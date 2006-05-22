@@ -1,0 +1,31 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 01_updown-default-path.dpatch by  <rene@mayrhofer.eu.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Changes /etc/sysconfig to /etc/default
+
+@DPATCH@
+
+--- openswan/programs/_updown/_updown.in.orig	2006-04-15 22:43:19.159741143 +0100
++++ openswan/programs/_updown/_updown.in	2006-04-15 22:43:26.851946210 +0100
+@@ -116,7 +116,7 @@
+ #       PLUTO_CONNECTION_TYPE
+ #
+ 
+-# Import default _updown configs from the /etc/sysconfig/pluto_updown file
++# Import default _updown configs from the /etc/default/pluto_updown file
+ #
+ # Two variables can be set in this file:
+ #
+@@ -132,9 +132,9 @@
+ #       IPRULEARGS
+ #              is the extra argument list for ip rule command
+ #
+-if [ -f /etc/sysconfig/pluto_updown ]
++if [ -f /etc/default/pluto_updown ]
+ then
+-    . /etc/sysconfig/pluto_updown
++    . /etc/default/pluto_updown
+ fi
+ 
+ # check interface version
