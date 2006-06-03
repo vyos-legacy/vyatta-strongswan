@@ -1,142 +1,49 @@
-Template: openswan/start_level
+Template: strongswan/start_level
 Type: select
 Choices: earliest, "after NFS", "after PCMCIA"
-Choices-fr: Le plus tôt possible, Après NFS, Après PCMCIA
-Choices-ja: ²ÄÇ½¤Ê¸Â¤êÁá¤¯, "NFS µ¯Æ°¸å", "PCMCIA µ¯Æ°¸å"
-Choices-pt_BR: o quando antes, "depois do NFS", "depois do PCMCIA"
+Choices-cs.UTF-8: nejdÅ™Ã­ve, "po NFS", "po PCMCIA"
+Choices-fr.UTF-8: Le plus tÃ´t possible, AprÃ¨s NFS, AprÃ¨s PCMCIA
+Choices-ja.UTF-8: å¯èƒ½ãªé™ã‚Šæ—©ã, "NFS èµ·å‹•å¾Œ", "PCMCIA èµ·å‹•å¾Œ"
+Choices-nl.UTF-8: "zo vroeg mogelijk", "na NFS", "na PCMCIA"
+Choices-pt_BR.UTF-8: o quando antes, "depois do NFS", "depois do PCMCIA"
+Choices-sv.UTF-8: tidigast, "efter NFS", "efter PCMCIA"
+Choices-vi.UTF-8: sá»›m nháº¥t, Â«sau NFSÂ», Â«sau PCMCIAÂ»
 Default: earliest
-Description: At which level do you wish to start Openswan ?
+Description: At which level do you wish to start strongSwan ?
  With the current Debian startup levels (nearly everything starting in
- level 20), it is impossible for Openswan to always start at the correct
- time. There are three possibilities when Openswan can start: before or
+ level 20), it is impossible for strongSwan to always start at the correct
+ time. There are three possibilities when strongSwan can start: before or
  after the NFS services and after the PCMCIA services. The correct answer
  depends on your specific setup.
  .
  If you do not have your /usr tree mounted via NFS (either you only mount
  other, less vital trees via NFS or don't use NFS mounted trees at all) and
- don't use a PCMCIA network card, then it is the best to start Openswan at
- the earliest possible time, thus allowing the NFS mounts  to be secured by
- IPSec. In this case (or if you don't understand or care  about this
+ don't use a PCMCIA network card, then it's best to start strongSwan at
+ the earliest possible time, thus allowing the NFS mounts to be secured by
+ IPSec. In this case (or if you don't understand or care about this
  issue), answer "earliest" to this question (the default).
  .
  If you have your /usr tree mounted via NFS and don't use a PCMCIA network
- card, then you will need to start Openswan after NFS so that all
+ card, then you will need to start strongSwan after NFS so that all
  necessary files are available. In this case, answer "after NFS" to this
- question. Please note that the NFS mount of /usr can  not be secured by
+ question. Please note that the NFS mount of /usr can not be secured by
  IPSec in this case.
  .
  If you use a PCMCIA network card for your IPSec connections, then you only
- have to choice to start it after the PCMCIA services. Answer "after
+ have to choose to start it after the PCMCIA services. Answer "after
  PCMCIA" in this case. This is also the correct answer if you want to fetch
  keys from a locally running DNS server with DNSSec support.
-Description-fr: Étape de lancement d'Openswan :
- Avec les niveaux de démarrage actuellement utilisés par Debian (presque
- tout démarre au niveau 20), il est impossible de faire en sorte
- qu'Openswan démarre toujours au moment approprié. Il existe trois moments
- où il est opportun de le démarrer : avant ou après les services NFS ou
- après les services PCMCIA. La réponse appropriée dépend de vos réglages
- spécifiques.
- .
- Si votre arborescence /usr n'est pas un montage NFS (soit parce que vos
- montages NFS sont à d'autres endroits, moins critiques, soit parce que
- vous n'utilisez pas du tout de montage NFS) et si vous n'utilisez pas de
- carte réseau PCMCIA, il est préférable de démarrer Openswan le plus tôt
- possible, ce qui permettra de sécuriser les montages NFS avec IPSec. Dans
- ce cas (ou bien si vous ne comprenez pas l'objet de la question ou qu'elle
- ne vous concerne pas), choisissez « le plus tôt possible », qui est le
- choix par défaut.
- .
- Si /usr est un montage NFS et que vous n'utilisez pas de carte réseau
- PCMCIA, vous devrez alors démarrer Openswan après les services NFS afin
- que tous les fichiers nécessaires soient disponibles. Dans ce cas,
- choisissez « après NFS ». Veuillez noter que le montage NFS de /usr n'est
- alors pas sécurisé par IPSec.
- .
- Si vous utilisez une carte PCMCIA pour vos connexions IPSec, votre seul
- choix possible est le démarrage après les services PCMCIA. Choisissez
- alors « après PCMCIA ». Faites également ce choix si vous souhaitez
- récupérer les clés d'authentification sur un serveur DNS reconnaissant
- DNSSec.
-Description-ja: ¤É¤ÎÃÊ³¬¤Ç Openswan ¤òµ¯Æ°¤µ¤»¤Ş¤¹¤«?
- ¸½ºß¤Î Debian ¤Ç¤Îµ¯Æ°¥ì¥Ù¥ë (¤Û¤È¤ó¤ÉÁ´¤Æ¤¬¥ì¥Ù¥ë20) ¤Î¤Ş¤Ş¤Ç¤Ï¡¢Openswan
- ¤ò¾ï¤Ë¤ÏÅ¬ÀÚ¤Ê¥¿¥¤¥ß¥ó¥°¤Çµ¯Æ°¤Ç¤­¤Ş¤»¤ó¡£Openswan
- ¤òµ¯Æ°¤µ¤»¤ë¥¿¥¤¥ß¥ó¥°¤ÎÁªÂò»è¤È¤·¤Æ¤Ï3¤Ä¤¬¹Í¤¨¤é¤ì¤Ş¤¹: NFS
- ¥µ¡¼¥Ó¥¹¤Î³«»ÏÁ°¡¦³«»Ï¸å¡¦PCMCIA
- ¥µ¡¼¥Ó¥¹¤Î³«»Ï¸å¤Ç¤¹¡£Àµ²ò¤Ï¤¢¤Ê¤¿¤ÎÀßÄê¼¡Âè¤Ç¤¹¡£
- .
- NFS ·ĞÍ³¤Ç /usr ¤ò¥Ş¥¦¥ó¥È¤»¤º
- (Â¾¤Î¥Ñ¡¼¥Æ¥£¥·¥ç¥ó¤ä¤¢¤Ş¤ê½ÅÍ×¤Ç¤Ï¤Ê¤¤¥Ñ¡¼¥Æ¥£¥·¥ç¥ó¤ò NFS
- ·ĞÍ³¤Ç¥Ş¥¦¥ó¥È¤¹¤ë¤«¡¢¤Ş¤¿¤Ï NFS ¥Ş¥¦¥ó¥È¤òÁ´¤¯»È¤ï¤Ê¤¤)¡¢²Ã¤¨¤Æ PCMCIA
- ¥Í¥Ã¥È¥ï¡¼¥¯¥«¡¼¥É¤òÍøÍÑ¤·¤Æ¤¤¤Ê¤¤¾ì¹ç¡¢²ÄÇ½¤Ê¸Â¤êÁá¤¤»ş´Ö¤Ë Openswan
- ¤òµ¯Æ°¤¹¤ë¤Î¤¬¥Ù¥¹¥È¤Ç¤¹¡£¤³¤ÎÀßÄê¤Ë¤è¤Ã¤Æ¡¢NFS ¤Ç¤Î¥Ş¥¦¥ó¥È¤Ï IPSec
- ¤ÇÊİ¸î¤µ¤ì¤Ş¤¹¡£¤³¤Î¾ì¹ç
- (¤Ş¤¿¤Ï¤³¤ÎÌäÂê¤òÍı²ò¤·¤Æ¤¤¤Ê¤¤¤«ÆÃ¤Ëµ¤¤Ë¤·¤Ê¤¤¾ì¹ç)
- ¡¢"²ÄÇ½¤Ê¸Â¤êÁá¤¯"¤È¼ÁÌä¤ËÅú¤¨¤Æ¤¯¤À¤µ¤¤ (É¸½à) ¡£
- .
- NFS ·ĞÍ³¤Ç /usr ¤ò¥Ş¥¦¥ó¥È¤·¤Æ¤¤¤Æ PCMCIA
- ¥Í¥Ã¥È¥ï¡¼¥¯¥«¡¼¥É¤ò»ÈÍÑ¤·¤Æ¤¤¤Ê¤¤¾ì¹ç¤Ï¡¢É¬Í×¤Ê¥Õ¥¡¥¤¥ë¤òÍøÍÑ²ÄÇ½¤Ë¤¹¤ë¤¿¤á¤Ë
- Openswan ¤ò NFS ¤Î¸å¤Çµ¯Æ°¤·¤Ê¤±¤ì¤Ğ¤Ê¤ê¤Ş¤»¤ó¡£¤³¤Î¾ì¹ç¡¢"NFS µ¯Æ°¸å"
- ¤ÈÅú¤¨¤Æ¤¯¤À¤µ¤¤¡£¤³¤Î»ş¤Ë NFS ·ĞÍ³¤Ç¥Ş¥¦¥ó¥È¤µ¤ì¤ë /usr ¤Ï¡¢IPSec
- ¤Ë¤è¤ë¥»¥­¥å¥¢¤Ê¾õÂÖ¤Ë¤Ï¤Ê¤é¤Ê¤¤¤È¤¤¤¦¤³¤È¤ËÃí°Õ¤·¤Æ¤¯¤À¤µ¤¤¡£
- .
- IPSec ÀÜÂ³¤Ë PCMCIA ¥Í¥Ã¥È¥ï¡¼¥¯¥«¡¼¥É¤òÍøÍÑ¤·¤Æ¤¤¤¿¾ì¹ç¡¢PCMCIA
- ¥µ¡¼¥Ó¥¹¤Îµ¯Æ°¸å¤Ë Openswan
- ¤òµ¯Æ°¤¹¤ë°Ê³°¤ËÁªÂò¤Ï¤¢¤ê¤Ş¤»¤ó¡£¤³¤Î¾ì¹ç¡¢"PCMCIA µ¯Æ°¸å"
- ¤ÈÅú¤¨¤Æ¤¯¤À¤µ¤¤¡£¥í¡¼¥«¥ë¤ÇÆ°ºî¤·¤Æ¤¤¤ë DNSSec µ¡Ç½¤ò»ÈÍÑ¤·¤Æ¤¤¤ë DNS
- ¥µ¡¼¥Ğ¤«¤é¸°¤ò¼èÆÀ¤·¤¿¤¤¾ì¹ç¤Ç¤â¡¢¤³¤ÎÅú¤¨¤ò¤·¤Æ¤¯¤À¤µ¤¤¡£
-Description-pt_BR: Em que nível você deseja iniciar o Openswan ?
- Com os níveis de inicialização atuais do Debian (quase todos os serviços
- iniciando no nível 20) é impossível para o Openswan sempre iniciar no
- momento correto. Existem três possibilidades para quando iniciar o
- Openswan : antes ou depois dos serviços NFS e depois dos serviços PCMCIA.
- A resposta correta depende se sua configuração específica.
- .
- Caso você não possua sua àrvore /usr montada via NFS (você somente monta
- outras àrvores não vitais via NFS ou não usa àrvores montadas via NFS) e
- não use um cartão de rede PCMCIA, a melhor opção é iniciar o Openswan o
- quando antes, permitindo dessa forma que os pontos de montagem NFS estejam
- protegidos por IPSec. Nesse caso (ou caso você não compreenda ou não se
- importe com esse problema), responda "o quando antes" para esta pergunta
- (o que é o padrão).
- .
- Caso você possua sua àrvore /usr montada via NFS e não use um cartão de
- rede PCMCIA, você precisará iniciar o Openswan depois do NFS de modo que
- todos os arquivos necessários estejam disponíveis. Nesse caso, responda
- "depois do NFS" para esta pergunta. Por favor, note que a montagem NFS de
- /usr não poderá ser protegida pelo IPSec nesse caso.
- .
- Caso você use um cartão de rede PCMCIA para suas conexões IPSec você
- precisará somente optar por iniciar o Opensan depois dos serviços PCMCIA.
- Responda "depois do PCMCIA" nesse caso. Esta é também a maneira correta de
- obter chaves de um servidor DNS sendo executado localmente e com suporte a
- DNSSec.
 
-Template: openswan/restart
+Template: strongswan/restart
 Type: boolean
 Default: true
-Description: Do you wish to restart Openswan?
- Restarting Openswan is a good idea, since if there is a security fix, it
+Description: Do you wish to restart strongSwan?
+ Restarting strongSwan is a good idea, since if there is a security fix, it
  will not be fixed until the daemon restarts. Most people expect the daemon
  to restart, so this is generally a good idea. However this might take down
  existing connections and then bring them back up.
-Description-fr: Souhaitez-vous redémarrer Openswan ?
- Redémarrer Openswan est préférable car un éventuel correctif de sécurité
- ne prendra place que si le démon est redémarré. La plupart des
- utilisateurs s'attendent à ce que le démon redémarre et c'est donc le plus
- souvent le meilleur choix. Cependant, cela pourrait interrompre
- provisoirement des connexions en cours.
-Description-ja: Openswan ¤òºÆµ¯Æ°¤·¤Ş¤¹¤«?
- ¥»¥­¥å¥ê¥Æ¥£½¤Àµ¤¬¤¢¤Ã¤¿¾ì¹ç¤Ë¤Ï¥Ç¡¼¥â¥ó¤¬ºÆµ¯Æ°¤µ¤ì¤ë¤Ş¤Ç½¤Àµ¤¬È¿±Ç¤µ¤ì¤Ş¤»¤ó¡£¤½¤Î¤¿¤á¡¢Openswan
- ¤òºÆµ¯Æ°¤¹¤ë¤Î¤ÏÎÉ¤¤¹Í¤¨¤Ç¤¹¡£¤Û¤È¤ó¤É¤Î¿Í¤Ï¥Ç¡¼¥â¥ó¤òºÆµ¯Æ°¤·¤è¤¦¤È¤·¤Ş¤¹¤¬¡¢¤³¤ì¤ÏÂçÄñÌäÂê¤¢¤ê¤Ş¤»¤ó¡£¤·¤«¤·¡¢¤³¤Îºî¶È¤Ç¸½ºß¤ÎÀÜÂ³¤ÏÀÚÃÇ¤µ¤ì¡¢ºÆÅÙ·Ò¤®¤Ê¤ª¤¹¤³¤È¤Ë¤Ê¤ê¤Ş¤¹¡£
-Description-pt_BR: Você deseja reiniciar o Openswan ?
- Reiniciar o Openswan é uma boa idéia, uma vez que caso exista um correção
- para uma falha de segurança, o mesmo não será corrigido até que o daemon
- seja reiniciado. A maioria das pessoas esperam que o daemon seja
- reiniciado, portanto essa é geralmente uma boa idéia. Porém, reiniciar o
- Openswan pode derrubar conexões existentes, mas posteriormente trazê-las
- de volta.
 
-Template: openswan/create_rsa_key
+Template: strongswan/create_rsa_key
 Type: boolean
 Default: true
 Description: Do you want to create a RSA public/private keypair for this host ?
@@ -146,167 +53,94 @@ Description: Do you want to create a RSA public/private keypair for this host ?
  connections. The other possibility would be to use shared secrets
  (passwords that are the same on both sides of the tunnel) for
  authenticating an connection, but for a larger number of connections RSA
- authentication is easier to administrate and more secure.
-Description-fr: Souhaitez-vous créer une paire de clés RSA publique et privée pour cet hôte ?
- Cet outil d'installation peut créer automatiquement une paire de clés RSA
- publique et privée pour cet hôte. Cette paire de clés peut servir à
- authentifier des connexions IPSec vers d'autres hôtes. Cette méthode est
- la méthode conseillée pour l'établissement de liaisons IPSec sûres.
- L'autre possibilité d'authentification à la connexion est l'utilisation
- d'un secret partagé (« pre-shared key » : des mots de passe identiques aux
- deux extrémités du tunnel). Toutefois, pour de nombreuses connexions,
- l'authentification RSA est plus simple à administrer et plus sûre.
-Description-ja: ¤³¤Î¥Û¥¹¥È¤Î RSA ¸ø³«¸°¤ÈÈëÌ©¸°¤Î¥­¡¼¥Ú¥¢¤òÀ¸À®¤·¤Ş¤¹¤«?
- ¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤Ï¤³¤Î¥Û¥¹¥È¤Î RSA
- ¸ø³«¸°¤ÈÈëÌ©¸°¤Î¥­¡¼¥Ú¥¢¤ò¼«Æ°Åª¤ËÀ¸À®¤Ç¤­¤Ş¤¹¡£¤³¤Î¥­¡¼¥Ú¥¢¤ÏÂ¾¤Î¥Û¥¹¥È¤È¤Î
- IPSec ÄÌ¿®¤Ç¤ÎÇ§¾Ú¤ËÍøÍÑ²ÄÇ½¤Ç¡¢¥»¥­¥å¥¢¤Ê IPSec
- ÄÌ¿®¤ò³ÎÎ©¤¹¤ëÊıË¡¤È¤·¤Æ¹¥¤Ş¤ì¤Æ¤¤¤Ş¤¹¡£Â¾¤ËÍøÍÑ²ÄÇ½¤ÊÊıË¡¤È¤·¤Æ¤Ï¶¦ÄÌ¸°
- (¥È¥ó¥Í¥ë¤ÎÁĞÊı¤ÇÆ±¤¸¥Ñ¥¹¥ï¡¼¥É)
- ¤òÄÌ¿®¤ÎÇ§¾Ú¤ËÍøÍÑ¤¹¤ë¤È¤¤¤¦¤Î¤¬¤¢¤ê¤Ş¤¹¤¬¡¢Â¿¿ô¤ÎÀÜÂ³¤ËÂĞ¤·¤Æ¤Ï¡¢RSA
- Ç§¾Ú¤Î¤Û¤¦¤¬´ÉÍı¤¬¤è¤ê´ÊÃ±¤Ç¡¢¤è¤ê¥»¥­¥å¥¢¤Ç¤¹¡£
-Description-pt_BR: Você deseja criar um par de chaves RSA pública/privada para este host ?
- Este instalador pode automaticamente criar um par de chaves RSA
- pública/privada para este host. Esse par de chaves pode ser usado para
- autenticar conexões IPSec com outros hosts e é a maneira preferida de
- construir conexões IPSec seguras. A outra possibilidade seria usar
- segredos compartilhados (senhas que são iguais em ambos os lados do túnel)
- para autenticar uma conexão, mas para um grande número de conexões RSA a
- autenticação é mais fácil de administrar e mais segura.
+ authentication is easier to administer and more secure.
+ .
+ If you do not want to create a new public/private keypair, you can choose to
+ use an existing one.
+Description-fr.UTF-8: Souhaitez-vous crÃ©er une paire de clÃ©s RSA publique et privÃ©e pour cet hÃ´teÂ ?
+ Cet outil d'installation peut crÃ©er automatiquement une paire de clÃ©s RSA publique et privÃ©e pour cet hÃ´te. Cette paire de clÃ©s peut servir Ã  authentifier des connexions IPSec vers d'autres hÃ´tes. Cette mÃ©thode est la mÃ©thode conseillÃ©e pour l'Ã©tablissement de liaisons IPSec sÃ»res. L'autre possibilitÃ© d'authentification Ã  la connexion est l'utilisation d'un secret partagÃ© (Â«Â pre-shared keyÂ Â»Â : des mots de passe identiques aux deux extrÃ©mitÃ©s du tunnel). Toutefois, pour de nombreuses connexions, l'authentification RSA est plus simple Ã  administrer et plus sÃ»re.
+ .
+ Si vous ne souhaitez pas crÃ©er une paire de clÃ©s publique et privÃ©e, vous pouvez choisir d'en utiliser une existante.
 
-Template: openswan/rsa_key_type
+Template: strongswan/rsa_key_type
 Type: select
 Choices: x509, plain
-Choices-fr: X509, simple paire
-Choices-ja: x509, ÄÌ¾ï¤Î¥¿¥¤¥×
-Choices-pt_BR: x509, pura
+Choices-cs.UTF-8: x509, prostÃ½
+Choices-fr.UTF-8: X509, Simple paire
+Choices-ja.UTF-8: x509, é€šå¸¸ã®ã‚¿ã‚¤ãƒ—
+Choices-nl.UTF-8: x509, gewoon
+Choices-pt_BR.UTF-8: x509, pura
+Choices-sv.UTF-8: x509, enkel
+Choices-vi.UTF-8: x509, giáº£n dá»‹
 Default: x509
 Description: Which type of RSA keypair do you want to create ?
- It is possible to create a plain RSA public/private keypair for the use
- with Openswan or to create a X509 certificate file which contains the RSA
- public key and additionally store the corresponding private key.
+ It is possible to create a plain RSA public/private keypair for use
+ with strongSwan or to create a X509 certificate file which contains the RSA
+ public key and additionally stores the corresponding private key.
  .
  If you only want to build up IPSec connections to hosts also running
- Openswan, it might be a bit easier using plain RSA keypairs. But if you
+ strongSwan, it might be a bit easier using plain RSA keypairs. But if you
  want to connect to other IPSec implementations, you will need a X509
  certificate. It is also possible to create a X509 certificate here and
  extract the RSA public key in plain format if the other side runs
- Openswan without X509 certificate support.
+ strongSwan without X509 certificate support.
  .
  Therefore a X509 certificate is recommended since it is more flexible and
  this installer should be able to hide the complex creation of the X509
- certificate and its use in Openswan anyway.
-Description-fr: Type de paire de clés RSA à créer :
- Il est possible de créer une simple paire de clés destinée à être utilisée
- avec Openswan ou de créer un fichier de certificat X509 qui contient la
- clé publique RSA et de conserver la clé privée correspondante par
- ailleurs.
- .
- Si vous ne prévoyez d'établir des connexions IPSec qu'avec des hôtes
- utilisant Openswan, il sera probablement plus facile d'utiliser des clés
- RSA simples. Mais si vous souhaitez vous connecter à des hôtes utilisant
- d'autres implémentations d'IPSec, vous aurez besoin d'un certificat X509.
- Il est également possible de créer un certificat X509 puis d'en extraire
- un simple clé publique RSA, si l'autre extrémité de la connexion utilise
- Openswan sans le support des certificats X509.
- .
- En conséquence, il vous est conseillé d'utiliser un certificat X509 car
- cette méthode est plus souple. Cet outil d'installation devrait vous
- simplifier la tâche de création et d'utilisation de ce certificat X509.
-Description-ja: ¤É¤Á¤é¤Î¥¿¥¤¥×¤Î RSA ¥­¡¼¥Ú¥¢¤òÀ¸À®¤·¤Ş¤¹¤«?
- Openswan ¤ÇÍøÍÑ¤¹¤ëÄÌ¾ï¤Î RSA ¸ø³«¸°¡¦ÈëÌ©¸°¤Î¥­¡¼¥Ú¥¢¤òºî¤ì¤Ş¤¹¡£¤¢¤ë¤¤¤Ï
- RSA ¸ø³«¸°¤ò (¤µ¤é¤Ë¤Ï¤½¤ì¤ËÂĞ±ş¤¹¤ëÈëÌ©¸°¤â) ´Ş¤à X509
- ¾ÚÌÀ½ñ¥Õ¥¡¥¤¥ë¤âÆ±ÍÍ¤Ç¤¹¡£
- .
- ´û¤Ë Openswan ¤òÆ°ºî¤µ¤»¤Æ¤¤¤ë¥Û¥¹¥È¤È IPSec
- ÄÌ¿®¤ò³ÎÎ©¤·¤¿¤¤¤À¤±¤Î¾ì¹ç¤Ï¡¢ÄÌ¾ï¤Î RSA
- ¥­¡¼¥Ú¥¢¤ò»ÈÍÑ¤¹¤ë¤ÈÂ¿¾¯´ÊÃ±¤Ë¤Ê¤ê¤Ş¤¹¡£¤·¤«¤·¡¢Â¾¤Î IPSec
- ¼ÂÁõ¤È¤ÎÀÜÂ³¤ò¹Ô¤¤¤¿¤¤¾ì¹ç¤Ï X509
- ¾ÚÌÀ½ñ¤¬É¬Í×¤Ë¤Ê¤ê¤Ş¤¹¡£ÄÌ¿®¤ò¹Ô¤¦ÂĞ¾İ¤Î¥Û¥¹¥È¤¬ Openswan ¤ò X509
- ¾ÚÌÀ½ñ¤Î¥µ¥İ¡¼¥ÈÌµ¤·¤Ç±¿ÍÑ¤·¤Æ¤¤¤¿¾ì¹ç¡¢¤³¤³¤Ç X509
- ¾ÚÌÀ½ñ¤òÀ¸À®¤·¤Æ¡¢¸å¤Û¤É RSA ¸ø³«¸°¤òÄÌ¾ï¤Î·Á¼°¤ËÅ¸³«¤¹¤ë¤³¤È¤â²ÄÇ½¤Ç¤¹¡£
- .
- ¤·¤¿¤¬¤Ã¤Æ X509
- ¾ÚÌÀ½ñ¤¬¤ª´«¤á¤Ç¤¹¡£¤³¤Á¤é¤Î¤Û¤¦¤¬½ÀÆğ¤Ç¤¹¤·¡¢¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤ò»È¤¨¤Ğ¡¢X509
- ¾ÚÌÀ½ñ¤ÎÀ¸À®¤ä Openswan ¤Ç¤ÎÍøÍÑ¤Ëºİ¤·¤Æ¤ÎÌÌÅİ¤µ¤ò±£ÊÃ¤·¤Æ¤¯¤ì¤ë¤Ï¤º¤Ç¤¹¡£
-Description-pt_BR: Qual tipo de par de chaves RSA você deseja criar ?
- É possível criar um par de chaves RSA pública/privada pura (plain) para
- uso com o Openswan ou para criar um arquivo de certificado X509 que irá
- conter a chave RSA pública e adicionalmente armazenar a chave privada
- correspondente.
- .
- Caso você queira somente construir conexões IPsec para hosts e também
- executar o Openswan, pode ser um pouco mais fácil usar pares de chaves RSA
- puros (plain). Mas caso você queira se conectar a outras implementações
- IPSec, você precisará de um certificado X509. É também possível criar um
- certificado X509 aqui e extrair a chave pública em formato puro (plain)
- caso o outro lado execute o Openswan sem suporte a certificados X509.
- .
- Um certificado X509 é recomendado, uma vez que o mesmo é mais flexível e
- este instalador é capaz de simplificar a complexa criação do certificado
- X509 e seu uso com o Openswan.
+ certificate and its use in strongSwan anyway.
 
-Template: openswan/existing_x509_certificate
+Template: strongswan/existing_x509_certificate
 Type: boolean
 Default: false
-Description: Do you have an existing X509 certificate file that you want to use for Openswan ?
+Description: Do you have an existing X509 certificate file that you want to use for strongSwan ?
  This installer can automatically extract the needed information from an
  existing X509 certificate with a matching RSA private key. Both parts can
  be in one file, if it is in PEM format. Do you have such an existing
  certificate and key file and want to use it for authenticating IPSec
  connections ?
-Description-fr: Possédez-vous un fichier de certificat X509 existant àutiliser avec Openswan ?
- Cet outil d'installation est capable d'extraire automatiquement
- l'information nécessaire d'un fichier de certificat X509 existant, avec la
- clé privée RSA correspondante. Les deux parties peuvent se trouver dans un
- seul fichier, s'il est en format PEM. Possédez-vous un tel certificat
- ainsi que la clé privée, et souhaitez-vous vous en servir pour
- l'authentification des connexions IPSec ?
-Description-ja: ´û¤ËÂ¸ºß¤·¤Æ¤¤¤ë X509 ¾ÚÌÀ½ñ¥Õ¥¡¥¤¥ë¤ò Openswan ¤ÇÍøÍÑ¤·¤Ş¤¹¤«?
- ¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤Ï´û¤ËÂ¸ºß¤·¤Æ¤¤¤ë X509 ¾ÚÌÀ½ñ¤«¤é RSA
- ÈëÌ©¸°¤È¾È¤é¤·¹ç¤ï¤»¤ÆÉ¬Í×¤Ê¾ğÊó¤ò¼«Æ°Åª¤ËÅ¸³«¤¹¤ë»ö¤¬²ÄÇ½¤Ç¤¹¡£ PEM
- ·Á¼°¤Î¾ì¹ç¡¢ÁĞÊı¤ò°ì¤Ä¤Î¥Õ¥¡¥¤¥ë¤Ë¤Ş¤È¤á¤ë¤³¤È¤â²ÄÇ½¤Ç¤¹¡£¤½¤Î¤è¤¦¤Ê¾ÚÌÀ½ñ¤È¸°¤Î¥Õ¥¡¥¤¥ë¤¬¤¢¤ê¡¢¤³¤ì¤é¤ò
- IPSec ÄÌ¿®¤Ç¤ÎÇ§¾Ú¤Ë»ÈÍÑ¤·¤¿¤¤¤Ç¤¹¤«?
-Description-pt_BR: Você possui um arquivo de certificado X509 existente que você gostaria de usar com o Openswan ?
- Este instalador pode extrair automaticamente a informação necessária de um
- certificado X509 existente com uma chave RSA privada adequada. Ambas as
- partes podem estar em um arquivo, caso estejam no formato PEM. Você possui
- um certificado existente e um arquivo de chave e quer usá-los para
- autenticar conexões IPSec ?
 
-Template: openswan/existing_x509_certificate_filename
+Template: strongswan/existing_x509_certificate_filename
 Type: string
 Description: Please enter the location of your X509 certificate in PEM format.
  Please enter the location of the file containing your X509 certificate in
  PEM format.
-Description-fr: Emplacement de votre certificat X509 au format PEM :
- Veuillez indiquer l'emplacement du fichier contenant votre certificat X509
- au format PEM.
-Description-ja: PEM ·Á¼°¤Î X509 ¾ÚÌÀ½ñ¤Î¾ì½ê¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- PEM ·Á¼°¤Î X509 ¾ÚÌÀ½ñ¤ò´Ş¤ó¤Ç¤¤¤ë¥Õ¥¡¥¤¥ë¤Î¾ì½ê¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
-Description-pt_BR: Por favor, informe a localização de seu certificado X509 no formato PEM.
- Por favor, informe a localização do arquivo contendo seu certificado X509
- no formato PEM.
+Description-cs.UTF-8: Zadejte prosÃ­m umÃ­stÄ›nÃ­ vaÅ¡eho certifikÃ¡tu X509 ve formÃ¡tu PEM.
+ Zadejte prosÃ­m umÃ­stÄ›nÃ­ vaÅ¡eho certifikÃ¡tu X509 ve formÃ¡tu PEM.
+Description-fr.UTF-8: Emplacement de votre certificat X509 au format PEMÂ :
+ Veuillez indiquer l'emplacement du fichier contenant votre certificat X509 au format PEM.
+Description-ja.UTF-8: PEM å½¢å¼ã® X509 è¨¼æ˜æ›¸ã®å ´æ‰€ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ PEM å½¢å¼ã® X509 è¨¼æ˜æ›¸ã‚’å«ã‚“ã§ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã®å ´æ‰€ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+Description-nl.UTF-8: Geef de locatie van uw X509-certificaat in PEM-formaat.
+ Geef de locatie van het bestand dat uw X509-certificaat in PEM-formaat bevat.
+Description-pt_BR.UTF-8: Por favor, informe a localizaÃ§Ã£o de seu certificado X509 no formato PEM.
+ Por favor, informe a localizaÃ§Ã£o do arquivo contendo seu certificado X509 no formato PEM.
+Description-sv.UTF-8: Ange platsen fÃ¶r ditt X509-certifikat i PEM-format.
+ Ange platsen fÃ¶r din fil som innehÃ¥ller ditt X509-certifikat i PEM-format.
+Description-vi.UTF-8: HÃ£y nháº­p Ä‘á»‹a Ä‘iá»ƒm cá»§a chá»©ng nháº­n X509 cá»§a báº¡n, cÃ³ dáº¡ng PEM.
+ HÃ£y nháº­p Ä‘á»‹a Ä‘iá»ƒm cá»§a táº­p tin chá»©a chá»©ng nháº­n X509 cá»§a báº¡n, cÃ³ dáº¡ng PEM.
 
-Template: openswan/existing_x509_key_filename
+Template: strongswan/existing_x509_key_filename
 Type: string
 Description: Please enter the location of your X509 private key in PEM format.
  Please enter the location of the file containing the private RSA key
  matching your X509 certificate in PEM format. This can be the same file
  that contains the X509 certificate.
-Description-fr: Emplacement de votre clé privée X509 au format PEM :
- Veuillez indiquer l'emplacement du fichier contenant la clé privée RSA
- correspondant à votre certificat X509 au format PEM. Cela peut être le
- fichier qui contient le certificat X509.
-Description-ja: PEM ·Á¼°¤Î X509 ÈëÌ©¸°¤Î¾ì½ê¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- PEM ·Á¼°¤Î X509
- ¾ÚÌÀ½ñ¤ËÂĞ±ş¤¹¤ëÈëÌ©¸°¤ò´Ş¤ó¤Ç¤¤¤ë¥Õ¥¡¥¤¥ë¤Î¾ì½ê¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï
- X509 ¾ÚÌÀ½ñ¤ò´Ş¤ó¤Ç¤¤¤ë¥Õ¥¡¥¤¥ë¤ÈÆ±¤¸¤Ç¹½¤¤¤Ş¤»¤ó¡£
-Description-pt_BR: Por favor, informe a localização de sua chave privada X509 no formato PEM.
- Por favor, informe a localização do arquivo contendo a chave privada RSA
- que casa com seu certificado X509 no formato PEM. Este pode ser o mesmo
- arquivo que contém o certificado X509.
+Description-cs.UTF-8: Zadejte prosÃ­m umÃ­stÄ›nÃ­ vaÅ¡eho certifikÃ¡tu X509 ve formÃ¡tu PEM.
+ Zadejte prosÃ­m umÃ­stÄ›nÃ­ souboru obsahujÃ­cÃ­ho privÃ¡tnÃ­ RSA klÃ­Ä odpovÃ­dajÃ­cÃ­ vaÅ¡emu certifikÃ¡tu X509 ve formÃ¡tu PEM. MÅ¯Å¾e to bÃ½t stejnÃ½ soubor jako ten obsahujÃ­cÃ­ certifikÃ¡t X509.
+Description-fr.UTF-8: Emplacement de votre clÃ© privÃ©e X509 au format PEMÂ :
+ Veuillez indiquer l'emplacement du fichier contenant la clÃ© privÃ©e RSA correspondant Ã  votre certificat X509 au format PEM. Cela peut Ãªtre le fichier qui contient le certificat X509.
+Description-ja.UTF-8: PEM å½¢å¼ã® X509 ç§˜å¯†éµã®å ´æ‰€ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ PEM å½¢å¼ã® X509 è¨¼æ˜æ›¸ã«å¯¾å¿œã™ã‚‹ç§˜å¯†éµã‚’å«ã‚“ã§ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã®å ´æ‰€ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯ X509 è¨¼æ˜æ›¸ã‚’å«ã‚“ã§ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã¨åŒã˜ã§æ§‹ã„ã¾ã›ã‚“ã€‚
+Description-nl.UTF-8: Geef de locatie van uw private X509-sleutel in PEM-formaat.
+ Geef de locatie van het bestand dat uw private RSA-sleutel bevat die behoort bij uw X509-certificaat in PEM-formaat. Dit kan hetzelfde bestand zijn als dat wat uw X509-certificaat bevat.
+Description-pt_BR.UTF-8: Por favor, informe a localizaÃ§Ã£o de sua chave privada X509 no formato PEM.
+ Por favor, informe a localizaÃ§Ã£o do arquivo contendo a chave privada RSA que casa com seu certificado X509 no formato PEM. Este pode ser o mesmo arquivo que contÃ©m o certificado X509.
+Description-sv.UTF-8: Ange platsen fÃ¶r din privata X509-nyckel i PEM-format.
+ Ange platsen fÃ¶r den fil som innehÃ¥ller den privata RSA-nyckeln som matchar ditt X509-certifikat i PEM-format. Detta kan vara samma fil som innehÃ¥ller X509-certifikatet.
+Description-vi.UTF-8: HÃ£y nháº­p Ä‘á»‹a Ä‘iá»ƒm cá»§a khÃ³a riÃªng X509 cá»§a báº¡n, cÃ³ dáº¡ng PEM.
+ HÃ£y nháº­p Ä‘á»‹a Ä‘iá»ƒm cá»§a táº­p tin chá»©a khÃ³a RSA riÃªng khá»›p vá»›i chá»©ng nháº­n X509 cá»§a báº¡n, cÃ³ dáº¡ng PEM. CÃ³ thá»ƒ lÃ  cÃ¹ng má»™t táº­p tin chá»©a chá»©ng nháº­n X509.
 
-Template: openswan/rsa_key_length
+Template: strongswan/rsa_key_length
 Type: string
 Default: 2048
 Description: Which length should the created RSA key have ?
@@ -314,24 +148,22 @@ Description: Which length should the created RSA key have ?
  1024 bits because this should be considered unsecure and you will probably
  not need anything more than 2048 bits because it only slows the
  authentication process down and is not needed at the moment.
-Description-fr: Longueur de la clé RSA à créer :
- Veuillez indiquer la longueur de la clé RSA qui sera créée. Elle ne doit
- pas être inférieure à 1024 bits car cela serait considéré comme
- insuffisamment sûr. Un choix excédant 2048 bits est probablement inutile
- car cela ne fait essentiellement que ralentir le processus
- d'authentification sans avoir d'intérêt actuellement.
-Description-ja: RSA ¸°¤ò¤É¤ÎÄ¹¤µ¤ÇÀ¸À®¤·¤Ş¤¹¤«?
- À¸À®¤¹¤ë RSA ¸°¤ÎÄ¹¤µ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£°ÂÁ´¤Î¤¿¤á¡¢1024
- ¥Ó¥Ã¥È°Ê²¼¤Ë¤¹¤Ù¤­¤Ç¤Ï¤¢¤ê¤Ş¤»¤ó¡£2048
- ¥Ó¥Ã¥È°Ê¾å¤Ë¤¹¤ëÉ¬Í×¤â¤Ê¤¤¤Ç¤·¤ç¤¦¡£Ç§¾Ú¥×¥í¥»¥¹¤¬ÃÙ¤¯¤Ê¤ê¤Ş¤¹¤·¡¢¸½»şÅÀ¤Ç¤Ï¤ª¤½¤é¤¯É¬Í×¤¢¤ê¤Ş¤»¤ó¡£
-Description-pt_BR: Qual deve ser o tamanho da chave RSA criada ?
- Por favor, informe o tamanho da chave RSA a ser criada. A mesma não deve
- ser menor que 1024 bits devido a uma chave de tamanho menor que esse ser
- considerada insegura. Você também não precisará de nada maior que 2048
- porque isso somente deixaria o processo de autenticação mais lento e não
- seria necessário no momento.
+Description-cs.UTF-8: Jakou dÃ©lku by mÄ›l mÃ­t vytvoÅ™enÃ½ RSA klÃ­Ä?
+ Zadejte prosÃ­m dÃ©lku vytvÃ¡Å™enÃ©ho RSA klÃ­Äe. KvÅ¯li bezpeÄnosti by nemÄ›la bÃ½t mÃ©nÄ› neÅ¾ 1024 bitÅ¯ a pravdÄ›podobnÄ› nepotÅ™ebujete vÃ­c neÅ¾ 2048 bitÅ¯, protoÅ¾e to jiÅ¾ zpomaluje proces autentizace.
+Description-fr.UTF-8: Longueur de la clÃ© RSA Ã  crÃ©erÂ :
+ Veuillez indiquer la longueur de la clÃ© RSA qui sera crÃ©Ã©e. Elle ne doit pas Ãªtre infÃ©rieure Ã  1024Â bits car cela serait considÃ©rÃ© comme insuffisamment sÃ»r. Un choix excÃ©dant 2048Â bits est probablement inutile car cela ne fait essentiellement que ralentir le processus d'authentification sans avoir d'intÃ©rÃªt actuellement.
+Description-ja.UTF-8: RSA éµã‚’ã©ã®é•·ã•ã§ç”Ÿæˆã—ã¾ã™ã‹?
+ ç”Ÿæˆã™ã‚‹ RSA éµã®é•·ã•ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚å®‰å…¨ã®ãŸã‚ã€1024 ãƒ“ãƒƒãƒˆä»¥ä¸‹ã«ã™ã¹ãã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚2048 ãƒ“ãƒƒãƒˆä»¥ä¸Šã«ã™ã‚‹å¿…è¦ã‚‚ãªã„ã§ã—ã‚‡ã†ã€‚èªè¨¼ãƒ—ãƒ­ã‚»ã‚¹ãŒé…ããªã‚Šã¾ã™ã—ã€ç¾æ™‚ç‚¹ã§ã¯ãŠãã‚‰ãå¿…è¦ã‚ã‚Šã¾ã›ã‚“ã€‚
+Description-nl.UTF-8: Welke lengte moet de aangemaakte RSA-sleutel hebben?
+ Geef de lengte van de aangemaakte RSA-sleutel. Het mag niet minder dan 1024 bits zijn omdat dit als onveilig wordt beschouwd en u zult waarschijnlijk niet meer dan 2048 bits nodig hebben omdat het enkel het authenticatieproces vertraagt en op dit moment niet nodig is.
+Description-pt_BR.UTF-8: Qual deve ser o tamanho da chave RSA criada ?
+ Por favor, informe o tamanho da chave RSA a ser criada. A mesma nÃ£o deve ser menor que 1024 bits devido a uma chave de tamanho menor que esse ser considerada insegura. VocÃª tambÃ©m nÃ£o precisarÃ¡ de nada maior que 2048 porque isso somente deixaria o processo de autenticaÃ§Ã£o mais lento e nÃ£o seria necessÃ¡rio no momento.
+Description-sv.UTF-8: Vilken lÃ¤ngd ska den skapade RSA-nyckeln ha ?
+ Ange lÃ¤ngden fÃ¶r den skapade RSA-nyckeln, den bÃ¶r inte vara kortare Ã¤n 1024 bitar fÃ¶r att detta bÃ¶r anses som osÃ¤kert och du vill antagligen inte behÃ¶va nÃ¥gon lÃ¤ngre Ã¤n 2048 bitar fÃ¶r att det bara gÃ¶r autentiseringsprocessen lÃ¥ngsammare och behÃ¶vs inte just nu.
+Description-vi.UTF-8: KhÃ³a RSA má»›i Ä‘Æ°á»£c táº¡o nÃªn cÃ³ Ä‘á»™ dÃ i nÃ o?
+ HÃ£y nháº­p Ä‘á»™ dÃ i cá»§a khÃ³a RSA má»›i Ä‘Æ°á»£c táº¡o. NÃªn cÃ³ Ã­t nháº¥t 1024 bit, vÃ¬ khÃ³a nÃ o nhá» hÆ¡n kÃ­ch thÆ°á»›c áº¥y khÃ´ng pháº£i lÃ  báº£o máº­t. Ráº¥t cÃ³ thá»ƒ lÃ  báº¡n sáº½ khÃ´ng cáº§n sá»­ dá»¥ng Ä‘á»™ dÃ i hÆ¡n 2048 bit, vÃ¬ nÃ³ chá»‰ giáº£m tá»‘c Ä‘á»™ tiáº¿n trÃ¬nh xÃ¡c thá»±c, vÃ  hiá»‡n thá»i khÃ´ng cáº§n thiáº¿t.
 
-Template: openswan/x509_self_signed
+Template: strongswan/x509_self_signed
 Type: boolean
 Default: true
 Description: Do you want to create a self-signed X509 certificate ?
@@ -340,7 +172,7 @@ Description: Do you want to create a self-signed X509 certificate ?
  the certificate request. If you want to create a self-signed certificate,
  you can use it immediately to connect to other IPSec hosts that support
  X509 certificate for authentication of IPSec connections. However, if you
- want to use the new PKI features of Openswan >= 1.91, you will need to
+ want to use the new PKI features of strongSwan >= 1.91, you will need to
  have all X509 certificates signed by a single certificate authority to
  create a trust path.
  .
@@ -348,50 +180,8 @@ Description: Do you want to create a self-signed X509 certificate ?
  installer will only create the RSA private key and the certificate request
  and you will have to sign the certificate request with your certificate
  authority.
-Description-fr: Souhaitez-vous créer un certificat X509 auto-signé ?
- Cet outil d'installation ne peut créer automatiquement qu'un certificat
- X509 auto-signé puisqu'une autorité de certification est indispensable
- pour signer la demande de certificat. Si vous choisissez de créer un
- certificat auto-signé, vous pourrez vous en servir immédiatement pour vous
- connecter aux hôtes qui authentifient les connexions IPSec avec des
- certificats X509. Cependant, si vous souhaitez utiliser les nouvelles
- fonctionnalités PKI de Openswan >= 1.91, vous aurez besoin que tous les
- certificats X509 soient signés par la même autorité de certification afin
- de créer un chemin de confiance.
- .
- Si vous ne voulez pas créer de certificat auto-signé, cet outil
- d'installation ne fera que créer la clé privée RSA et la demande de
- certificat, que vous devrez ensuite signer avec votre autorité de
- certification.
-Description-ja: ¼«¸Ê½ğÌ¾ X509 ¾ÚÌÀ½ñ¤òÀ¸À®¤·¤Ş¤¹¤«?
- ¾ÚÌÀ½ñÍ×µá¤Ë½ğÌ¾¤¹¤ë¤¿¤á¤Ë¤ÏÇ§¾Ú¶É¤¬É¬Í×¤È¤Ê¤ë¤Î¤Ç¡¢¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤Ç¤Ï¼«¸Ê½ğÌ¾
- X509
- ¾ÚÌÀ½ñ¤ò¼«Æ°Åª¤ËÀ¸À®¤¹¤ë»ö¤À¤±¤¬²ÄÇ½¤Ç¤¹¡£¼«¸Ê½ğÌ¾¾ÚÌÀ½ñ¤òÀ¸À®¤·¤¿¤¤¾ì¹ç¡¢¤³¤ì¤ò»ÈÍÑ¤·¤Æ¤¹¤°¤Ë
- X509 ¾ÚÌÀ½ñ¤ò¥µ¥İ¡¼¥È¤·¤Æ¤¤¤ëÂ¾¤Î IPSec
- ¥Û¥¹¥È¤ËÀÜÂ³²ÄÇ½¤Ç¤¹¡£¤·¤«¤·¡¢Openswan ¥Ğ¡¼¥¸¥ç¥ó 1.91 °Ê¾å¤Ç¤Î¿·¤·¤¤ PKI
- µ¡Ç½¤ò»È¤¤¤¿¤¤¾ì¹ç¤Ï¡¢trust path
- ¤òÀ¸À®¤¹¤ë¤¿¤á¤ËÃ±°ì¤ÎÇ§¾Ú¶É¤Ë¤è¤Ã¤Æ¤¹¤Ù¤Æ¤Î X509
- ¾ÚÌÀ½ñ¤Ë½ğÌ¾¤·¤Æ¤â¤é¤¦É¬Í×¤¬¤¢¤ê¤Ş¤¹¡£
- .
- ¼«¸Ê½ğÌ¾¾ÚÌÀ½ñ¤òÀ¸À®¤·¤¿¤¯¤Ê¤¤¾ì¹ç¡¢¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤Ï RSA
- ÈëÌ©¸°¤È¾ÚÌÀ½ñÍ×µá¤Î¤ß¤òÀ¸À®¤·¤Ş¤¹¡£¤½¤·¤Æ¡¢Ç§¾Ú¶É¤Ë¾ÚÌÀ½ñÍ×µá¤Ø½ğÌ¾¤ò¤·¤Æ¤â¤é¤¦É¬Í×¤¬¤¢¤ê¤Ş¤¹¡£
-Description-pt_BR: Deseja criar um certificado X509 auto-assinado ?
- Este instalador pode criar automaticamente somente certificados X509
- auto-assinados, devido a uma autoridade certificadora ser necessária para
- assinar a requisição de certificado. Caso você queira criar um certificado
- auto-assinado, você poderá usá-lo imediatamente para conexão com outros
- hosts IPSec que suportem certificados X509 para autenticação de conexões
- IPSec. Porém, caso você queira usar os novos recursos PKI do Openswan
- versão 1.91 ou superior, você precisará possuir todos seus certificados
- X509 assinados por uma única autoridade certificadora para criar um
- caminho de confiança.
- .
- Caso você não queira criar um certificado auto-assinado, este instalador
- irá somente criar a chave privada RSA e a requisição de certificado e você
- terá então que assinar a requisição de certificado junto a sua autoridade
- certificadora.
 
-Template: openswan/x509_country_code
+Template: strongswan/x509_country_code
 Type: string
 Default: AT
 Description: Please enter the country code for the X509 certificate request.
@@ -403,35 +193,50 @@ Description: Please enter the country code for the X509 certificate request.
  any other field of the X.509 certificate, but not for this one.
  .
  Example: AT
-Description-fr: Code du pays :
- Veuillez indiquer le code à deux lettres de votre pays. Ce code sera
- inclus dans la demande de certificat.
+Description-cs.UTF-8: Zadejte prosÃ­m kÃ³d zemÄ› pro X509 certifikaÄnÃ­ poÅ¾adavek.
+ Zadejte prosÃ­m dvoumÃ­stnÃ½ kÃ³d vaÅ¡Ã­ zemÄ›. Tento kÃ³d bude umÃ­stÄ›n do certifikaÄnÃ­ho poÅ¾adavku.
  .
- Il est impératif de choisir ici un code de pays valide sinon OpenSSL
- refusera de générer les certificats. Tous les autres champs d'un
- certificat X.509 peuvent être vides, sauf celui-ci.
+ Je opravdu nutnÃ©, abyste vloÅ¾ili sprÃ¡vnÃ½ kÃ³d zemÄ›, protoÅ¾e openssl jinak odmÃ­tne vygenerovÃ¡nÃ­ certifikÃ¡tu. PrÃ¡zdnÃ© pole je povolenÃ© pro vÅ¡echny ostatnÃ­ pole certifikÃ¡tu X509 kromÄ› tohoto.
  .
- Exemple : FR
-Description-ja: X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ë¹ñ¥³¡¼¥É¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- ¤¢¤Ê¤¿¤Î¹ñ¤Î¹ñ¥³¡¼¥É¤ò2Ê¸»ú¤ÇÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤Î¥³¡¼¥É¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£
+ PÅ™Ã­klad: CZ
+Description-fr.UTF-8: Code du paysÂ :
+ Veuillez indiquer le code Ã  deux lettres de votre pays. Ce code sera inclus dans la demande de certificat.
  .
- openssl
- ¤¬¹ñ¥³¡¼¥É¤Ê¤·¤Ç¤Ï¾ÚÌÀ½ñ¤ÎÀ¸À®¤òµñÈİ¤¹¤ë¤Î¤Ç¡¢Àµ¤·¤¤¹ñ¥³¡¼¥É¤ò¤³¤³¤ÇÆşÎÏ¤¹¤ëÉ¬Í×¤¬¤¢¤ê¤Ş¤¹¡£X.509
- ¾ÚÌÀ½ñ¤Ç¤Ï¡¢Â¾¤Î¥Õ¥£¡¼¥ë¥É¤Ë¤Ä¤¤¤Æ¤Ï¶õ¤Ç¤â¹½¤¤¤Ş¤»¤ó¤¬¡¢¤³¤ì¤Ë¤Ä¤¤¤Æ¤Ïµö²Ä¤µ¤ì¤Æ¤¤¤Ş¤»¤ó¡£
+ Il est impÃ©ratif de choisir ici un code de pays valide sinon OpenSSL refusera de gÃ©nÃ©rer les certificats. Tous les autres champs d'un certificat X.509 peuvent Ãªtre vides, sauf celui-ci.
  .
- Îã: JP
-Description-pt_BR: Por favor, informe o código de país para a requisição de certificado X509.
- Por favor, informe o códifo de país de duas letras para seu país. Esse
- código será inserido na requisição de certificado.
+ ExempleÂ : FR
+Description-ja.UTF-8: X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹å›½ã‚³ãƒ¼ãƒ‰ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ ã‚ãªãŸã®å›½ã®å›½ã‚³ãƒ¼ãƒ‰ã‚’2æ–‡å­—ã§å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã®ã‚³ãƒ¼ãƒ‰ã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚
  .
- Você realmente precisa informar um código de país válido aqui devido ao
- openssl se recusar a gerar certificados sem um código de país válido. Um
- campo em branco é permitido para qualquer outro campo do certificado
- X.509, mas não para esse campo.
+ openssl ãŒå›½ã‚³ãƒ¼ãƒ‰ãªã—ã§ã¯è¨¼æ˜æ›¸ã®ç”Ÿæˆã‚’æ‹’å¦ã™ã‚‹ã®ã§ã€æ­£ã—ã„å›½ã‚³ãƒ¼ãƒ‰ã‚’ã“ã“ã§å…¥åŠ›ã™ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™ã€‚X.509 è¨¼æ˜æ›¸ã§ã¯ã€ä»–ã®ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã«ã¤ã„ã¦ã¯ç©ºã§ã‚‚æ§‹ã„ã¾ã›ã‚“ãŒã€ã“ã‚Œã«ã¤ã„ã¦ã¯è¨±å¯ã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚
+ .
+ ä¾‹: JP
+Description-nl.UTF-8: Geef de landcode van de X509-certificaataanvraag.
+ Geef de 2-letterige landcode voor uw land. Deze code zal in de certificaataanvraag worden geplaatst.
+ .
+ U moet hier wel een geldige landcode opgeven omdat openssl anders zal weigeren om een certificaat aan te maken. Er is voor elke veld van het X509-certificaat een leeg veld toegestaan, maar niet voor dit veld.
+ .
+ Voorbeeld: BE
+Description-pt_BR.UTF-8: Por favor, informe o cÃ³digo de paÃ­s para a requisiÃ§Ã£o de certificado X509.
+ Por favor, informe o cÃ³difo de paÃ­s de duas letras para seu paÃ­s. Esse cÃ³digo serÃ¡ inserido na requisiÃ§Ã£o de certificado.
+ .
+ VocÃª realmente precisa informar um cÃ³digo de paÃ­s vÃ¡lido aqui devido ao openssl se recusar a gerar certificados sem um cÃ³digo de paÃ­s vÃ¡lido. Um campo em branco Ã© permitido para qualquer outro campo do certificado X.509, mas nÃ£o para esse campo.
  .
  Exemplo: BR
+Description-sv.UTF-8: Ange en landskod fÃ¶r X509-certifikatfÃ¶rfrÃ¥gan.
+ Ange en landskod med 2 bokstÃ¤ver fÃ¶r ditt land. Denna kod kommer att placeras i certifikatfÃ¶rfrÃ¥gan.
+ .
+ Du behÃ¶ver verkligen ange en giltig landskod hÃ¤r fÃ¶r att openssl kommer att vÃ¤gra att generera certifikat utan ett. Ett tomt fÃ¤lt Ã¤r tillÃ¥tet fÃ¶r alla andra fÃ¤lt i X509-certifikatet men inte fÃ¶r denna.
+ .
+ Exempel: SE
+Description-vi.UTF-8: HÃ£y nháº­p mÃ£ quá»‘c gia cho lá»i yÃªu cáº§u chá»©ng nháº­n X509.
+ HÃ£y nháº­p mÃ£ hai chá»¯ cho quá»‘c gia báº¡n. Sáº½ chÃ¨n mÃ£ nÃ y vÃ o lá»i yÃªu cáº§u chá»©ng nháº­n.
+ .
+ Báº¡n tháº­t cáº§n pháº£i nháº­p má»™t mÃ£ quá»‘c gia há»£p lá»‡ vÃ o Ä‘Ã¢y, vÃ¬ trÃ¬nh OpenSSL sáº½ tá»« chá»‘i táº¡o ra chá»©ng nháº­n nÃ o khi khÃ´ng cÃ³ mÃ£ áº¥y. CÃ³ thá»ƒ bá» rá»—ng báº¥t cá»© trÆ°á»ng nÃ o khÃ¡c cho chá»©ng nháº­n X509, nhÆ°ng mÃ  khÃ´ng pháº£i trÆ°á»ng nÃ y.
+ .
+ Láº¥y thÃ­ dá»¥: VN
 
-Template: openswan/x509_state_name
+Template: strongswan/x509_state_name
 Type: string
 Default:
 Description: Please enter the state or province name for the X509 certificate request.
@@ -439,22 +244,36 @@ Description: Please enter the state or province name for the X509 certificate re
  will be placed in the certificate request.
  .
  Example: Upper Austria
-Description-fr: État, province ou région :
- Veuillez indiquer le nom complet de l'état, de la province ou de la région
- où vous résidez. Ce nom sera inclus dans la demande de certificat.
+Description-cs.UTF-8: Zadejte prosÃ­m jmÃ©no stÃ¡tu nebo oblasti pro certifikaÄnÃ­ poÅ¾adavek.
+ Zadejte prosÃ­m celÃ© jmÃ©no stÃ¡tu nebo oblasti kde Å¾ijete. Toto jmÃ©no bude umÃ­stÄ›no do certifikaÄnÃ­ho poÅ¾adavku.
  .
- Exemples : Rhône-Alpes, Brabant, Bouches du Rhône, Québec, Canton de Vaud
-Description-ja: X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ëÅÔÆ»ÉÜ¸©Ì¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- ¤¢¤Ê¤¿¤¬ºß½»¤·¤Æ¤¤¤ëÅÔÆ»ÉÜ¸©¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£
+ PÅ™Ã­klad: Morava
+Description-fr.UTF-8: Ã‰tat, province ou rÃ©gionÂ :
+ Veuillez indiquer le nom complet de l'Ã©tat, de la province ou de la rÃ©gion oÃ¹ vous rÃ©sidez. Ce nom sera inclus dans la demande de certificat.
  .
- Îã: Tokyo
-Description-pt_BR: Por favor, informe o estado ou nome de província para a requisição de certificado X509.
- Por favor, informe o nome complete do estado ou província em que você
- mora. Esse nome será inserido na requisição de certificado.
+ ExemplesÂ : RhÃ´ne-Alpes, Brabant Wallon, Bouches du RhÃ´ne, QuÃ©bec, Canton de Vaud
+Description-ja.UTF-8: X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹éƒ½é“åºœçœŒåã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ ã‚ãªãŸãŒåœ¨ä½ã—ã¦ã„ã‚‹éƒ½é“åºœçœŒã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚
+ .
+ ä¾‹: Tokyo
+Description-nl.UTF-8: Geef de staat of provincie voor de X509-certificaataanvraag.
+ Geef de volledige naam van de staat of provincie waarin u woont. Deze naam zal in de certificaataanvraag worden geplaatst.
+ .
+ Voorbeeld: Limburg
+Description-pt_BR.UTF-8: Por favor, informe o estado ou nome de provÃ­ncia para a requisiÃ§Ã£o de certificado X509.
+ Por favor, informe o nome complete do estado ou provÃ­ncia em que vocÃª mora. Esse nome serÃ¡ inserido na requisiÃ§Ã£o de certificado.
  .
  Exemplo : Sao Paulo
+Description-sv.UTF-8: Ange namnet pÃ¥ regionen eller lÃ¤net fÃ¶r X509-certifikatfÃ¶rfrÃ¥gan.
+ Ange det fulla namnet pÃ¥ regionen eller lÃ¤net du bor i. Detta namn kommer att placeras i certifikatfÃ¶rfrÃ¥gan.
+ .
+ Exempel: Centrala Sverige
+Description-vi.UTF-8: HÃ£y nháº­p tÃªn báº£ng hay tá»‰nh cho lá»i yÃªu cáº§u chá»©ng nháº­n X509.
+ HÃ£y nháº­p tÃªn Ä‘áº§y Ä‘á»§ cá»§a bang hay tá»‰nh nÆ¡i báº¡n á»Ÿ. Sáº½ chÃ¨n tÃªn nÃ y vÃ o lá»i yÃªu cáº§u chá»©ng nháº­n.
+ .
+ Láº¥y thÃ­ dá»¥: BÃ¬nh Äá»‹nh
 
-Template: openswan/x509_locality_name
+Template: strongswan/x509_locality_name
 Type: string
 Default: 
 Description: Please enter the locality name for the X509 certificate request.
@@ -462,23 +281,36 @@ Description: Please enter the locality name for the X509 certificate request.
  placed in the certificate request.
  .
  Example: Vienna
-Description-fr: Localité :
- Veuillez indiquer la localité (p. ex. la ville) où vous résidez. Ce nom
- sera inclus dans la demande de certificat.
+Description-cs.UTF-8: Zadejte prosÃ­m jmÃ©no lokality pro certifikaÄnÃ­ poÅ¾adavek.
+ Zadejte prosÃ­m lokalitu (napÅ™. mÄ›sto) kde Å¾ijete. Toto jmÃ©no bude umÃ­stÄ›no do certifikaÄnÃ­ho poÅ¾adavku.
  .
- Exemple : Saint-Étienne
-Description-ja: X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ëÅÚÃÏ¤ÎÌ¾Á°¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- ¤¢¤Ê¤¿¤Îºß½»¤·¤Æ¤¤¤ëÃÏÊı¤ÎÌ¾Á° (Îã: »ÔÄ®Â¼Ì¾)
- ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£
+ PÅ™Ã­klad: Brno
+Description-fr.UTF-8: LocalitÃ©Â :
+ Veuillez indiquer la localitÃ© (p.Â ex. la ville) oÃ¹ vous rÃ©sidez. Ce nom sera inclus dans la demande de certificat.
  .
- Îã: Shinjuku-ku
-Description-pt_BR: Por favor, informe o nome da localidade para a requisição de certificado X509.
- Por favor, informe a localidade (ou seja, cidade) onde você mora. Esse
- nome será inserido na requisição de certificado.
+ ExempleÂ : Saint-Ã‰tienne
+Description-ja.UTF-8: X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹åœŸåœ°ã®åå‰ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ ã‚ãªãŸã®åœ¨ä½ã—ã¦ã„ã‚‹åœ°æ–¹ã®åå‰ (ä¾‹: å¸‚ç”ºæ‘å) ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚
+ .
+ ä¾‹: Shinjuku-ku
+Description-nl.UTF-8: Geef de plaatsnaam voor de X509-certificaataanvraag.
+ Geef de plaatsnaam (v.b. stad) waar u woont. Deze naam zal in de certificaataanvraag worden geplaatst.
+ .
+ Voorbeeld: Genk
+Description-pt_BR.UTF-8: Por favor, informe o nome da localidade para a requisiÃ§Ã£o de certificado X509.
+ Por favor, informe a localidade (ou seja, cidade) onde vocÃª mora. Esse nome serÃ¡ inserido na requisiÃ§Ã£o de certificado.
  .
  Exemplo : Sao Paulo
+Description-sv.UTF-8: Ange lokaliteten fÃ¶r X509-certifikatfÃ¶rfrÃ¥gan.
+ Ange lokaliteten (exempelvis stad) dÃ¤r du bor. Detta namn kommer att placeras i certifikatfÃ¶rfrÃ¥gan.
+ .
+ Exempel: Stockholm
+Description-vi.UTF-8: HÃ£y nháº­p tÃªn Ä‘á»‹a phÆ°Æ¡ng cho lá»i yÃªu cáº§u chá»©ng nháº­n X509.
+ HÃ£y nháº­p Ä‘á»‹a phÆ°Æ¡ng (v.d. thÃ nh phá»‘) nÆ¡i báº¡n á»Ÿ. Sáº½ chÃ¨n tÃªn nÃ y vÃ o lá»i yÃªu cáº§u chá»©ng nháº­n.
+ .
+ Láº¥y thÃ­ dá»¥: Quy NhÆ¡n
 
-Template: openswan/x509_organization_name
+Template: strongswan/x509_organization_name
 Type: string
 Default: 
 Description: Please enter the organization name for the X509 certificate request.
@@ -487,24 +319,36 @@ Description: Please enter the organization name for the X509 certificate request
  request.
  .
  Example: Debian
-Description-fr: Organisme :
- Veuillez indiquer l'organisme (p. ex. l'entreprise) pour qui sera créé le
- certificat X509. Ce nom sera inclus dans la demande de certificat.
+Description-cs.UTF-8: Zadejte prosÃ­m nÃ¡zev organizace pro certifikaÄnÃ­ poÅ¾adavek.
+ Zadejte prosÃ­m organizaci pro kterou je certifikÃ¡t vytvÃ¡Å™en. Toto jmÃ©no bude umÃ­stÄ›no do certifikaÄnÃ­ho poÅ¾adavku.
  .
- Exemple : Debian
-Description-ja: X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ëÁÈ¿¥Ì¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- X509 ¾ÚÌÀ½ñ¤ÎÀ¸À®ÂĞ¾İ¤È¤Ê¤ë¤Ù¤­ÁÈ¿¥ (Îã: ²ñ¼Ò)
- ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£
+ PÅ™Ã­klad: Debian
+Description-fr.UTF-8: OrganismeÂ :
+ Veuillez indiquer l'organisme (p.Â ex. l'entreprise) pour qui sera crÃ©Ã© le certificat X509. Ce nom sera inclus dans la demande de certificat.
  .
- Îã: Debian
-Description-pt_BR: Por favor, informe o nome da organização para a requisição de certificado X509.
- Por favor, informe a organização (ou seja, a empresa) para a qual este
- certificado X509 deverá ser criado. Esse nome será inserido na requisição
- de certificado.
+ ExempleÂ : Debian
+Description-ja.UTF-8: X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹çµ„ç¹”åã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ X509 è¨¼æ˜æ›¸ã®ç”Ÿæˆå¯¾è±¡ã¨ãªã‚‹ã¹ãçµ„ç¹” (ä¾‹: ä¼šç¤¾) ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚
+ .
+ ä¾‹: Debian
+Description-nl.UTF-8: Geef de naam van de organisatie voor de X509-certificaataanvraag.
+ Geef de organisatie (v.b. bedrijf) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certicicaataanvraag worden geplaatst.
+ .
+ Voorbeeld: Debian
+Description-pt_BR.UTF-8: Por favor, informe o nome da organizaÃ§Ã£o para a requisiÃ§Ã£o de certificado X509.
+ Por favor, informe a organizaÃ§Ã£o (ou seja, a empresa) para a qual este certificado X509 deverÃ¡ ser criado. Esse nome serÃ¡ inserido na requisiÃ§Ã£o de certificado.
  .
  Exemplo : Debian
+Description-sv.UTF-8: Ange organisationsnamnet fÃ¶r X509-certifikatfÃ¶rfrÃ¥gan.
+ Ange organisationen (exempelvis fÃ¶retaget) som X509-certifikatet ska skapas fÃ¶r. Detta namn kommer att placeras i certifikatfÃ¶rfrÃ¥gan.
+ .
+ Exempel: Debian
+Description-vi.UTF-8: HÃ£y nháº­p tÃªn tá»• chá»©c cho lá»i yÃªu cáº§u chá»©ng nháº­n X509.
+ HÃ£y nháº­p tá»• chá»©c (v.d. cÃ´ng ty) cho mÃ  chá»©ng nháº­n X509 nÃªn Ä‘Æ°á»£c táº¡o. Sáº½ chÃ¨n tÃªn nÃ y vÃ o lá»i yÃªu cáº§u chá»©ng nháº­n.
+ .
+ Láº¥y thÃ­ dá»¥: Debian
 
-Template: openswan/x509_organizational_unit
+Template: strongswan/x509_organizational_unit
 Type: string
 Default: 
 Description: Please enter the organizational unit for the X509 certificate request.
@@ -513,25 +357,36 @@ Description: Please enter the organizational unit for the X509 certificate reque
  certificate request.
  .
  Example: security group
-Description-fr: Unité d'organisation :
- Veuillez indiquer l'unité d'organisation (p. ex. département, division,
- etc.) pour qui sera créé le certificat X509. Ce nom sera inclus dans la
- demande de certificat.
+Description-cs.UTF-8: Zadejte prosÃ­m nÃ¡zev organizaÄnÃ­ jednotky pro certifikaÄnÃ­ poÅ¾adavek.
+ Zadejte prosÃ­m organizaÄnÃ­ jednotku pro kterou je certifikÃ¡t vytvÃ¡Å™en. Toto jmÃ©no bude umÃ­stÄ›no do certifikaÄnÃ­ho poÅ¾adavku.
  .
- Exemple : Département Réseaux et Informatique Scientifique
-Description-ja: X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ëÁÈ¿¥Ã±°Ì¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- X509 ¾ÚÌÀ½ñ¤ÎÀ¸À®ÂĞ¾İ¤È¤Ê¤ë¤Ù¤­ÁÈ¿¥Ã±°Ì (Îã: Éô½ğÌ¾)
- ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£
+ PÅ™Ã­klad: bezpeÄnostnÃ­ oddÄ›lenÃ­
+Description-fr.UTF-8: UnitÃ© d'organisationÂ :
+ Veuillez indiquer l'unitÃ© d'organisation (p. ex. dÃ©partement, division, etc.) pour qui sera crÃ©Ã© le certificat X509. Ce nom sera inclus dans la demande de certificat.
  .
- Îã: security group
-Description-pt_BR: Por favor, informe a unidade organizacional para a requisição de certificado X509.
- Por favor, informe a unidade organizacional (ou seja, seção ou
- departamento) para a qual este certificado deverá ser criado. Esse nome
- será inserido na requisição de certificado.
+ ExempleÂ : DÃ©partement RÃ©seaux et Informatique Scientifique
+Description-ja.UTF-8: X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹çµ„ç¹”å˜ä½ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ X509 è¨¼æ˜æ›¸ã®ç”Ÿæˆå¯¾è±¡ã¨ãªã‚‹ã¹ãçµ„ç¹”å˜ä½ (ä¾‹: éƒ¨ç½²å) ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚
  .
- Exemplo : Grupo de Segurança
+ ä¾‹: security group
+Description-nl.UTF-8: Geef de organisatie-eenheid voor de X509-certificaataanvraag.
+ Geef de organisatie-eenheid (v.b. dienst) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certificaataanvraag worden geplaatst.
+ .
+ Voorbeeld: dienst veiligheid
+Description-pt_BR.UTF-8: Por favor, informe a unidade organizacional para a requisiÃ§Ã£o de certificado X509.
+ Por favor, informe a unidade organizacional (ou seja, seÃ§Ã£o ou departamento) para a qual este certificado deverÃ¡ ser criado. Esse nome serÃ¡ inserido na requisiÃ§Ã£o de certificado.
+ .
+ Exemplo : Grupo de SeguranÃ§a
+Description-sv.UTF-8: Ange organisationsenheten fÃ¶r X509-certifikatfÃ¶rfrÃ¥gan.
+ Ange organisationsenheten (exempelvis avdelning) som X509-certifikatet ska skapas fÃ¶r. Detta namn kommer att placeras i certifikatfÃ¶rfrÃ¥gan.
+ .
+ Exempel: sÃ¤kerhetsgruppen
+Description-vi.UTF-8: HÃ£y nháº­p tÃªn Ä‘Æ¡n vá»‹ tá»• chá»©c cho lá»i yÃªu cáº§u chá»©ng nháº­n X509.
+ HÃ£y nháº­p Ä‘Æ¡n vá»‹ tá»• chá»©c (v.d. pháº§n) cho mÃ  chá»©ng nháº­n X509 nÃªn Ä‘Æ°á»£c táº¡o. Sáº½ chÃ¨n tÃªn nÃ y vÃ o lá»i yÃªu cáº§u chá»©ng nháº­n.
+ .
+ Láº¥y thÃ­ dá»¥: nhÃ³m Viá»‡t hÃ³a
 
-Template: openswan/x509_common_name
+Template: strongswan/x509_common_name
 Type: string
 Default: 
 Description: Please enter the common name for the X509 certificate request.
@@ -540,94 +395,69 @@ Description: Please enter the common name for the X509 certificate request.
  in the certificate request.
  .
  Example: gateway.debian.org
-Description-fr: Nom ordinaire (« common name ») :
- Veuillez indiquer le nom ordinaire (p. ex. le nom réseau de cette machine)
- pour qui sera créé le certificat X509. Ce nom sera inclus dans la demande
- de certificat.
+Description-cs.UTF-8: Zadejte prosÃ­m obvyklÃ© jmÃ©no pro certifikaÄnÃ­ poÅ¾adavek.
+ Zadejte prosÃ­m bÄ›Å¾nÃ© jmÃ©no (napÅ™. jmÃ©no poÄÃ­taÄe - hostname) pro kterou je certifikÃ¡t vytvÃ¡Å™en. Toto jmÃ©no bude umÃ­stÄ›no do certifikaÄnÃ­ho poÅ¾adavku.
  .
- Exemple : gateway.debian.org
-Description-ja: X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ë¥³¥â¥ó¥Í¡¼¥à¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- X509 ¾ÚÌÀ½ñ¤ÎÀ¸À®ÂĞ¾İ¤È¤Ê¤ë¤Ù¤­¥³¥â¥ó¥Í¡¼¥à (Îã: ¤³¤Î¥Ş¥·¥ó¤Î¥Û¥¹¥ÈÌ¾)
- ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£
+ PÅ™Ã­klad: gateway.debian.org
+Description-fr.UTF-8: Nom ordinaireÂ :
+ Veuillez indiquer le nom ordinaire (p.Â ex. le nom rÃ©seau de cette machine) pour qui sera crÃ©Ã© le certificat X509. Ce nom sera inclus dans la demande de certificat.
  .
- Îã: gateway.debian.org
-Description-pt_BR: Por favor, informe o nome comum para a requisição de certificado X509.
- Por favor, informe o nome comum (ou seja, o nome do host dessa máquina)
- para o qual o certificado X509 deverá ser criado. Esse nome será inserido
- na requisição de certificado.
+ ExempleÂ : gateway.debian.org
+Description-ja.UTF-8: X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹ã‚³ãƒ¢ãƒ³ãƒãƒ¼ãƒ ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ X509 è¨¼æ˜æ›¸ã®ç”Ÿæˆå¯¾è±¡ã¨ãªã‚‹ã¹ãã‚³ãƒ¢ãƒ³ãƒãƒ¼ãƒ  (ä¾‹: ã“ã®ãƒã‚·ãƒ³ã®ãƒ›ã‚¹ãƒˆå) ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚
+ .
+ ä¾‹: gateway.debian.org
+Description-nl.UTF-8: Geef de naam voor de X509-certificaataanvraag.
+ Geef de naam (v.b. computernaam van deze machine) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certificaataanvraag worden geplaatst.
+ .
+ Voorbeeld: gateway.debian.org
+Description-pt_BR.UTF-8: Por favor, informe o nome comum para a requisiÃ§Ã£o de certificado X509.
+ Por favor, informe o nome comum (ou seja, o nome do host dessa mÃ¡quina) para o qual o certificado X509 deverÃ¡ ser criado. Esse nome serÃ¡ inserido na requisiÃ§Ã£o de certificado.
  .
  Exemplo : gateway.debian.org
+Description-sv.UTF-8: Ange namnet fÃ¶r X509-certifikatfÃ¶rfrÃ¥gan.
+ Ange namnet (exempelvis vÃ¤rdnamnet fÃ¶r denna maskin) fÃ¶r vilken X509-certifikatet ska skapas fÃ¶r. Detta namn kommer att placeras i certifikatfÃ¶rfrÃ¥gan.
+ .
+ Exempel: gateway.debian.org
+Description-vi.UTF-8: HÃ£y nháº­p tÃªn chung cho lá»i yÃªu cáº§u chá»©ng nháº­n X509.
+ HÃ£y nháº­p tÃªn chung (v.d. tÃªn mÃ¡y) cho mÃ  chá»©ng nháº­n X509 nÃªn Ä‘Æ°á»£c táº¡o. Sáº½ chÃ¨n tÃªn nÃ y vÃ o lá»i yÃªu cáº§u chá»©ng nháº­n.
+ .
+ Láº¥y thÃ­ cá»¥: gateway.debian.org
 
-Template: openswan/x509_email_address
+Template: strongswan/x509_email_address
 Type: string
 Default: 
 Description: Please enter the email address for the X509 certificate request.
  Please enter the email address of the person or organization who is
  responsible for the X509 certificate, This address will be placed in the
  certificate request.
-Description-fr: Adresse électronique :
- Veuillez indiquer l'adresse électronique de la personne ou de l'organisme
- responsable du certificat X509. Cette adresse sera incluse dans la demande
- de certificat.
-Description-ja: X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ë¥á¡¼¥ë¥¢¥É¥ì¥¹¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£
- X509
- ¾ÚÌÀ½ñ¤ÎÀÕÇ¤¼Ô¤È¤Ê¤ë¿ÍÊª¡¦ÃÄÂÎ¤Î¥á¡¼¥ë¥¢¥É¥ì¥¹¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤Î¥¢¥É¥ì¥¹¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£
-Description-pt_BR: Por favor, informe o endereço de e-mail para a requisição de certificado X509.
- Por favor, informe o endereço de e-mail da pessoa ou organização
- responsável pelo certificado X509. Esse endereço será inserido na
- requisição de certificado.
+Description-cs.UTF-8: Zadejte prosÃ­m emailovou adresu pro certifikaÄnÃ­ poÅ¾adavek.
+ Zadejte prosÃ­m emailovou adresu osoby nebo organizace, kterÃ¡ je zodpovÄ›dnÃ¡ za certifikÃ¡t X509. Toto jmÃ©no bude umÃ­stÄ›no do certifikaÄnÃ­ho poÅ¾adavku.
+Description-fr.UTF-8: Adresse Ã©lectroniqueÂ :
+ Veuillez indiquer l'adresse Ã©lectronique de la personne ou de l'organisme responsable du certificat X509. Cette adresse sera incluse dans la demande de certificat.
+Description-ja.UTF-8: X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹ãƒ¡ãƒ¼ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚
+ X509 è¨¼æ˜æ›¸ã®è²¬ä»»è€…ã¨ãªã‚‹äººç‰©ãƒ»å›£ä½“ã®ãƒ¡ãƒ¼ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã®ã‚¢ãƒ‰ãƒ¬ã‚¹ã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚
+Description-nl.UTF-8: Geef het e-mailadres voor de X509-certificaataanvraag.
+ Geef het e-mailadres van de persoon of organisatie die verantwoordelijk is voor het X509-certificaat. Dit adres zal in de certificaataanvraag worden geplaatst.
+Description-pt_BR.UTF-8: Por favor, informe o endereÃ§o de e-mail para a requisiÃ§Ã£o de certificado X509.
+ Por favor, informe o endereÃ§o de e-mail da pessoa ou organizaÃ§Ã£o responsÃ¡vel pelo certificado X509. Esse endereÃ§o serÃ¡ inserido na requisiÃ§Ã£o de certificado.
+Description-sv.UTF-8: Ange e-postaddressen fÃ¶r X509-certifikatfÃ¶rfrÃ¥gan.
+ Ange e-postaddressen till den person eller organisation som ansvarar fÃ¶r X509-certifikatet. Denna address kommer att placeras i certifikatfÃ¶rfrÃ¥gan.
+Description-vi.UTF-8: HÃ£y nháº­p Ä‘á»‹a chá»‰ thÆ° Ä‘iá»‡n tá»­ chung cho lá»i yÃªu cáº§u chá»©ng nháº­n X509.
+ HÃ£y nháº­p Ä‘á»‹a chá»‰ thÆ° Ä‘iá»‡n tá»­ cá»§a ngÆ°á»i hay tá»• chá»©c chá»‹u trÃ¡ch nhiá»‡m vá» chá»©ng nháº­n X509 nÃ y. Sáº½ chÃ¨n Ä‘á»‹a chá»‰ nÃ y vÃ o lá»i yÃªu cáº§u chá»©ng nháº­n.
 
-Template: openswan/enable-oe
+Template: strongswan/enable-oe
 Type: boolean
 Default: false
-Description: Do you wish to enable opportunistic encryption in Openswan?
- Openswan comes with support for opportunistic encryption (OE), which stores
+Description: Do you wish to enable opportunistic encryption in strongSwan?
+ strongSwan comes with support for opportunistic encryption (OE), which stores
  IPSec authentication information (i.e. RSA public keys) in (preferably
  secure) DNS records. Until this is widely deployed, activating it will
  cause a significant slow-down for every new, outgoing connection. Since
- version 2.0, Openswan upstream comes with OE enabled by default and is thus
- likely to break you existing connection to the Internet (i.e. your default
- route) as soon as pluto (the Openswan keying daemon) is started.
+ version 2.0, strongSwan upstream comes with OE enabled by default and is thus
+ likely to break your existing connection to the Internet (i.e. your default
+ route) as soon as pluto (the strongSwan keying daemon) is started.
  .
  Please choose whether you want to enable support for OE. If unsure, do not
  enable it.
-Description-fr: Souhaitez-vous activer le chiffrement opportuniste dansOpenswan ?
- Openswan gère le chiffrement opportuniste (« opportunistic encryption » :
- OE) qui permet de conserver les informations d'authentification IPSec
- (c'est-à-dire les clés publiques RSA) dans des enregistrements DNS, de
- préférence sécurisés. Tant que cette fonctionnalité ne sera pas déployée
- largement, son activation provoquera un ralentissement significatif pour
- toute nouvelle connexion sortante. À partir de la version 2.0, cette
- fonctionnalité est activée par défaut dans Openswan, ce qui peut
- interrompre le fonctionnement de votre connexion à l'Internet
- (c'est-à-dire votre route par défaut) dès le démarrage de pluto, le démon
- de gestion de clés d'Openswan.
- .
- Veuillez choisir si vous souhaitez activer la gestion du chiffrement
- opportuniste. Ne l'activez pas si vous n'êtes pas certain d'en avoir
- besoin.
-Description-ja: Openswan ¤Ç opportunistic encryption ¤òÍ­¸ú¤Ë¤·¤Ş¤¹¤«?
- Openswan ¤Ï¡¢IPSec Ç§¾Ú¾ğÊó (Îã: RSA ¸ø³«¸°) ¤ò (´ê¤ï¤¯¤Ï¥»¥­¥å¥¢¤Ê) DNS
- ¥ì¥³¡¼¥ÉÆâ¤ËÊİÂ¸¤¹¤ë opportunistic encryption (OE)
- ¤ò¥µ¥İ¡¼¥È¤·¤Æ¤¤¤Ş¤¹¡£¤³¤ì¤Ï¹­¤¯ÍøÍÑ¤µ¤ì¤ë¤è¤¦¤Ë¤Ê¤ë¤Ş¤Ç¡¢¤³¤ì¤òÍ­¸ú¤Ë¤¹¤ë¤³¤È¤ÇÁ´¤Æ¤Î³°Éô¤Ø¤Î¿·µ¬ÀÜÂ³¤Ï³ÊÃÊ¤ËÃÙ¤¯¤Ê¤ê¤Ş¤¹¡£¥Ğ¡¼¥¸¥ç¥ó
- 2.0 ¤è¤ê¡¢Openswan ¤Î³«È¯¸µ¤Ï¥Ç¥Õ¥©¥ë¥È¤Ç OE ¤òÍ­¸ú¤Ë¤·¤Æ¤ª¤ê¡¢¤·¤¿¤¬¤Ã¤Æ
- plute (Openswan ¸°½ğÌ¾¥Ç¡¼¥â¥ó)
- ¤¬³«»Ï¤µ¤ì¤ë¤Ş¤Ç¡¢¤¹¤Ç¤Ë¤¢¤ë¥¤¥ó¥¿¡¼¥Í¥Ã¥È¤Ø¤ÎÀÜÂ³
- (¤Ä¤Ş¤ê¥Ç¥Õ¥©¥ë¥È¥ë¡¼¥È) ¤¬ÃæÃÇ¤µ¤ì¤ë¤«¤â¤·¤ì¤Ş¤»¤ó¡£
- .
- OE
- ¤Î¥µ¥İ¡¼¥È¤òÍ­¸ú¤Ë¤¹¤ë¤«¤É¤¦¤«¤òÁª¤ó¤Ç¤¯¤À¤µ¤¤¡£¤è¤¯¤ï¤«¤é¤Ê¤¤¾ì¹ç¤Ï¡¢Í­¸ú¤Ë¤Ï¤·¤Ê¤¤¤Ç¤¯¤À¤µ¤¤¡£
-Description-pt_BR: Você deseja habilitar a encriptação oportunística no Openswan ?
- O Openswan suporta encriptação oportunística (OE), a qual armazena
- informações de autenticação IPSec (por exemplo, chaves públicas RSA) em
- registros DNS (preferivelmente seguros). Até que esse suporte esteja
- largamento sendo utilizado, ativá-lo irá causar uma signficante lentidão
- para cada nova conexão de saída. Iniciando a partir da versão 2.0, o
- Openswan, da forma como é distribuído pelos desenvolvedores oficiais, é
- fornecido com o suporte a OE habilitado por padrão e, portanto,
- provavelmente irá quebrar suas conexões existentes com a Internet (por
- exemplo, sua rota padrão) tão logo o pluto (o daemon de troca de chaves do
- Openswan) seja iniciado.
- .
- Por favor, informe se você deseja habilitar o suporte a OE. Em caso de
- dúvidas, não habilite esse suporte.
+
