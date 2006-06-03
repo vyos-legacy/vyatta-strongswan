@@ -8,10 +8,11 @@ Build-Depends: debhelper (>= 4.1.16), libgmp3-dev, libssl-dev (>= 0.9.8-1), html
 Package: strongswan
 Architecture: any
 Pre-Depends: debconf | debconf-2.0
-Depends: ${shlibs:Depends}, bsdmainutils, makedev | devfsd, debianutils (>=1.7), ipsec-tools, openssl, host, iproute
+Depends: ${shlibs:Depends}, bsdmainutils, debianutils (>=1.7), ipsec-tools, openssl, host, iproute
 Suggests: strongswan-modules-source | linux-patch-strongswan, curl
 Provides: ike-server
-Conflicts: freeswan (<< 2.04-12)
+Conflicts: freeswan (<< 2.04-12), openswan
+Replaces: openswan
 Description: IPSEC utilities for strongSwan
  IPSEC is Internet Protocol SECurity. It uses strong cryptography to provide
  both authentication and encryption services. Authentication ensures that
