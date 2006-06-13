@@ -2,6 +2,15 @@ strongswan (2.7.0-1) unstable; urgency=low
 
   * Initial Debian packaging of strongswan. This is directly based on my
     Debian package of openswan 2.4.5-3.
+    Closes: #372267: ITP: strongswan -- second fork of freeswan.
+  * Do not compile and ship fswcert right now, because it is not included
+    in strongswan upstream. If it turns out to be necessary for supporting
+    easy-to-use OE in the future (i.e. for generating the DNS format for the
+    public keys from generated X.509 certificates), I will re-add it to the
+    Debian package.
+  * Also disabled my patches to use /etc/default instead of /etc/sysconfig for
+    now. Something like that will be necessary in the future, but those parts
+    of strongswan differ significanty from openswan.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Mon, 22 May 2006 07:37:00 +0100
 

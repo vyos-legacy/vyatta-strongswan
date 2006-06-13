@@ -55,9 +55,9 @@ build-stamp: patch
 	$(MAKE) -C doc/ index.html
 	
 	# also generate the fswcert tool
-	$(MAKE) -C programs/fswcert/
+	#$(MAKE) -C programs/fswcert/
 	# ugly hack....
-	$(MAKE) -C programs/fswcert/ programs WERROR='-lcrypto'
+	#$(MAKE) -C programs/fswcert/ programs WERROR='-lcrypto'
 
 	touch build-stamp
 
