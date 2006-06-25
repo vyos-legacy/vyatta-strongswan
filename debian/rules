@@ -51,9 +51,6 @@ build-stamp: patch
 	# remove the temporary file, it will be created during install
 	rm -f $(CURDIR)/debian/ipsec.secrets
 
-	# here we re-generate the upstream HTML documentation
-	$(MAKE) -C doc/ index.html
-	
 	# also generate the fswcert tool
 	#$(MAKE) -C programs/fswcert/
 	# ugly hack....
@@ -174,10 +171,10 @@ install-strongswan-modules-source: patch
 	mkdir -p "$(BUILDDIR)/modules/strongswan/lib"
 	mkdir -p "$(BUILDDIR)/modules/strongswan/debian"
 	mkdir -p "$(BUILDDIR)/modules/strongswan/packaging"
-	cp -r Makefile Makefile.top Makefile.inc Makefile.ver linux/ \
+	cp -r Makefile Makefile.inc Makefile.ver linux/ \
 		"$(BUILDDIR)/modules/strongswan"
 	cp -r lib/libcrypto "$(BUILDDIR)/modules/strongswan/lib/"
-	cp -r packaging/makefiles packaging/linus packaging/defaults/ \
+	cp -r packaging/makefiles packaging/linus \
 		"$(BUILDDIR)/modules/strongswan/packaging/"
 	find "$(BUILDDIR)/modules/strongswan/lib/" -name "*.o" | xargs --no-run-if-empty rm
 	install --mode=644 debian/strongswan-modules-source.kernel-config "$(BUILDDIR)/modules/strongswan/config-all.h"
@@ -185,11 +182,6 @@ install-strongswan-modules-source: patch
 	install --mode=644 debian/strongswan-modules-source.control.in "$(BUILDDIR)/modules/strongswan/debian/control.in"
 	install --mode=644 debian/changelog "$(BUILDDIR)/modules/strongswan/debian/"
 
-	# This creates the NAT-T patches that can be used on the kernel tree 
-	# even with strongswan-modules-source.
-	make nattpatch2.4 > $(BUILDDIR)/modules/strongswan/debian/nat-t-2.4.diff
-	make nattpatch2.6 > $(BUILDDIR)/modules/strongswan/debian/nat-t-2.6.diff
-        
 	tar -C $(BUILDDIR) -c modules/ | bzip2 -9 > \
         	"$(PKGDIR)/usr/src/strongswan-modules.tar.bz2"
 		
@@ -212,8 +204,8 @@ install-linux-patch-strongswan: patch
 		"$(PKGDIR)/usr/src/kernel-patches/all/unpatch/strongswan"
 	install --mode=0755 packaging/utils/patcher \
 		"$(PKGDIR)/usr/src/kernel-patches/all/strongswan"
-	cp -r Makefile Makefile.inc Makefile.ver Makefile.top lib/ linux/ \
-		packaging/ nat-t/ \
+	cp -r Makefile Makefile.inc Makefile.ver lib/ linux/ \
+		packaging/ \
 		"$(PKGDIR)/usr/src/kernel-patches/all/strongswan"
 	# also don't generate the out.kpatch file under /usr/src/....
 	sed 's/>>out.kpatch//' \
