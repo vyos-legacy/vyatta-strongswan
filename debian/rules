@@ -111,8 +111,8 @@ install-strongswan: build
 	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan/etc/ipsec.secrets
 
 	# use bash for init.d and _plutorun
-	patch $(CURDIR)/debian/strongswan/etc/init.d/ipsec < debian/use-bash.diff
-	patch $(CURDIR)/debian/strongswan/usr/lib/ipsec/_plutorun < debian/use-bash.diff
+	patch $(CURDIR)/debian/strongswan/etc/init.d/ipsec < debian/use-bash1.diff
+	patch $(CURDIR)/debian/strongswan/usr/lib/ipsec/_plutorun < debian/use-bash2.diff
 
 	# install the fswcert tool
 	install $(CURDIR)/programs/fswcert/fswcert $(CURDIR)/debian/strongswan/usr/bin
