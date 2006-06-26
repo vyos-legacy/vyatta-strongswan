@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: demux.c,v 1.13 2005/02/18 21:08:59 as Exp $
+ * RCSID $Id: demux.c,v 1.14 2006/06/22 11:58:25 as Exp $
  */
 
 /* Ordering Constraints on Payloads
@@ -2397,7 +2397,8 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 	     * whatever retrying was in place, remains in place.
 	     */
 	    whack_log(RC_NOTIFICATION + md->note
-		, "%s: %s", enum_name(&state_names, st->st_state)
+		, "%s: %s"
+		, enum_name(&state_names, (st == NULL)? STATE_MAIN_R0:st->st_state)
 		, enum_name(&notification_names, md->note));
 
 	    SEND_NOTIFICATION(md->note);

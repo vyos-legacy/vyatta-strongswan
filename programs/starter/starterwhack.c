@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterwhack.c,v 1.17 2006/04/17 10:32:36 as Exp $
+ * RCSID $Id: starterwhack.c,v 1.18 2006/06/20 21:52:53 as Exp $
  */
 
 #include <sys/types.h>
@@ -161,13 +161,13 @@ set_whack_end(whack_end_t *w, starter_end_t *end)
     w->host_addr           = end->addr;
     w->host_nexthop        = end->nexthop;
     w->host_srcip          = end->srcip;
-
-    if (end->has_client)
-	w->client = end->subnet;
-    else
-	w->client.addr.u.v4.sin_family = AF_INET;
-
     w->has_client          = end->has_client;
+
+    if (w->has_client)
+	w->client          = end->subnet;
+    else
+	w->client.addr.u.v4.sin_family = addrtypeof(&w->host_addr);
+
     w->has_client_wildcard = end->has_client_wildcard;
     w->has_port_wildcard   = end->has_port_wildcard;
     w->has_srcip           = end->has_srcip;

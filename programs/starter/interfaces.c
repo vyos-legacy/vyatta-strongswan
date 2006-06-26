@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: interfaces.c,v 1.15 2006/02/05 10:51:55 as Exp $
+ * RCSID $Id: interfaces.c,v 1.16 2006/05/25 12:10:15 as Exp $
  */
 
 #include <sys/socket.h>
@@ -192,9 +192,6 @@ _iface_up (int sock,  struct st_ipsec_if *iface, char *phys
     struct ipsectunnelconf *shc=(struct ipsectunnelconf *)&req.ifr_data;
     short phys_flags;
     int ret = 0;
-    /* sscholz@astaro.com: for network mask 32 bit
-    struct sockaddr_in *inp;
-    */
 
     strncpy(req.ifr_name, phys, IFNAMSIZ);
     if (ioctl(sock, SIOCGIFFLAGS, &req) !=0 )
@@ -239,13 +236,6 @@ _iface_up (int sock,  struct st_ipsec_if *iface, char *phys
     if (ioctl(sock, SIOCGIFNETMASK, &req) == 0)
     {
 	strncpy(req.ifr_name, iface->name, IFNAMSIZ);
-	/* sscholz@astaro.com: changed netmask to 32 bit
-	 * in order to prevent network routes from being created
-
-	inp = (struct sockaddr_in *)&req.ifr_addr;
-	inp->sin_addr.s_addr = 0xFFFFFFFFL;
-
-         */
 	ioctl(sock, SIOCSIFNETMASK, &req);
     }
 
@@ -253,8 +243,7 @@ _iface_up (int sock,  struct st_ipsec_if *iface, char *phys
     strncpy(req.ifr_name, iface->name, IFNAMSIZ);
     if (ioctl(sock, SIOCGIFFLAGS, &req)==0)
     {
-/* removed by sscholz@astaro.com (caused trouble with DSL/ppp0) */
-/*	if (phys_flags & IFF_POINTOPOINT)
+	if (phys_flags & IFF_POINTOPOINT)
 	{
 	    req.ifr_flags |= IFF_POINTOPOINT;
 	    req.ifr_flags &= ~IFF_BROADCAST;
@@ -266,9 +255,7 @@ _iface_up (int sock,  struct st_ipsec_if *iface, char *phys
 		ioctl(sock, SIOCSIFDSTADDR, &req);
 	    }
 	}
-	else
- */
-	if (phys_flags & IFF_BROADCAST)
+	else if (phys_flags & IFF_BROADCAST)
 	{
 	    req.ifr_flags &= ~IFF_POINTOPOINT;
 	    req.ifr_flags |= IFF_BROADCAST;
