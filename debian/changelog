@@ -1,4 +1,4 @@
-strongswan (2.7.2-1); urgency=low
+strongswan (2.7.2-1); unstable; urgency=low
 
   * New upstream release. This release fixes a potential DoS problem.
     Closes: #372267: ITP: strongswan -- second fork of freeswan.
