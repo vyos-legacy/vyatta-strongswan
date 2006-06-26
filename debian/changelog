@@ -1,10 +1,10 @@
-strongswan (2.7.2-1); unstable; urgency=low
+strongswan (2.7.2-1) unstable; urgency=low
 
   * New upstream release. This release fixes a potential DoS problem.
     Closes: #372267: ITP: strongswan -- second fork of freeswan.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Mon, 26 Jun 2006 12:34:43 +0100
-
+ 
 strongswan (2.7.0-1) unstable; urgency=low
 
   * Initial Debian packaging of strongswan. This is directly based on my
