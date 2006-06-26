@@ -1,3 +1,35 @@
+strongswan-2.7.2
+----------------
+
+- The mixed PSK/RSA roadwarrior detection capability introduced by the
+  strongswan-2.7.0 release necessitated the pre-parsing of the IKE proposal
+  payloads by the responder right before any defined IKE Main Mode state had
+  been established. Although any form of bad proposal syntax was being correctly
+  detected by the payload parser, the subsequent error handler didn't check
+  the state pointer before logging current state information, causing an
+  immediate crash of the pluto keying daemon due to a NULL pointer.
+
+  We strongly recommend to update to the 2.7.2 released which fixes this
+  vulnerability to malformed proposal payload that could otherwise be
+  exploited by Denial-of-Service attacks.
+
+
+strongswan-2.7.1
+----------------
+
+- Calling ipsec up|down|route|unroute with a non-empty connection name
+  caused pluto to crash. As a fix argument checks have been added both
+  to the ipsec command on the sender end and pluto/rcv_whack.c on the
+  receiver end.
+
+- reactivated the PPP pointopoint code in starter/interfaces.c which
+  creates an ipsecN interface when used with Linux 2.4 KLIPS.
+
+- replaced free() by curl_free() in pluto/fetch.c thus fixing pluto
+  crashes occuring on some 64 bit hardware platforms when curl couldn't
+  successfully resolve a DNS request prior to fetching a CRL.
+
+
 strongswan-2.7.0
 ----------------
 

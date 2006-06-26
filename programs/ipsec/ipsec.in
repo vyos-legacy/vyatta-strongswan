@@ -12,7 +12,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: ipsec.in,v 1.13 2006/03/09 20:09:33 as Exp $
+# RCSID $Id: ipsec.in,v 1.14 2006/05/25 11:52:03 as Exp $
 
 IPSEC_NAME=strongSwan
 
@@ -122,6 +122,11 @@ case "$1" in
 	;;
 down)
 	shift
+	if [ "$#" -ne 1 ]
+	then
+	    echo "Usage: ipsec down <connection name>"
+	    exit 1
+	fi
 	$IPSEC_EXECDIR/whack --name "$1" --terminate
 	exit 0
 	;;
@@ -161,6 +166,11 @@ restart)
 route|unroute)
 	op="$1"
 	shift
+	if [ "$#" -ne 1 ]
+	then
+	    echo "Usage: ipsec $op <connection name>"
+	    exit 1
+	fi
 	$IPSEC_EXECDIR/whack --name "$1" "--$op"
 	exit 0
 	;;
@@ -197,6 +207,11 @@ stop)
 	;;
 up)
 	shift
+	if [ "$#" -ne 1 ]
+	then
+	    echo "Usage: ipsec up <connection name>"
+	    exit 1
+	fi
 	$IPSEC_EXECDIR/whack --name "$1" --initiate
 	exit 0
 	;;
