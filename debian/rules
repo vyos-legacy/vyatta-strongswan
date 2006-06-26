@@ -64,7 +64,7 @@ clean: unpatch
 	rm -f build-stamp configure-stamp
 
 	-$(MAKE) clean
-	-$(MAKE) -C programs/fswcert/ clean
+	#-$(MAKE) -C programs/fswcert/ clean
 	# after a make clean, no binaries _should_ be left, but ....
 	-find $(CURDIR) -name "*.o" | xargs --no-run-if-empty rm
 	-find $(CURDIR)/lib/libcrypto -name "*.a" | xargs --no-run-if-empty rm
@@ -115,8 +115,8 @@ install-strongswan: build
 	patch $(CURDIR)/debian/strongswan/usr/lib/ipsec/_plutorun < debian/use-bash2.diff
 
 	# install the fswcert tool
-	install $(CURDIR)/programs/fswcert/fswcert $(CURDIR)/debian/strongswan/usr/bin
-	install $(CURDIR)/programs/fswcert/fswcert.8 $(CURDIR)/debian/strongswan/usr/share/man/man8
+	#install $(CURDIR)/programs/fswcert/fswcert $(CURDIR)/debian/strongswan/usr/bin
+	#install $(CURDIR)/programs/fswcert/fswcert.8 $(CURDIR)/debian/strongswan/usr/share/man/man8
 
 	rm -f $(CURDIR)/debian/strongswan/etc/init.d/ipsec?*
 	rm -f $(CURDIR)/debian/strongswan/usr/lib/ipsec/_plutorun?*
