@@ -9,74 +9,33 @@ Package: strongswan
 Architecture: any
 Pre-Depends: debconf | debconf-2.0
 Depends: ${shlibs:Depends}, bsdmainutils, debianutils (>=1.7), ipsec-tools, openssl, host, iproute
-Suggests: strongswan-modules-source | linux-patch-strongswan, curl
+Suggests: curl
 Provides: ike-server
 Conflicts: freeswan (<< 2.04-12), openswan
 Replaces: openswan
-Description: IPSEC utilities for strongSwan
- IPSEC is Internet Protocol SECurity. It uses strong cryptography to provide
+Description: IPSec utilities for strongSwan
+ IPSec is Internet Protocol SECurity. It uses strong cryptography to provide
  both authentication and encryption services. Authentication ensures that
  packets are from the right sender and have not been altered in transit.
  Encryption prevents unauthorised reading of packet contents.
  .
  This version of strongSwan supports Opportunistic Encryption (OE) out of the
- box. OE enables you to set up IPsec tunnels to a site without
+ box. OE enables you to set up IPSec tunnels to a site without
  co-ordinating with the site administrator, and without hand
  configuring each tunnel. If enough sites support OE, a "FAX effect"
  occurs, and many of us can communicate without eavesdroppers. 
  .
  In addition to OE, you may manually configure secure tunnels through
  untrusted networks. Everything passing through the untrusted net is
- encrypted by the IPSEC gateway machine and decrypted by the gateway
+ encrypted by the IPSec gateway machine and decrypted by the gateway
  at the other end. The result is Virtual Private Network or VPN. This
  is a network which is effectively private even though it includes
  machines at several different sites connected by the insecure Internet.
  .
  Please note that you will need a recent kernel (>=2.4.24 or 2.6.x)
- for using this package. The standard Debian kernel includes both IPSEC
+ for using this package. The standard Debian kernel includes both IPSec
  and crypto support, patching the kernel is no longer necessary!
  .
  If you want to use the KLIPS IPSec code for kernel modules instead of the
- native ones, you will need to install either strongswan-modules-source or
- linux-patch-strongswan and build the respective modules for your kernel.
- 
-Package: strongswan-modules-source
-Architecture: all
-Depends: coreutils | fileutils, debhelper, bzip2
-Recommends: kernel-package (>= 7.04), kernel-source
-Suggests: strongswan
-Description: IPSEC kernel modules source for strongSwan
- This package contains the source for the strongSwan modules to get the necessary
- kernel support to use strongSwan.
- .
- It includes the NAT Traversal patches, which will need to be applied to the
- kernel tree if NAT Traversal is needed.
- .
- This package will not work with 2.6 kernels! It is recommended to use the 
- native IPSec stack included with 2.6 kernels with strongSwan. If you want to 
- use KLIPS (the FreeSWan/Openswan/strongSwan IPSec kernel support) with a 2.6
- kernel, then please use the openswan-modules-source package. It is 
- interoperable with the strongswan user space programs.
-
-Package: linux-patch-strongswan
-Architecture: all
-Depends: coreutils | fileutils
-Recommends: kernel-package (>= 7.04)
-Suggests: strongswan
-Provides: kernel-patch-strongswan
-Replaces: kernel-patch-strongswan
-Description: IPSEC Linux kernel support for strongSwan
- This package contains the patches for the Linux kernel to get the necessary
- kernel support to use strongSwan. If you want to build a kernel module for
- IPSec, it is much easier to use the strongswan-modules-source package instead.
- This kernel-patch package should probably only be used when building a
- non-modular kernel or when compiling IPSec non-modular.
- .
- It includes the NAT Traversal patches and applies them automatically to the
- kernel after inserting KLIPS.
- .
- This package will not work with 2.6 kernels! It is recommended to use the 
- native IPSec stack included with 2.6 kernels with strongSwan. If you want to 
- use KLIPS (the FreeSWan/Openswan/strongSwan IPSec kernel support) with a 2.6
- kernel, then please use the linux-patch-strongswan package. It is 
- interoperable with the strongswan user space programs.
+ native ones, you will need to install either openswan-modules-source or
+ linux-patch-openswan and build the respective modules for your kernel.

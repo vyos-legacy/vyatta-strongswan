@@ -1,7 +1,17 @@
+strongswan (2.7.2-2) unstable; urgency=low
+
+  * First upload to the main Debian archive. This does no longer build
+    the linux-patch-strongswan and strongswan-modules-source packages,
+    as KLIPS will be removed from the strongswan upstream source anyway
+    for the next major release. However, the openswan KLIPS could should
+    be interoperable with strongswan user space.
+    Closes: #372267: ITP: strongswan -- second fork of freeswan.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sat,  8 Jul 2006 17:24:45 +0100
+
 strongswan (2.7.2-1) unstable; urgency=low
 
   * New upstream release. This release fixes a potential DoS problem.
-    Closes: #372267: ITP: strongswan -- second fork of freeswan.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Mon, 26 Jun 2006 12:34:43 +0100
  
@@ -9,7 +19,6 @@ strongswan (2.7.0-1) unstable; urgency=low
 
   * Initial Debian packaging of strongswan. This is directly based on my
     Debian package of openswan 2.4.5-3.
-    Closes: #372267: ITP: strongswan -- second fork of freeswan.
   * Do not compile and ship fswcert right now, because it is not included
     in strongswan upstream. If it turns out to be necessary for supporting
     easy-to-use OE in the future (i.e. for generating the DNS format for the

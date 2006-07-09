@@ -69,8 +69,6 @@ clean: unpatch
 	-find $(CURDIR) -name "*.o" | xargs --no-run-if-empty rm
 	-find $(CURDIR)/lib/libcrypto -name "*.a" | xargs --no-run-if-empty rm
 
-	rm -rf debian/strongswan-modules-source-build/
-
 	# Really clean (#356716)
 	# This is a hack: should be better implemented
 	rm -f lib/libstrongswan/libstrongswan.a || true
@@ -160,109 +158,6 @@ install-strongswan: build
 	find $(CURDIR)/debian/strongswan -name ".cvsignore" | xargs --no-run-if-empty rm -f
 	find $(CURDIR)/debian/strongswan -name "/.svn/" | xargs --no-run-if-empty rm -rf
 
-install-strongswan-modules-source: DH_OPTIONS=-i
-install-strongswan-modules-source: PKGDIR=$(CURDIR)/debian/strongswan-modules-source
-install-strongswan-modules-source: BUILDDIR=$(CURDIR)/debian/strongswan-modules-source-build
-install-strongswan-modules-source: patch
-	dh_testdir
-	dh_testroot
-	dh_installdirs
-	mkdir -p "$(BUILDDIR)/modules/strongswan"
-	mkdir -p "$(BUILDDIR)/modules/strongswan/lib"
-	mkdir -p "$(BUILDDIR)/modules/strongswan/debian"
-	mkdir -p "$(BUILDDIR)/modules/strongswan/packaging"
-	cp -r Makefile Makefile.inc Makefile.ver linux/ \
-		"$(BUILDDIR)/modules/strongswan"
-	cp -r lib/libcrypto "$(BUILDDIR)/modules/strongswan/lib/"
-	cp -r packaging/makefiles packaging/linus \
-		"$(BUILDDIR)/modules/strongswan/packaging/"
-	find "$(BUILDDIR)/modules/strongswan/lib/" -name "*.o" | xargs --no-run-if-empty rm
-	install --mode=644 debian/strongswan-modules-source.kernel-config "$(BUILDDIR)/modules/strongswan/config-all.h"
-	install --mode=755 debian/strongswan-modules-source.rules "$(BUILDDIR)/modules/strongswan/debian/rules"
-	install --mode=644 debian/strongswan-modules-source.control.in "$(BUILDDIR)/modules/strongswan/debian/control.in"
-	install --mode=644 debian/changelog "$(BUILDDIR)/modules/strongswan/debian/"
-
-	tar -C $(BUILDDIR) -c modules/ | bzip2 -9 > \
-        	"$(PKGDIR)/usr/src/strongswan-modules.tar.bz2"
-		
-	dh_installdocs -pstrongswan-modules-source -n
-
-	# more lintian cleanups
-	find $(CURDIR)/debian/strongswan-modules-source -name ".cvsignore" | xargs --no-run-if-empty rm -f
-	find $(PKGDIR) -name "/.svn/" | xargs --no-run-if-empty rm -rf
-
-install-linux-patch-strongswan: DH_OPTIONS=-i
-install-linux-patch-strongswan: PKGDIR=$(CURDIR)/debian/linux-patch-strongswan
-install-linux-patch-strongswan: patch
-	dh_testdir
-	dh_testroot
-	dh_installdirs
-	# some of this has been taken from Tommi Virtanen's package
-	install --mode=0755 debian/linux-patch-strongswan.apply \
-		"$(PKGDIR)/usr/src/kernel-patches/all/apply/strongswan"
-	install --mode=0755 debian/linux-patch-strongswan.unpatch \
-		"$(PKGDIR)/usr/src/kernel-patches/all/unpatch/strongswan"
-	install --mode=0755 packaging/utils/patcher \
-		"$(PKGDIR)/usr/src/kernel-patches/all/strongswan"
-	cp -r Makefile Makefile.inc Makefile.ver lib/ linux/ \
-		packaging/ \
-		"$(PKGDIR)/usr/src/kernel-patches/all/strongswan"
-	# also don't generate the out.kpatch file under /usr/src/....
-	sed 's/>>out.kpatch//' \
-        	"$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile" \
-			> "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile.tmp"
-	mv "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile.tmp" \
-        	"$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile"
-	sed 's/>out.kpatch//' \
-        	"$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile" \
-			> "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile.tmp"
-	mv "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile.tmp" \
-        	"$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile"
-	sed 's/rm -f out.kpatch//' \
-        	"$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile" \
-			> "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile.tmp"
-	mv "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile.tmp" \
-        	"$(PKGDIR)/usr/src/kernel-patches/all/strongswan/Makefile"
-	chmod u=rwX,go=rX "$(PKGDIR)/usr/src/kernel-patches/all/strongswan"
-	# remove extra junk not needed on linux / that lintian would complain about
-	find "$(PKGDIR)/usr/src/kernel-patches/all/strongswan" \
-		-name '*.o' -print0 | xargs --no-run-if-empty -0 rm -f
-	find "$(PKGDIR)/usr/src/kernel-patches/all/strongswan" \
-		-name '*.a' -print0 | xargs --no-run-if-empty -0 rm -f
-	rm -rf "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/lib/libstrongswan/"
-	rm -rf "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/lib/libdes/"
-	rm -rf "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/lib/liblwres/"
-	rm -f "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/lib/COPYING.LIB"
-	rm -f "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/lib/README"
-	rm -rf "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/linus"
-	rm -rf "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/ipkg"
-	rm -rf "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/makefiles"
-	rm -rf "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/redhat"
-	rm -rf "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/suse"
-	rm -r "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/utils/disttools.pl"
-	rm -r "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/utils/kernel.patch.gen.sh"
-	rm -r "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/utils/sshenv"
-	rm -r "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/packaging/utils/setup"
-	find "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/linux/net/ipsec/des/asm/" \
-		-name '*.pl' -print0 | xargs --no-run-if-empty -0 \
-		perl -pi -e 's{^#!/usr/local/bin/perl}{#!/usr/bin/perl}g'
-	find "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/lib/libcrypto/" \
-		-name '*.pl' -print0 | xargs --no-run-if-empty -0 \
-		perl -pi -e 's{^#!/usr/local/bin/perl}{#!/usr/bin/perl}g'
-	find "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/linux/net/ipsec/des/asm/" \
-		-name '*.pl' -print0 | xargs --no-run-if-empty -0 chmod a+x
-	find "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/lib/libcrypto/" \
-		-name '*.pl' -print0 | xargs --no-run-if-empty -0 chmod a+x
-	find "$(PKGDIR)/usr/src/kernel-patches/all/strongswan/linux/net/ipsec/alg/scripts/" \
-		-name '*.sh' -print0 | xargs --no-run-if-empty -0 chmod a+x
-	chmod -R u=rwX,go=rX "$(PKGDIR)/usr/src/kernel-patches/all/strongswan"
-	
-	dh_installdocs -plinux-patch-strongswan -n
-
-	# more lintian cleanups
-	find $(PKGDIR) -name ".cvsignore" | xargs --no-run-if-empty rm -f
-	find $(PKGDIR) -name "/.svn/" | xargs --no-run-if-empty rm -rf
-
 binary-common:
 	#dh_testversion 2
 	dh_testdir
@@ -283,7 +178,7 @@ binary-common:
 	dh_builddeb
 
 # Build architecture-independent files here.
-binary-indep: install-strongswan-modules-source install-linux-patch-strongswan
+binary-indep: 
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
 # Build architecture-dependent files here.

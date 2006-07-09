@@ -1,5 +1,5 @@
 #! /bin/sh
-# postrm script for openswan
+# postrm script for strongswan
 #
 # see: dh_installdeb(1)
 

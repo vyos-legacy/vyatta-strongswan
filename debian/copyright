@@ -6,7 +6,7 @@ previous freeswan packages by Tommi Virtanen and Aaron Johnson.
 The upstream software was downloaded from http://www.freeswan.org/
 
 After the FreeS/WAN folks decided to cease development, we used the forked
-code base at http://www.openswan.org/.
+code base at http://www.strongswan.org/.
 
 This project has multiple authors, please see the file CREDITS for details. 
 However, all of the code is DFSG-free and, since 2002-09-16,

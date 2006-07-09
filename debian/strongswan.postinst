@@ -1,5 +1,5 @@
 #! /bin/bash
-# postinst script for openswan
+# postinst script for strongswan
 #
 # see: dh_installdeb(1)
 
@@ -103,26 +103,26 @@ make_x509_cert() {
 
 case "$1" in
     configure)
-	db_get openswan/create_rsa_key
+	db_get strongswan/create_rsa_key
 	if [ "$RET" = "true" ]; then
             repair_legacy_secrets
  	    # OK, ipsec.secrets should now be correct
-	    db_get openswan/rsa_key_type
+	    db_get strongswan/rsa_key_type
 	    if [ "$RET" = "plain" ]; then
 	        # a RSA keypair should be created - check if there is one already
 		if egrep -q ": RSA[:space:]*" /etc/ipsec.secrets; then
                     echo "Warning: there is already a RSA key in /etc/ipsec.secrets."
                     echo "Creating an additional one."
                 fi
-                # create a plain openswan keypair
-      	        db_get openswan/rsa_key_length
+                # create a plain strongswan keypair
+      	        db_get strongswan/rsa_key_length
                 umask 077
                 keylength=$RET
                 privkey=`mktemp /tmp/ipsec-postinst.XXXXXX`
                 /usr/lib/ipsec/rsasigkey $keylength > $privkey
 		insert_private_key "`cat $privkey`"
                 rm $privkey
-		echo "Successfully created a plain openswan RSA keypair."
+		echo "Successfully created a plain strongSwan RSA keypair."
 	    else
                 # extract the key from a (newly created) x509 certificate
 		host=`hostname`
@@ -133,29 +133,29 @@ case "$1" in
                     echo "Please remove them first an re-run dpkg-reconfigure to create a new keypair."
                 else
      			# create a new certificate
-       			db_get openswan/rsa_key_length
+       			db_get strongswan/rsa_key_length
        			keylength=$RET
-       			db_get openswan/x509_self_signed
+       			db_get strongswan/x509_self_signed
        			selfsigned=$RET
-       			db_get openswan/x509_country_code
+       			db_get strongswan/x509_country_code
        			countrycode=$RET
        			if [ -z "$countrycode" ]; then countrycode="."; fi
-       			db_get openswan/x509_state_name
+       			db_get strongswan/x509_state_name
        			statename=$RET
        			if [ -z "$statename" ]; then statename="."; fi
-       			db_get openswan/x509_locality_name
+       			db_get strongswan/x509_locality_name
        			localityname=$RET
        			if [ -z "$localityname" ]; then localityname="."; fi
-       			db_get openswan/x509_organization_name
+       			db_get strongswan/x509_organization_name
        			orgname=$RET
        			if [ -z "$orgname" ]; then orgname="."; fi
-       			db_get openswan/x509_organizational_unit
+       			db_get strongswan/x509_organizational_unit
        			orgunit=$RET
        			if [ -z "$orgunit" ]; then orgunit="."; fi
-       			db_get openswan/x509_common_name
+       			db_get strongswan/x509_common_name
        			commonname=$RET
        			if [ -z "$commonname" ]; then commonname="."; fi
-       			db_get openswan/x509_email_address
+       			db_get strongswan/x509_email_address
        			email=$RET
        			if [ -z "$email" ]; then email="."; fi
        			make_x509_cert $keylength 1500 "$newkeyfile" "$newcertfile" "$selfsigned" "$countrycode" "$statename" "$localityname" "$orgname" "$orgunit" "$commonname" "$email"
@@ -166,16 +166,16 @@ case "$1" in
        		fi
        	    fi
         else
-	    db_get openswan/existing_x509_certificate
+	    db_get strongswan/existing_x509_certificate
        	    if [ "$RET" = "true" ]; then
                 if [ -e $newcertfile -o -e $newkeyfile ]; then
                      echo "Error: $newcertfile or $newkeyfile already exists."
                      echo "Please remove them first an re-run dpkg-reconfigure to create a new keypair."
                 else
        			# existing certificate - use it
-       			db_get openswan/existing_x509_certificate_filename
+       			db_get strongswan/existing_x509_certificate_filename
        			certfile=$RET
-       			db_get openswan/existing_x509_key_filename
+       			db_get strongswan/existing_x509_key_filename
        			keyfile=$RET
        			if [ ! -r $certfile ] || [ ! -r $keyfile ]; then
        			    echo "Either the certificate or the key file could not be read !"
@@ -193,7 +193,7 @@ case "$1" in
 	fi
 
         # figure out the correct start time
-        db_get openswan/start_level
+        db_get strongswan/start_level
 	if [ "$RET" = "earliest" ]; then
 	    LEVELS="start 41 S . stop 34 0 6 ."
 	elif [ "$RET" = "after NFS" ]; then
@@ -203,7 +203,7 @@ case "$1" in
 	fi
 	update-rc.d ipsec $LEVELS > /dev/null
 
-        db_get openswan/enable-oe
+        db_get strongswan/enable-oe
         if [ "$RET" != "true" ]; then
             echo -n "Disabling opportunistic encryption (OE) in config file ... "
             if egrep -q "^include /etc/ipsec.d/examples/no_oe.conf$" /etc/ipsec.conf; then
@@ -227,11 +227,11 @@ EOF
         fi
 
 	if [ -z "$2" ]; then
-	    # no old configured version - start openswan now
+	    # no old configured version - start strongswan now
             invoke-rc.d ipsec start || true
         else
-  	    # does the user wish openswan to restart?
-	    db_get openswan/restart
+  	    # does the user wish strongswan to restart?
+	    db_get strongswan/restart
 	    if [ "$RET" = "true" ]; then
 	         invoke-rc.d ipsec restart || true # sure, we'll restart it for you
 	    fi

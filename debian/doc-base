@@ -1,10 +1,10 @@
-Document: openswan
-Title: Openswan documentation
-Author: The Openswan project
-Abstract: This is a comprehensive document which describes what IPSEC
-  is, how it works, and the Openswan IPSEC implementation.
+Document: strongswan
+Title: strongSwan documentation
+Author: The strongSwan project
+Abstract: This is a comprehensive document which describes what IPSec
+  is, how it works, and the strongSwan IPSec implementation.
 Section: Apps/System
 
 Format: HTML
-Index: /usr/share/doc/openswan/doc/index.html
-Files: /usr/share/doc/openswan/doc/*.html
+Index: /usr/share/doc/strongswan/doc/index.html
+Files: /usr/share/doc/strongswan/doc/*.html

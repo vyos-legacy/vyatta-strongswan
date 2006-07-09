@@ -1,5 +1,5 @@
 #! /bin/sh
-# prerm script for openswan
+# prerm script for strongswan
 #
 # see: dh_installdeb(1)
 
@@ -20,7 +20,7 @@ case "$1" in
         ;;
     remove|deconfigure)
         /etc/init.d/ipsec stop || true
-#       install-info --quiet --remove /usr/info/openswan.info.gz
+#       install-info --quiet --remove /usr/info/strongswan.info.gz
         ;;
     failed-upgrade)
         ;;
