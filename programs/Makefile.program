@@ -22,6 +22,10 @@ endif
 
 #CFLAGS+= ${WERROR}
 
+ifeq ($(USE_NAT_TRAVERSAL),true)
+  CFLAGS+= -DNAT_TRAVERSAL
+endif
+
 ifneq ($(LD_LIBRARY_PATH),)
 LDFLAGS=-L$(LD_LIBRARY_PATH)
 endif

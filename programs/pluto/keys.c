@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keys.c,v 1.24 2006/01/27 08:59:40 as Exp $
+ * RCSID $Id: keys.c,v 1.25 2006/07/06 19:23:28 as Exp $
  */
 
 #include <stddef.h>
@@ -54,11 +54,6 @@
 #include "whack.h"	/* for RC_LOG_SERIOUS */
 #include "timer.h"
 #include "fetch.h"
-
-#ifdef NAT_TRAVERSAL
-#define PB_STREAM_UNDEFINED
-#include "nat_traversal.h"
-#endif
 
 const char *shared_secrets_file = SHARED_SECRETS_FILE;
 
@@ -186,9 +181,8 @@ get_secret(const struct connection *c, enum PrivateKeyKind kind, bool asym)
 	his_id = &rw_id;
     }
 #ifdef NAT_TRAVERSAL
-    else if (nat_traversal_enabled
+    else if (kind == PPK_PSK
     && (c->policy & POLICY_PSK)
-    && kind == PPK_PSK
     && ((c->kind == CK_TEMPLATE && c->spd.that.id.kind == ID_NONE) ||
         (c->kind == CK_INSTANCE && id_is_ipaddr(&c->spd.that.id))))
     {

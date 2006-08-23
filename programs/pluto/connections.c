@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: connections.c,v 1.43 2006/04/29 18:16:02 as Exp $
+ * RCSID $Id: connections.c,v 1.44 2006/07/06 19:20:09 as Exp $
  */
 
 #include <string.h>
@@ -116,7 +116,8 @@ find_host_pair(const ip_address *myaddr, u_int16_t myport
 	hisaddr = aftoinfo(addrtypeof(myaddr))->any;
 	
 #ifdef NAT_TRAVERSAL
-    if (nat_traversal_enabled) {
+    if (nat_traversal_enabled)
+    {
 	/**
 	 * port is not relevant in host_pair. with nat_traversal we
 	 * always use pluto_port (500)
@@ -151,9 +152,11 @@ find_host_pair_connections(const ip_address *myaddr, u_int16_t myport
     struct host_pair *hp = find_host_pair(myaddr, myport, hisaddr, hisport);
 
 #ifdef NAT_TRAVERSAL
-    if (nat_traversal_enabled && hp && hisaddr) {
+    if (nat_traversal_enabled && hp && hisaddr)
+    {
 	struct connection *c;
-	for (c = hp->connections; c != NULL; c = c->hp_next) {
+	for (c = hp->connections; c != NULL; c = c->hp_next)
+	{
 	    if ((c->spd.this.host_port==myport) && (c->spd.that.host_port==hisport))
 		return c;
 	}
