@@ -76,6 +76,9 @@ clean: unpatch
 
 	# just in case something went wrong
 	rm -f $(CURDIR)/debian/ipsec.secrets
+	
+	# and make sure that template are up-to-date
+	debconf-updatepo
 
 	dh_clean
 

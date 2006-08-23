@@ -2,6 +2,8 @@ strongswan (2.7.3+dfsg-1) unstable; urgency=low
 
   * New upstream release. Another try on getting it into unstable.
     Closes: #372267: ITP: strongswan -- second fork of freeswan.
+  * Call debian-updatepo in the clean target, in line with the openswan
+    change for its version 2.4.6+dfsg-1.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Wed, 23 Aug 2006 21:23:36 +0100
 
