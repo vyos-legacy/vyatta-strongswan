@@ -1,8 +1,9 @@
-strongswan (2.7.3-1) UNRELEASED; urgency=low
+strongswan (2.7.3+dfsg-1) unstable; urgency=low
 
-  * (NOT RELEASED YET) New upstream release
+  * New upstream release. Another try on getting it into unstable.
+    Closes: #372267: ITP: strongswan -- second fork of freeswan.
 
- -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Wed, 23 Aug 2006 21:23:36 +0100
+ -- Rene Mayrhofer <rmayr@debian.org>  Wed, 23 Aug 2006 21:23:36 +0100
 
 strongswan (2.7.2+dfsg-1) unstable; urgency=low
 
