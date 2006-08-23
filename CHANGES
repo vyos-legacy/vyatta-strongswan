@@ -1,3 +1,15 @@
+strongswan-2.7.3
+----------------
+
+- "sha" and "sha1" are now treated as synonyms in the ike= and esp=
+  algorithm configuration statements.
+
+- Fixed possible segmentation faults in the eroute, klipsdebug, and 
+  other KLIPS-related auxiliary functions by making the USE_NAT_TRAVERSAL
+  compile-time condition defined in Makefile.inc known in
+  programs/Makefile.program. 
+
+
 strongswan-2.7.2
 ----------------
 
@@ -9,8 +21,8 @@ strongswan-2.7.2
   the state pointer before logging current state information, causing an
   immediate crash of the pluto keying daemon due to a NULL pointer.
 
-  We strongly recommend to update to the 2.7.2 released which fixes this
-  vulnerability to malformed proposal payload that could otherwise be
+  We strongly recommend to update to the 2.7.2 release which fixes this
+  vulnerability to malformed proposal payloads that could otherwise be
   exploited by Denial-of-Service attacks.
 
 

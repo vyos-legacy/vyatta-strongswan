@@ -1,3 +1,9 @@
+strongswan (2.7.3-1) UNRELEASED; urgency=low
+
+  * (NOT RELEASED YET) New upstream release
+
+ -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Wed, 23 Aug 2006 21:23:36 +0100
+
 strongswan (2.7.2+dfsg-1) unstable; urgency=low
 
   * First upload to the main Debian archive. This does no longer build

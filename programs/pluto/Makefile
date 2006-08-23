@@ -12,7 +12,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: Makefile,v 1.44 2006/01/25 17:22:19 as Exp $
+# RCSID $Id: Makefile,v 1.45 2006/07/06 12:33:08 as Exp $
 
 # relative path to top directory of FreeS/WAN source
 # Note: referenced in ${FREESWANSRCDIR}/Makefile.inc
@@ -108,11 +108,11 @@ ifeq ($(USE_KERNEL26),true)
 endif
 
 ifeq ($(USE_NAT_TRAVERSAL),true)
-NAT_DEFS=-DNAT_TRAVERSAL -DVIRTUAL_IP
+  NAT_DEFS=-DNAT_TRAVERSAL -DVIRTUAL_IP
 endif
 
 ifeq ($(USE_NAT_TRAVERSAL_TRANSPORT_MODE),true)
-NAT_DEFS+=-DI_KNOW_TRANSPORT_MODE_HAS_SECURITY_CONCERN_BUT_I_WANT_IT
+  NAT_DEFS+=-DI_KNOW_TRANSPORT_MODE_HAS_SECURITY_CONCERN_BUT_I_WANT_IT
 endif
 
 DEFINES = $(EXTRA_DEFINES) \

@@ -2,7 +2,7 @@
  * Algorithm info parsing and creation functions
  * Author: JuanJo Ciarlante <jjo-ipsec@mendoza.gov.ar>
  *
- * $Id: alg_info.c,v 1.5 2004/09/29 22:42:49 as Exp $
+ * $Id: alg_info.c,v 1.6 2006/08/03 10:18:21 as Exp $
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -192,6 +192,10 @@ aalg_getbyname_esp(const char *const str, int len)
     if (!str || !*str)
 	return -1;
 
+    /* interpret 'SHA' as 'SHA1' */
+    if (strncasecmp("SHA", str, len) == 0)
+	return enum_search(&auth_alg_names, "AUTH_ALGORITHM_HMAC_SHA1");
+
     ret = enum_search_prefix(&auth_alg_names,"AUTH_ALGORITHM_HMAC_", str ,len);
     if (ret >= 0)
 	return ret;
@@ -336,6 +340,10 @@ aalg_getbyname_ike(const char *const str, int len)
 
     if (!str || !*str)
 	return -1;
+
+    /* interpret 'SHA1' as 'SHA' */
+    if (strncasecmp("SHA1", str, len) == 0)
+	return enum_search(&oakley_hash_names, "OAKLEY_SHA");
 
     ret = enum_search_prefix(&oakley_hash_names,"OAKLEY_", str, len);
     if (ret >= 0)
