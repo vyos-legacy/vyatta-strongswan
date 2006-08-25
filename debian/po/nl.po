@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openswan 2.3.0-3\n"
 "Report-Msgid-Bugs-To: rmayr@debian.org\n"
-"POT-Creation-Date: 2006-08-24 16:13+0100\n"
+"POT-Creation-Date: 2006-08-25 17:56+0100\n"
 "PO-Revision-Date: 2005-02-07 20:53+0100\n"
 "Last-Translator: Luk Claes <luk.claes@ugent.be>\n"
 "Language-Team: Debian l10n Dutch <debian-l10n-dutch@lists.debian.org>\n"
@@ -33,16 +33,14 @@ msgstr "\"zo vroeg mogelijk\", \"na NFS\", \"na PCMCIA\""
 #. Description
 #: ../strongswan.templates.master:1002
 #, fuzzy
-msgid "At which level do you wish to start strongSwan ?"
-msgstr "Op welk niveau wilt u Openswan starten?"
+msgid "When to start strongSwan:"
+msgstr "Wilt u Openswan herstarten?"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
 #, fuzzy
 msgid ""
-"With the current Debian startup levels (nearly everything starting in level "
-"20), it is impossible for strongSwan to always start at the correct time. "
 "There are three possibilities when strongSwan can start: before or after the "
 "NFS services and after the PCMCIA services. The correct answer depends on "
 "your specific setup."
@@ -130,7 +128,8 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:3001
-msgid "Do you want to create a RSA public/private keypair for this host ?"
+#, fuzzy
+msgid "Do you want to create a RSA public/private keypair for this host?"
 msgstr "Wilt u een publiek/privaat RSA-sleutelpaar aanmaken voor deze host?"
 
 #. Type: boolean
@@ -172,7 +171,8 @@ msgstr "x509, gewoon"
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-msgid "Which type of RSA keypair do you want to create ?"
+#, fuzzy
+msgid "The type of RSA keypair to create:"
 msgstr "Welk type RSA-sleutelpaar wilt u aanmaken?"
 
 #. Type: select
@@ -226,9 +226,7 @@ msgstr ""
 #. Description
 #: ../strongswan.templates.master:5001
 #, fuzzy
-msgid ""
-"Do you have an existing X509 certificate file that you want to use for "
-"strongSwan ?"
+msgid "Do you have an existing X509 certificate file for strongSwan?"
 msgstr ""
 "Hebt u een bestaand X509-certificaatbestand dat u voor Openswan wilt "
 "gebruiken?"
@@ -236,12 +234,13 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:5001
+#, fuzzy
 msgid ""
 "This installer can automatically extract the needed information from an "
 "existing X509 certificate with a matching RSA private key. Both parts can be "
-"in one file, if it is in PEM format. Do you have such an existing "
+"in one file, if it is in PEM format. If you have such an existing "
 "certificate and key file and want to use it for authenticating IPSec "
-"connections ?"
+"connections, then please answer yes."
 msgstr ""
 "Deze installatie kan de benodigde informatie automatisch extraheren van een "
 "bestaand X509-certificaat met een bijhorende private RSA-sleutel. Beide "
@@ -252,29 +251,33 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:6001
-msgid "Please enter the location of your X509 certificate in PEM format."
+#, fuzzy
+msgid "File name of your X509 certificate in PEM format:"
 msgstr "Geef de locatie van uw X509-certificaat in PEM-formaat."
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:6001
+#, fuzzy
 msgid ""
-"Please enter the location of the file containing your X509 certificate in "
-"PEM format."
+"Please enter the full location of the file containing your X509  certificate "
+"in PEM format."
 msgstr ""
 "Geef de locatie van het bestand dat uw X509-certificaat in PEM-formaat bevat."
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:7001
-msgid "Please enter the location of your X509 private key in PEM format."
+#, fuzzy
+msgid "File name of your X509 private key in PEM format:"
 msgstr "Geef de locatie van uw private X509-sleutel in PEM-formaat."
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:7001
+#, fuzzy
 msgid ""
-"Please enter the location of the file containing the private RSA key "
+"Please enter the full location of the file containing the private RSA key "
 "matching your X509 certificate in PEM format. This can be the same file that "
 "contains the X509 certificate."
 msgstr ""
@@ -285,7 +288,8 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:8001
-msgid "Which length should the created RSA key have ?"
+#, fuzzy
+msgid "The length of the created RSA key (in bits):"
 msgstr "Welke lengte moet de aangemaakte RSA-sleutel hebben?"
 
 #. Type: string
@@ -305,7 +309,8 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:9001
-msgid "Do you want to create a self-signed X509 certificate ?"
+#, fuzzy
+msgid "Do you want to create a self-signed X509 certificate?"
 msgstr "Wilt u een door uzelf getekend X509-certificaat?"
 
 #. Type: boolean
@@ -346,7 +351,8 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:10001
-msgid "Please enter the country code for the X509 certificate request."
+#, fuzzy
+msgid "Country code for the X509 certificate request:"
 msgstr "Geef de landcode van de X509-certificaataanvraag."
 
 #. Type: string
@@ -380,8 +386,8 @@ msgstr "Voorbeeld: BE"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:11001
-msgid ""
-"Please enter the state or province name for the X509 certificate request."
+#, fuzzy
+msgid "State or province name for the X509 certificate request:"
 msgstr "Geef de staat of provincie voor de X509-certificaataanvraag."
 
 #. Type: string
@@ -403,7 +409,8 @@ msgstr "Voorbeeld: Limburg"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:12001
-msgid "Please enter the locality name for the X509 certificate request."
+#, fuzzy
+msgid "Locality name for the X509 certificate request:"
 msgstr "Geef de plaatsnaam voor de X509-certificaataanvraag."
 
 #. Type: string
@@ -425,7 +432,8 @@ msgstr "Voorbeeld: Genk"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:13001
-msgid "Please enter the organization name for the X509 certificate request."
+#, fuzzy
+msgid "Organization name for the X509 certificate request:"
 msgstr "Geef de naam van de organisatie voor de X509-certificaataanvraag."
 
 #. Type: string
@@ -447,7 +455,8 @@ msgstr "Voorbeeld: Debian"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:14001
-msgid "Please enter the organizational unit for the X509 certificate request."
+#, fuzzy
+msgid "Organizational unit for the X509 certificate request:"
 msgstr "Geef de organisatie-eenheid voor de X509-certificaataanvraag."
 
 #. Type: string
@@ -470,7 +479,8 @@ msgstr "Voorbeeld: dienst veiligheid"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:15001
-msgid "Please enter the common name for the X509 certificate request."
+#, fuzzy
+msgid "Common name for the X509 certificate request:"
 msgstr "Geef de naam voor de X509-certificaataanvraag."
 
 #. Type: string
@@ -494,7 +504,8 @@ msgstr "Voorbeeld: gateway.debian.org"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:16001
-msgid "Please enter the email address for the X509 certificate request."
+#, fuzzy
+msgid "Email address for the X509 certificate request:"
 msgstr "Geef het e-mailadres voor de X509-certificaataanvraag."
 
 #. Type: string
@@ -547,3 +558,11 @@ msgid ""
 msgstr ""
 "Kiest of u OE-ondersteuning wilt aanschakelen. Indien onzeker, schakel het "
 "dan niet aan."
+
+#, fuzzy
+#~ msgid "Please choose the when to start strongSwan:"
+#~ msgstr "Wilt u Openswan herstarten?"
+
+#, fuzzy
+#~ msgid "At which level do you wish to start strongSwan ?"
+#~ msgstr "Op welk niveau wilt u Openswan starten?"

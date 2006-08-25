@@ -2,10 +2,8 @@ Template: strongswan/start_level
 Type: select
 _Choices: earliest, "after NFS", "after PCMCIA"
 Default: earliest
-_Description: At which level do you wish to start strongSwan ?
- With the current Debian startup levels (nearly everything starting in
- level 20), it is impossible for strongSwan to always start at the correct
- time. There are three possibilities when strongSwan can start: before or
+_Description: When to start strongSwan:
+ There are three possibilities when strongSwan can start: before or
  after the NFS services and after the PCMCIA services. The correct answer
  depends on your specific setup.
  .
@@ -39,7 +37,7 @@ _Description: Do you wish to restart strongSwan?
 Template: strongswan/create_rsa_key
 Type: boolean
 Default: true
-_Description: Do you want to create a RSA public/private keypair for this host ?
+_Description: Do you want to create a RSA public/private keypair for this host?
  This installer can automatically create a RSA public/private keypair for
  this host. This keypair can be used to authenticate IPSec connections to
  other hosts and is the preferred way for building up secure IPSec
@@ -55,7 +53,7 @@ Template: strongswan/rsa_key_type
 Type: select
 _Choices: x509, plain
 Default: x509
-_Description: Which type of RSA keypair do you want to create ?
+_Description: The type of RSA keypair to create:
  It is possible to create a plain RSA public/private keypair for use
  with strongSwan or to create a X509 certificate file which contains the RSA
  public key and additionally stores the corresponding private key.
@@ -74,30 +72,30 @@ _Description: Which type of RSA keypair do you want to create ?
 Template: strongswan/existing_x509_certificate
 Type: boolean
 Default: false
-_Description: Do you have an existing X509 certificate file that you want to use for strongSwan ?
+_Description: Do you have an existing X509 certificate file for strongSwan?
  This installer can automatically extract the needed information from an
  existing X509 certificate with a matching RSA private key. Both parts can
- be in one file, if it is in PEM format. Do you have such an existing
+ be in one file, if it is in PEM format. If you have such an existing
  certificate and key file and want to use it for authenticating IPSec
- connections ?
+ connections, then please answer yes.
 
 Template: strongswan/existing_x509_certificate_filename
 Type: string
-_Description: Please enter the location of your X509 certificate in PEM format.
- Please enter the location of the file containing your X509 certificate in
- PEM format.
+_Description: File name of your X509 certificate in PEM format:
+ Please enter the full location of the file containing your X509 
+ certificate in PEM format.
 
 Template: strongswan/existing_x509_key_filename
 Type: string
-_Description: Please enter the location of your X509 private key in PEM format.
- Please enter the location of the file containing the private RSA key
+_Description: File name of your X509 private key in PEM format:
+ Please enter the full location of the file containing the private RSA key
  matching your X509 certificate in PEM format. This can be the same file
  that contains the X509 certificate.
 
 Template: strongswan/rsa_key_length
 Type: string
 Default: 2048
-_Description: Which length should the created RSA key have ?
+_Description: The length of the created RSA key (in bits):
  Please enter the length of the created RSA key. it should not be less than
  1024 bits because this should be considered unsecure and you will probably
  not need anything more than 2048 bits because it only slows the
@@ -106,7 +104,7 @@ _Description: Which length should the created RSA key have ?
 Template: strongswan/x509_self_signed
 Type: boolean
 Default: true
-_Description: Do you want to create a self-signed X509 certificate ?
+_Description: Do you want to create a self-signed X509 certificate?
  This installer can only create self-signed X509 certificates
  automatically, because otherwise a certificate authority is needed to sign
  the certificate request. If you want to create a self-signed certificate,
@@ -124,7 +122,7 @@ _Description: Do you want to create a self-signed X509 certificate ?
 Template: strongswan/x509_country_code
 Type: string
 Default: AT
-_Description: Please enter the country code for the X509 certificate request.
+_Description: Country code for the X509 certificate request:
  Please enter the 2 letter country code for your country. This code will be
  placed in the certificate request. 
  .
@@ -137,7 +135,7 @@ _Description: Please enter the country code for the X509 certificate request.
 Template: strongswan/x509_state_name
 Type: string
 Default:
-_Description: Please enter the state or province name for the X509 certificate request.
+_Description: State or province name for the X509 certificate request:
  Please enter the full name of the state or province you live in. This name
  will be placed in the certificate request.
  .
@@ -146,7 +144,7 @@ _Description: Please enter the state or province name for the X509 certificate r
 Template: strongswan/x509_locality_name
 Type: string
 Default: 
-_Description: Please enter the locality name for the X509 certificate request.
+_Description: Locality name for the X509 certificate request:
  Please enter the locality (e.g. city) where you live. This name will be
  placed in the certificate request.
  .
@@ -155,7 +153,7 @@ _Description: Please enter the locality name for the X509 certificate request.
 Template: strongswan/x509_organization_name
 Type: string
 Default: 
-_Description: Please enter the organization name for the X509 certificate request.
+_Description: Organization name for the X509 certificate request:
  Please enter the organization (e.g. company) that the X509 certificate
  should be created for. This name will be placed in the certificate
  request.
@@ -165,7 +163,7 @@ _Description: Please enter the organization name for the X509 certificate reques
 Template: strongswan/x509_organizational_unit
 Type: string
 Default: 
-_Description: Please enter the organizational unit for the X509 certificate request.
+_Description: Organizational unit for the X509 certificate request:
  Please enter the organizational unit (e.g. section) that the X509
  certificate should be created for. This name will be placed in the
  certificate request.
@@ -175,7 +173,7 @@ _Description: Please enter the organizational unit for the X509 certificate requ
 Template: strongswan/x509_common_name
 Type: string
 Default: 
-_Description: Please enter the common name for the X509 certificate request.
+_Description: Common name for the X509 certificate request:
  Please enter the common name (e.g. the host name of this machine) for
  which the X509 certificate should be created for. This name will be placed
  in the certificate request.
@@ -185,7 +183,7 @@ _Description: Please enter the common name for the X509 certificate request.
 Template: strongswan/x509_email_address
 Type: string
 Default: 
-_Description: Please enter the email address for the X509 certificate request.
+_Description: Email address for the X509 certificate request:
  Please enter the email address of the person or organization who is
  responsible for the X509 certificate, This address will be placed in the
  certificate request.

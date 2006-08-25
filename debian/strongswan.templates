@@ -9,10 +9,8 @@ Choices-pt_BR.UTF-8: o quando antes, "depois do NFS", "depois do PCMCIA"
 Choices-sv.UTF-8: tidigast, "efter NFS", "efter PCMCIA"
 Choices-vi.UTF-8: sớm nhất, «sau NFS», «sau PCMCIA»
 Default: earliest
-Description: At which level do you wish to start strongSwan ?
- With the current Debian startup levels (nearly everything starting in
- level 20), it is impossible for strongSwan to always start at the correct
- time. There are three possibilities when strongSwan can start: before or
+Description: When to start strongSwan:
+ There are three possibilities when strongSwan can start: before or
  after the NFS services and after the PCMCIA services. The correct answer
  depends on your specific setup.
  .
@@ -46,7 +44,7 @@ Description: Do you wish to restart strongSwan?
 Template: strongswan/create_rsa_key
 Type: boolean
 Default: true
-Description: Do you want to create a RSA public/private keypair for this host ?
+Description: Do you want to create a RSA public/private keypair for this host?
  This installer can automatically create a RSA public/private keypair for
  this host. This keypair can be used to authenticate IPSec connections to
  other hosts and is the preferred way for building up secure IPSec
@@ -57,10 +55,6 @@ Description: Do you want to create a RSA public/private keypair for this host ?
  .
  If you do not want to create a new public/private keypair, you can choose to
  use an existing one.
-Description-fr.UTF-8: Souhaitez-vous créer une paire de clés RSA publique et privée pour cet hôte ?
- Cet outil d'installation peut créer automatiquement une paire de clés RSA publique et privée pour cet hôte. Cette paire de clés peut servir à authentifier des connexions IPSec vers d'autres hôtes. Cette méthode est la méthode conseillée pour l'établissement de liaisons IPSec sûres. L'autre possibilité d'authentification à la connexion est l'utilisation d'un secret partagé (« pre-shared key » : des mots de passe identiques aux deux extrémités du tunnel). Toutefois, pour de nombreuses connexions, l'authentification RSA est plus simple à administrer et plus sûre.
- .
- Si vous ne souhaitez pas créer une paire de clés publique et privée, vous pouvez choisir d'en utiliser une existante.
 
 Template: strongswan/rsa_key_type
 Type: select
@@ -73,7 +67,7 @@ Choices-pt_BR.UTF-8: x509, pura
 Choices-sv.UTF-8: x509, enkel
 Choices-vi.UTF-8: x509, giản dị
 Default: x509
-Description: Which type of RSA keypair do you want to create ?
+Description: The type of RSA keypair to create:
  It is possible to create a plain RSA public/private keypair for use
  with strongSwan or to create a X509 certificate file which contains the RSA
  public key and additionally stores the corresponding private key.
@@ -92,81 +86,39 @@ Description: Which type of RSA keypair do you want to create ?
 Template: strongswan/existing_x509_certificate
 Type: boolean
 Default: false
-Description: Do you have an existing X509 certificate file that you want to use for strongSwan ?
+Description: Do you have an existing X509 certificate file for strongSwan?
  This installer can automatically extract the needed information from an
  existing X509 certificate with a matching RSA private key. Both parts can
- be in one file, if it is in PEM format. Do you have such an existing
+ be in one file, if it is in PEM format. If you have such an existing
  certificate and key file and want to use it for authenticating IPSec
- connections ?
+ connections, then please answer yes.
 
 Template: strongswan/existing_x509_certificate_filename
 Type: string
-Description: Please enter the location of your X509 certificate in PEM format.
- Please enter the location of the file containing your X509 certificate in
- PEM format.
-Description-cs.UTF-8: Zadejte prosím umístění vašeho certifikátu X509 ve formátu PEM.
- Zadejte prosím umístění vašeho certifikátu X509 ve formátu PEM.
-Description-fr.UTF-8: Emplacement de votre certificat X509 au format PEM :
- Veuillez indiquer l'emplacement du fichier contenant votre certificat X509 au format PEM.
-Description-ja.UTF-8: PEM 形式の X509 証明書の場所を入力してください。
- PEM 形式の X509 証明書を含んでいるファイルの場所を入力してください。
-Description-nl.UTF-8: Geef de locatie van uw X509-certificaat in PEM-formaat.
- Geef de locatie van het bestand dat uw X509-certificaat in PEM-formaat bevat.
-Description-pt_BR.UTF-8: Por favor, informe a localização de seu certificado X509 no formato PEM.
- Por favor, informe a localização do arquivo contendo seu certificado X509 no formato PEM.
-Description-sv.UTF-8: Ange platsen för ditt X509-certifikat i PEM-format.
- Ange platsen för din fil som innehåller ditt X509-certifikat i PEM-format.
-Description-vi.UTF-8: Hãy nhập địa điểm của chứng nhận X509 của bạn, có dạng PEM.
- Hãy nhập địa điểm của tập tin chứa chứng nhận X509 của bạn, có dạng PEM.
+Description: File name of your X509 certificate in PEM format:
+ Please enter the full location of the file containing your X509 
+ certificate in PEM format.
 
 Template: strongswan/existing_x509_key_filename
 Type: string
-Description: Please enter the location of your X509 private key in PEM format.
- Please enter the location of the file containing the private RSA key
+Description: File name of your X509 private key in PEM format:
+ Please enter the full location of the file containing the private RSA key
  matching your X509 certificate in PEM format. This can be the same file
  that contains the X509 certificate.
-Description-cs.UTF-8: Zadejte prosím umístění vašeho certifikátu X509 ve formátu PEM.
- Zadejte prosím umístění souboru obsahujícího privátní RSA klíč odpovídající vašemu certifikátu X509 ve formátu PEM. Může to být stejný soubor jako ten obsahující certifikát X509.
-Description-fr.UTF-8: Emplacement de votre clé privée X509 au format PEM :
- Veuillez indiquer l'emplacement du fichier contenant la clé privée RSA correspondant à votre certificat X509 au format PEM. Cela peut être le fichier qui contient le certificat X509.
-Description-ja.UTF-8: PEM 形式の X509 秘密鍵の場所を入力してください。
- PEM 形式の X509 証明書に対応する秘密鍵を含んでいるファイルの場所を入力してください。これは X509 証明書を含んでいるファイルと同じで構いません。
-Description-nl.UTF-8: Geef de locatie van uw private X509-sleutel in PEM-formaat.
- Geef de locatie van het bestand dat uw private RSA-sleutel bevat die behoort bij uw X509-certificaat in PEM-formaat. Dit kan hetzelfde bestand zijn als dat wat uw X509-certificaat bevat.
-Description-pt_BR.UTF-8: Por favor, informe a localização de sua chave privada X509 no formato PEM.
- Por favor, informe a localização do arquivo contendo a chave privada RSA que casa com seu certificado X509 no formato PEM. Este pode ser o mesmo arquivo que contém o certificado X509.
-Description-sv.UTF-8: Ange platsen för din privata X509-nyckel i PEM-format.
- Ange platsen för den fil som innehåller den privata RSA-nyckeln som matchar ditt X509-certifikat i PEM-format. Detta kan vara samma fil som innehåller X509-certifikatet.
-Description-vi.UTF-8: Hãy nhập địa điểm của khóa riêng X509 của bạn, có dạng PEM.
- Hãy nhập địa điểm của tập tin chứa khóa RSA riêng khớp với chứng nhận X509 của bạn, có dạng PEM. Có thể là cùng một tập tin chứa chứng nhận X509.
 
 Template: strongswan/rsa_key_length
 Type: string
 Default: 2048
-Description: Which length should the created RSA key have ?
+Description: The length of the created RSA key (in bits):
  Please enter the length of the created RSA key. it should not be less than
  1024 bits because this should be considered unsecure and you will probably
  not need anything more than 2048 bits because it only slows the
  authentication process down and is not needed at the moment.
-Description-cs.UTF-8: Jakou délku by měl mít vytvořený RSA klíč?
- Zadejte prosím délku vytvářeného RSA klíče. Kvůli bezpečnosti by neměla být méně než 1024 bitů a pravděpodobně nepotřebujete víc než 2048 bitů, protože to již zpomaluje proces autentizace.
-Description-fr.UTF-8: Longueur de la clé RSA à créer :
- Veuillez indiquer la longueur de la clé RSA qui sera créée. Elle ne doit pas être inférieure à 1024 bits car cela serait considéré comme insuffisamment sûr. Un choix excédant 2048 bits est probablement inutile car cela ne fait essentiellement que ralentir le processus d'authentification sans avoir d'intérêt actuellement.
-Description-ja.UTF-8: RSA 鍵をどの長さで生成しますか?
- 生成する RSA 鍵の長さを入力してください。安全のため、1024 ビット以下にすべきではありません。2048 ビット以上にする必要もないでしょう。認証プロセスが遅くなりますし、現時点ではおそらく必要ありません。
-Description-nl.UTF-8: Welke lengte moet de aangemaakte RSA-sleutel hebben?
- Geef de lengte van de aangemaakte RSA-sleutel. Het mag niet minder dan 1024 bits zijn omdat dit als onveilig wordt beschouwd en u zult waarschijnlijk niet meer dan 2048 bits nodig hebben omdat het enkel het authenticatieproces vertraagt en op dit moment niet nodig is.
-Description-pt_BR.UTF-8: Qual deve ser o tamanho da chave RSA criada ?
- Por favor, informe o tamanho da chave RSA a ser criada. A mesma não deve ser menor que 1024 bits devido a uma chave de tamanho menor que esse ser considerada insegura. Você também não precisará de nada maior que 2048 porque isso somente deixaria o processo de autenticação mais lento e não seria necessário no momento.
-Description-sv.UTF-8: Vilken längd ska den skapade RSA-nyckeln ha ?
- Ange längden för den skapade RSA-nyckeln, den bör inte vara kortare än 1024 bitar för att detta bör anses som osäkert och du vill antagligen inte behöva någon längre än 2048 bitar för att det bara gör autentiseringsprocessen långsammare och behövs inte just nu.
-Description-vi.UTF-8: Khóa RSA mới được tạo nên có độ dài nào?
- Hãy nhập độ dài của khóa RSA mới được tạo. Nên có ít nhất 1024 bit, vì khóa nào nhỏ hơn kích thước ấy không phải là bảo mật. Rất có thể là bạn sẽ không cần sử dụng độ dài hơn 2048 bit, vì nó chỉ giảm tốc độ tiến trình xác thực, và hiện thời không cần thiết.
 
 Template: strongswan/x509_self_signed
 Type: boolean
 Default: true
-Description: Do you want to create a self-signed X509 certificate ?
+Description: Do you want to create a self-signed X509 certificate?
  This installer can only create self-signed X509 certificates
  automatically, because otherwise a certificate authority is needed to sign
  the certificate request. If you want to create a self-signed certificate,
@@ -184,7 +136,7 @@ Description: Do you want to create a self-signed X509 certificate ?
 Template: strongswan/x509_country_code
 Type: string
 Default: AT
-Description: Please enter the country code for the X509 certificate request.
+Description: Country code for the X509 certificate request:
  Please enter the 2 letter country code for your country. This code will be
  placed in the certificate request. 
  .
@@ -193,258 +145,62 @@ Description: Please enter the country code for the X509 certificate request.
  any other field of the X.509 certificate, but not for this one.
  .
  Example: AT
-Description-cs.UTF-8: Zadejte prosím kód země pro X509 certifikační požadavek.
- Zadejte prosím dvoumístný kód vaší země. Tento kód bude umístěn do certifikačního požadavku.
- .
- Je opravdu nutné, abyste vložili správný kód země, protože openssl jinak odmítne vygenerování certifikátu. Prázdné pole je povolené pro všechny ostatní pole certifikátu X509 kromě tohoto.
- .
- Příklad: CZ
-Description-fr.UTF-8: Code du pays :
- Veuillez indiquer le code à deux lettres de votre pays. Ce code sera inclus dans la demande de certificat.
- .
- Il est impératif de choisir ici un code de pays valide sinon OpenSSL refusera de générer les certificats. Tous les autres champs d'un certificat X.509 peuvent être vides, sauf celui-ci.
- .
- Exemple : FR
-Description-ja.UTF-8: X509 証明書要求に記載する国コードを入力してください。
- あなたの国の国コードを2文字で入力してください。このコードは証明書要求に記載されます。
- .
- openssl が国コードなしでは証明書の生成を拒否するので、正しい国コードをここで入力する必要があります。X.509 証明書では、他のフィールドについては空でも構いませんが、これについては許可されていません。
- .
- 例: JP
-Description-nl.UTF-8: Geef de landcode van de X509-certificaataanvraag.
- Geef de 2-letterige landcode voor uw land. Deze code zal in de certificaataanvraag worden geplaatst.
- .
- U moet hier wel een geldige landcode opgeven omdat openssl anders zal weigeren om een certificaat aan te maken. Er is voor elke veld van het X509-certificaat een leeg veld toegestaan, maar niet voor dit veld.
- .
- Voorbeeld: BE
-Description-pt_BR.UTF-8: Por favor, informe o código de país para a requisição de certificado X509.
- Por favor, informe o códifo de país de duas letras para seu país. Esse código será inserido na requisição de certificado.
- .
- Você realmente precisa informar um código de país válido aqui devido ao openssl se recusar a gerar certificados sem um código de país válido. Um campo em branco é permitido para qualquer outro campo do certificado X.509, mas não para esse campo.
- .
- Exemplo: BR
-Description-sv.UTF-8: Ange en landskod för X509-certifikatförfrågan.
- Ange en landskod med 2 bokstäver för ditt land. Denna kod kommer att placeras i certifikatförfrågan.
- .
- Du behöver verkligen ange en giltig landskod här för att openssl kommer att vägra att generera certifikat utan ett. Ett tomt fält är tillåtet för alla andra fält i X509-certifikatet men inte för denna.
- .
- Exempel: SE
-Description-vi.UTF-8: Hãy nhập mã quốc gia cho lời yêu cầu chứng nhận X509.
- Hãy nhập mã hai chữ cho quốc gia bạn. Sẽ chèn mã này vào lời yêu cầu chứng nhận.
- .
- Bạn thật cần phải nhập một mã quốc gia hợp lệ vào đây, vì trình OpenSSL sẽ từ chối tạo ra chứng nhận nào khi không có mã ấy. Có thể bỏ rỗng bất cứ trường nào khác cho chứng nhận X509, nhưng mà không phải trường này.
- .
- Lấy thí dụ: VN
 
 Template: strongswan/x509_state_name
 Type: string
 Default:
-Description: Please enter the state or province name for the X509 certificate request.
+Description: State or province name for the X509 certificate request:
  Please enter the full name of the state or province you live in. This name
  will be placed in the certificate request.
  .
  Example: Upper Austria
-Description-cs.UTF-8: Zadejte prosím jméno státu nebo oblasti pro certifikační požadavek.
- Zadejte prosím celé jméno státu nebo oblasti kde žijete. Toto jméno bude umístěno do certifikačního požadavku.
- .
- Příklad: Morava
-Description-fr.UTF-8: État, province ou région :
- Veuillez indiquer le nom complet de l'état, de la province ou de la région où vous résidez. Ce nom sera inclus dans la demande de certificat.
- .
- Exemples : Rhône-Alpes, Brabant Wallon, Bouches du Rhône, Québec, Canton de Vaud
-Description-ja.UTF-8: X509 証明書要求に記載する都道府県名を入力してください。
- あなたが在住している都道府県を入力してください。これは証明書要求に記載されます。
- .
- 例: Tokyo
-Description-nl.UTF-8: Geef de staat of provincie voor de X509-certificaataanvraag.
- Geef de volledige naam van de staat of provincie waarin u woont. Deze naam zal in de certificaataanvraag worden geplaatst.
- .
- Voorbeeld: Limburg
-Description-pt_BR.UTF-8: Por favor, informe o estado ou nome de província para a requisição de certificado X509.
- Por favor, informe o nome complete do estado ou província em que você mora. Esse nome será inserido na requisição de certificado.
- .
- Exemplo : Sao Paulo
-Description-sv.UTF-8: Ange namnet på regionen eller länet för X509-certifikatförfrågan.
- Ange det fulla namnet på regionen eller länet du bor i. Detta namn kommer att placeras i certifikatförfrågan.
- .
- Exempel: Centrala Sverige
-Description-vi.UTF-8: Hãy nhập tên bảng hay tỉnh cho lời yêu cầu chứng nhận X509.
- Hãy nhập tên đầy đủ của bang hay tỉnh nơi bạn ở. Sẽ chèn tên này vào lời yêu cầu chứng nhận.
- .
- Lấy thí dụ: Bình Định
 
 Template: strongswan/x509_locality_name
 Type: string
 Default: 
-Description: Please enter the locality name for the X509 certificate request.
+Description: Locality name for the X509 certificate request:
  Please enter the locality (e.g. city) where you live. This name will be
  placed in the certificate request.
  .
  Example: Vienna
-Description-cs.UTF-8: Zadejte prosím jméno lokality pro certifikační požadavek.
- Zadejte prosím lokalitu (např. město) kde žijete. Toto jméno bude umístěno do certifikačního požadavku.
- .
- Příklad: Brno
-Description-fr.UTF-8: Localité :
- Veuillez indiquer la localité (p. ex. la ville) où vous résidez. Ce nom sera inclus dans la demande de certificat.
- .
- Exemple : Saint-Étienne
-Description-ja.UTF-8: X509 証明書要求に記載する土地の名前を入力してください。
- あなたの在住している地方の名前 (例: 市町村名) を入力してください。これは証明書要求に記載されます。
- .
- 例: Shinjuku-ku
-Description-nl.UTF-8: Geef de plaatsnaam voor de X509-certificaataanvraag.
- Geef de plaatsnaam (v.b. stad) waar u woont. Deze naam zal in de certificaataanvraag worden geplaatst.
- .
- Voorbeeld: Genk
-Description-pt_BR.UTF-8: Por favor, informe o nome da localidade para a requisição de certificado X509.
- Por favor, informe a localidade (ou seja, cidade) onde você mora. Esse nome será inserido na requisição de certificado.
- .
- Exemplo : Sao Paulo
-Description-sv.UTF-8: Ange lokaliteten för X509-certifikatförfrågan.
- Ange lokaliteten (exempelvis stad) där du bor. Detta namn kommer att placeras i certifikatförfrågan.
- .
- Exempel: Stockholm
-Description-vi.UTF-8: Hãy nhập tên địa phương cho lời yêu cầu chứng nhận X509.
- Hãy nhập địa phương (v.d. thành phố) nơi bạn ở. Sẽ chèn tên này vào lời yêu cầu chứng nhận.
- .
- Lấy thí dụ: Quy Nhơn
 
 Template: strongswan/x509_organization_name
 Type: string
 Default: 
-Description: Please enter the organization name for the X509 certificate request.
+Description: Organization name for the X509 certificate request:
  Please enter the organization (e.g. company) that the X509 certificate
  should be created for. This name will be placed in the certificate
  request.
  .
  Example: Debian
-Description-cs.UTF-8: Zadejte prosím název organizace pro certifikační požadavek.
- Zadejte prosím organizaci pro kterou je certifikát vytvářen. Toto jméno bude umístěno do certifikačního požadavku.
- .
- Příklad: Debian
-Description-fr.UTF-8: Organisme :
- Veuillez indiquer l'organisme (p. ex. l'entreprise) pour qui sera créé le certificat X509. Ce nom sera inclus dans la demande de certificat.
- .
- Exemple : Debian
-Description-ja.UTF-8: X509 証明書要求に記載する組織名を入力してください。
- X509 証明書の生成対象となるべき組織 (例: 会社) を入力してください。これは証明書要求に記載されます。
- .
- 例: Debian
-Description-nl.UTF-8: Geef de naam van de organisatie voor de X509-certificaataanvraag.
- Geef de organisatie (v.b. bedrijf) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certicicaataanvraag worden geplaatst.
- .
- Voorbeeld: Debian
-Description-pt_BR.UTF-8: Por favor, informe o nome da organização para a requisição de certificado X509.
- Por favor, informe a organização (ou seja, a empresa) para a qual este certificado X509 deverá ser criado. Esse nome será inserido na requisição de certificado.
- .
- Exemplo : Debian
-Description-sv.UTF-8: Ange organisationsnamnet för X509-certifikatförfrågan.
- Ange organisationen (exempelvis företaget) som X509-certifikatet ska skapas för. Detta namn kommer att placeras i certifikatförfrågan.
- .
- Exempel: Debian
-Description-vi.UTF-8: Hãy nhập tên tổ chức cho lời yêu cầu chứng nhận X509.
- Hãy nhập tổ chức (v.d. công ty) cho mà chứng nhận X509 nên được tạo. Sẽ chèn tên này vào lời yêu cầu chứng nhận.
- .
- Lấy thí dụ: Debian
 
 Template: strongswan/x509_organizational_unit
 Type: string
 Default: 
-Description: Please enter the organizational unit for the X509 certificate request.
+Description: Organizational unit for the X509 certificate request:
  Please enter the organizational unit (e.g. section) that the X509
  certificate should be created for. This name will be placed in the
  certificate request.
  .
  Example: security group
-Description-cs.UTF-8: Zadejte prosím název organizační jednotky pro certifikační požadavek.
- Zadejte prosím organizační jednotku pro kterou je certifikát vytvářen. Toto jméno bude umístěno do certifikačního požadavku.
- .
- Příklad: bezpečnostní oddělení
-Description-fr.UTF-8: Unité d'organisation :
- Veuillez indiquer l'unité d'organisation (p. ex. département, division, etc.) pour qui sera créé le certificat X509. Ce nom sera inclus dans la demande de certificat.
- .
- Exemple : Département Réseaux et Informatique Scientifique
-Description-ja.UTF-8: X509 証明書要求に記載する組織単位を入力してください。
- X509 証明書の生成対象となるべき組織単位 (例: 部署名) を入力してください。これは証明書要求に記載されます。
- .
- 例: security group
-Description-nl.UTF-8: Geef de organisatie-eenheid voor de X509-certificaataanvraag.
- Geef de organisatie-eenheid (v.b. dienst) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certificaataanvraag worden geplaatst.
- .
- Voorbeeld: dienst veiligheid
-Description-pt_BR.UTF-8: Por favor, informe a unidade organizacional para a requisição de certificado X509.
- Por favor, informe a unidade organizacional (ou seja, seção ou departamento) para a qual este certificado deverá ser criado. Esse nome será inserido na requisição de certificado.
- .
- Exemplo : Grupo de Segurança
-Description-sv.UTF-8: Ange organisationsenheten för X509-certifikatförfrågan.
- Ange organisationsenheten (exempelvis avdelning) som X509-certifikatet ska skapas för. Detta namn kommer att placeras i certifikatförfrågan.
- .
- Exempel: säkerhetsgruppen
-Description-vi.UTF-8: Hãy nhập tên đơn vị tổ chức cho lời yêu cầu chứng nhận X509.
- Hãy nhập đơn vị tổ chức (v.d. phần) cho mà chứng nhận X509 nên được tạo. Sẽ chèn tên này vào lời yêu cầu chứng nhận.
- .
- Lấy thí dụ: nhóm Việt hóa
 
 Template: strongswan/x509_common_name
 Type: string
 Default: 
-Description: Please enter the common name for the X509 certificate request.
+Description: Common name for the X509 certificate request:
  Please enter the common name (e.g. the host name of this machine) for
  which the X509 certificate should be created for. This name will be placed
  in the certificate request.
  .
  Example: gateway.debian.org
-Description-cs.UTF-8: Zadejte prosím obvyklé jméno pro certifikační požadavek.
- Zadejte prosím běžné jméno (např. jméno počítače - hostname) pro kterou je certifikát vytvářen. Toto jméno bude umístěno do certifikačního požadavku.
- .
- Příklad: gateway.debian.org
-Description-fr.UTF-8: Nom ordinaire :
- Veuillez indiquer le nom ordinaire (p. ex. le nom réseau de cette machine) pour qui sera créé le certificat X509. Ce nom sera inclus dans la demande de certificat.
- .
- Exemple : gateway.debian.org
-Description-ja.UTF-8: X509 証明書要求に記載するコモンネームを入力してください。
- X509 証明書の生成対象となるべきコモンネーム (例: このマシンのホスト名) を入力してください。これは証明書要求に記載されます。
- .
- 例: gateway.debian.org
-Description-nl.UTF-8: Geef de naam voor de X509-certificaataanvraag.
- Geef de naam (v.b. computernaam van deze machine) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certificaataanvraag worden geplaatst.
- .
- Voorbeeld: gateway.debian.org
-Description-pt_BR.UTF-8: Por favor, informe o nome comum para a requisição de certificado X509.
- Por favor, informe o nome comum (ou seja, o nome do host dessa máquina) para o qual o certificado X509 deverá ser criado. Esse nome será inserido na requisição de certificado.
- .
- Exemplo : gateway.debian.org
-Description-sv.UTF-8: Ange namnet för X509-certifikatförfrågan.
- Ange namnet (exempelvis värdnamnet för denna maskin) för vilken X509-certifikatet ska skapas för. Detta namn kommer att placeras i certifikatförfrågan.
- .
- Exempel: gateway.debian.org
-Description-vi.UTF-8: Hãy nhập tên chung cho lời yêu cầu chứng nhận X509.
- Hãy nhập tên chung (v.d. tên máy) cho mà chứng nhận X509 nên được tạo. Sẽ chèn tên này vào lời yêu cầu chứng nhận.
- .
- Lấy thí cụ: gateway.debian.org
 
 Template: strongswan/x509_email_address
 Type: string
 Default: 
-Description: Please enter the email address for the X509 certificate request.
+Description: Email address for the X509 certificate request:
  Please enter the email address of the person or organization who is
  responsible for the X509 certificate, This address will be placed in the
  certificate request.
-Description-cs.UTF-8: Zadejte prosím emailovou adresu pro certifikační požadavek.
- Zadejte prosím emailovou adresu osoby nebo organizace, která je zodpovědná za certifikát X509. Toto jméno bude umístěno do certifikačního požadavku.
-Description-fr.UTF-8: Adresse électronique :
- Veuillez indiquer l'adresse électronique de la personne ou de l'organisme responsable du certificat X509. Cette adresse sera incluse dans la demande de certificat.
-Description-ja.UTF-8: X509 証明書要求に記載するメールアドレスを入力してください。
- X509 証明書の責任者となる人物・団体のメールアドレスを入力してください。このアドレスは証明書要求に記載されます。
-Description-nl.UTF-8: Geef het e-mailadres voor de X509-certificaataanvraag.
- Geef het e-mailadres van de persoon of organisatie die verantwoordelijk is voor het X509-certificaat. Dit adres zal in de certificaataanvraag worden geplaatst.
-Description-pt_BR.UTF-8: Por favor, informe o endereço de e-mail para a requisição de certificado X509.
- Por favor, informe o endereço de e-mail da pessoa ou organização responsável pelo certificado X509. Esse endereço será inserido na requisição de certificado.
-Description-sv.UTF-8: Ange e-postaddressen för X509-certifikatförfrågan.
- Ange e-postaddressen till den person eller organisation som ansvarar för X509-certifikatet. Denna address kommer att placeras i certifikatförfrågan.
-Description-vi.UTF-8: Hãy nhập địa chỉ thư điện tử chung cho lời yêu cầu chứng nhận X509.
- Hãy nhập địa chỉ thư điện tử của người hay tổ chức chịu trách nhiệm về chứng nhận X509 này. Sẽ chèn địa chỉ này vào lời yêu cầu chứng nhận.
 
 Template: strongswan/enable-oe
 Type: boolean
