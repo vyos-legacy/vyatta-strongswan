@@ -12,4 +12,5 @@
 /etc/logcheck/violations.ignore.d
 /usr/bin
 /usr/sbin
+/usr/share/lintian/overrides
 /var/lock/subsys

@@ -156,10 +156,16 @@ install-strongswan: build
 	# don't know why they come with +x set by default...
 	chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.d/policies/*
 	chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.d/examples/*
+	# or why these are copied to the directory...
+	rm -f $(CURDIR)/debian/strongswan/usr/lib/ipsec/ipsec_pr.template
+	rm -f $(CURDIR)/debian/strongswan/usr/lib/ipsec/distro.txt
 
 	# more lintian cleanups
 	find $(CURDIR)/debian/strongswan -name ".cvsignore" | xargs --no-run-if-empty rm -f
 	find $(CURDIR)/debian/strongswan -name "/.svn/" | xargs --no-run-if-empty rm -rf
+
+	# and lintian overrides
+	install --mode=0644 $(CURDIR)/debian/strongswan.lintian-overrides $(CURDIR)/debian/strongswan/usr/share/lintian/overrides/strongswan
 
 binary-common:
 	#dh_testversion 2
