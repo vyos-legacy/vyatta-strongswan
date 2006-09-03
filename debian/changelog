@@ -9,6 +9,7 @@ strongswan (2.7.3+dfsg-1) unstable; urgency=low
   * Starting shipping a lintian overrides file to finally silence the 
     warnings about non-standard-(file|dir)-perms (they are intentional).
   * Clean up /usr/lib/ipsec somehow, again owing to lintian warnings.
+  * Add po-debconf to build dependencies.
     
  -- Rene Mayrhofer <rmayr@debian.org>  Wed, 23 Aug 2006 21:23:36 +0100
 
