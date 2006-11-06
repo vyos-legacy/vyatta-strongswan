@@ -7,17 +7,16 @@
 # /usr/share/doc/po-debconf/README-trans
 # or http://www.debian.org/intl/l10n/po-debconf/README-trans
 # Developers do not need to manually edit POT or PO files.
-# , fuzzy
 # 
 # 
 msgid ""
 msgstr ""
-"Project-Id-Version: openswan 2.3.0\n"
+"Project-Id-Version: strongswan\n"
 "Report-Msgid-Bugs-To: rmayr@debian.org\n"
 "POT-Creation-Date: 2006-08-25 17:56+0100\n"
-"PO-Revision-Date: 2005-02-08 14:12+0100\n"
-"Last-Translator: Ondra Kudlik <kepi@orthank.net>\n"
-"Language-Team: Czech <cs@li.org>\n"
+"PO-Revision-Date: 2006-09-24 20:49+0200\n"
+"Last-Translator: Miroslav Kure <kurem@debian.cz>\n"
+"Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -26,33 +25,29 @@ msgstr ""
 #. Choices
 #: ../strongswan.templates.master:1001
 msgid "earliest, \"after NFS\", \"after PCMCIA\""
-msgstr "nejdříve, \"po NFS\", \"po PCMCIA\""
+msgstr "\"co nejdříve\", \"po NFS\", \"po PCMCIA\""
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid "When to start strongSwan:"
-msgstr "Přejete si spustit Openswan?"
+msgstr "Kdy spustit strongSwan:"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "There are three possibilities when strongSwan can start: before or after the "
 "NFS services and after the PCMCIA services. The correct answer depends on "
 "your specific setup."
 msgstr ""
-"Se současnými startovacími úrovněmi Debianu (téměř vše začíná na úrovni 20), "
-"je nemožné, aby Openswan vždy nastartoval ve správný čas. Jsou zde tři "
-"možnosti, kdyjej lze spouštět: před nebo po NFS službách a nebo po PCMCIA "
-"službách. Správná odpověď závisí na vašem konkrétním nastavení."
+"Existují tři možnosti, kdy se dá strongSwan spouštět: před NFS službami, po "
+"NFS službách nebo po PCMCIA službách. Správná odpověď závisí na vašem "
+"konkrétním nastavení."
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "If you do not have your /usr tree mounted via NFS (either you only mount "
 "other, less vital trees via NFS or don't use NFS mounted trees at all) and "
@@ -61,17 +56,16 @@ msgid ""
 "In this case (or if you don't understand or care about this issue), answer "
 "\"earliest\" to this question (the default)."
 msgstr ""
-"Jestliže nemáte váš /usr strom připojen skrz NFS (buď přes NFS připojujete "
-"jiné, ne tak důležité stromy nebo jej vůbec nepoužíváte) a zároveň "
-"nepoužíváte PCMCIA síťovou kartu, je nejlepší spouštět Openswan co nejdříve, "
-"čímž umožníte aby NFS svazky byly chráněny pomocí IPSec. V tomto případě "
-"(nebo pokud si nejste jisti, či vám na tom nezáleží) na otázku odpovězte "
-"\"nejdříve\" (výchozí)."
+"Jestliže nemáte svůj strom /usr připojen skrz NFS (buď přes NFS připojujete "
+"jiné, ne tak důležité stromy, nebo NFS vůbec nepoužíváte) a nepoužíváte "
+"síťovou kartu PCMCIA, je nejlepší spouštět strongSwan co nejdříve, "
+"čímž umožníte aby byly NFS svazky chráněny pomocí IPSec. V takovém případě "
+"(nebo pokud si nejste jisti, nebo pokud vám na tom nezáleží) na otázku "
+"odpovězte \"co nejdříve\" (výchozí)."
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "If you have your /usr tree mounted via NFS and don't use a PCMCIA network "
 "card, then you will need to start strongSwan after NFS so that all necessary "
@@ -79,9 +73,9 @@ msgid ""
 "Please note that the NFS mount of /usr can not be secured by IPSec in this "
 "case."
 msgstr ""
-"Jestliže máte /usr strom připojen skrz NFS a nepoužíváte PCMCIA síťovou "
-"kartu, potřebujete spustit Openswan po NFS, aby byly všechny potřebné "
-"soubory dostupné. V tomto případě na otázku odpověztě \"po NFS\". Uvědomtě "
+"Jestliže máte strom /usr připojen skrz NFS a nepoužíváte síťovou kartu "
+"PCMCIA, musíte spustit strongSwan po NFS, aby byly všechny potřebné "
+"soubory dostupné. V tomto případě na otázku odpovězte \"po NFS\". Uvědomte "
 "si prosím, že v tomto případě nemůže být NFS svazek /usr chráněn pomocí "
 "IPSec."
 
@@ -102,32 +96,29 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:2001
-#, fuzzy
 msgid "Do you wish to restart strongSwan?"
-msgstr "Přejete si spustit Openswan?"
+msgstr "Přejete si restartovat strongSwan?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:2001
-#, fuzzy
 msgid ""
 "Restarting strongSwan is a good idea, since if there is a security fix, it "
 "will not be fixed until the daemon restarts. Most people expect the daemon "
 "to restart, so this is generally a good idea. However this might take down "
 "existing connections and then bring them back up."
 msgstr ""
-"Restartování Openswan je dobrý nápad, protože v případě, že aktualizace "
+"Restartování strongSwan je dobrý nápad, protože v případě, že aktualizace "
 "obsahuje bezpečnostní záplatu, nebude opravena dokud se démon nerestartuje. "
 "Většina lidí předpokládá restartování démona, takže je to v každém případě "
-"správný postup. Nicméně existující spojení mohou být shozena a poté znovu "
-"nastavena."
+"správný postup. Nicméně je možné, že existující spojení budou shozena a poté "
+"znovu nastavena."
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:3001
-#, fuzzy
 msgid "Do you want to create a RSA public/private keypair for this host?"
-msgstr "Přejete si vytvořit RSA veřejný/soukromý pár klíčů pro tento počítač?"
+msgstr "Přejete si vytvořit veřejný/soukromý pár RSA klíčů pro tento počítač?"
 
 #. Type: boolean
 #. Description
@@ -141,21 +132,22 @@ msgid ""
 "connection, but for a larger number of connections RSA authentication is "
 "easier to administer and more secure."
 msgstr ""
-"Tento instalátor může automaticky vytvořit RSA soukromý/privátní pár klíčů "
-"pro tento počítač. Pár klíčů může být využit k autentifikaci IPSec spojení "
+"Tento instalátor může automaticky vytvořit veřejný/soukromý pár RSA klíčů "
+"pro tento počítač. Pár klíčů může být využit k autentizaci IPSec spojení "
 "na další počítače a je upřednostňovanou cestou pro sestavování bezpečných "
-"IPSec spojení. Další možností autentifikace je využití sdílených tajemství "
-"(hesel, která jsou stejná na obou stranách tunelu), ale pro větší množství "
-"spojení je RSA autentifikace snažší pro správu a mnohem bezpečnější."
+"IPSec spojení. Další možností autentizace je využití sdílených tajemství "
+"(hesel, která jsou stejná na obou stranách tunelu), ale pro větší počet "
+"spojení je RSA autentizace snazší pro správu a mnohem bezpečnější."
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:3001
-#, fuzzy
 msgid ""
 "If you do not want to create a new public/private keypair, you can choose to "
 "use an existing one."
-msgstr "Přejete si vytvořit RSA veřejný/soukromý pár klíčů pro tento počítač?"
+msgstr ""
+"Jestliže si nepřejete vytvořit nový pár klíčů pro tento počítač, můžete si "
+"zvolit existující."
 
 #. Type: select
 #. Choices
@@ -166,27 +158,24 @@ msgstr "x509, prostý"
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid "The type of RSA keypair to create:"
-msgstr "Jaký typ RSA páru klíčů chcete vytvořit?"
+msgstr "Typ páru RSA klíčů, který se vytvoří:"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "It is possible to create a plain RSA public/private keypair for use with "
 "strongSwan or to create a X509 certificate file which contains the RSA "
 "public key and additionally stores the corresponding private key."
 msgstr ""
-"Je možné vytvořit čisty pár RSA klíčů pro použití s Openswan nebo vytvořit "
-"soubor s certifikátem X509, který obsahuje veřejný RSA klíč a dodatečně "
-"uchovává odpovídající privátní klíč."
+"Je možné vytvořit prostý pár RSA klíčů pro použití se strongSwanem, nebo "
+"vytvořit soubor s certifikátem X509, který obsahuje veřejný RSA klíč a "
+"dodatečně uchovává odpovídající soukromý klíč."
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "If you only want to build up IPSec connections to hosts also running "
 "strongSwan, it might be a bit easier using plain RSA keypairs. But if you "
@@ -195,37 +184,35 @@ msgid ""
 "extract the RSA public key in plain format if the other side runs strongSwan "
 "without X509 certificate support."
 msgstr ""
-"Pokud chcete vytvořit IPSec spojení jen k počítači, na kterém taktéž běží "
-"Openswan, může být mnohem jednodušší použít RSA pár klíčů. Pokud se ale "
-"chcete připojit k jiným implementacím IPSec, budete potřebovat certifikát "
-"X509. Můžete také vytvořit certifikát X509 zde a získat veřejný klíč RSA v "
-"čisté textové podobě pokud druhá strana používá Openswan bez podpory "
-"certifikátu X509."
+"Pokud chcete vytvořit IPSec spojení jen k počítačům, na kterých taktéž běží "
+"strongSwan, může být mnohem jednodušší použít pár prostých RSA klíčů. Pokud "
+"se ale chcete připojit k jiným implementacím IPSec, budete potřebovat "
+"certifikát X509. Také je možné zde vytvořit certifikát X509 a později, pokud "
+"druhá strana používá strongSwan bez podpory certifikátů X509, z něj získat "
+"veřejný RSA klíč v prostém formátu."
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "Therefore a X509 certificate is recommended since it is more flexible and "
 "this installer should be able to hide the complex creation of the X509 "
 "certificate and its use in strongSwan anyway."
 msgstr ""
-"Certifikát X509 je proto doporučován zejména díky své flexibilnosti. "
-"Tentoinstalátor by v každém případě měl být schopen skrýt komplexnost jeho "
-"vytváření a použití s Openswan."
+"Certifikát X509 je proto doporučován zejména díky své flexibilitě. Tento "
+"instalátor by v měl být schopen skrýt komplexnost vytváření a používání "
+"certifikátu ve strongSwanu."
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:5001
-#, fuzzy
 msgid "Do you have an existing X509 certificate file for strongSwan?"
-msgstr "Vlastníte existující certifkát X509, který chcete použít pro Openswan?"
+msgstr ""
+"Vlastníte existující certifikát X509, který chcete použít pro strongSwan?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:5001
-#, fuzzy
 msgid ""
 "This installer can automatically extract the needed information from an "
 "existing X509 certificate with a matching RSA private key. Both parts can be "
@@ -234,52 +221,50 @@ msgid ""
 "connections, then please answer yes."
 msgstr ""
 "Instalátor může automaticky získat potřebné informace z existujícího "
-"certiifikátu X509 s odpovídajícím privátním RSA klíčem. Obě části mohou být "
-"v jednom souboru, jedná-li se o formát PEM. Vlastníte takový certifikát i "
-"soubor s klíčem a chcete jej použít pro autentifikaci spojení IPSec?"
+"certifikátu X509 s odpovídajícím soukromým RSA klíčem. Jedná-li se o formát "
+"PEM, mohou být obě části v jednom souboru. Vlastníte-li takový certifikát a "
+"soubor s klíčem a chcete-li je použít pro autentizaci IPSec spojení, "
+"odpovězte kladně."
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:6001
-#, fuzzy
 msgid "File name of your X509 certificate in PEM format:"
-msgstr "Zadejte prosím umístění vašeho certifikátu X509 ve formátu PEM."
+msgstr "Jméno souboru s certifikátem X509 ve formátu PEM:"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:6001
-#, fuzzy
 msgid ""
 "Please enter the full location of the file containing your X509  certificate "
 "in PEM format."
-msgstr "Zadejte prosím umístění vašeho certifikátu X509 ve formátu PEM."
+msgstr ""
+"Zadejte prosím absolutní cestu k souboru obsahujícímu váš certifikát X509 ve "
+"formátu PEM."
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:7001
-#, fuzzy
 msgid "File name of your X509 private key in PEM format:"
-msgstr "Zadejte prosím umístění vašeho certifikátu X509 ve formátu PEM."
+msgstr "Jméno souboru se soukromým klíčem X509 ve formátu PEM:"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:7001
-#, fuzzy
 msgid ""
 "Please enter the full location of the file containing the private RSA key "
 "matching your X509 certificate in PEM format. This can be the same file that "
 "contains the X509 certificate."
 msgstr ""
-"Zadejte prosím umístění souboru obsahujícího privátní RSA klíč odpovídající "
-"vašemu certifikátu X509 ve formátu PEM. Může to být stejný soubor jako ten "
-"obsahující certifikát X509."
+"Zadejte prosím absolutní cestu k souboru obsahujícímu soukromý RSA klíč ve "
+"formátu PEM odpovídající vašemu certifikátu X509. Může to být stejný soubor "
+"jako ten, ve kterém se nachází certifikát X509."
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:8001
-#, fuzzy
 msgid "The length of the created RSA key (in bits):"
-msgstr "Jakou délku by měl mít vytvořený RSA klíč?"
+msgstr "Délka vytvořeného RSA klíče (v bitech):"
 
 #. Type: string
 #. Description
@@ -297,14 +282,12 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:9001
-#, fuzzy
 msgid "Do you want to create a self-signed X509 certificate?"
 msgstr "Chcete vytvořit certifikát X509 podepsaný sám sebou?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:9001
-#, fuzzy
 msgid ""
 "This installer can only create self-signed X509 certificates automatically, "
 "because otherwise a certificate authority is needed to sign the certificate "
@@ -316,10 +299,10 @@ msgid ""
 msgstr ""
 "Tento instalátor může automaticky vytvořit pouze certifikát X509 podepsaný "
 "sám sebou, jelikož v opačném případě je k podpisu certifikátu potřeba "
-"certifikační autorita. Tento certifikát můžete ihned použít k přípojení na "
+"certifikační autorita. Tento certifikát můžete ihned použít k připojení na "
 "další počítače s IPSec, které podporují autentizaci pomocí certifikátu X509. "
-"Nicméně chcete-li využít novýchmožností PKI Openswanu >= 1.91, budete k "
-"vytovření důvěryhodných cest potřebovat všechny certifikáty X509 podepsané "
+"Nicméně chcete-li využít nových PKI možností strongSwanu >= 1.91, budete k "
+"vytvoření důvěryhodných cest potřebovat všechny certifikáty X509 podepsané "
 "jedinou certifikační autoritou."
 
 #. Type: boolean
@@ -330,16 +313,15 @@ msgid ""
 "will only create the RSA private key and the certificate request and you "
 "will have to sign the certificate request with your certificate authority."
 msgstr ""
-"Jestliže nechcete vytvořit certifikát podepsaný sám sebou, vytvořít tento "
-"instalátor jen privátní RSA klíč a certifikační požadavek. Vy potom musíte "
+"Jestliže nechcete vytvořit certifikát podepsaný sám sebou, vytvoří tento "
+"instalátor jen soukromý RSA klíč a požadavek na certifikát. Vy potom musíte "
 "podepsat požadavek svojí certifikační autoritou."
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:10001
-#, fuzzy
 msgid "Country code for the X509 certificate request:"
-msgstr "Zadejte prosím kód země pro X509 certifikační požadavek."
+msgstr "Kód země pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
@@ -348,8 +330,8 @@ msgid ""
 "Please enter the 2 letter country code for your country. This code will be "
 "placed in the certificate request."
 msgstr ""
-"Zadejte prosím dvoumístný kód vaší země. Tento kód bude umístěn do "
-"certifikačního požadavku."
+"Zadejte prosím dvoumístný kód vaší země. Tento kód bude umístěn do požadavku "
+"na certifikát."
 
 #. Type: string
 #. Description
@@ -360,8 +342,8 @@ msgid ""
 "any other field of the X.509 certificate, but not for this one."
 msgstr ""
 "Je opravdu nutné, abyste vložili správný kód země, protože openssl jinak "
-"odmítne vygenerování certifikátu. Prázdné pole je povolené pro všechny "
-"ostatní pole certifikátu X509 kromě tohoto."
+"odmítne vygenerování certifikátu. Prázdné pole je dovoleno ve všech ostatních "
+"polích certifikátu X509 kromě tohoto."
 
 #. Type: string
 #. Description
@@ -372,9 +354,8 @@ msgstr "Příklad: CZ"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:11001
-#, fuzzy
 msgid "State or province name for the X509 certificate request:"
-msgstr "Zadejte prosím jméno státu nebo oblasti pro certifikační požadavek."
+msgstr "Jméno státu nebo oblasti pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
@@ -384,7 +365,7 @@ msgid ""
 "will be placed in the certificate request."
 msgstr ""
 "Zadejte prosím celé jméno státu nebo oblasti kde žijete. Toto jméno bude "
-"umístěno do certifikačního požadavku."
+"umístěno do požadavku na certifikát."
 
 #. Type: string
 #. Description
@@ -395,9 +376,8 @@ msgstr "Příklad: Morava"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:12001
-#, fuzzy
 msgid "Locality name for the X509 certificate request:"
-msgstr "Zadejte prosím jméno lokality pro certifikační požadavek."
+msgstr "Jméno lokality pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
@@ -407,20 +387,19 @@ msgid ""
 "placed in the certificate request."
 msgstr ""
 "Zadejte prosím lokalitu (např. město) kde žijete. Toto jméno bude umístěno "
-"do certifikačního požadavku."
+"do požadavku na certifikát."
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:12001
 msgid "Example: Vienna"
-msgstr "Příklad: Brno"
+msgstr "Příklad: Olomouc"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:13001
-#, fuzzy
 msgid "Organization name for the X509 certificate request:"
-msgstr "Zadejte prosím název organizace pro certifikační požadavek."
+msgstr "Název organizace pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
@@ -430,7 +409,7 @@ msgid ""
 "should be created for. This name will be placed in the certificate request."
 msgstr ""
 "Zadejte prosím organizaci pro kterou je certifikát vytvářen. Toto jméno bude "
-"umístěno do certifikačního požadavku."
+"umístěno do požadavku na certifikát."
 
 #. Type: string
 #. Description
@@ -441,9 +420,8 @@ msgstr "Příklad: Debian"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:14001
-#, fuzzy
 msgid "Organizational unit for the X509 certificate request:"
-msgstr "Zadejte prosím název organizační jednotky pro certifikační požadavek."
+msgstr "Název organizační jednotky pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
@@ -454,7 +432,7 @@ msgid ""
 "certificate request."
 msgstr ""
 "Zadejte prosím organizační jednotku pro kterou je certifikát vytvářen. Toto "
-"jméno bude umístěno do certifikačního požadavku."
+"jméno bude umístěno do požadavku na certifikát."
 
 #. Type: string
 #. Description
@@ -465,9 +443,8 @@ msgstr "Příklad: bezpečnostní oddělení"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:15001
-#, fuzzy
 msgid "Common name for the X509 certificate request:"
-msgstr "Zadejte prosím obvyklé jméno pro certifikační požadavek."
+msgstr "Obvyklé jméno pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
@@ -477,8 +454,8 @@ msgid ""
 "the X509 certificate should be created for. This name will be placed in the "
 "certificate request."
 msgstr ""
-"Zadejte prosím běžné jméno (např. jméno počítače - hostname) pro kterou je "
-"certifikát vytvářen. Toto jméno bude umístěno do certifikačního požadavku."
+"Zadejte prosím běžné jméno (např. jméno počítače) pro které je certifikát "
+"vytvářen. Toto jméno bude umístěno do požadavku na certifikát."
 
 #. Type: string
 #. Description
@@ -489,9 +466,8 @@ msgstr "Příklad: gateway.debian.org"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:16001
-#, fuzzy
 msgid "Email address for the X509 certificate request:"
-msgstr "Zadejte prosím emailovou adresu pro certifikační požadavek."
+msgstr "Emailová adresa pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
@@ -502,19 +478,17 @@ msgid ""
 "certificate request."
 msgstr ""
 "Zadejte prosím emailovou adresu osoby nebo organizace, která je zodpovědná "
-"za certifikát X509. Toto jméno bude umístěno do certifikačního požadavku."
+"za certifikát X509. Toto jméno bude umístěno do požadavku na certifikát."
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:17001
-#, fuzzy
 msgid "Do you wish to enable opportunistic encryption in strongSwan?"
-msgstr "Chcete povolit opportunistic encryption ve Openswan?"
+msgstr "Chcete ve strongSwanu povolit oportunistické šifrování?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:17001
-#, fuzzy
 msgid ""
 "strongSwan comes with support for opportunistic encryption (OE), which "
 "stores IPSec authentication information (i.e. RSA public keys) in "
@@ -524,14 +498,14 @@ msgid ""
 "is thus likely to break your existing connection to the Internet (i.e. your "
 "default route) as soon as pluto (the strongSwan keying daemon) is started."
 msgstr ""
-"Openswan přichází s podporou pro opportunistic·encryption·(OE), která "
-"uchováváautentizační informace IPSec (např. veřejné RSA klíče) v (nejlépe "
-"zabezpečených)DNS záznamech. Dokud nebude tato schopnost více rozšířena, "
-"způsobí její aktivacevyrazné zpomalení s každým novým odchozím spojením. Od "
-"verze 2.0 přicházíOpenswan s implicitně zapnutou podporou OE čímž "
-"pravděpodobně zruší vašeprobíhající připojení k Internetu (např. vaši "
-"impicitní cestu - default route) jakmileje pluto (Openswan keying démon) "
-"spuštěno."
+"strongSwan přichází s podporou pro oportunistické šifrování (OE), které "
+"uchovává autentizační informace IPSecu (např. veřejné RSA klíče) v (nejlépe "
+"zabezpečených) DNS záznamech. Dokud nebude tato schopnost více rozšířena, "
+"způsobí její aktivace výrazné zpomalení každého nového odchozího spojení. Od "
+"verze 2.0 přichází strongSwan s implicitně zapnutou podporou OE čímž "
+"pravděpodobně zruší vaše probíhající spojení do Internetu (např. vaši "
+"implicitní cestu - default route) v okamžiku, kdy spustíte pluto (strongSwan "
+"keying démon)."
 
 #. Type: boolean
 #. Description
@@ -542,11 +516,3 @@ msgid ""
 msgstr ""
 "Prosím vyberte si zda chcete povolit podporu pro OE. Nejste-li si jisti, "
 "podporu nepovolujte."
-
-#, fuzzy
-#~ msgid "Please choose the when to start strongSwan:"
-#~ msgstr "Přejete si spustit Openswan?"
-
-#, fuzzy
-#~ msgid "At which level do you wish to start strongSwan ?"
-#~ msgstr "Na jaké úrovni chcete spouštět Openswan?"

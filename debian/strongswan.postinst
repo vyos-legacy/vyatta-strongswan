@@ -206,23 +206,39 @@ case "$1" in
         db_get strongswan/enable-oe
         if [ "$RET" != "true" ]; then
             echo -n "Disabling opportunistic encryption (OE) in config file ... "
-            if egrep -q "^include /etc/ipsec.d/examples/no_oe.conf$" /etc/ipsec.conf; then
-                echo "already disabled"
-            else
-                cat <<EOF >> /etc/ipsec.conf
-#Disable Opportunistic Encryption
-include /etc/ipsec.d/examples/no_oe.conf
-EOF
-              echo "done"
+            if egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" /etc/ipsec.conf; then
+                # also update to new-style config
+                sed 's/.*include \/etc\/ipsec.d\/examples\/no_oe.conf/#include \/etc\/ipsec.d\/examples\/oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
+                mv /etc/ipsec.conf.tmp /etc/ipsec.conf
+                echo -n "converted old config line to new format"
             fi
-	else
-            echo -n "Enabling opportunistic encryption (OE) in config file ... "
-            if egrep -q "^include /etc/ipsec.d/examples/no_oe.conf$" /etc/ipsec.conf; then
-            	sed 's/include \/etc\/ipsec.d\/examples\/no_oe.conf/#include \/etc\/ipsec.d\/examples\/no_oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
+            if egrep -q "^include /etc/ipsec.d/examples/oe.conf$" /etc/ipsec.conf; then
+            	sed 's/include \/etc\/ipsec.d\/examples\/oe.conf/#include \/etc\/ipsec.d\/examples\/oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
                 mv /etc/ipsec.conf.tmp /etc/ipsec.conf
                 echo "done"
             else
+                echo "already disabled"
+            fi
+	else
+            echo -n "Enabling opportunistic encryption (OE) in config file ... "
+            if egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" /etc/ipsec.conf; then
+                # also update to new-style config
+            	sed 's/.*include \/etc\/ipsec.d\/examples\/no_oe.conf/include \/etc\/ipsec.d\/examples\/oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
+                mv /etc/ipsec.conf.tmp /etc/ipsec.conf
+                echo -n "converted old config line to new format"
+            fi
+            if egrep -q "^include /etc/ipsec.d/examples/oe.conf$" /etc/ipsec.conf; then
                 echo "already enabled"
+            elif egrep -q "^#.*include /etc/ipsec.d/examples/oe.conf$" /etc/ipsec.conf; then
+            	sed 's/#.*include \/etc\/ipsec.d\/examples\/oe.conf/include \/etc\/ipsec.d\/examples\/oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
+                mv /etc/ipsec.conf.tmp /etc/ipsec.conf
+                echo "done"
+            else
+                cat <<EOF >> /etc/ipsec.conf
+#Enable Opportunistic Encryption
+include /etc/ipsec.d/examples/oe.conf
+EOF
+              echo "done"
             fi
         fi
 

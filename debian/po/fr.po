@@ -9,13 +9,13 @@ msgstr ""
 "Project-Id-Version: fr\n"
 "Report-Msgid-Bugs-To: rmayr@debian.org\n"
 "POT-Creation-Date: 2006-08-25 17:56+0100\n"
-"PO-Revision-Date: 2006-04-17 18:59+0200\n"
+"PO-Revision-Date: 2006-09-21 22:02+0200\n"
 "Last-Translator: Christian Perrier <bubulle@debian.org>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=ISO-8859-15\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: KBabel 1.11.2\n"
+"X-Generator: KBabel 1.11.4\n"
 "Plural-Forms: Plural-Forms: nplurals=2; plural=n>1;\n"
 
 #. Type: select
@@ -27,29 +27,24 @@ msgstr "Le plus tôt possible, Après NFS, Après PCMCIA"
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid "When to start strongSwan:"
-msgstr "Souhaitez-vous redémarrer Openswan ?"
+msgstr "Moment de démarrage de strongSwan :"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "There are three possibilities when strongSwan can start: before or after the "
 "NFS services and after the PCMCIA services. The correct answer depends on "
 "your specific setup."
 msgstr ""
-"Avec les niveaux de démarrage actuellement utilisés par Debian (presque tout "
-"démarre au niveau 20), il est impossible de faire en sorte qu'Openswan "
-"démarre toujours au moment approprié. Il existe trois moments où il est "
-"opportun de le démarrer : avant ou après les services NFS, ou après les "
-"services PCMCIA. La réponse appropriée dépend de vos réglages spécifiques."
+"Il existe trois moments où il est opportun de démarrer strongSwan : avant ou "
+"après les services NFS, ou après les services PCMCIA. La réponse appropriée "
+"dépend de vos réglages spécifiques."
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "If you do not have your /usr tree mounted via NFS (either you only mount "
 "other, less vital trees via NFS or don't use NFS mounted trees at all) and "
@@ -61,16 +56,15 @@ msgstr ""
 "Si votre arborescence /usr n'est pas un montage NFS (soit parce que vos "
 "montages NFS sont à d'autres endroits, moins critiques, soit parce que vous "
 "n'utilisez pas du tout de montage NFS) et si vous n'utilisez pas de carte "
-"réseau PCMCIA, il est préférable de démarrer Openswan le plus tôt possible, "
-"ce qui permettra de sécuriser les montages NFS avec IPSec. Dans ce cas (ou "
-"bien si vous ne comprenez pas l'objet de la question ou qu'elle ne vous "
-"concerne pas), choisissez « le plus tôt possible », qui est le choix par "
-"défaut."
+"réseau PCMCIA, il est préférable de démarrer strongSwan le plus tôt "
+"possible, ce qui permettra de sécuriser les montages NFS avec IPSec. Dans ce "
+"cas (ou bien si vous ne comprenez pas l'objet de la question ou qu'elle ne "
+"vous concerne pas), choisissez « le plus tôt possible », qui est le choix "
+"par défaut."
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "If you have your /usr tree mounted via NFS and don't use a PCMCIA network "
 "card, then you will need to start strongSwan after NFS so that all necessary "
@@ -79,10 +73,10 @@ msgid ""
 "case."
 msgstr ""
 "Si /usr est un montage NFS et que vous n'utilisez pas de carte réseau "
-"PCMCIA, vous devrez alors démarrer Openswan après les services NFS afin que "
-"tous les fichiers nécessaires soient disponibles. Dans ce cas, choisissez "
-"« Après NFS ». Veuillez noter que le montage NFS de /usr n'est alors pas "
-"sécurisé par IPSec."
+"PCMCIA, vous devrez alors démarrer strongSwan après les services NFS afin "
+"que tous les fichiers nécessaires soient disponibles. Dans ce cas, "
+"choisissez « Après NFS ». Veuillez noter que le montage NFS de /usr n'est "
+"alors pas sécurisé par IPSec."
 
 #. Type: select
 #. Description
@@ -101,22 +95,20 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:2001
-#, fuzzy
 msgid "Do you wish to restart strongSwan?"
-msgstr "Souhaitez-vous redémarrer Openswan ?"
+msgstr "Souhaitez-vous redémarrer strongSwan ?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:2001
-#, fuzzy
 msgid ""
 "Restarting strongSwan is a good idea, since if there is a security fix, it "
 "will not be fixed until the daemon restarts. Most people expect the daemon "
 "to restart, so this is generally a good idea. However this might take down "
 "existing connections and then bring them back up."
 msgstr ""
-"Redémarrer Openswan est préférable car un éventuel correctif de sécurité ne "
-"prendra place que si le démon est redémarré. La plupart des utilisateurs "
+"Redémarrer strongSwan est préférable car un éventuel correctif de sécurité "
+"ne prendra place que si le démon est redémarré. La plupart des utilisateurs "
 "s'attendent à ce que le démon redémarre et c'est donc le plus souvent le "
 "meilleur choix. Cependant, cela pourrait interrompre provisoirement des "
 "connexions en cours."
@@ -124,7 +116,6 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:3001
-#, fuzzy
 msgid "Do you want to create a RSA public/private keypair for this host?"
 msgstr ""
 "Souhaitez-vous créer une paire de clés RSA publique et privée pour cet hôte ?"
@@ -169,27 +160,24 @@ msgstr "X509, Simple paire"
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid "The type of RSA keypair to create:"
 msgstr "Type de paire de clés RSA à créer :"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "It is possible to create a plain RSA public/private keypair for use with "
 "strongSwan or to create a X509 certificate file which contains the RSA "
 "public key and additionally stores the corresponding private key."
 msgstr ""
 "Il est possible de créer une simple paire de clés destinée à être utilisée "
-"avec Openswan ou de créer un fichier de certificat X509 qui contient la clé "
-"publique RSA et de conserver la clé privée correspondante par ailleurs."
+"avec strongSwan ou de créer un fichier de certificat X509 qui contient la "
+"clé publique RSA et de conserver la clé privée correspondante par ailleurs."
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "If you only want to build up IPSec connections to hosts also running "
 "strongSwan, it might be a bit easier using plain RSA keypairs. But if you "
@@ -199,8 +187,8 @@ msgid ""
 "without X509 certificate support."
 msgstr ""
 "Si vous ne prévoyez d'établir des connexions IPSec qu'avec des hôtes "
-"utilisant Openswan, il sera probablement plus facile d'utiliser des clés RSA "
-"simples. Mais si vous souhaitez vous connecter à des hôtes utilisant "
+"utilisant strongSwan, il sera probablement plus facile d'utiliser des clés "
+"RSA simples. Mais si vous souhaitez vous connecter à des hôtes utilisant "
 "d'autres implémentations d'IPSec, vous aurez besoin d'un certificat X509. Il "
 "est également possible de créer un certificat X509 puis d'en extraire une "
 "simple clé publique RSA, si l'autre extrémité de la connexion utilise "
@@ -209,7 +197,6 @@ msgstr ""
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "Therefore a X509 certificate is recommended since it is more flexible and "
 "this installer should be able to hide the complex creation of the X509 "
@@ -217,21 +204,19 @@ msgid ""
 msgstr ""
 "Ainsi, il vous est conseillé d'utiliser un certificat X509 car cette méthode "
 "est plus souple. Cet outil d'installation devrait vous simplifier la tâche "
-"de création et d'utilisation de ce certificat X509."
+"de création et d'utilisation de ce certificat X509 avec strongSwan."
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:5001
-#, fuzzy
 msgid "Do you have an existing X509 certificate file for strongSwan?"
 msgstr ""
 "Possédez-vous un fichier de certificat X509 existant à utiliser avec "
-"Openswan ?"
+"strongSwan ?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:5001
-#, fuzzy
 msgid ""
 "This installer can automatically extract the needed information from an "
 "existing X509 certificate with a matching RSA private key. Both parts can be "
@@ -249,14 +234,12 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:6001
-#, fuzzy
 msgid "File name of your X509 certificate in PEM format:"
 msgstr "Emplacement de votre certificat X509 au format PEM :"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:6001
-#, fuzzy
 msgid ""
 "Please enter the full location of the file containing your X509  certificate "
 "in PEM format."
@@ -267,14 +250,12 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:7001
-#, fuzzy
 msgid "File name of your X509 private key in PEM format:"
 msgstr "Emplacement de votre clé privée X509 au format PEM :"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:7001
-#, fuzzy
 msgid ""
 "Please enter the full location of the file containing the private RSA key "
 "matching your X509 certificate in PEM format. This can be the same file that "
@@ -287,9 +268,8 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:8001
-#, fuzzy
 msgid "The length of the created RSA key (in bits):"
-msgstr "Longueur de la clé RSA à créer :"
+msgstr "Longueur (en bits) de la clé RSA à créer :"
 
 #. Type: string
 #. Description
@@ -309,14 +289,12 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:9001
-#, fuzzy
 msgid "Do you want to create a self-signed X509 certificate?"
 msgstr "Souhaitez-vous créer un certificat X509 autosigné ?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:9001
-#, fuzzy
 msgid ""
 "This installer can only create self-signed X509 certificates automatically, "
 "because otherwise a certificate authority is needed to sign the certificate "
@@ -332,7 +310,7 @@ msgstr ""
 "autosigné, vous pourrez vous en servir immédiatement pour vous connecter aux "
 "hôtes qui authentifient les connexions IPSec avec des certificats X509. "
 "Cependant, si vous souhaitez utiliser les nouvelles fonctionnalités PKI de "
-"Openswan >= 1.91, vous aurez besoin que tous les certificats X509 soient "
+"strongSwan >= 1.91, vous aurez besoin que tous les certificats X509 soient "
 "signés par la même autorité de certification afin de créer un chemin de "
 "confiance."
 
@@ -352,7 +330,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:10001
-#, fuzzy
 msgid "Country code for the X509 certificate request:"
 msgstr "Code du pays :"
 
@@ -387,7 +364,6 @@ msgstr "Exemple : FR"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:11001
-#, fuzzy
 msgid "State or province name for the X509 certificate request:"
 msgstr "État, province ou région :"
 
@@ -412,7 +388,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:12001
-#, fuzzy
 msgid "Locality name for the X509 certificate request:"
 msgstr "Localité :"
 
@@ -435,7 +410,6 @@ msgstr "Exemple : Saint-Étienne"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:13001
-#, fuzzy
 msgid "Organization name for the X509 certificate request:"
 msgstr "Organisme :"
 
@@ -458,7 +432,6 @@ msgstr "Exemple : Debian"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:14001
-#, fuzzy
 msgid "Organizational unit for the X509 certificate request:"
 msgstr "Unité d'organisation :"
 
@@ -483,7 +456,6 @@ msgstr "Exemple : Département Réseaux et Informatique Scientifique"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:15001
-#, fuzzy
 msgid "Common name for the X509 certificate request:"
 msgstr "Nom ordinaire :"
 
@@ -508,7 +480,6 @@ msgstr "Exemple : gateway.debian.org"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:16001
-#, fuzzy
 msgid "Email address for the X509 certificate request:"
 msgstr "Adresse électronique :"
 
@@ -527,14 +498,12 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:17001
-#, fuzzy
 msgid "Do you wish to enable opportunistic encryption in strongSwan?"
-msgstr "Souhaitez-vous activer le chiffrement opportuniste dans Openswan ?"
+msgstr "Souhaitez-vous activer le chiffrement opportuniste dans strongSwan ?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:17001
-#, fuzzy
 msgid ""
 "strongSwan comes with support for opportunistic encryption (OE), which "
 "stores IPSec authentication information (i.e. RSA public keys) in "
@@ -544,15 +513,15 @@ msgid ""
 "is thus likely to break your existing connection to the Internet (i.e. your "
 "default route) as soon as pluto (the strongSwan keying daemon) is started."
 msgstr ""
-"Openswan gère le chiffrement opportuniste (« opportunistic encryption » : "
+"StrongSwan gère le chiffrement opportuniste (« opportunistic encryption » : "
 "OE) qui permet de conserver les informations d'authentification IPSec (c'est-"
 "à-dire les clés publiques RSA) dans des enregistrements DNS, de préférence "
 "sécurisés. Tant que cette fonctionnalité ne sera pas déployée largement, son "
 "activation provoquera un ralentissement significatif pour toute nouvelle "
 "connexion sortante. À partir de la version 2.0, cette fonctionnalité est "
-"activée par défaut dans Openswan, ce qui peut interrompre le fonctionnement "
-"de votre connexion à l'Internet (c'est-à-dire votre route par défaut) dès le "
-"démarrage de pluto, le démon de gestion de clés d'Openswan."
+"activée par défaut dans strongSwan, ce qui peut interrompre le "
+"fonctionnement de votre connexion à l'Internet (c'est-à-dire votre route par "
+"défaut) dès le démarrage de pluto, le démon de gestion de clés de strongSwan."
 
 #. Type: boolean
 #. Description
@@ -563,11 +532,3 @@ msgid ""
 msgstr ""
 "Veuillez choisir si vous souhaitez activer la gestion du chiffrement "
 "opportuniste. Ne l'activez pas si vous n'êtes pas certain d'en avoir besoin."
-
-#, fuzzy
-#~ msgid "Please choose the when to start strongSwan:"
-#~ msgstr "Souhaitez-vous redémarrer Openswan ?"
-
-#, fuzzy
-#~ msgid "At which level do you wish to start strongSwan ?"
-#~ msgstr "Étape de lancement d'Openswan :"

@@ -14,47 +14,43 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: openswan 1:2.2.0-8\n"
+"Project-Id-Version: strongSwan 2.7.3+dfsg-1\n"
 "Report-Msgid-Bugs-To: rmayr@debian.org\n"
 "POT-Creation-Date: 2006-08-25 17:56+0100\n"
-"PO-Revision-Date: 2005-05-28 01:26+0900\n"
-"Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
+"PO-Revision-Date: 2006-10-19 07:45+0900\n"
+"Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=EUC-JP\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #. Type: select
 #. Choices
 #: ../strongswan.templates.master:1001
 msgid "earliest, \"after NFS\", \"after PCMCIA\""
-msgstr "²ÄÇ½¤Ê¸Â¤êÁá¤¯, \"NFS µ¯Æ°¸å\", \"PCMCIA µ¯Æ°¸å\""
+msgstr "å¯èƒ½ãªé™ã‚Šæ—©ã, \"NFS èµ·å‹•å¾Œ\", \"PCMCIA èµ·å‹•å¾Œ\""
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid "When to start strongSwan:"
-msgstr "Openswan ¤òºÆµ¯Æ°¤·¤Ş¤¹¤«?"
+msgstr "strongSwan ã®ã‚¿ã‚¤ãƒŸãƒ³ã‚°:"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "There are three possibilities when strongSwan can start: before or after the "
 "NFS services and after the PCMCIA services. The correct answer depends on "
 "your specific setup."
 msgstr ""
-"¸½ºß¤Î Debian ¤Ç¤Îµ¯Æ°¥ì¥Ù¥ë (¤Û¤È¤ó¤ÉÁ´¤Æ¤¬¥ì¥Ù¥ë20) ¤Î¤Ş¤Ş¤Ç¤Ï¡¢Openswan ¤ò"
-"¾ï¤Ë¤ÏÅ¬ÀÚ¤Ê¥¿¥¤¥ß¥ó¥°¤Çµ¯Æ°¤Ç¤­¤Ş¤»¤ó¡£Openswan ¤òµ¯Æ°¤µ¤»¤ë¥¿¥¤¥ß¥ó¥°¤ÎÁªÂò"
-"»è¤È¤·¤Æ¤Ï3¤Ä¤¬¹Í¤¨¤é¤ì¤Ş¤¹: NFS ¥µ¡¼¥Ó¥¹¤Î³«»ÏÁ°¡¦³«»Ï¸å¡¦PCMCIA ¥µ¡¼¥Ó¥¹¤Î"
-"³«»Ï¸å¤Ç¤¹¡£Àµ²ò¤Ï¤¢¤Ê¤¿¤ÎÀßÄê¼¡Âè¤Ç¤¹¡£"
+"strongSwan ã‚’èµ·å‹•ã•ã›ã‚‹ã‚¿ã‚¤ãƒŸãƒ³ã‚°ã®é¸æŠè‚¢ã¨ã—ã¦ã¯3ã¤ãŒè€ƒãˆã‚‰ã‚Œã¾ã™: NFS ã‚µãƒ¼"
+"ãƒ“ã‚¹ã®é–‹å§‹å‰ãƒ»é–‹å§‹å¾Œãƒ»PCMCIA ã‚µãƒ¼ãƒ“ã‚¹ã®é–‹å§‹å¾Œã€ã§ã™ã€‚æ­£è§£ã¯ã‚ãªãŸã®è¨­å®šæ¬¡ç¬¬ã§"
+"ã™ã€‚"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "If you do not have your /usr tree mounted via NFS (either you only mount "
 "other, less vital trees via NFS or don't use NFS mounted trees at all) and "
@@ -63,17 +59,16 @@ msgid ""
 "In this case (or if you don't understand or care about this issue), answer "
 "\"earliest\" to this question (the default)."
 msgstr ""
-"NFS ·ĞÍ³¤Ç /usr ¤ò¥Ş¥¦¥ó¥È¤»¤º (Â¾¤Î¥Ñ¡¼¥Æ¥£¥·¥ç¥ó¤ä¤¢¤Ş¤ê½ÅÍ×¤Ç¤Ï¤Ê¤¤¥Ñ¡¼"
-"¥Æ¥£¥·¥ç¥ó¤ò NFS ·ĞÍ³¤Ç¥Ş¥¦¥ó¥È¤¹¤ë¤«¡¢¤Ş¤¿¤Ï NFS ¥Ş¥¦¥ó¥È¤òÁ´¤¯»È¤ï¤Ê¤¤)¡¢²Ã"
-"¤¨¤Æ PCMCIA ¥Í¥Ã¥È¥ï¡¼¥¯¥«¡¼¥É¤òÍøÍÑ¤·¤Æ¤¤¤Ê¤¤¾ì¹ç¡¢²ÄÇ½¤Ê¸Â¤êÁá¤¤»ş´Ö¤Ë "
-"Openswan ¤òµ¯Æ°¤¹¤ë¤Î¤¬¥Ù¥¹¥È¤Ç¤¹¡£¤³¤ÎÀßÄê¤Ë¤è¤Ã¤Æ¡¢NFS ¤Ç¤Î¥Ş¥¦¥ó¥È¤Ï "
-"IPSec ¤ÇÊİ¸î¤µ¤ì¤Ş¤¹¡£¤³¤Î¾ì¹ç (¤Ş¤¿¤Ï¤³¤ÎÌäÂê¤òÍı²ò¤·¤Æ¤¤¤Ê¤¤¤«ÆÃ¤Ëµ¤¤Ë¤·¤Ê"
-"¤¤¾ì¹ç) ¡¢\"²ÄÇ½¤Ê¸Â¤êÁá¤¯\"¤È¼ÁÌä¤ËÅú¤¨¤Æ¤¯¤À¤µ¤¤ (É¸½à) ¡£"
+"NFS çµŒç”±ã§ /usr ã‚’ãƒã‚¦ãƒ³ãƒˆã›ãš (ä»–ã®ãƒ‘ãƒ¼ãƒ†ã‚£ã‚·ãƒ§ãƒ³ã‚„ã‚ã¾ã‚Šé‡è¦ã§ã¯ãªã„ãƒ‘ãƒ¼"
+"ãƒ†ã‚£ã‚·ãƒ§ãƒ³ã‚’ NFS çµŒç”±ã§ãƒã‚¦ãƒ³ãƒˆã™ã‚‹ã‹ã€ã¾ãŸã¯ NFS ãƒã‚¦ãƒ³ãƒˆã‚’å…¨ãä½¿ã‚ãªã„)ã€åŠ "
+"ãˆã¦ PCMCIA ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯ã‚«ãƒ¼ãƒ‰ã‚’åˆ©ç”¨ã—ã¦ã„ãªã„å ´åˆã€å¯èƒ½ãªé™ã‚Šæ—©ã„ã‚¿ã‚¤ãƒŸãƒ³ã‚°"
+"ã§ strongSwan ã‚’èµ·å‹•ã™ã‚‹ã®ãŒãƒ™ã‚¹ãƒˆã§ã™ã€‚ã“ã®è¨­å®šã«ã‚ˆã£ã¦ã€NFS ã§ã®ãƒã‚¦ãƒ³ãƒˆã¯ "
+"IPSec ã§ä¿è­·ã•ã‚Œã¾ã™ã€‚ã“ã®å ´åˆ (ã¾ãŸã¯ã“ã®å•é¡Œã‚’ç†è§£ã—ã¦ã„ãªã„ã‹ç‰¹ã«æ°—ã«ã—ãª"
+"ã„å ´åˆ) ã€\"å¯èƒ½ãªé™ã‚Šæ—©ã\"ã¨è³ªå•ã«ç­”ãˆã¦ãã ã•ã„ (æ¨™æº–è¨­å®šã§ã™) ã€‚"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:1002
-#, fuzzy
 msgid ""
 "If you have your /usr tree mounted via NFS and don't use a PCMCIA network "
 "card, then you will need to start strongSwan after NFS so that all necessary "
@@ -81,11 +76,11 @@ msgid ""
 "Please note that the NFS mount of /usr can not be secured by IPSec in this "
 "case."
 msgstr ""
-"NFS ·ĞÍ³¤Ç /usr ¤ò¥Ş¥¦¥ó¥È¤·¤Æ¤¤¤Æ PCMCIA ¥Í¥Ã¥È¥ï¡¼¥¯¥«¡¼¥É¤ò»ÈÍÑ¤·¤Æ¤¤¤Ê¤¤"
-"¾ì¹ç¤Ï¡¢É¬Í×¤Ê¥Õ¥¡¥¤¥ë¤òÍøÍÑ²ÄÇ½¤Ë¤¹¤ë¤¿¤á¤Ë Openswan ¤ò NFS ¤Î¸å¤Çµ¯Æ°¤·¤Ê¤±"
-"¤ì¤Ğ¤Ê¤ê¤Ş¤»¤ó¡£¤³¤Î¾ì¹ç¡¢\"NFS µ¯Æ°¸å\" ¤ÈÅú¤¨¤Æ¤¯¤À¤µ¤¤¡£¤³¤Î»ş¤Ë NFS ·ĞÍ³"
-"¤Ç¥Ş¥¦¥ó¥È¤µ¤ì¤ë /usr ¤Ï¡¢IPSec ¤Ë¤è¤ë¥»¥­¥å¥¢¤Ê¾õÂÖ¤Ë¤Ï¤Ê¤é¤Ê¤¤¤È¤¤¤¦¤³¤È¤Ë"
-"Ãí°Õ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+"NFS çµŒç”±ã§ /usr ã‚’ãƒã‚¦ãƒ³ãƒˆã—ã¦ã„ã¦ PCMCIA ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯ã‚«ãƒ¼ãƒ‰ã‚’ä½¿ç”¨ã—ã¦ã„ãªã„"
+"å ´åˆã¯ã€å¿…è¦ãªãƒ•ã‚¡ã‚¤ãƒ«ã‚’åˆ©ç”¨å¯èƒ½ã«ã™ã‚‹ãŸã‚ã« strongSwan ã‚’ NFS ã®å¾Œã§èµ·å‹•ã—ãª"
+"ã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“ã€‚ã“ã®å ´åˆã€\"NFS èµ·å‹•å¾Œ\" ã¨ç­”ãˆã¦ãã ã•ã„ã€‚ã“ã®æ™‚ã« NFS çµŒ"
+"ç”±ã§ãƒã‚¦ãƒ³ãƒˆã•ã‚Œã‚‹ /usr ã¯ã€IPSec ã«ã‚ˆã‚‹ã‚»ã‚­ãƒ¥ã‚¢ãªçŠ¶æ…‹ã«ã¯ãªã‚‰ãªã„ã¨ã„ã†ã“ã¨"
+"ã«æ³¨æ„ã—ã¦ãã ã•ã„ã€‚"
 
 #. Type: select
 #. Description
@@ -96,39 +91,36 @@ msgid ""
 "\" in this case. This is also the correct answer if you want to fetch keys "
 "from a locally running DNS server with DNSSec support."
 msgstr ""
-"IPSec ÀÜÂ³¤Ë PCMCIA ¥Í¥Ã¥È¥ï¡¼¥¯¥«¡¼¥É¤òÍøÍÑ¤·¤Æ¤¤¤¿¾ì¹ç¡¢PCMCIA ¥µ¡¼¥Ó¥¹¤Îµ¯"
-"Æ°¸å¤Ë Openswan ¤òµ¯Æ°¤¹¤ë°Ê³°¤ËÁªÂò¤Ï¤¢¤ê¤Ş¤»¤ó¡£¤³¤Î¾ì¹ç¡¢\"PCMCIA µ¯Æ°¸å"
-"\" ¤ÈÅú¤¨¤Æ¤¯¤À¤µ¤¤¡£¥í¡¼¥«¥ë¤ÇÆ°ºî¤·¤Æ¤¤¤ë DNSSec µ¡Ç½¤ò»ÈÍÑ¤·¤Æ¤¤¤ë DNS "
-"¥µ¡¼¥Ğ¤«¤é¸°¤ò¼èÆÀ¤·¤¿¤¤¾ì¹ç¤Ç¤â¡¢¤³¤ÎÅú¤¨¤ò¤·¤Æ¤¯¤À¤µ¤¤¡£"
+"IPSec æ¥ç¶šã« PCMCIA ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯ã‚«ãƒ¼ãƒ‰ã‚’åˆ©ç”¨ã—ã¦ã„ãŸå ´åˆã€PCMCIA ã‚µãƒ¼ãƒ“ã‚¹ã®èµ·"
+"å‹•å¾Œã« strongSwan ã‚’èµ·å‹•ã™ã‚‹ä»¥å¤–ã«é¸æŠã¯ã‚ã‚Šã¾ã›ã‚“ã€‚ã“ã®å ´åˆã€\"PCMCIA èµ·å‹•å¾Œ"
+"\" ã¨ç­”ãˆã¦ãã ã•ã„ã€‚ãƒ­ãƒ¼ã‚«ãƒ«ã§å‹•ä½œã—ã¦ã„ã‚‹ DNSSec æ©Ÿèƒ½ã‚’ä½¿ç”¨ã—ã¦ã„ã‚‹ DNS "
+"ã‚µãƒ¼ãƒã‹ã‚‰éµã‚’å–å¾—ã—ãŸã„å ´åˆã§ã‚‚ã€ã“ã®ç­”ãˆã‚’ã—ã¦ãã ã•ã„ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:2001
-#, fuzzy
 msgid "Do you wish to restart strongSwan?"
-msgstr "Openswan ¤òºÆµ¯Æ°¤·¤Ş¤¹¤«?"
+msgstr "strongSwan ã‚’å†èµ·å‹•ã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:2001
-#, fuzzy
 msgid ""
 "Restarting strongSwan is a good idea, since if there is a security fix, it "
 "will not be fixed until the daemon restarts. Most people expect the daemon "
 "to restart, so this is generally a good idea. However this might take down "
 "existing connections and then bring them back up."
 msgstr ""
-"¥»¥­¥å¥ê¥Æ¥£½¤Àµ¤¬¤¢¤Ã¤¿¾ì¹ç¤Ë¤Ï¥Ç¡¼¥â¥ó¤¬ºÆµ¯Æ°¤µ¤ì¤ë¤Ş¤Ç½¤Àµ¤¬È¿±Ç¤µ¤ì¤Ş¤»"
-"¤ó¡£¤½¤Î¤¿¤á¡¢Openswan ¤òºÆµ¯Æ°¤¹¤ë¤Î¤ÏÎÉ¤¤¹Í¤¨¤Ç¤¹¡£¤Û¤È¤ó¤É¤Î¿Í¤Ï¥Ç¡¼¥â¥ó¤ò"
-"ºÆµ¯Æ°¤·¤è¤¦¤È¤·¤Ş¤¹¤¬¡¢¤³¤ì¤ÏÂçÄñÌäÂê¤¢¤ê¤Ş¤»¤ó¡£¤·¤«¤·¡¢¤³¤Îºî¶È¤Ç¸½ºß¤ÎÀÜ"
-"Â³¤ÏÀÚÃÇ¤µ¤ì¡¢ºÆÅÙ·Ò¤®¤Ê¤ª¤¹¤³¤È¤Ë¤Ê¤ê¤Ş¤¹¡£"
+"ã‚»ã‚­ãƒ¥ãƒªãƒ†ã‚£ä¿®æ­£ãŒã‚ã£ãŸå ´åˆã«ã¯ãƒ‡ãƒ¼ãƒ¢ãƒ³ãŒå†èµ·å‹•ã•ã‚Œã‚‹ã¾ã§ä¿®æ­£ãŒåæ˜ ã•ã‚Œã¾ã›"
+"ã‚“ã€‚ã§ã™ã®ã§ã€strongSwan ã‚’å†èµ·å‹•ã™ã‚‹ã®ã¯è‰¯ã„è€ƒãˆã§ã™ã€‚ã»ã¨ã‚“ã©ã®äººã¯ãƒ‡ãƒ¼ãƒ¢ãƒ³"
+"ã‚’å†èµ·å‹•ã—ã‚ˆã†ã¨ã—ã¾ã™ãŒã€ã“ã‚Œã¯å¤§æŠµå•é¡Œã‚ã‚Šã¾ã›ã‚“ã€‚ã—ã‹ã—ã€ã“ã®ä½œæ¥­ã§ç¾åœ¨ã®"
+"æ¥ç¶šã¯åˆ‡æ–­ã•ã‚Œã€å†åº¦ç¹‹ããªãŠã™ã“ã¨ã«ãªã‚Šã¾ã™ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:3001
-#, fuzzy
 msgid "Do you want to create a RSA public/private keypair for this host?"
-msgstr "¤³¤Î¥Û¥¹¥È¤Î RSA ¸ø³«¸°¤ÈÈëÌ©¸°¤Î¥­¡¼¥Ú¥¢¤òÀ¸À®¤·¤Ş¤¹¤«?"
+msgstr "ã“ã®ãƒ›ã‚¹ãƒˆã® RSA å…¬é–‹éµãƒ»ç§˜å¯†éµã®ã‚­ãƒ¼ãƒšã‚¢ã‚’ç”Ÿæˆã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
@@ -142,52 +134,50 @@ msgid ""
 "connection, but for a larger number of connections RSA authentication is "
 "easier to administer and more secure."
 msgstr ""
-"¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤Ï¤³¤Î¥Û¥¹¥È¤Î RSA ¸ø³«¸°¤ÈÈëÌ©¸°¤Î¥­¡¼¥Ú¥¢¤ò¼«Æ°Åª¤ËÀ¸À®¤Ç¤­"
-"¤Ş¤¹¡£¤³¤Î¥­¡¼¥Ú¥¢¤ÏÂ¾¤Î¥Û¥¹¥È¤È¤Î IPSec ÄÌ¿®¤Ç¤ÎÇ§¾Ú¤ËÍøÍÑ²ÄÇ½¤Ç¡¢¥»¥­¥å¥¢"
-"¤Ê IPSec ÄÌ¿®¤ò³ÎÎ©¤¹¤ëÊıË¡¤È¤·¤Æ¹¥¤Ş¤ì¤Æ¤¤¤Ş¤¹¡£Â¾¤ËÍøÍÑ²ÄÇ½¤ÊÊıË¡¤È¤·¤Æ¤Ï¶¦"
-"ÄÌ¸° (¥È¥ó¥Í¥ë¤ÎÁĞÊı¤ÇÆ±¤¸¥Ñ¥¹¥ï¡¼¥É) ¤òÄÌ¿®¤ÎÇ§¾Ú¤ËÍøÍÑ¤¹¤ë¤È¤¤¤¦¤Î¤¬¤¢¤ê¤Ş"
-"¤¹¤¬¡¢Â¿¿ô¤ÎÀÜÂ³¤ËÂĞ¤·¤Æ¤Ï¡¢RSA Ç§¾Ú¤Î¤Û¤¦¤¬´ÉÍı¤¬¤è¤ê´ÊÃ±¤Ç¡¢¤è¤ê¥»¥­¥å¥¢¤Ç"
-"¤¹¡£"
+"ã“ã®ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ©ã¯ã“ã®ãƒ›ã‚¹ãƒˆã® RSA å…¬é–‹éµãƒ»ç§˜å¯†éµã®ã‚­ãƒ¼ãƒšã‚¢ã‚’è‡ªå‹•çš„ã«ç”Ÿæˆã§ã"
+"ã¾ã™ã€‚ã“ã®ã‚­ãƒ¼ãƒšã‚¢ã¯ä»–ã®ãƒ›ã‚¹ãƒˆã¨ã® IPSec é€šä¿¡ã§ã®èªè¨¼ã«åˆ©ç”¨å¯èƒ½ã§ã€ã‚»ã‚­ãƒ¥ã‚¢"
+"ãª IPSec é€šä¿¡ã‚’ç¢ºç«‹ã™ã‚‹æ–¹æ³•ã¨ã—ã¦å¥½ã¾ã‚Œã¦ã„ã¾ã™ã€‚ä»–ã«åˆ©ç”¨å¯èƒ½ãªæ–¹æ³•ã¨ã—ã¦ã¯å…±"
+"é€šéµ (ãƒˆãƒ³ãƒãƒ«ã®åŒæ–¹ã§åŒã˜ãƒ‘ã‚¹ãƒ¯ãƒ¼ãƒ‰) ã‚’é€šä¿¡ã®èªè¨¼ã«åˆ©ç”¨ã™ã‚‹ã¨ã„ã†ã®ãŒã‚ã‚Šã¾"
+"ã™ãŒã€å¤šæ•°ã®æ¥ç¶šã«å¯¾ã—ã¦ã¯ã€RSA èªè¨¼ã®ã»ã†ãŒç®¡ç†ãŒã‚ˆã‚Šç°¡å˜ã§ã€ã‚ˆã‚Šã‚»ã‚­ãƒ¥ã‚¢ã§"
+"ã™ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:3001
-#, fuzzy
 msgid ""
 "If you do not want to create a new public/private keypair, you can choose to "
 "use an existing one."
-msgstr "¤³¤Î¥Û¥¹¥È¤Î RSA ¸ø³«¸°¤ÈÈëÌ©¸°¤Î¥­¡¼¥Ú¥¢¤òÀ¸À®¤·¤Ş¤¹¤«?"
+msgstr ""
+"æ–°ãŸãªå…¬é–‹éµãƒ»ç§˜å¯†éµã®ã‚­ãƒ¼ãƒšã‚¢ã‚’ç”Ÿæˆã—ãŸããªã„å ´åˆã¯ã€æ—¢å­˜ã®ã‚­ãƒ¼ãƒšã‚¢ã®åˆ©ç”¨ã‚’"
+"é¸æŠã™ã‚‹ã“ã¨ã‚‚å¯èƒ½ã§ã™ã€‚"
 
 #. Type: select
 #. Choices
 #: ../strongswan.templates.master:4001
 msgid "x509, plain"
-msgstr "x509, ÄÌ¾ï¤Î¥¿¥¤¥×"
+msgstr "x509, é€šå¸¸ã®ã‚¿ã‚¤ãƒ—"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid "The type of RSA keypair to create:"
-msgstr "¤É¤Á¤é¤Î¥¿¥¤¥×¤Î RSA ¥­¡¼¥Ú¥¢¤òÀ¸À®¤·¤Ş¤¹¤«?"
+msgstr "ç”Ÿæˆã™ã‚‹ RSA ã‚­ãƒ¼ãƒšã‚¢ã®ã‚¿ã‚¤ãƒ—:"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "It is possible to create a plain RSA public/private keypair for use with "
 "strongSwan or to create a X509 certificate file which contains the RSA "
 "public key and additionally stores the corresponding private key."
 msgstr ""
-"Openswan ¤ÇÍøÍÑ¤¹¤ëÄÌ¾ï¤Î RSA ¸ø³«¸°¡¦ÈëÌ©¸°¤Î¥­¡¼¥Ú¥¢¤òºî¤ì¤Ş¤¹¡£¤¢¤ë¤¤¤Ï "
-"RSA ¸ø³«¸°¤ò (¤µ¤é¤Ë¤Ï¤½¤ì¤ËÂĞ±ş¤¹¤ëÈëÌ©¸°¤â) ´Ş¤à X509 ¾ÚÌÀ½ñ¥Õ¥¡¥¤¥ë¤âÆ±ÍÍ"
-"¤Ç¤¹¡£"
+"strongSwan ã§åˆ©ç”¨ã™ã‚‹é€šå¸¸ã® RSA å…¬é–‹éµãƒ»ç§˜å¯†éµã®ã‚­ãƒ¼ãƒšã‚¢ã‚’ä½œã‚Œã¾ã™ã€‚ã‚ã‚‹ã„ã¯ "
+"RSA å…¬é–‹éµ (ã•ã‚‰ã«ã¯ãã‚Œã«å¯¾å¿œã™ã‚‹ç§˜å¯†éµã‚‚) ã‚’å«ã‚€ X509 è¨¼æ˜æ›¸ãƒ•ã‚¡ã‚¤ãƒ«ã‚‚åŒæ§˜"
+"ã§ã™ã€‚"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "If you only want to build up IPSec connections to hosts also running "
 "strongSwan, it might be a bit easier using plain RSA keypairs. But if you "
@@ -196,36 +186,33 @@ msgid ""
 "extract the RSA public key in plain format if the other side runs strongSwan "
 "without X509 certificate support."
 msgstr ""
-"´û¤Ë Openswan ¤òÆ°ºî¤µ¤»¤Æ¤¤¤ë¥Û¥¹¥È¤È IPSec ÄÌ¿®¤ò³ÎÎ©¤·¤¿¤¤¤À¤±¤Î¾ì¹ç¤Ï¡¢ÄÌ"
-"¾ï¤Î RSA ¥­¡¼¥Ú¥¢¤ò»ÈÍÑ¤¹¤ë¤ÈÂ¿¾¯´ÊÃ±¤Ë¤Ê¤ê¤Ş¤¹¡£¤·¤«¤·¡¢Â¾¤Î IPSec ¼ÂÁõ¤È¤Î"
-"ÀÜÂ³¤ò¹Ô¤¤¤¿¤¤¾ì¹ç¤Ï X509 ¾ÚÌÀ½ñ¤¬É¬Í×¤Ë¤Ê¤ê¤Ş¤¹¡£ÄÌ¿®¤ò¹Ô¤¦ÂĞ¾İ¤Î¥Û¥¹¥È¤¬ "
-"Openswan ¤ò X509 ¾ÚÌÀ½ñ¤Î¥µ¥İ¡¼¥ÈÌµ¤·¤Ç±¿ÍÑ¤·¤Æ¤¤¤¿¾ì¹ç¡¢¤³¤³¤Ç X509 ¾ÚÌÀ½ñ¤ò"
-"À¸À®¤·¤Æ¡¢¸å¤Û¤É RSA ¸ø³«¸°¤òÄÌ¾ï¤Î·Á¼°¤ËÅ¸³«¤¹¤ë¤³¤È¤â²ÄÇ½¤Ç¤¹¡£"
+"æ—¢ã« strongSwan ã‚’å‹•ä½œã•ã›ã¦ã„ã‚‹ãƒ›ã‚¹ãƒˆã¨ IPSec é€šä¿¡ã‚’ç¢ºç«‹ã—ãŸã„ã ã‘ã®å ´åˆã¯ã€"
+"é€šå¸¸ã® RSA ã‚­ãƒ¼ãƒšã‚¢ã‚’ä½¿ç”¨ã™ã‚‹ã¨å¤šå°‘ç°¡å˜ã«ãªã‚Šã¾ã™ã€‚ã—ã‹ã—ã€ä»–ã® IPSec å®Ÿè£…ã¨"
+"ã®æ¥ç¶šã‚’è¡Œã„ãŸã„å ´åˆã¯ X509 è¨¼æ˜æ›¸ãŒå¿…è¦ã«ãªã‚Šã¾ã™ã€‚é€šä¿¡ã‚’è¡Œã†å¯¾è±¡ã®ãƒ›ã‚¹ãƒˆãŒ "
+"strongSwan ã‚’ X509 è¨¼æ˜æ›¸ã®ã‚µãƒãƒ¼ãƒˆç„¡ã—ã§é‹ç”¨ã—ã¦ã„ãŸå ´åˆã€ã“ã“ã§ X509 è¨¼æ˜æ›¸"
+"ã‚’ç”Ÿæˆã—ã¦ã‹ã‚‰ã€å¾Œã»ã© RSA å…¬é–‹éµã‚’é€šå¸¸ã®å½¢å¼ã«å±•é–‹ã™ã‚‹ã“ã¨ã‚‚å¯èƒ½ã§ã™ã€‚"
 
 #. Type: select
 #. Description
 #: ../strongswan.templates.master:4002
-#, fuzzy
 msgid ""
 "Therefore a X509 certificate is recommended since it is more flexible and "
 "this installer should be able to hide the complex creation of the X509 "
 "certificate and its use in strongSwan anyway."
 msgstr ""
-"¤·¤¿¤¬¤Ã¤Æ X509 ¾ÚÌÀ½ñ¤¬¤ª´«¤á¤Ç¤¹¡£¤³¤Á¤é¤Î¤Û¤¦¤¬½ÀÆğ¤Ç¤¹¤·¡¢¤³¤Î¥¤¥ó¥¹¥È¡¼"
-"¥é¤ò»È¤¨¤Ğ¡¢X509 ¾ÚÌÀ½ñ¤ÎÀ¸À®¤ä Openswan ¤Ç¤ÎÍøÍÑ¤Ëºİ¤·¤Æ¤ÎÌÌÅİ¤µ¤ò±£ÊÃ¤·¤Æ¤¯"
-"¤ì¤ë¤Ï¤º¤Ç¤¹¡£"
+"ã—ãŸãŒã£ã¦ X509 è¨¼æ˜æ›¸ãŒãŠå‹§ã‚ã§ã™ã€‚ã“ã¡ã‚‰ã®ã»ã†ãŒæŸ”è»Ÿã§ã™ã—ã€ã“ã®ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼"
+"ãƒ©ã‚’ä½¿ãˆã°ã€X509 è¨¼æ˜æ›¸ã®ç”Ÿæˆã‚„ strongSwan ã§ã®åˆ©ç”¨ã«éš›ã—ã¦ã®é¢å€’ã•ã‚’éš è”½ã—ã¦"
+"ãã‚Œã‚‹ã¯ãšã§ã™ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:5001
-#, fuzzy
 msgid "Do you have an existing X509 certificate file for strongSwan?"
-msgstr "´û¤ËÂ¸ºß¤·¤Æ¤¤¤ë X509 ¾ÚÌÀ½ñ¥Õ¥¡¥¤¥ë¤ò Openswan ¤ÇÍøÍÑ¤·¤Ş¤¹¤«?"
+msgstr "æ—¢ã«å­˜åœ¨ã—ã¦ã„ã‚‹ X509 è¨¼æ˜æ›¸ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ strongSwan ã§åˆ©ç”¨ã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:5001
-#, fuzzy
 msgid ""
 "This installer can automatically extract the needed information from an "
 "existing X509 certificate with a matching RSA private key. Both parts can be "
@@ -233,52 +220,50 @@ msgid ""
 "certificate and key file and want to use it for authenticating IPSec "
 "connections, then please answer yes."
 msgstr ""
-"¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤Ï´û¤ËÂ¸ºß¤·¤Æ¤¤¤ë X509 ¾ÚÌÀ½ñ¤«¤é RSA ÈëÌ©¸°¤È¾È¤é¤·¹ç¤ï¤»¤Æ"
-"É¬Í×¤Ê¾ğÊó¤ò¼«Æ°Åª¤ËÅ¸³«¤¹¤ë»ö¤¬²ÄÇ½¤Ç¤¹¡£ PEM ·Á¼°¤Î¾ì¹ç¡¢ÁĞÊı¤ò°ì¤Ä¤Î¥Õ¥¡¥¤"
-"¥ë¤Ë¤Ş¤È¤á¤ë¤³¤È¤â²ÄÇ½¤Ç¤¹¡£¤½¤Î¤è¤¦¤Ê¾ÚÌÀ½ñ¤È¸°¤Î¥Õ¥¡¥¤¥ë¤¬¤¢¤ê¡¢¤³¤ì¤é¤ò "
-"IPSec ÄÌ¿®¤Ç¤ÎÇ§¾Ú¤Ë»ÈÍÑ¤·¤¿¤¤¤Ç¤¹¤«?"
+"ã“ã®ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ©ã¯æ—¢ã«å­˜åœ¨ã—ã¦ã„ã‚‹ X509 è¨¼æ˜æ›¸ã‹ã‚‰ RSA ç§˜å¯†éµã¨ç…§ã‚‰ã—åˆã‚ã›ã¦"
+"å¿…è¦ãªæƒ…å ±ã‚’è‡ªå‹•çš„ã«å±•é–‹ã™ã‚‹äº‹ãŒå¯èƒ½ã§ã™ã€‚ PEM å½¢å¼ã®å ´åˆã€åŒæ–¹ã‚’ä¸€ã¤ã®ãƒ•ã‚¡ã‚¤"
+"ãƒ«ã«ã¾ã¨ã‚ã‚‹ã“ã¨ã‚‚å¯èƒ½ã§ã™ã€‚ãã®ã‚ˆã†ãªè¨¼æ˜æ›¸ã¨éµã®ãƒ•ã‚¡ã‚¤ãƒ«ãŒã‚ã‚Šã€ã“ã‚Œã‚‰ã‚’ "
+"IPSec é€šä¿¡ã§ã®èªè¨¼ã«ä½¿ç”¨ã—ãŸã„å ´åˆã¯ã€Œã¯ã„ã€ã¨ç­”ãˆã¦ãã ã•ã„ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:6001
-#, fuzzy
 msgid "File name of your X509 certificate in PEM format:"
-msgstr "PEM ·Á¼°¤Î X509 ¾ÚÌÀ½ñ¤Î¾ì½ê¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "PEM å½¢å¼ã® X509 è¨¼æ˜æ›¸ã®ãƒ•ã‚¡ã‚¤ãƒ«å:"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:6001
-#, fuzzy
 msgid ""
 "Please enter the full location of the file containing your X509  certificate "
 "in PEM format."
-msgstr "PEM ·Á¼°¤Î X509 ¾ÚÌÀ½ñ¤ò´Ş¤ó¤Ç¤¤¤ë¥Õ¥¡¥¤¥ë¤Î¾ì½ê¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr ""
+"PEM å½¢å¼ã® X509 è¨¼æ˜æ›¸ã‚’å«ã‚“ã§ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã®å ´æ‰€ã‚’çµ¶å¯¾ãƒ‘ã‚¹ã§å…¥åŠ›ã—ã¦ãã ã•"
+"ã„ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:7001
-#, fuzzy
 msgid "File name of your X509 private key in PEM format:"
-msgstr "PEM ·Á¼°¤Î X509 ÈëÌ©¸°¤Î¾ì½ê¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "PEM å½¢å¼ã® X509 ç§˜å¯†éµã®ãƒ•ã‚¡ã‚¤ãƒ«å:"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:7001
-#, fuzzy
 msgid ""
 "Please enter the full location of the file containing the private RSA key "
 "matching your X509 certificate in PEM format. This can be the same file that "
 "contains the X509 certificate."
 msgstr ""
-"PEM ·Á¼°¤Î X509 ¾ÚÌÀ½ñ¤ËÂĞ±ş¤¹¤ëÈëÌ©¸°¤ò´Ş¤ó¤Ç¤¤¤ë¥Õ¥¡¥¤¥ë¤Î¾ì½ê¤òÆşÎÏ¤·¤Æ¤¯"
-"¤À¤µ¤¤¡£¤³¤ì¤Ï X509 ¾ÚÌÀ½ñ¤ò´Ş¤ó¤Ç¤¤¤ë¥Õ¥¡¥¤¥ë¤ÈÆ±¤¸¤Ç¹½¤¤¤Ş¤»¤ó¡£"
+"PEM å½¢å¼ã® X509 è¨¼æ˜æ›¸ã«å¯¾å¿œã™ã‚‹ RSA ç§˜å¯†éµã‚’å«ã‚“ã§ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã®å ´æ‰€ã‚’çµ¶å¯¾ãƒ‘"
+"ã‚¹ã§å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯ X509 è¨¼æ˜æ›¸ã‚’å«ã‚“ã§ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã¨åŒã˜ã§æ§‹ã„ã¾ã›"
+"ã‚“ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:8001
-#, fuzzy
 msgid "The length of the created RSA key (in bits):"
-msgstr "RSA ¸°¤ò¤É¤ÎÄ¹¤µ¤ÇÀ¸À®¤·¤Ş¤¹¤«?"
+msgstr "RSA éµã®éµé•·ï¼ˆãƒ“ãƒƒãƒˆæ•°ï¼‰:"
 
 #. Type: string
 #. Description
@@ -289,21 +274,19 @@ msgid ""
 "not need anything more than 2048 bits because it only slows the "
 "authentication process down and is not needed at the moment."
 msgstr ""
-"À¸À®¤¹¤ë RSA ¸°¤ÎÄ¹¤µ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£°ÂÁ´¤Î¤¿¤á¡¢1024 ¥Ó¥Ã¥È°Ê²¼¤Ë¤¹¤Ù¤­"
-"¤Ç¤Ï¤¢¤ê¤Ş¤»¤ó¡£2048 ¥Ó¥Ã¥È°Ê¾å¤Ë¤¹¤ëÉ¬Í×¤â¤Ê¤¤¤Ç¤·¤ç¤¦¡£Ç§¾Ú¥×¥í¥»¥¹¤¬ÃÙ¤¯¤Ê"
-"¤ê¤Ş¤¹¤·¡¢¸½»şÅÀ¤Ç¤Ï¤ª¤½¤é¤¯É¬Í×¤¢¤ê¤Ş¤»¤ó¡£"
+"ç”Ÿæˆã™ã‚‹ RSA éµã®é•·ã•ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚å®‰å…¨ã®ãŸã‚ã€1024 ãƒ“ãƒƒãƒˆæœªæº€ã«ã™ã¹ã"
+"ã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚2048 ãƒ“ãƒƒãƒˆã‚ˆã‚Šå¤§ããªã‚‚ã®ã«ã™ã‚‹å¿…è¦ã‚‚ãªã„ã§ã—ã‚‡ã†ã€‚èªè¨¼ãƒ—ãƒ­ã‚»"
+"ã‚¹ãŒé…ããªã‚Šã¾ã™ã—ã€ç¾æ™‚ç‚¹ã§ã¯ãŠãã‚‰ãå¿…è¦ã‚ã‚Šã¾ã›ã‚“ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:9001
-#, fuzzy
 msgid "Do you want to create a self-signed X509 certificate?"
-msgstr "¼«¸Ê½ğÌ¾ X509 ¾ÚÌÀ½ñ¤òÀ¸À®¤·¤Ş¤¹¤«?"
+msgstr "è‡ªå·±ç½²å X509 è¨¼æ˜æ›¸ã‚’ç”Ÿæˆã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:9001
-#, fuzzy
 msgid ""
 "This installer can only create self-signed X509 certificates automatically, "
 "because otherwise a certificate authority is needed to sign the certificate "
@@ -313,12 +296,12 @@ msgid ""
 "PKI features of strongSwan >= 1.91, you will need to have all X509 "
 "certificates signed by a single certificate authority to create a trust path."
 msgstr ""
-"¾ÚÌÀ½ñÍ×µá¤Ë½ğÌ¾¤¹¤ë¤¿¤á¤Ë¤ÏÇ§¾Ú¶É¤¬É¬Í×¤È¤Ê¤ë¤Î¤Ç¡¢¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤Ç¤Ï¼«¸Ê"
-"½ğÌ¾ X509 ¾ÚÌÀ½ñ¤ò¼«Æ°Åª¤ËÀ¸À®¤¹¤ë»ö¤À¤±¤¬²ÄÇ½¤Ç¤¹¡£¼«¸Ê½ğÌ¾¾ÚÌÀ½ñ¤òÀ¸À®¤·¤¿"
-"¤¤¾ì¹ç¡¢¤³¤ì¤ò»ÈÍÑ¤·¤Æ¤¹¤°¤Ë X509 ¾ÚÌÀ½ñ¤ò¥µ¥İ¡¼¥È¤·¤Æ¤¤¤ëÂ¾¤Î IPSec ¥Û¥¹¥È¤Ë"
-"ÀÜÂ³²ÄÇ½¤Ç¤¹¡£¤·¤«¤·¡¢Openswan ¥Ğ¡¼¥¸¥ç¥ó 1.91 °Ê¾å¤Ç¤Î¿·¤·¤¤ PKI µ¡Ç½¤ò»È¤¤"
-"¤¿¤¤¾ì¹ç¤Ï¡¢trust path ¤òÀ¸À®¤¹¤ë¤¿¤á¤ËÃ±°ì¤ÎÇ§¾Ú¶É¤Ë¤è¤Ã¤Æ¤¹¤Ù¤Æ¤Î X509 ¾ÚÌÀ"
-"½ñ¤Ë½ğÌ¾¤·¤Æ¤â¤é¤¦É¬Í×¤¬¤¢¤ê¤Ş¤¹¡£"
+"è¨¼æ˜æ›¸è¦æ±‚ã«ç½²åã™ã‚‹ãŸã‚ã«ã¯èªè¨¼å±€ãŒå¿…è¦ã¨ãªã‚‹ã®ã§ã€ã“ã®ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ©ã§ã¯è‡ªå·±"
+"ç½²å X509 è¨¼æ˜æ›¸ã‚’è‡ªå‹•çš„ã«ç”Ÿæˆã™ã‚‹äº‹ã ã‘ãŒå¯èƒ½ã§ã™ã€‚è‡ªå·±ç½²åè¨¼æ˜æ›¸ã‚’ç”Ÿæˆã—ãŸ"
+"ã„å ´åˆã€ã“ã‚Œã‚’ä½¿ç”¨ã—ã¦ã™ãã« X509 è¨¼æ˜æ›¸ã‚’ã‚µãƒãƒ¼ãƒˆã—ã¦ã„ã‚‹ä»–ã® IPSec ãƒ›ã‚¹ãƒˆã«"
+"æ¥ç¶šå¯èƒ½ã§ã™ã€‚ã—ã‹ã—ã€strongSwan ãƒãƒ¼ã‚¸ãƒ§ãƒ³ 1.91 ä»¥ä¸Šã§ã®æ–°ã—ã„ PKI æ©Ÿèƒ½ã‚’ä½¿"
+"ã„ãŸã„å ´åˆã¯ã€trust path ã‚’ç”Ÿæˆã™ã‚‹ãŸã‚ã«å˜ä¸€ã®èªè¨¼å±€ã«ã‚ˆã£ã¦ã™ã¹ã¦ã® X509 è¨¼"
+"æ˜æ›¸ã«ç½²åã—ã¦ã‚‚ã‚‰ã†å¿…è¦ãŒã‚ã‚Šã¾ã™ã€‚"
 
 #. Type: boolean
 #. Description
@@ -328,16 +311,15 @@ msgid ""
 "will only create the RSA private key and the certificate request and you "
 "will have to sign the certificate request with your certificate authority."
 msgstr ""
-"¼«¸Ê½ğÌ¾¾ÚÌÀ½ñ¤òÀ¸À®¤·¤¿¤¯¤Ê¤¤¾ì¹ç¡¢¤³¤Î¥¤¥ó¥¹¥È¡¼¥é¤Ï RSA ÈëÌ©¸°¤È¾ÚÌÀ½ñÍ×µá"
-"¤Î¤ß¤òÀ¸À®¤·¤Ş¤¹¡£¤½¤·¤Æ¡¢Ç§¾Ú¶É¤Ë¾ÚÌÀ½ñÍ×µá¤Ø½ğÌ¾¤ò¤·¤Æ¤â¤é¤¦É¬Í×¤¬¤¢¤ê¤Ş"
-"¤¹¡£"
+"è‡ªå·±ç½²åè¨¼æ˜æ›¸ã‚’ç”Ÿæˆã—ãŸããªã„å ´åˆã€ã“ã®ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ©ã¯ RSA ç§˜å¯†éµã¨è¨¼æ˜æ›¸è¦æ±‚"
+"ã®ã¿ã‚’ç”Ÿæˆã—ã¾ã™ã€‚ãã—ã¦ã€èªè¨¼å±€ã«è¨¼æ˜æ›¸è¦æ±‚ã¸ç½²åã‚’ã—ã¦ã‚‚ã‚‰ã†å¿…è¦ãŒã‚ã‚Šã¾"
+"ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:10001
-#, fuzzy
 msgid "Country code for the X509 certificate request:"
-msgstr "X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ë¹ñ¥³¡¼¥É¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹å›½ã‚³ãƒ¼ãƒ‰:"
 
 #. Type: string
 #. Description
@@ -346,8 +328,8 @@ msgid ""
 "Please enter the 2 letter country code for your country. This code will be "
 "placed in the certificate request."
 msgstr ""
-"¤¢¤Ê¤¿¤Î¹ñ¤Î¹ñ¥³¡¼¥É¤ò2Ê¸»ú¤ÇÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤Î¥³¡¼¥É¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ"
-"¤ì¤Ş¤¹¡£"
+"ã‚ãªãŸã®å›½ã®å›½ã‚³ãƒ¼ãƒ‰ã‚’2æ–‡å­—ã§å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã®ã‚³ãƒ¼ãƒ‰ã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•"
+"ã‚Œã¾ã™ã€‚"
 
 #. Type: string
 #. Description
@@ -357,22 +339,21 @@ msgid ""
 "refuse to generate certificates without one. An empty field is allowed for "
 "any other field of the X.509 certificate, but not for this one."
 msgstr ""
-"openssl ¤¬¹ñ¥³¡¼¥É¤Ê¤·¤Ç¤Ï¾ÚÌÀ½ñ¤ÎÀ¸À®¤òµñÈİ¤¹¤ë¤Î¤Ç¡¢Àµ¤·¤¤¹ñ¥³¡¼¥É¤ò¤³¤³¤Ç"
-"ÆşÎÏ¤¹¤ëÉ¬Í×¤¬¤¢¤ê¤Ş¤¹¡£X.509 ¾ÚÌÀ½ñ¤Ç¤Ï¡¢Â¾¤Î¥Õ¥£¡¼¥ë¥É¤Ë¤Ä¤¤¤Æ¤Ï¶õ¤Ç¤â¹½¤¤"
-"¤Ş¤»¤ó¤¬¡¢¤³¤ì¤Ë¤Ä¤¤¤Æ¤Ïµö²Ä¤µ¤ì¤Æ¤¤¤Ş¤»¤ó¡£"
+"openssl ãŒå›½ã‚³ãƒ¼ãƒ‰ãªã—ã§ã¯è¨¼æ˜æ›¸ã®ç”Ÿæˆã‚’æ‹’å¦ã™ã‚‹ã®ã§ã€æ­£ã—ã„å›½ã‚³ãƒ¼ãƒ‰ã‚’ã“ã“ã§"
+"å…¥åŠ›ã™ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™ã€‚X.509 è¨¼æ˜æ›¸ã§ã¯ã€ä»–ã®ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã«ã¤ã„ã¦ã¯ç©ºã§ã‚‚æ§‹ã„"
+"ã¾ã›ã‚“ãŒã€ã“ã‚Œã«ã¤ã„ã¦ã¯è¨±å¯ã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:10001
 msgid "Example: AT"
-msgstr "Îã: JP"
+msgstr "ä¾‹: JP"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:11001
-#, fuzzy
 msgid "State or province name for the X509 certificate request:"
-msgstr "X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ëÅÔÆ»ÉÜ¸©Ì¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹éƒ½é“åºœçœŒå:"
 
 #. Type: string
 #. Description
@@ -381,21 +362,20 @@ msgid ""
 "Please enter the full name of the state or province you live in. This name "
 "will be placed in the certificate request."
 msgstr ""
-"¤¢¤Ê¤¿¤¬ºß½»¤·¤Æ¤¤¤ëÅÔÆ»ÉÜ¸©¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş"
-"¤¹¡£"
+"ã‚ãªãŸãŒåœ¨ä½ã—ã¦ã„ã‚‹éƒ½é“åºœçœŒã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾"
+"ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:11001
 msgid "Example: Upper Austria"
-msgstr "Îã: Tokyo"
+msgstr "ä¾‹: Tokyo"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:12001
-#, fuzzy
 msgid "Locality name for the X509 certificate request:"
-msgstr "X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ëÅÚÃÏ¤ÎÌ¾Á°¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹åœ°åŸŸå:"
 
 #. Type: string
 #. Description
@@ -404,21 +384,20 @@ msgid ""
 "Please enter the locality (e.g. city) where you live. This name will be "
 "placed in the certificate request."
 msgstr ""
-"¤¢¤Ê¤¿¤Îºß½»¤·¤Æ¤¤¤ëÃÏÊı¤ÎÌ¾Á° (Îã: »ÔÄ®Â¼Ì¾) ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ"
-"½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£"
+"ã‚ãªãŸã®åœ¨ä½ã—ã¦ã„ã‚‹åœ°åŸŸã®åå‰ (ä¾‹: å¸‚ç”ºæ‘å) ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜"
+"æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:12001
 msgid "Example: Vienna"
-msgstr "Îã: Shinjuku-ku"
+msgstr "ä¾‹: Shinjuku-ku"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:13001
-#, fuzzy
 msgid "Organization name for the X509 certificate request:"
-msgstr "X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ëÁÈ¿¥Ì¾¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹çµ„ç¹”å:"
 
 #. Type: string
 #. Description
@@ -427,21 +406,20 @@ msgid ""
 "Please enter the organization (e.g. company) that the X509 certificate "
 "should be created for. This name will be placed in the certificate request."
 msgstr ""
-"X509 ¾ÚÌÀ½ñ¤ÎÀ¸À®ÂĞ¾İ¤È¤Ê¤ë¤Ù¤­ÁÈ¿¥ (Îã: ²ñ¼Ò) ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ"
-"½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£"
+"X509 è¨¼æ˜æ›¸ã®ç”Ÿæˆå¯¾è±¡ã¨ãªã‚‹ã¹ãçµ„ç¹” (ä¾‹: ä¼šç¤¾) ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜"
+"æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:13001
 msgid "Example: Debian"
-msgstr "Îã: Debian"
+msgstr "ä¾‹: Debian"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:14001
-#, fuzzy
 msgid "Organizational unit for the X509 certificate request:"
-msgstr "X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ëÁÈ¿¥Ã±°Ì¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹çµ„ç¹”å˜ä½:"
 
 #. Type: string
 #. Description
@@ -451,21 +429,20 @@ msgid ""
 "certificate should be created for. This name will be placed in the "
 "certificate request."
 msgstr ""
-"X509 ¾ÚÌÀ½ñ¤ÎÀ¸À®ÂĞ¾İ¤È¤Ê¤ë¤Ù¤­ÁÈ¿¥Ã±°Ì (Îã: Éô½ğÌ¾) ¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì"
-"¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£"
+"X509 è¨¼æ˜æ›¸ã®ç”Ÿæˆå¯¾è±¡ã¨ãªã‚‹ã¹ãçµ„ç¹”å˜ä½ (ä¾‹: éƒ¨ç½²å) ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œ"
+"ã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:14001
 msgid "Example: security group"
-msgstr "Îã: security group"
+msgstr "ä¾‹: security group"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:15001
-#, fuzzy
 msgid "Common name for the X509 certificate request:"
-msgstr "X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ë¥³¥â¥ó¥Í¡¼¥à¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹ã‚³ãƒ¢ãƒ³ãƒãƒ¼ãƒ :"
 
 #. Type: string
 #. Description
@@ -475,21 +452,20 @@ msgid ""
 "the X509 certificate should be created for. This name will be placed in the "
 "certificate request."
 msgstr ""
-"X509 ¾ÚÌÀ½ñ¤ÎÀ¸À®ÂĞ¾İ¤È¤Ê¤ë¤Ù¤­¥³¥â¥ó¥Í¡¼¥à (Îã: ¤³¤Î¥Ş¥·¥ó¤Î¥Û¥¹¥ÈÌ¾) ¤òÆşÎÏ"
-"¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤ì¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£"
+"X509 è¨¼æ˜æ›¸ã®ç”Ÿæˆå¯¾è±¡ã¨ãªã‚‹ã¹ãã‚³ãƒ¢ãƒ³ãƒãƒ¼ãƒ  (ä¾‹: ã“ã®ãƒã‚·ãƒ³ã®ãƒ›ã‚¹ãƒˆå) ã‚’å…¥åŠ›"
+"ã—ã¦ãã ã•ã„ã€‚ã“ã‚Œã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:15001
 msgid "Example: gateway.debian.org"
-msgstr "Îã: gateway.debian.org"
+msgstr "ä¾‹: gateway.debian.org"
 
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:16001
-#, fuzzy
 msgid "Email address for the X509 certificate request:"
-msgstr "X509 ¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤¹¤ë¥á¡¼¥ë¥¢¥É¥ì¥¹¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£"
+msgstr "X509 è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã™ã‚‹ãƒ¡ãƒ¼ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹:"
 
 #. Type: string
 #. Description
@@ -499,20 +475,18 @@ msgid ""
 "responsible for the X509 certificate, This address will be placed in the "
 "certificate request."
 msgstr ""
-"X509 ¾ÚÌÀ½ñ¤ÎÀÕÇ¤¼Ô¤È¤Ê¤ë¿ÍÊª¡¦ÃÄÂÎ¤Î¥á¡¼¥ë¥¢¥É¥ì¥¹¤òÆşÎÏ¤·¤Æ¤¯¤À¤µ¤¤¡£¤³¤Î¥¢"
-"¥É¥ì¥¹¤Ï¾ÚÌÀ½ñÍ×µá¤Ëµ­ºÜ¤µ¤ì¤Ş¤¹¡£"
+"X509 è¨¼æ˜æ›¸ã®è²¬ä»»è€…ã¨ãªã‚‹äººç‰©ãƒ»å›£ä½“ã®ãƒ¡ãƒ¼ãƒ«ã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’å…¥åŠ›ã—ã¦ãã ã•ã„ã€‚ã“ã®ã‚¢"
+"ãƒ‰ãƒ¬ã‚¹ã¯è¨¼æ˜æ›¸è¦æ±‚ã«è¨˜è¼‰ã•ã‚Œã¾ã™ã€‚"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:17001
-#, fuzzy
 msgid "Do you wish to enable opportunistic encryption in strongSwan?"
-msgstr "Openswan ¤Ç opportunistic encryption ¤òÍ­¸ú¤Ë¤·¤Ş¤¹¤«?"
+msgstr "strongSwan ã§ opportunistic encryption ã‚’æœ‰åŠ¹ã«ã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:17001
-#, fuzzy
 msgid ""
 "strongSwan comes with support for opportunistic encryption (OE), which "
 "stores IPSec authentication information (i.e. RSA public keys) in "
@@ -522,13 +496,12 @@ msgid ""
 "is thus likely to break your existing connection to the Internet (i.e. your "
 "default route) as soon as pluto (the strongSwan keying daemon) is started."
 msgstr ""
-"Openswan ¤Ï¡¢IPSec Ç§¾Ú¾ğÊó (Îã: RSA ¸ø³«¸°) ¤ò (´ê¤ï¤¯¤Ï¥»¥­¥å¥¢¤Ê) DNS ¥ì"
-"¥³¡¼¥ÉÆâ¤ËÊİÂ¸¤¹¤ë opportunistic encryption (OE) ¤ò¥µ¥İ¡¼¥È¤·¤Æ¤¤¤Ş¤¹¡£¤³¤ì¤Ï"
-"¹­¤¯ÍøÍÑ¤µ¤ì¤ë¤è¤¦¤Ë¤Ê¤ë¤Ş¤Ç¡¢Í­¸ú¤Ë¤¹¤ë¤È³°Éô¤Ø¤Î¿·µ¬ÀÜÂ³¤ÏÁ´¤Æ³ÊÃÊ¤ËÃÙ¤¯¤Ê"
-"¤ê¤Ş¤¹¡£¥Ğ¡¼¥¸¥ç¥ó 2.0 ¤è¤ê Openswan ¤Î³«È¯¸µ¤Ï¥Ç¥Õ¥©¥ë¥È¤Ç OE ¤òÍ­¸ú¤Ë¤·¤Æ¤ª"
-"¤ê¡¢¤·¤¿¤¬¤Ã¤Æ pluto (Openswan ¸°½ğÌ¾¥Ç¡¼¥â¥ó) ¤¬³«»Ï¤¹¤ë¤È¤¹¤°¡¢´û¤ËÂ¸ºß¤·¤Æ"
-"¤¤¤ë¥¤¥ó¥¿¡¼¥Í¥Ã¥È¤Ø¤ÎÀÜÂ³ (¤Ä¤Ş¤ê¥Ç¥Õ¥©¥ë¥È¥ë¡¼¥È) ¤¬ÃæÃÇ¤µ¤ì¤ë¤«¤â¤·¤ì¤Ş¤»"
-"¤ó¡£"
+"strongSwan ã¯ã€IPSec èªè¨¼æƒ…å ± (ä¾‹: RSA å…¬é–‹éµ) ã‚’ (é¡˜ã‚ãã¯ã‚»ã‚­ãƒ¥ã‚¢ãª) DNS ãƒ¬"
+"ã‚³ãƒ¼ãƒ‰å†…ã«ä¿å­˜ã™ã‚‹ opportunistic encryption (OE) ã‚’ã‚µãƒãƒ¼ãƒˆã—ã¦ã„ã¾ã™ã€‚ã“ã‚Œã¯"
+"åºƒãåˆ©ç”¨ã•ã‚Œã‚‹ã‚ˆã†ã«ãªã‚‹ã¾ã§ã€æœ‰åŠ¹ã«ã™ã‚‹ã¨å¤–éƒ¨ã¸ã®æ–°è¦æ¥ç¶šã¯å…¨ã¦æ ¼æ®µã«é…ããª"
+"ã‚Šã¾ã™ã€‚ãƒãƒ¼ã‚¸ãƒ§ãƒ³ 2.0 ã‚ˆã‚Š strongSwan ã®é–‹ç™ºå…ƒã¯ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã§ OE ã‚’æœ‰åŠ¹ã«ã—ã¦"
+"ã„ã¾ã™ã€‚ãã®ãŸã‚ pluto (strongSwan éµç½²åãƒ‡ãƒ¼ãƒ¢ãƒ³) ãŒé–‹å§‹ã™ã‚‹ã¨ã™ãã€æ—¢å­˜ã®ã‚¤"
+"ãƒ³ã‚¿ãƒ¼ãƒãƒƒãƒˆæ¥ç¶š (ã¤ã¾ã‚Šãƒ‡ãƒ•ã‚©ãƒ«ãƒˆãƒ«ãƒ¼ãƒˆ) ãŒä¸­æ–­ã•ã‚Œã‚‹ã‹ã‚‚ã—ã‚Œã¾ã›ã‚“ã€‚"
 
 #. Type: boolean
 #. Description
@@ -537,13 +510,13 @@ msgid ""
 "Please choose whether you want to enable support for OE. If unsure, do not "
 "enable it."
 msgstr ""
-"OE ¤Î¥µ¥İ¡¼¥È¤òÍ­¸ú¤Ë¤¹¤ë¤«¤É¤¦¤«¤òÁª¤ó¤Ç¤¯¤À¤µ¤¤¡£¤è¤¯¤ï¤«¤é¤Ê¤¤¾ì¹ç¤Ï¡¢Í­¸ú"
-"¤Ë¤Ï¤·¤Ê¤¤¤Ç¤¯¤À¤µ¤¤¡£"
+"OE ã®ã‚µãƒãƒ¼ãƒˆã‚’æœ‰åŠ¹ã«ã™ã‚‹ã‹ã©ã†ã‹ã‚’é¸ã‚“ã§ãã ã•ã„ã€‚ã‚ˆãã‚ã‹ã‚‰ãªã„å ´åˆã¯ã€æœ‰åŠ¹"
+"ã«ã¯ã—ãªã„ã§ãã ã•ã„ã€‚"
 
 #, fuzzy
 #~ msgid "Please choose the when to start strongSwan:"
-#~ msgstr "Openswan ¤òºÆµ¯Æ°¤·¤Ş¤¹¤«?"
+#~ msgstr "strongSwan ã‚’å†èµ·å‹•ã—ã¾ã™ã‹?"
 
 #, fuzzy
 #~ msgid "At which level do you wish to start strongSwan ?"
-#~ msgstr "¤É¤ÎÃÊ³¬¤Ç Openswan ¤òµ¯Æ°¤µ¤»¤Ş¤¹¤«?"
+#~ msgstr "ã©ã®æ®µéšã§ strongSwan ã‚’èµ·å‹•ã•ã›ã¾ã™ã‹?"

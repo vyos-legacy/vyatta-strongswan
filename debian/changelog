@@ -1,6 +1,22 @@
-strongswan (2.8.0+dfsg-1) UNRELEASED; urgency=low
+strongswan (2.8.0+dfsg-1) unstable; urgency=low
 
-  * (NOT RELEASED YET) New upstream release
+  * New upstream release.
+  * Update debconf templates.
+    Closes: #388672: strongswan: [INTL:fr] French debconf templates
+                     translation update
+    Closes: #389253: [l10n] Updated Czech translation of strongswan
+                     debconf messages
+    Closes: #391457: [INTL:nl] Updated dutch po-debconf translation 
+    Closes: #396179: strongswan: [INTL:ja] Updated Japanese po-debconf
+                     template translation (ja.po)
+  * Fix broken reference to a now non-existing config file. no_oe.conf
+    has been replaced by oe.conf, with the opposite meaning. Changed
+    postinst to deal with it correctly now, and also try to convert
+    older config file lines to newer (e.g. when updating from openswan
+    to strongswan).
+    Closes: #391565: fails to start : /etc/ipsec.conf:46: include
+                     files found no matches 
+		     [/etc/ipsec.d/examples/no_oe.conf]
 
  -- Rene Mayrhofer <rmayr@debian.org>  Mon,  6 Nov 2006 19:01:58 +0000
 
