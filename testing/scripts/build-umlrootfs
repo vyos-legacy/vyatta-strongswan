@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: build-umlrootfs,v 1.11 2006/01/08 22:29:56 as Exp $
+# RCSID $Id: build-umlrootfs,v 1.12 2006/10/20 14:26:05 as Exp $
 
 DIR=`dirname $0`
 
@@ -91,6 +91,12 @@ cecho "done"
 
 
 ######################################################
+# remove /etc/resolv.conf
+#
+cecho " * Removing /etc/resolv.conf"
+rm -f $LOOPDIR/etc/resolv.conf
+
+######################################################
 # copying default /etc/hosts to the root filesystem
 #
 cecho " * Copying '$HOSTCONFIGDIR/default/etc/hosts' to the root filesystem"
@@ -153,7 +159,7 @@ cp $LOOPDIR/etc/ssh/ssh_host_rsa_key $LOOPDIR/root/.ssh/id_rsa
 
 for host in $STRONGSWANHOSTS
 do
-    eval ip="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+    eval ip="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
     echo "$host,$ip `cat $HOSTCONFIGDIR/ssh_host_rsa_key.pub`" >> $LOOPDIR/root/.ssh/known_hosts
     echo "`cat $HOSTCONFIGDIR/ssh_host_rsa_key.pub` root@$host" >> $LOOPDIR/root/.ssh/authorized_keys
 done

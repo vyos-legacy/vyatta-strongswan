@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.c,v 1.38 2006/06/20 21:52:53 as Exp $
+ * RCSID $Id: confread.c,v 1.39 2006/10/19 14:58:30 as Exp $
  */
 
 #include <stddef.h>
@@ -255,6 +255,11 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 	end->has_port_wildcard = has_port_wildcard;
 	break;
     case KW_SOURCEIP:
+	if (end->has_natip)
+	{
+	    plog("# natip and sourceip cannot be defined at the same time");
+	    goto err;
+	}
 	if (streq(value, "%modeconfig") || streq(value, "%modecfg"))
 	{
 	    end->modecfg = TRUE;
@@ -270,6 +275,22 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 	    }
 	    end->has_srcip = TRUE;
 	}
+	conn->policy |= POLICY_TUNNEL;
+	break;
+    case KW_NATIP:
+	if (end->has_srcip)
+	{
+	    plog("# natip and sourceip cannot be defined at the same time");
+	    goto err;
+	}
+	conn->tunnel_addr_family = ip_version(value);
+	ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &end->srcip);
+	if (ugh != NULL)
+	{
+	    plog("# bad addr: %s=%s [%s]", name, value, ugh);
+	    goto err;
+	}
+	end->has_natip = TRUE;
 	conn->policy |= POLICY_TUNNEL;
 	break;
     default:
@@ -429,6 +450,9 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 	    break;
 	case KW_REKEY:
 	    KW_POLICY_FLAG("no", "yes", POLICY_DONT_REKEY)
+	    break;
+	case KW_MODECONFIG:
+	    KW_POLICY_FLAG("push", "pull", POLICY_MODECFG_PUSH)
 	    break;
 	default:
 	    break;

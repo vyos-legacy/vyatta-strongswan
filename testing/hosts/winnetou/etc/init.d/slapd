@@ -1,7 +1,7 @@
 #!/sbin/runscript
 # Copyright 1999-2004 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/strongswan/testing/hosts/winnetou/etc/init.d/slapd,v 1.2 2005/05/31 14:04:43 as Exp $
+# $Header: /root/strongswan/testing/hosts/winnetou/etc/init.d/slapd,v 1.2 2005/05/31 14:04:43 as Exp $
 
 depend() {
 	need net

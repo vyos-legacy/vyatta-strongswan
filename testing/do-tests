@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: do-tests,v 1.20 2006/02/08 21:27:59 as Exp $
+# RCSID $Id: do-tests,v 1.21 2006/10/19 21:12:43 as Exp $
 
 DIR=`dirname $0`
 
@@ -68,15 +68,16 @@ cp -rfp $DEFAULTTESTSDIR/* $TESTSDIR
 
 for host in $STRONGSWANHOSTS
 do
-    eval ip_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+    eval ip_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
+
     case $host in
     moon)
-        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        eval ip1_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
         searchandreplace PH_IP_MOON $ip_moon $TESTSDIR
         searchandreplace PH_IP1_MOON $ip1_moon $TESTSDIR
         ;;
     sun)
-        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        eval ip1_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
         searchandreplace PH_IP_SUN $ip_sun $TESTSDIR
         searchandreplace PH_IP1_SUN $ip1_sun $TESTSDIR
         ;;
@@ -90,12 +91,12 @@ do
         searchandreplace PH_IP_BOB $ip_bob $TESTSDIR
         ;;
     carol)
-        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        eval ip1_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
         searchandreplace PH_IP_CAROL $ip_carol $TESTSDIR
         searchandreplace PH_IP1_CAROL $ip1_carol $TESTSDIR
         ;;
     dave)
-        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        eval ip1_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
         searchandreplace PH_IP_DAVE $ip_dave $TESTSDIR
         searchandreplace PH_IP1_DAVE $ip1_dave $TESTSDIR
         ;;
@@ -104,7 +105,6 @@ do
         ;;
     esac
 done
-
 
 ##############################################################################
 # create header for the results html file

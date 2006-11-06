@@ -11,7 +11,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: Makefile,v 1.4 2004/11/14 21:50:59 as Exp $
+# RCSID $Id: Makefile,v 1.5 2006/08/28 11:12:36 as Exp $
 
 
 FREESWANSRCDIR=$(shell pwd)
@@ -244,7 +244,7 @@ programs install clean checkprograms::
 	@for d in $(SUBDIRS) ; \
 	do \
 		(cd $$d && $(MAKE) FREESWANSRCDIR=.. $@ ) || exit 1; \
-	done; \
+	done;
 
 clean::
 	rm -rf $(RPMTMPDIR) $(RPMDEST)

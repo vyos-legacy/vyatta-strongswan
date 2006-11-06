@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: connections.h,v 1.18 2006/04/22 21:59:20 as Exp $
+ * RCSID $Id: connections.h,v 1.19 2006/10/19 15:38:27 as Exp $
  */
 
 #ifndef _CONNECTIONS_H
@@ -143,6 +143,7 @@ struct end {
     bool has_client_wildcard;
     bool has_port_wildcard;
     bool has_id_wildcards;
+    bool has_natip;
     char *updown;
     u_int16_t host_port;	/* host order */
     u_int16_t port;		/* host order */

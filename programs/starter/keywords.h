@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.h,v 1.8 2006/04/17 10:30:27 as Exp $
+ * RCSID $Id: keywords.h,v 1.9 2006/10/19 14:57:56 as Exp $
  */
 
 #ifndef _KEYWORDS_H_
@@ -76,9 +76,10 @@ typedef enum {
     KW_DPDDELAY,
     KW_DPDTIMEOUT,
     KW_DPDACTION,
+    KW_MODECONFIG,
 
 #define KW_CONN_FIRST	KW_CONN_SETUP
-#define KW_CONN_LAST	KW_DPDACTION
+#define KW_CONN_LAST	KW_MODECONFIG
 
    /* ca section keywords */
     KW_CA_NAME,
@@ -100,6 +101,7 @@ typedef enum {
     KW_SUBNETWITHIN,
     KW_PROTOPORT,
     KW_SOURCEIP,
+    KW_NATIP,
     KW_FIREWALL,
     KW_HOSTACCESS,
     KW_UPDOWN,
@@ -121,6 +123,7 @@ typedef enum {
     KW_LEFTSUBNETWITHIN,
     KW_LEFTPROTOPORT,
     KW_LEFTSOURCEIP,
+    KW_LEFTNATIP,
     KW_LEFTFIREWALL,
     KW_LEFTHOSTACCESS,
     KW_LEFTUPDOWN,
@@ -141,6 +144,7 @@ typedef enum {
     KW_RIGHTSUBNETWITHIN,
     KW_RIGHTPROTOPORT,
     KW_RIGHTSOURCEIP,
+    KW_RIGHTNATIP,
     KW_RIGHTFIREWALL,
     KW_RIGHTHOSTACCESS,
     KW_RIGHTUPDOWN,

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt,v 1.6 2006/04/17 10:30:27 as Exp $
+ * RCSID $Id: keywords.txt,v 1.7 2006/10/19 14:57:56 as Exp $
  */
 
 #include <string.h>
@@ -65,6 +65,7 @@ pfsgroup,          KW_PFSGROUP
 dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
+modeconfig,        KW_MODECONFIG
 cacert,            KW_CACERT
 ldaphost,          KW_LDAPHOST
 ldapbase,          KW_LDAPBASE
@@ -77,6 +78,7 @@ leftsubnet,        KW_LEFTSUBNET
 leftsubnetwithin,  KW_LEFTSUBNETWITHIN
 leftprotoport,     KW_LEFTPROTOPORT
 leftsourceip,      KW_LEFTSOURCEIP
+leftnatip,         KW_LEFTNATIP
 leftfirewall,      KW_LEFTFIREWALL
 lefthostaccess,    KW_LEFTHOSTACCESS
 leftupdown,        KW_LEFTUPDOWN
@@ -92,6 +94,7 @@ rightsubnet,       KW_RIGHTSUBNET
 rightsubnetwithin, KW_RIGHTSUBNETWITHIN
 rightprotoport,    KW_RIGHTPROTOPORT
 rightsourceip,     KW_RIGHTSOURCEIP
+rightnatip,        KW_RIGHTNATIP
 rightfirewall,     KW_RIGHTFIREWALL
 righthostaccess,   KW_RIGHTHOSTACCESS
 rightupdown,       KW_RIGHTUPDOWN

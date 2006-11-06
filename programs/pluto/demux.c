@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: demux.c,v 1.14 2006/06/22 11:58:25 as Exp $
+ * RCSID $Id: demux.c,v 1.16 2006/10/19 21:07:40 as Exp $
  */
 
 /* Ordering Constraints on Payloads
@@ -481,7 +481,17 @@ static const struct state_microcode state_microcode_table[] = {
     { STATE_MODE_CFG_I1, STATE_MODE_CFG_I2
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_RELEASE_PENDING_P2
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
-    , EVENT_SA_REPLACE, modecfg_inR1 },
+    , EVENT_SA_REPLACE, modecfg_inI1 },
+
+    { STATE_MODE_CFG_I2, STATE_MODE_CFG_I3
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY | SMF_RELEASE_PENDING_P2
+    , P(ATTR) | P(HASH), P(VID), PT(HASH)
+    , EVENT_SA_REPLACE, modecfg_inI2 },
+
+    { STATE_MODE_CFG_I3, STATE_UNDEFINED
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    , LEMPTY, LEMPTY, PT(NONE)
+    , EVENT_NULL, unexpected },
 
 #undef P
 #undef PT
@@ -1441,7 +1451,7 @@ process_packet(struct msg_digest **mdp)
 	    {
 		st->st_state = STATE_MAIN_R3;	    /* ISAKMP is up... */
 	    }
-	    
+
 	    set_cur_state(st);
 
 	    if (!IS_ISAKMP_SA_ESTABLISHED(st->st_state))
@@ -1471,7 +1481,7 @@ process_packet(struct msg_digest **mdp)
 	}
 	else
 	{
-	    set_cur_state(st);
+	    set_cur_state(st);  
 	    from_state = st->st_state;
 	}
 
@@ -1563,7 +1573,7 @@ process_packet(struct msg_digest **mdp)
 	    else if (st->st_connection->spd.this.modecfg
 	    && IS_PHASE1(st->st_state))
 	    {
-		from_state = STATE_MODE_CFG_R1;
+		from_state = STATE_MODE_CFG_I2;
 	    }
 	    else
 	    {
@@ -2323,38 +2333,39 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		    , story, sadetails);
 	    }
 
-	    /* Should we start Mode Config as a client */
+	    /* Should we start ModeConfig as a client? */
 	    if (st->st_connection->spd.this.modecfg
 	    && IS_ISAKMP_SA_ESTABLISHED(st->st_state)
+	    && !(st->st_connection->policy & POLICY_MODECFG_PUSH)
 	    && !st->st_modecfg.started)
 	    {
 		DBG(DBG_CONTROL,
-		    DBG_log("modecfg client is starting")
+		    DBG_log("starting ModeCfg client in pull mode")
 		)
 		modecfg_send_request(st);
 		break;
 	    }
 
-	    /* Should we set the peer's IP address regardless? */
-/*	    if (st->st_connection->spd.that.modecfg
+	    /* Should we start ModeConfig as a server? */
+	    if (st->st_connection->spd.that.modecfg
 	    && IS_ISAKMP_SA_ESTABLISHED(st->st_state)
-	    && !st->st_modecfg.vars_set
-	    && !(st->st_connection->policy & POLICY_MODECFG_PULL))
+	    && !st->st_modecfg.started
+	    && (st->st_connection->policy & POLICY_MODECFG_PUSH))
 	    {
-		st->st_state = STATE_MODE_CFG_R1;
-		set_cur_state(st);
-		plog("Sending MODE CONFIG set");
-		modecfg_start_set(st);
+		DBG(DBG_CONTROL,
+		    DBG_log("starting ModeCfg server in push mode")
+		)
+		modecfg_send_set(st);
 		break;
 	    }
-*/
-	    /* wait for modecfg_set */
+
+	    /* Wait for ModeConfig set from server */
 	    if (st->st_connection->spd.this.modecfg
 	    && IS_ISAKMP_SA_ESTABLISHED(st->st_state)
 	    && !st->st_modecfg.vars_set)
 	    {
 		DBG(DBG_CONTROL,
-		    DBG_log("waiting for modecfg set from server")
+		    DBG_log("waiting for ModeCfg set from server")
 		)
 		break;
 	    }

@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterwhack.c,v 1.18 2006/06/20 21:52:53 as Exp $
+ * RCSID $Id: starterwhack.c,v 1.19 2006/10/19 15:02:46 as Exp $
  */
 
 #include <sys/types.h>
@@ -171,6 +171,7 @@ set_whack_end(whack_end_t *w, starter_end_t *end)
     w->has_client_wildcard = end->has_client_wildcard;
     w->has_port_wildcard   = end->has_port_wildcard;
     w->has_srcip           = end->has_srcip;
+    w->has_natip           = end->has_natip;
     w->modecfg             = end->modecfg;
     w->hostaccess          = end->hostaccess;
     w->sendcert            = end->sendcert;

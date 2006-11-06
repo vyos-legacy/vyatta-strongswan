@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.c,v 1.21 2006/03/27 07:38:59 as Exp $
+ * RCSID $Id: constants.c,v 1.22 2006/10/19 21:07:40 as Exp $
  */
 
 /*
@@ -188,6 +188,7 @@ static const char *const state_name[] = {
 	"STATE_MODE_CFG_R2",
 	"STATE_MODE_CFG_I1",
 	"STATE_MODE_CFG_I2",
+	"STATE_MODE_CFG_I3",
 
 	"STATE_IKE_ROOF"
     };
@@ -218,9 +219,10 @@ const char *const state_story[] = {
 	
 	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R0 */
 	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R1 */
-	"ModeCfg R2",				 /* STATE_MODE_CFG_R2 */
+	"received ModeCfg ack",			 /* STATE_MODE_CFG_R2 */
 	"sent ModeCfg request, expecting reply", /* STATE_MODE_CFG_I1 */
 	"received ModeCfg reply",		 /* STATE_MODE_CFG_I2 */
+	"received ModeCfg set, sent ack",	 /* STATE_MODE_CFG_I3 */
     };
 
 /* kind of struct connection */
@@ -484,6 +486,7 @@ const char *const sa_policy_bit_names[] = {
 	"GROUP",
 	"GROUTED",
 	"UP",
+	"MODECFGPUSH",
 	NULL
     };
 

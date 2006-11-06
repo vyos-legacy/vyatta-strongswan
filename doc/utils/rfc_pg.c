@@ -1,5 +1,5 @@
 /*
- *  $Header: /var/cvsroot/strongswan/doc/utils/rfc_pg.c,v 1.1 2004/03/15 20:35:24 as Exp $
+ *  $Header: /root/strongswan/doc/utils/rfc_pg.c,v 1.1 2004/03/15 20:35:24 as Exp $
  *
  * from 2-nroff.template file.
  *
