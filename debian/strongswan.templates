@@ -1,7 +1,7 @@
 Template: strongswan/start_level
 Type: select
 Choices: earliest, "after NFS", "after PCMCIA"
-Choices-cs.UTF-8: nejdříve, "po NFS", "po PCMCIA"
+Choices-cs.UTF-8: "co nejdříve", "po NFS", "po PCMCIA"
 Choices-fr.UTF-8: Le plus tôt possible, Après NFS, Après PCMCIA
 Choices-ja.UTF-8: 可能な限り早く, "NFS 起動後", "PCMCIA 起動後"
 Choices-nl.UTF-8: "zo vroeg mogelijk", "na NFS", "na PCMCIA"
@@ -31,6 +31,38 @@ Description: When to start strongSwan:
  have to choose to start it after the PCMCIA services. Answer "after
  PCMCIA" in this case. This is also the correct answer if you want to fetch
  keys from a locally running DNS server with DNSSec support.
+Description-cs.UTF-8: Kdy spustit strongSwan:
+ Existují tři možnosti, kdy se dá strongSwan spouštět: před NFS službami, po NFS službách nebo po PCMCIA službách. Správná odpověď závisí na vašem konkrétním nastavení.
+ .
+ Jestliže nemáte svůj strom /usr připojen skrz NFS (buď přes NFS připojujete jiné, ne tak důležité stromy, nebo NFS vůbec nepoužíváte) a nepoužíváte síťovou kartu PCMCIA, je nejlepší spouštět strongSwan co nejdříve, čímž umožníte aby byly NFS svazky chráněny pomocí IPSec. V takovém případě (nebo pokud si nejste jisti, nebo pokud vám na tom nezáleží) na otázku odpovězte "co nejdříve" (výchozí).
+ .
+ Jestliže máte strom /usr připojen skrz NFS a nepoužíváte síťovou kartu PCMCIA, musíte spustit strongSwan po NFS, aby byly všechny potřebné soubory dostupné. V tomto případě na otázku odpovězte "po NFS". Uvědomte si prosím, že v tomto případě nemůže být NFS svazek /usr chráněn pomocí IPSec.
+ .
+ Jestliže používáte PCMCIA síťovou kartu pro vaše IPSec připojení, pak je jedinou možností jej spustit po PCMCIA službách. V tom případě odpovězte "po PCMCIA". Toto je také správná odpověď, pokud chcete získat klíče z lokálního DNS serveru s podporou DNSSec.
+Description-fr.UTF-8: Moment de démarrage de strongSwan :
+ Il existe trois moments où il est opportun de démarrer strongSwan : avant ou après les services NFS, ou après les services PCMCIA. La réponse appropriée dépend de vos réglages spécifiques.
+ .
+ Si votre arborescence /usr n'est pas un montage NFS (soit parce que vos montages NFS sont à d'autres endroits, moins critiques, soit parce que vous n'utilisez pas du tout de montage NFS) et si vous n'utilisez pas de carte réseau PCMCIA, il est préférable de démarrer strongSwan le plus tôt possible, ce qui permettra de sécuriser les montages NFS avec IPSec. Dans ce cas (ou bien si vous ne comprenez pas l'objet de la question ou qu'elle ne vous concerne pas), choisissez « le plus tôt possible », qui est le choix par défaut.
+ .
+ Si /usr est un montage NFS et que vous n'utilisez pas de carte réseau PCMCIA, vous devrez alors démarrer strongSwan après les services NFS afin que tous les fichiers nécessaires soient disponibles. Dans ce cas, choisissez « Après NFS ». Veuillez noter que le montage NFS de /usr n'est alors pas sécurisé par IPSec.
+ .
+ Si vous utilisez une carte PCMCIA pour vos connexions IPSec, votre seul choix possible est le démarrage après les services PCMCIA. Choisissez alors « Après PCMCIA ». Faites également ce choix si vous souhaitez récupérer les clés d'authentification sur un serveur DNS reconnaissant DNSSec.
+Description-ja.UTF-8: strongSwan のタイミング:
+ strongSwan を起動させるタイミングの選択肢としては3つが考えられます: NFS サービスの開始前・開始後・PCMCIA サービスの開始後、です。正解はあなたの設定次第です。
+ .
+ NFS 経由で /usr をマウントせず (他のパーティションやあまり重要ではないパーティションを NFS 経由でマウントするか、または NFS マウントを全く使わない)、加えて PCMCIA ネットワークカードを利用していない場合、可能な限り早いタイミングで strongSwan を起動するのがベストです。この設定によって、NFS でのマウントは IPSec で保護されます。この場合 (またはこの問題を理解していないか特に気にしない場合) 、"可能な限り早く"と質問に答えてください (標準設定です) 。
+ .
+ NFS 経由で /usr をマウントしていて PCMCIA ネットワークカードを使用していない場合は、必要なファイルを利用可能にするために strongSwan を NFS の後で起動しなければなりません。この場合、"NFS 起動後" と答えてください。この時に NFS 経由でマウントされる /usr は、IPSec によるセキュアな状態にはならないということに注意してください。
+ .
+ IPSec 接続に PCMCIA ネットワークカードを利用していた場合、PCMCIA サービスの起動後に strongSwan を起動する以外に選択はありません。この場合、"PCMCIA 起動後" と答えてください。ローカルで動作している DNSSec 機能を使用している DNS サーバから鍵を取得したい場合でも、この答えをしてください。
+Description-nl.UTF-8: Wanneer moet strongSwan herstarten:
+ Er zijn drie mogelijkheden wanneer stronSwan kan starten: vóór of na de NFS-diensten en na de PCMCIA-diensten. Het juiste antwoord is afhankelijk van uw specifieke installatie.
+ .
+ Als u uw /usr-boom niet via NFS heeft aangekoppeld (u koppelt enkel andere, minder vitale bomen via NFS of u gebruikt NFS helemaal niet om bomen aan te koppelen) en u gebruikt geen PCMCIA-netwerkkaart, dan is het best om strongSwan zo vroeg mogelijk te starten, dus toe te staan van de NFS-aankoppelingen te beveiligen door IPSec. In dit geval (of als u deze zaak niet verstaat of het u niet uitmaakt), antwoord dan "zo vroeg mogelijk" op deze vraag (de standaard).
+ .
+ Als u uw /usr-boom via NFS heeft aangekoppeld en u gebruikt geen PCMCIA-netwerkkaart, dan zult u strongSwan moeten starten na NFS zodat alle nodige bestanden aanwezig zijn. In dit geval, antwoord "na NFS" op deze vraag. Merk op dat in dit geval de NFS-aankoppeling van /usr niet kan worden beveiligd door IPSec.
+ .
+ Als u een PCMCIA-netwerkkaart gebruikt voor uw IPSec-verbindingen, dan hebt u enkel de keuze om te starten na de PCMCIA-diensten. Antwoord in dit geval "na PCMCIA". Dit is ook het correcte antwoord als u sleutels wilt afhalen van een lokaal draaiende DNS-server met DNSSec-ondersteuning.
 
 Template: strongswan/restart
 Type: boolean
@@ -40,6 +72,14 @@ Description: Do you wish to restart strongSwan?
  will not be fixed until the daemon restarts. Most people expect the daemon
  to restart, so this is generally a good idea. However this might take down
  existing connections and then bring them back up.
+Description-cs.UTF-8: Přejete si restartovat strongSwan?
+ Restartování strongSwan je dobrý nápad, protože v případě, že aktualizace obsahuje bezpečnostní záplatu, nebude opravena dokud se démon nerestartuje. Většina lidí předpokládá restartování démona, takže je to v každém případě správný postup. Nicméně je možné, že existující spojení budou shozena a poté znovu nastavena.
+Description-fr.UTF-8: Souhaitez-vous redémarrer strongSwan ?
+ Redémarrer strongSwan est préférable car un éventuel correctif de sécurité ne prendra place que si le démon est redémarré. La plupart des utilisateurs s'attendent à ce que le démon redémarre et c'est donc le plus souvent le meilleur choix. Cependant, cela pourrait interrompre provisoirement des connexions en cours.
+Description-ja.UTF-8: strongSwan を再起動しますか?
+ セキュリティ修正があった場合にはデーモンが再起動されるまで修正が反映されません。ですので、strongSwan を再起動するのは良い考えです。ほとんどの人はデーモンを再起動しようとしますが、これは大抵問題ありません。しかし、この作業で現在の接続は切断され、再度繋ぎなおすことになります。
+Description-nl.UTF-8: Wilt u strongSwan herstarten?
+ strongSwan herstarten is een goed idee omdat als er een veiligheidsherstelling is, het pas echt hersteld zal zijn vanaf dat de achtergronddienst is herstart. De meeste mensen verwachten dat de achtergronddienst herstart, dus dit is meestal een goed idee. Hoewel, dit kan bestaande verbindingen verbreken en ze dan opnieuw herstellen.
 
 Template: strongswan/create_rsa_key
 Type: boolean
@@ -55,6 +95,22 @@ Description: Do you want to create a RSA public/private keypair for this host?
  .
  If you do not want to create a new public/private keypair, you can choose to
  use an existing one.
+Description-cs.UTF-8: Přejete si vytvořit veřejný/soukromý pár RSA klíčů pro tento počítač?
+ Tento instalátor může automaticky vytvořit veřejný/soukromý pár RSA klíčů pro tento počítač. Pár klíčů může být využit k autentizaci IPSec spojení na další počítače a je upřednostňovanou cestou pro sestavování bezpečných IPSec spojení. Další možností autentizace je využití sdílených tajemství (hesel, která jsou stejná na obou stranách tunelu), ale pro větší počet spojení je RSA autentizace snazší pro správu a mnohem bezpečnější.
+ .
+ Jestliže si nepřejete vytvořit nový pár klíčů pro tento počítač, můžete si zvolit existující.
+Description-fr.UTF-8: Souhaitez-vous créer une paire de clés RSA publique et privée pour cet hôte ?
+ Cet outil d'installation peut créer automatiquement une paire de clés RSA publique et privée pour cet hôte. Cette paire de clés peut servir à authentifier des connexions IPSec vers d'autres hôtes. Cette méthode est la méthode conseillée pour l'établissement de liaisons IPSec sûres. L'autre possibilité d'authentification à la connexion est l'utilisation d'un secret partagé (« pre-shared key » : des mots de passe identiques aux deux extrémités du tunnel). Toutefois, pour de nombreuses connexions, l'authentification RSA est plus simple à administrer et plus sûre.
+ .
+ Si vous ne souhaitez pas créer une paire de clés publique et privée, vous pouvez choisir d'en utiliser une existante.
+Description-ja.UTF-8: このホストの RSA 公開鍵・秘密鍵のキーペアを生成しますか?
+ このインストーラはこのホストの RSA 公開鍵・秘密鍵のキーペアを自動的に生成できます。このキーペアは他のホストとの IPSec 通信での認証に利用可能で、セキュアな IPSec 通信を確立する方法として好まれています。他に利用可能な方法としては共通鍵 (トンネルの双方で同じパスワード) を通信の認証に利用するというのがありますが、多数の接続に対しては、RSA 認証のほうが管理がより簡単で、よりセキュアです。
+ .
+ 新たな公開鍵・秘密鍵のキーペアを生成したくない場合は、既存のキーペアの利用を選択することも可能です。
+Description-nl.UTF-8: Wilt u een publiek/privaat RSA-sleutelpaar aanmaken voor deze host?
+ Deze installatie kan automatisch een publiek/privaat RSA-sleutelpaar aanmaken voor deze host. Dit sleutelpaar kan worden gebruikt om IPSec-verbinden naar andere hosts te authenticeren en is de aanbevolen manier om veilige IPSec-verbindingen op te zetten. De andere mogelijkheid zou zijn om gedeelde geheimen (wachtwoorden die aan beide kanten van de tunnel hetzelfde zijn) te gebruiken voor het authenticeren van een verbinding, maar voor een groter aantal verbindingen is RSA-authenticatie makkelijker te beheren en veiliger.
+ .
+ Indien u geen nieuw publiek/privaat sleutelpaar wenst aan te maken, kunt u een bestaand sleutelpaar kiezen.
 
 Template: strongswan/rsa_key_type
 Type: select
@@ -82,6 +138,30 @@ Description: The type of RSA keypair to create:
  Therefore a X509 certificate is recommended since it is more flexible and
  this installer should be able to hide the complex creation of the X509
  certificate and its use in strongSwan anyway.
+Description-cs.UTF-8: Typ páru RSA klíčů, který se vytvoří:
+ Je možné vytvořit prostý pár RSA klíčů pro použití se strongSwanem, nebo vytvořit soubor s certifikátem X509, který obsahuje veřejný RSA klíč a dodatečně uchovává odpovídající soukromý klíč.
+ .
+ Pokud chcete vytvořit IPSec spojení jen k počítačům, na kterých taktéž běží strongSwan, může být mnohem jednodušší použít pár prostých RSA klíčů. Pokud se ale chcete připojit k jiným implementacím IPSec, budete potřebovat certifikát X509. Také je možné zde vytvořit certifikát X509 a později, pokud druhá strana používá strongSwan bez podpory certifikátů X509, z něj získat veřejný RSA klíč v prostém formátu.
+ .
+ Certifikát X509 je proto doporučován zejména díky své flexibilitě. Tento instalátor by v měl být schopen skrýt komplexnost vytváření a používání certifikátu ve strongSwanu.
+Description-fr.UTF-8: Type de paire de clés RSA à créer :
+ Il est possible de créer une simple paire de clés destinée à être utilisée avec strongSwan ou de créer un fichier de certificat X509 qui contient la clé publique RSA et de conserver la clé privée correspondante par ailleurs.
+ .
+ Si vous ne prévoyez d'établir des connexions IPSec qu'avec des hôtes utilisant strongSwan, il sera probablement plus facile d'utiliser des clés RSA simples. Mais si vous souhaitez vous connecter à des hôtes utilisant d'autres implémentations d'IPSec, vous aurez besoin d'un certificat X509. Il est également possible de créer un certificat X509 puis d'en extraire une simple clé publique RSA, si l'autre extrémité de la connexion utilise Openswan sans la gestion des certificats X509.
+ .
+ Ainsi, il vous est conseillé d'utiliser un certificat X509 car cette méthode est plus souple. Cet outil d'installation devrait vous simplifier la tâche de création et d'utilisation de ce certificat X509 avec strongSwan.
+Description-ja.UTF-8: 生成する RSA キーペアのタイプ:
+ strongSwan で利用する通常の RSA 公開鍵・秘密鍵のキーペアを作れます。あるいは RSA 公開鍵 (さらにはそれに対応する秘密鍵も) を含む X509 証明書ファイルも同様です。
+ .
+ 既に strongSwan を動作させているホストと IPSec 通信を確立したいだけの場合は、通常の RSA キーペアを使用すると多少簡単になります。しかし、他の IPSec 実装との接続を行いたい場合は X509 証明書が必要になります。通信を行う対象のホストが strongSwan を X509 証明書のサポート無しで運用していた場合、ここで X509 証明書を生成してから、後ほど RSA 公開鍵を通常の形式に展開することも可能です。
+ .
+ したがって X509 証明書がお勧めです。こちらのほうが柔軟ですし、このインストーラを使えば、X509 証明書の生成や strongSwan での利用に際しての面倒さを隠蔽してくれるはずです。
+Description-nl.UTF-8: Aan te maken type RSA-sleutelpaar:
+ Het is mogelijk om een gewoon publiek/privaat RSA-sleutelpaar aan te maken om te gebruiken met strongSwan of om een X509-certificaatbestand aan te maken die de publieke RSA-sleutel bevat en de corresponderende private sleutel te bewaren.
+ .
+ Als u enkel IPSec-verbindingen wilt opzetten naar hosts die ook strongSwan draaien, dan is het misschien een beetje gemakkelijker om gewone RSA-sleutelparen te gebruiken. Maar als u verbindingen wilt leggen met andere IPSec-implementaties, dan zult u een X509-certificaat nodig hebben. Het is ook mogelijk om hier een X509-certificaat aan te maken en de publieke RSA-sleutel te extraheren in een gewoon formaat als de andere kant strongSwan draait zonder X509-certificaatondersteuning.
+ .
+ Daarom wordt een X509-certificaat aanbevolen omdat het flexibeler is en deze installatie moet de complexe creatie van een X509-certificaat kunnen verbergen en het toch in strongSwan kunnen gebruiken.
 
 Template: strongswan/existing_x509_certificate
 Type: boolean
@@ -92,12 +172,28 @@ Description: Do you have an existing X509 certificate file for strongSwan?
  be in one file, if it is in PEM format. If you have such an existing
  certificate and key file and want to use it for authenticating IPSec
  connections, then please answer yes.
+Description-cs.UTF-8: Vlastníte existující certifikát X509, který chcete použít pro strongSwan?
+ Instalátor může automaticky získat potřebné informace z existujícího certifikátu X509 s odpovídajícím soukromým RSA klíčem. Jedná-li se o formát PEM, mohou být obě části v jednom souboru. Vlastníte-li takový certifikát a soubor s klíčem a chcete-li je použít pro autentizaci IPSec spojení, odpovězte kladně.
+Description-fr.UTF-8: Possédez-vous un fichier de certificat X509 existant à utiliser avec strongSwan ?
+ Cet outil d'installation est capable d'extraire automatiquement l'information nécessaire d'un fichier de certificat X509 existant, avec la clé privée RSA correspondante. Les deux parties peuvent se trouver dans un seul fichier, s'il est en format PEM. Indiquez si vous possédez un tel certificat ainsi que la clé privée, et si vous souhaitez vous en servir pour l'authentification des connexions IPSec.
+Description-ja.UTF-8: 既に存在している X509 証明書ファイルを strongSwan で利用しますか?
+ このインストーラは既に存在している X509 証明書から RSA 秘密鍵と照らし合わせて必要な情報を自動的に展開する事が可能です。 PEM 形式の場合、双方を一つのファイルにまとめることも可能です。そのような証明書と鍵のファイルがあり、これらを IPSec 通信での認証に使用したい場合は「はい」と答えてください。
+Description-nl.UTF-8: Hebt u een bestaand X509-certificaatbestand dat u voor strongSwan wilt gebruiken?
+ Deze installatie kan de benodigde informatie automatisch extraheren van een bestaand X509-certificaat met een bijhorende private RSA-sleutel. Beide delen kunnen in één bestand zijn, als het in PEM-formaat is. Hebt u zo'n bestaand certificaat en een sleutelbestand; en wilt u het voor de authenticatie van IPSec-verbindingen gebruiken, antwoord dan met 'ja'
 
 Template: strongswan/existing_x509_certificate_filename
 Type: string
 Description: File name of your X509 certificate in PEM format:
  Please enter the full location of the file containing your X509 
  certificate in PEM format.
+Description-cs.UTF-8: Jméno souboru s certifikátem X509 ve formátu PEM:
+ Zadejte prosím absolutní cestu k souboru obsahujícímu váš certifikát X509 ve formátu PEM.
+Description-fr.UTF-8: Emplacement de votre certificat X509 au format PEM :
+ Veuillez indiquer l'emplacement du fichier contenant votre certificat X509 au format PEM.
+Description-ja.UTF-8: PEM 形式の X509 証明書のファイル名:
+ PEM 形式の X509 証明書を含んでいるファイルの場所を絶対パスで入力してください。
+Description-nl.UTF-8: Bestandsnaam van uw X509-certificaat in PEM-formaat:
+ Geef de volledige locatie van het bestand dat uw X509-certificaat in PEM-formaat bevat.
 
 Template: strongswan/existing_x509_key_filename
 Type: string
@@ -105,6 +201,14 @@ Description: File name of your X509 private key in PEM format:
  Please enter the full location of the file containing the private RSA key
  matching your X509 certificate in PEM format. This can be the same file
  that contains the X509 certificate.
+Description-cs.UTF-8: Jméno souboru se soukromým klíčem X509 ve formátu PEM:
+ Zadejte prosím absolutní cestu k souboru obsahujícímu soukromý RSA klíč ve formátu PEM odpovídající vašemu certifikátu X509. Může to být stejný soubor jako ten, ve kterém se nachází certifikát X509.
+Description-fr.UTF-8: Emplacement de votre clé privée X509 au format PEM :
+ Veuillez indiquer l'emplacement du fichier contenant la clé privée RSA correspondant à votre certificat X509 au format PEM. Cela peut être le fichier qui contient le certificat X509.
+Description-ja.UTF-8: PEM 形式の X509 秘密鍵のファイル名:
+ PEM 形式の X509 証明書に対応する RSA 秘密鍵を含んでいるファイルの場所を絶対パスで入力してください。これは X509 証明書を含んでいるファイルと同じで構いません。
+Description-nl.UTF-8: Bestandsnaam van uw private X509-sleutel in PEM-formaat:
+ Geef de volledige locatie van het bestand dat uw private RSA-sleutel bevat die behoort bij uw X509-certificaat in PEM-formaat. Dit kan hetzelfde bestand zijn als dat wat uw X509-certificaat bevat.
 
 Template: strongswan/rsa_key_length
 Type: string
@@ -114,6 +218,14 @@ Description: The length of the created RSA key (in bits):
  1024 bits because this should be considered unsecure and you will probably
  not need anything more than 2048 bits because it only slows the
  authentication process down and is not needed at the moment.
+Description-cs.UTF-8: Délka vytvořeného RSA klíče (v bitech):
+ Zadejte prosím délku vytvářeného RSA klíče. Kvůli bezpečnosti by neměla být méně než 1024 bitů a pravděpodobně nepotřebujete víc než 2048 bitů, protože to již zpomaluje proces autentizace.
+Description-fr.UTF-8: Longueur (en bits) de la clé RSA à créer :
+ Veuillez indiquer la longueur de la clé RSA qui sera créée. Elle ne doit pas être inférieure à 1024 bits car cela serait considéré comme insuffisamment sûr. Un choix excédant 2048 bits est probablement inutile car cela ne fait essentiellement que ralentir le processus d'authentification sans avoir d'intérêt actuellement.
+Description-ja.UTF-8: RSA 鍵の鍵長（ビット数）:
+ 生成する RSA 鍵の長さを入力してください。安全のため、1024 ビット未満にすべきではありません。2048 ビットより大きなものにする必要もないでしょう。認証プロセスが遅くなりますし、現時点ではおそらく必要ありません。
+Description-nl.UTF-8: Lengte van de aangemaakte RSA-sleutel (in bits):
+ Geef de lengte van de aangemaakte RSA-sleutel. Het mag niet minder dan 1024 bits zijn omdat dit als onveilig wordt beschouwd en u zult waarschijnlijk niet meer dan 2048 bits nodig hebben omdat het enkel het authenticatieproces vertraagt en op dit moment niet nodig is.
 
 Template: strongswan/x509_self_signed
 Type: boolean
@@ -132,6 +244,22 @@ Description: Do you want to create a self-signed X509 certificate?
  installer will only create the RSA private key and the certificate request
  and you will have to sign the certificate request with your certificate
  authority.
+Description-cs.UTF-8: Chcete vytvořit certifikát X509 podepsaný sám sebou?
+ Tento instalátor může automaticky vytvořit pouze certifikát X509 podepsaný sám sebou, jelikož v opačném případě je k podpisu certifikátu potřeba certifikační autorita. Tento certifikát můžete ihned použít k připojení na další počítače s IPSec, které podporují autentizaci pomocí certifikátu X509. Nicméně chcete-li využít nových PKI možností strongSwanu >= 1.91, budete k vytvoření důvěryhodných cest potřebovat všechny certifikáty X509 podepsané jedinou certifikační autoritou.
+ .
+ Jestliže nechcete vytvořit certifikát podepsaný sám sebou, vytvoří tento instalátor jen soukromý RSA klíč a požadavek na certifikát. Vy potom musíte podepsat požadavek svojí certifikační autoritou.
+Description-fr.UTF-8: Souhaitez-vous créer un certificat X509 autosigné ?
+ Cet outil d'installation ne peut créer automatiquement qu'un certificat X509 autosigné puisqu'une autorité de certification est indispensable pour signer la demande de certificat. Si vous choisissez de créer un certificat autosigné, vous pourrez vous en servir immédiatement pour vous connecter aux hôtes qui authentifient les connexions IPSec avec des certificats X509. Cependant, si vous souhaitez utiliser les nouvelles fonctionnalités PKI de strongSwan >= 1.91, vous aurez besoin que tous les certificats X509 soient signés par la même autorité de certification afin de créer un chemin de confiance.
+ .
+ Si vous ne voulez pas créer de certificat autosigné, cet outil d'installation ne fera que créer la clé privée RSA et la demande de certificat, que vous devrez ensuite signer avec votre autorité de certification.
+Description-ja.UTF-8: 自己署名 X509 証明書を生成しますか?
+ 証明書要求に署名するためには認証局が必要となるので、このインストーラでは自己署名 X509 証明書を自動的に生成する事だけが可能です。自己署名証明書を生成したい場合、これを使用してすぐに X509 証明書をサポートしている他の IPSec ホストに接続可能です。しかし、strongSwan バージョン 1.91 以上での新しい PKI 機能を使いたい場合は、trust path を生成するために単一の認証局によってすべての X509 証明書に署名してもらう必要があります。
+ .
+ 自己署名証明書を生成したくない場合、このインストーラは RSA 秘密鍵と証明書要求のみを生成します。そして、認証局に証明書要求へ署名をしてもらう必要があります。
+Description-nl.UTF-8: Wilt u een door uzelf getekend X509-certificaat aanmaken?
+ Deze installatie kan enkel een door uzelf getekend X509-certificaat automatischaanmaken omdat anders een certificaatautoriteit nodig is om de certificaataanvraag te tekenen. Als u een door uzelf getekend certificaat wilt aanmaken, dan kunt u het onmiddellijk gebruiken om een verbinding te leggen met andere IPSec-hosts die X509-certificaten ondersteunen voor IPSec-verbindingen. Hoewel, als u de nieuwe PKI-mogelijkheden wilt gebruiken van strongSwan >= 1.91, dan zult u alle X509-certificaten moeten laten tekenen door één enkele certificaatautoriteit om een vertrouwenspad aan te maken.
+ .
+ Als u geen door uzelf getekend certificaat wilt aanmaken, dan zal deze installatie enkel de private RSA-sleutel en de certificaataanvraag aanmaken en u zult de certificaataanvraag moeten laten tekenen door uw certificaatautoriteit.
 
 Template: strongswan/x509_country_code
 Type: string
@@ -145,6 +273,30 @@ Description: Country code for the X509 certificate request:
  any other field of the X.509 certificate, but not for this one.
  .
  Example: AT
+Description-cs.UTF-8: Kód země pro požadavek na certifikát X509:
+ Zadejte prosím dvoumístný kód vaší země. Tento kód bude umístěn do požadavku na certifikát.
+ .
+ Je opravdu nutné, abyste vložili správný kód země, protože openssl jinak odmítne vygenerování certifikátu. Prázdné pole je dovoleno ve všech ostatních polích certifikátu X509 kromě tohoto.
+ .
+ Příklad: CZ
+Description-fr.UTF-8: Code du pays :
+ Veuillez indiquer le code à deux lettres de votre pays. Ce code sera inclus dans la demande de certificat.
+ .
+ Il est impératif de choisir ici un code de pays valide sinon OpenSSL refusera de générer les certificats. Tous les autres champs d'un certificat X.509 peuvent être vides, sauf celui-ci.
+ .
+ Exemple : FR
+Description-ja.UTF-8: X509 証明書要求に記載する国コード:
+ あなたの国の国コードを2文字で入力してください。このコードは証明書要求に記載されます。
+ .
+ openssl が国コードなしでは証明書の生成を拒否するので、正しい国コードをここで入力する必要があります。X.509 証明書では、他のフィールドについては空でも構いませんが、これについては許可されていません。
+ .
+ 例: JP
+Description-nl.UTF-8: Landcode van de X509-certificaataanvraag:
+ Geef de 2-letterige landcode voor uw land. Deze code zal in de certificaataanvraag worden geplaatst.
+ .
+ U moet hier wel een geldige landcode opgeven omdat openssl anders zal weigeren om een certificaat aan te maken. Er is voor elke veld van het X509-certificaat een leeg veld toegestaan, maar niet voor dit veld.
+ .
+ Voorbeeld: BE
 
 Template: strongswan/x509_state_name
 Type: string
@@ -154,6 +306,22 @@ Description: State or province name for the X509 certificate request:
  will be placed in the certificate request.
  .
  Example: Upper Austria
+Description-cs.UTF-8: Jméno státu nebo oblasti pro požadavek na certifikát X509:
+ Zadejte prosím celé jméno státu nebo oblasti kde žijete. Toto jméno bude umístěno do požadavku na certifikát.
+ .
+ Příklad: Morava
+Description-fr.UTF-8: État, province ou région :
+ Veuillez indiquer le nom complet de l'état, de la province ou de la région où vous résidez. Ce nom sera inclus dans la demande de certificat.
+ .
+ Exemples : Rhône-Alpes, Brabant Wallon, Bouches du Rhône, Québec, Canton de Vaud
+Description-ja.UTF-8: X509 証明書要求に記載する都道府県名:
+ あなたが在住している都道府県を入力してください。これは証明書要求に記載されます。
+ .
+ 例: Tokyo
+Description-nl.UTF-8: Staat of provincie voor de X509-certificaataanvraag:
+ Geef de volledige naam van de staat of provincie waarin u woont. Deze naam zal in de certificaataanvraag worden geplaatst.
+ .
+ Voorbeeld: Limburg
 
 Template: strongswan/x509_locality_name
 Type: string
@@ -163,6 +331,22 @@ Description: Locality name for the X509 certificate request:
  placed in the certificate request.
  .
  Example: Vienna
+Description-cs.UTF-8: Jméno lokality pro požadavek na certifikát X509:
+ Zadejte prosím lokalitu (např. město) kde žijete. Toto jméno bude umístěno do požadavku na certifikát.
+ .
+ Příklad: Olomouc
+Description-fr.UTF-8: Localité :
+ Veuillez indiquer la localité (p. ex. la ville) où vous résidez. Ce nom sera inclus dans la demande de certificat.
+ .
+ Exemple : Saint-Étienne
+Description-ja.UTF-8: X509 証明書要求に記載する地域名:
+ あなたの在住している地域の名前 (例: 市町村名) を入力してください。これは証明書要求に記載されます。
+ .
+ 例: Shinjuku-ku
+Description-nl.UTF-8: Plaatsnaam voor de X509-certificaataanvraag:
+ Geef de plaatsnaam (v.b. stad) waar u woont. Deze naam zal in de certificaataanvraag worden geplaatst.
+ .
+ Voorbeeld: Genk
 
 Template: strongswan/x509_organization_name
 Type: string
@@ -173,6 +357,22 @@ Description: Organization name for the X509 certificate request:
  request.
  .
  Example: Debian
+Description-cs.UTF-8: Název organizace pro požadavek na certifikát X509:
+ Zadejte prosím organizaci pro kterou je certifikát vytvářen. Toto jméno bude umístěno do požadavku na certifikát.
+ .
+ Příklad: Debian
+Description-fr.UTF-8: Organisme :
+ Veuillez indiquer l'organisme (p. ex. l'entreprise) pour qui sera créé le certificat X509. Ce nom sera inclus dans la demande de certificat.
+ .
+ Exemple : Debian
+Description-ja.UTF-8: X509 証明書要求に記載する組織名:
+ X509 証明書の生成対象となるべき組織 (例: 会社) を入力してください。これは証明書要求に記載されます。
+ .
+ 例: Debian
+Description-nl.UTF-8: Naam van de organisatie voor de X509-certificaataanvraag:
+ Geef de organisatie (v.b. bedrijf) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certicicaataanvraag worden geplaatst.
+ .
+ Voorbeeld: Debian
 
 Template: strongswan/x509_organizational_unit
 Type: string
@@ -183,6 +383,22 @@ Description: Organizational unit for the X509 certificate request:
  certificate request.
  .
  Example: security group
+Description-cs.UTF-8: Název organizační jednotky pro požadavek na certifikát X509:
+ Zadejte prosím organizační jednotku pro kterou je certifikát vytvářen. Toto jméno bude umístěno do požadavku na certifikát.
+ .
+ Příklad: bezpečnostní oddělení
+Description-fr.UTF-8: Unité d'organisation :
+ Veuillez indiquer l'unité d'organisation (p. ex. département, division, etc.) pour qui sera créé le certificat X509. Ce nom sera inclus dans la demande de certificat.
+ .
+ Exemple : Département Réseaux et Informatique Scientifique
+Description-ja.UTF-8: X509 証明書要求に記載する組織単位:
+ X509 証明書の生成対象となるべき組織単位 (例: 部署名) を入力してください。これは証明書要求に記載されます。
+ .
+ 例: security group
+Description-nl.UTF-8: Organisatie-eenheid voor de X509-certificaataanvraag:
+ Geef de organisatie-eenheid (v.b. dienst) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certificaataanvraag worden geplaatst.
+ .
+ Voorbeeld: dienst veiligheid
 
 Template: strongswan/x509_common_name
 Type: string
@@ -193,6 +409,22 @@ Description: Common name for the X509 certificate request:
  in the certificate request.
  .
  Example: gateway.debian.org
+Description-cs.UTF-8: Obvyklé jméno pro požadavek na certifikát X509:
+ Zadejte prosím běžné jméno (např. jméno počítače) pro které je certifikát vytvářen. Toto jméno bude umístěno do požadavku na certifikát.
+ .
+ Příklad: gateway.debian.org
+Description-fr.UTF-8: Nom ordinaire :
+ Veuillez indiquer le nom ordinaire (p. ex. le nom réseau de cette machine) pour qui sera créé le certificat X509. Ce nom sera inclus dans la demande de certificat.
+ .
+ Exemple : gateway.debian.org
+Description-ja.UTF-8: X509 証明書要求に記載するコモンネーム:
+ X509 証明書の生成対象となるべきコモンネーム (例: このマシンのホスト名) を入力してください。これは証明書要求に記載されます。
+ .
+ 例: gateway.debian.org
+Description-nl.UTF-8: Naam voor de X509-certificaataanvraag:
+ Geef de naam (v.b. computernaam van deze machine) waarvoor het X509-certificaat wordt aangemaakt. Deze naam zal in de certificaataanvraag worden geplaatst.
+ .
+ Voorbeeld: gateway.debian.org
 
 Template: strongswan/x509_email_address
 Type: string
@@ -201,6 +433,14 @@ Description: Email address for the X509 certificate request:
  Please enter the email address of the person or organization who is
  responsible for the X509 certificate, This address will be placed in the
  certificate request.
+Description-cs.UTF-8: Emailová adresa pro požadavek na certifikát X509:
+ Zadejte prosím emailovou adresu osoby nebo organizace, která je zodpovědná za certifikát X509. Toto jméno bude umístěno do požadavku na certifikát.
+Description-fr.UTF-8: Adresse électronique :
+ Veuillez indiquer l'adresse électronique de la personne ou de l'organisme responsable du certificat X509. Cette adresse sera incluse dans la demande de certificat.
+Description-ja.UTF-8: X509 証明書要求に記載するメールアドレス:
+ X509 証明書の責任者となる人物・団体のメールアドレスを入力してください。このアドレスは証明書要求に記載されます。
+Description-nl.UTF-8: E-mailadres voor de X509-certificaataanvraag:
+ Geef het e-mailadres van de persoon of organisatie die verantwoordelijk is voor het X509-certificaat. Dit adres zal in de certificaataanvraag worden geplaatst.
 
 Template: strongswan/enable-oe
 Type: boolean
@@ -216,4 +456,20 @@ Description: Do you wish to enable opportunistic encryption in strongSwan?
  .
  Please choose whether you want to enable support for OE. If unsure, do not
  enable it.
+Description-cs.UTF-8: Chcete ve strongSwanu povolit oportunistické šifrování?
+ strongSwan přichází s podporou pro oportunistické šifrování (OE), které uchovává autentizační informace IPSecu (např. veřejné RSA klíče) v (nejlépe zabezpečených) DNS záznamech. Dokud nebude tato schopnost více rozšířena, způsobí její aktivace výrazné zpomalení každého nového odchozího spojení. Od verze 2.0 přichází strongSwan s implicitně zapnutou podporou OE čímž pravděpodobně zruší vaše probíhající spojení do Internetu (např. vaši implicitní cestu - default route) v okamžiku, kdy spustíte pluto (strongSwan keying démon).
+ .
+ Prosím vyberte si zda chcete povolit podporu pro OE. Nejste-li si jisti, podporu nepovolujte.
+Description-fr.UTF-8: Souhaitez-vous activer le chiffrement opportuniste dans strongSwan ?
+ StrongSwan gère le chiffrement opportuniste (« opportunistic encryption » : OE) qui permet de conserver les informations d'authentification IPSec (c'est-à-dire les clés publiques RSA) dans des enregistrements DNS, de préférence sécurisés. Tant que cette fonctionnalité ne sera pas déployée largement, son activation provoquera un ralentissement significatif pour toute nouvelle connexion sortante. À partir de la version 2.0, cette fonctionnalité est activée par défaut dans strongSwan, ce qui peut interrompre le fonctionnement de votre connexion à l'Internet (c'est-à-dire votre route par défaut) dès le démarrage de pluto, le démon de gestion de clés de strongSwan.
+ .
+ Veuillez choisir si vous souhaitez activer la gestion du chiffrement opportuniste. Ne l'activez pas si vous n'êtes pas certain d'en avoir besoin.
+Description-ja.UTF-8: strongSwan で opportunistic encryption を有効にしますか?
+ strongSwan は、IPSec 認証情報 (例: RSA 公開鍵) を (願わくはセキュアな) DNS レコード内に保存する opportunistic encryption (OE) をサポートしています。これは広く利用されるようになるまで、有効にすると外部への新規接続は全て格段に遅くなります。バージョン 2.0 より strongSwan の開発元はデフォルトで OE を有効にしています。そのため pluto (strongSwan 鍵署名デーモン) が開始するとすぐ、既存のインターネット接続 (つまりデフォルトルート) が中断されるかもしれません。
+ .
+ OE のサポートを有効にするかどうかを選んでください。よくわからない場合は、有効にはしないでください。
+Description-nl.UTF-8: Wilt u opportunistische encryptie aanschakelen in strongSwan?
+ strongSwan heeft ondersteuning voor opportunistische encryptie (OE) die IPSec-authenticatie-informatie (v.b. publieke RSA-sleutels) bewaart in (liefst veilige) DNS-records. Totdat dit veelvuldig wordt toegepast zal dit activeren een significante vertraging veroorzaken voor elke nieuwe uitgaande verbinding. Omdat versie 2.0 van strongSwan standaard OE heeft aangeschakeld, wordt dus waarschijnlijk uw bestaande verbinding met het Internet (v.b. uw standaard route) verbroken vanaf dat pluto (de strongSwan-sleutelringachtergronddienst) wordt gestart.
+ .
+ Kiest of u OE-ondersteuning wilt aanschakelen. Indien onzeker, schakel het dan niet aan.
 
