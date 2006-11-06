@@ -12,7 +12,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: Makefile,v 1.1 2004/03/15 20:35:24 as Exp $
+# RCSID $Id: Makefile,v 1.2 2006/10/19 18:12:45 as Exp $
 
 FREESWANSRCDIR=..
 include ${FREESWANSRCDIR}/Makefile.inc
@@ -37,5 +37,4 @@ cleanall distclean mostlyclean realclean install programs checkprograms check cl
 	@for d in $(SUBDIRS) ; \
 	do \
 		(cd $$d && $(MAKE) FREESWANSRCDIR=$(FREESWANSRCDIR)/.. $@ ) || exit 1; \
-	done; \
-
+	done; 

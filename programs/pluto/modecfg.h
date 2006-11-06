@@ -12,22 +12,17 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: modecfg.h,v 1.1 2005/01/06 22:10:15 as Exp $
+ * RCSID $Id: modecfg.h,v 1.3 2006/10/19 21:07:40 as Exp $
  */
 
 struct state;
 
-stf_status modecfg_resp(struct state *st
-			, u_int resp
-			, pb_stream *s, u_int16_t cmd
-			, bool hackthat, u_int16_t id);
+/* ModeConfig starting functions */
+extern stf_status modecfg_send_request(struct state *st);
+extern stf_status modecfg_send_set(struct state *st);
 
-stf_status modecfg_send_set(struct state *st);
-
-extern stf_status modecfg_start_set(struct state *st);
-
-/* Mode Config States */
-
+/* ModeConfig state transition functions */
 extern stf_status modecfg_inR0(struct msg_digest *md);
 extern stf_status modecfg_inR1(struct msg_digest *md);
-extern stf_status modecfg_send_request(struct state *st);
+extern stf_status modecfg_inI1(struct msg_digest *md);
+extern stf_status modecfg_inI2(struct msg_digest *md);

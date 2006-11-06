@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: args.c,v 1.9 2006/04/17 10:32:36 as Exp $
+ * RCSID $Id: args.c,v 1.10 2006/10/19 14:58:30 as Exp $
  */
 
 #include <stddef.h>
@@ -191,6 +191,7 @@ static const token_info_t token_info[] =
     { ARG_TIME, offsetof(starter_conn_t, dpd_delay), NULL                          },
     { ARG_TIME, offsetof(starter_conn_t, dpd_timeout), NULL                        },
     { ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
+    { ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
 
     /* ca section keywords */
     { ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },
@@ -209,6 +210,7 @@ static const token_info_t token_info[] =
     { ARG_MISC, 0, NULL  /* KW_SUBNETWITHIN */                                     },
     { ARG_MISC, 0, NULL  /* KW_PROTOPORT */                                        },
     { ARG_MISC, 0, NULL  /* KW_SOURCEIP */                                         },
+    { ARG_MISC, 0, NULL  /* KW_NATIP */                                            },
     { ARG_ENUM, offsetof(starter_end_t, firewall), LST_bool                        },
     { ARG_ENUM, offsetof(starter_end_t, hostaccess), LST_bool                      },
     { ARG_STR,  offsetof(starter_end_t, updown), NULL                              },

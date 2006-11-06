@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: whack.h,v 1.16 2006/04/17 10:39:14 as Exp $
+ * RCSID $Id: whack.h,v 1.17 2006/10/19 15:18:43 as Exp $
  */
 
 #ifndef _WHACK_H
@@ -62,6 +62,7 @@ struct whack_end {
     bool has_client_wildcard;
     bool has_port_wildcard;
     bool has_srcip;
+    bool has_natip;
     bool modecfg;
     bool hostaccess;
     certpolicy_t sendcert;

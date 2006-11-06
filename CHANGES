@@ -1,3 +1,13 @@
+strongswan-2.8.0
+----------------
+
+- Implementation of ModeConfig push mode via the new connection keyword
+  modeconfig=push allows interoperability with Cisco VPN gateways.
+
+- The command ipsec statusall now shows "DPD active" for all ISAKMP SAs
+  that are under active Dead Peer Detection control.
+
+
 strongswan-2.7.3
 ----------------
 
