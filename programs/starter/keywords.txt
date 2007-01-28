@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt,v 1.7 2006/10/19 14:57:56 as Exp $
+ * RCSID $Id: keywords.txt,v 1.8 2007/01/11 21:27:51 as Exp $
  */
 
 #include <string.h>
@@ -66,6 +66,7 @@ dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
 modeconfig,        KW_MODECONFIG
+xauth,             KW_XAUTH
 cacert,            KW_CACERT
 ldaphost,          KW_LDAPHOST
 ldapbase,          KW_LDAPBASE

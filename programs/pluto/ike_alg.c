@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ike_alg.c,v 1.6 2004/09/17 21:29:50 as Exp $
+ * RCSID $Id: ike_alg.c,v 1.7 2007/01/10 00:36:19 as Exp $
  */
 
 #include <stdio.h>
@@ -233,6 +233,7 @@ ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
     struct ike_info *ike_info;
     u_int ealg, halg, modp, eklen = 0;
     struct encrypt_desc *enc_desc;
+    bool is_xauth_server;
     int i;
 
     if (!ai)
@@ -298,9 +299,35 @@ ike_alg_db_new(struct alg_info_ike *ai , lset_t policy)
 	    db_trans_add(db_ctx, KEY_IKE);
 	    db_attr_add_values(db_ctx, OAKLEY_ENCRYPTION_ALGORITHM, ealg);
 	    db_attr_add_values(db_ctx, OAKLEY_HASH_ALGORITHM, halg);
-	    if (ike_info->ike_eklen)
-		db_attr_add_values(db_ctx, OAKLEY_KEY_LENGTH, ike_info->ike_eklen);
+	    if (eklen)
+		db_attr_add_values(db_ctx, OAKLEY_KEY_LENGTH, eklen);
 	    db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD, OAKLEY_PRESHARED_KEY);
+	    db_attr_add_values(db_ctx, OAKLEY_GROUP_DESCRIPTION, modp);
+	}
+
+	is_xauth_server = (policy & POLICY_XAUTH_SERVER) != LEMPTY;
+
+	if (policy & POLICY_XAUTH_RSASIG)
+	{
+	    db_trans_add(db_ctx, KEY_IKE);
+	    db_attr_add_values(db_ctx, OAKLEY_ENCRYPTION_ALGORITHM, ealg);
+	    db_attr_add_values(db_ctx, OAKLEY_HASH_ALGORITHM, halg);
+	    if (eklen)
+		db_attr_add_values(db_ctx, OAKLEY_KEY_LENGTH, eklen);
+	    db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD
+		, is_xauth_server ? XAUTHRespRSA : XAUTHInitRSA);
+	    db_attr_add_values(db_ctx, OAKLEY_GROUP_DESCRIPTION, modp);
+	}
+
+	if (policy & POLICY_XAUTH_PSK)
+	{
+	    db_trans_add(db_ctx, KEY_IKE);
+	    db_attr_add_values(db_ctx, OAKLEY_ENCRYPTION_ALGORITHM, ealg);
+	    db_attr_add_values(db_ctx, OAKLEY_HASH_ALGORITHM, halg);
+	    if (eklen)
+		db_attr_add_values(db_ctx, OAKLEY_KEY_LENGTH, eklen);
+	    db_attr_add_values(db_ctx, OAKLEY_AUTHENTICATION_METHOD
+		, is_xauth_server ? XAUTHRespPreShared : XAUTHInitPreShared);
 	    db_attr_add_values(db_ctx, OAKLEY_GROUP_DESCRIPTION, modp);
 	}
     }

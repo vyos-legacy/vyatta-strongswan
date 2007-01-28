@@ -11,7 +11,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: Makefile.inc,v 1.12 2006/01/25 17:23:15 as Exp $
+# RCSID $Id: Makefile.inc,v 1.13 2007/01/11 21:42:11 as Exp $
 
 
 # Variables in this file with names starting with INC_ are not for use
@@ -261,8 +261,8 @@ USE_KERNEL26?=true
 # whether or not pluto sends its strongSwan Vendor ID
 USE_VENDORID?=true
 
-# whether or not pluto sends an XAUTH VID (Cisco Mode Config Interoperability)
-USE_XAUTH_VID?=false
+# whether to tolerate some non-conformities (interoperability with Cisco VPN client)
+USE_CISCO_QUIRKS?=false
 
 # whether to support NAT Traversal (aka NAT-T)
 USE_NAT_TRAVERSAL?=true
@@ -291,6 +291,9 @@ PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
 #PKCS11_DEFAULT_LIB=\"/usr/lib/opensc-pkcs11.so\"
 # Uncomment and complete this line if using another default library
 #PKCS11_DEFAULT_LIB=\"/usr/lib/...\"
+
+# Uncomment if you want to specify a path to an XAUTH library module
+#XAUTH_DEFAULT_LIB=
 
 # Enable the leak detective to find memory leaks
 USE_LEAK_DETECTIVE?=false

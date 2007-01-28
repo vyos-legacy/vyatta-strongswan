@@ -12,7 +12,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: Makefile,v 1.45 2006/07/06 12:33:08 as Exp $
+# RCSID $Id: Makefile,v 1.47 2007/01/11 21:47:13 as Exp $
 
 # relative path to top directory of FreeS/WAN source
 # Note: referenced in ${FREESWANSRCDIR}/Makefile.inc
@@ -137,8 +137,8 @@ ifeq ($(USE_VENDORID),true)
   DEFINES+= -DVENDORID
 endif
 
-ifeq ($(USE_XAUTH_VID),true)
-  DEFINES+= -DXAUTH_VID
+ifeq ($(USE_CISCO_QUIRKS),true)
+  DEFINES+= -DCISCO_QUIRKS
 endif
 
 # This compile option activates dynamic URL fetching using libcurl
@@ -262,6 +262,7 @@ DISTSRC = \
 	spdb.c spdb.h \
 	state.c state.h \
 	timer.c timer.h \
+	xauth.c xauth.h \
 	x509.c x509.h \
 	$(DISTGCRYPT) \
 	vendor.c nat_traversal.c virtual.c \
@@ -280,7 +281,7 @@ OBJSPLUTO = asn1.o connections.o constants.o cookie.o crypto.o defs.o fetch.o fo
 	ca.o certs.o id.o ipsec_doi.o kernel.o $(KERNEL26_OBJS) kernel_pfkey.o mp_defs.o \
 	kernel_noklips.o rcv_whack.o ${IPSECPOLICY_OBJS} demux.o packet.o lex.o keys.o \
 	dnskey.o smartcard.o ac.o rnd.o spdb.o sha1.o md5.o md2.o modecfg.o ocsp.o crl.o \
-	vendor.o nat_traversal.o virtual.o
+	vendor.o nat_traversal.o virtual.o xauth.o
 
 OBJSADNS = adns.o
 
@@ -477,6 +478,7 @@ vendor.o: vendor.c
 virtual.o: virtual.c
 whack.o: whack.c
 x509.o: x509.c
+xauth.o: xauth.c
 
 ac.o: constants.h
 ac.o: defs.h
@@ -794,7 +796,7 @@ keys.o: log.h
 keys.o: whack.h
 keys.o: timer.h
 keys.o: fetch.h
-keys.o: nat_traversal.h
+keys.o: xauth.h
 lex.o: constants.h
 lex.o: defs.h
 lex.o: log.h
@@ -823,6 +825,7 @@ modecfg.o: sha1.h
 modecfg.o: crypto.h
 modecfg.o: modecfg.h
 modecfg.o: whack.h
+modecfg.o: xauth.h
 mp_defs.o: constants.h
 mp_defs.o: defs.h
 mp_defs.o: mp_defs.h
@@ -1088,3 +1091,8 @@ x509.o: whack.h
 x509.o: fetch.h
 x509.o: ocsp.h
 x509.o: sha1.h
+xauth.o: constants.h
+xauth.o: defs.h
+xauth.o: xauth.h
+xauth.o: keys.h
+xauth.o: log.h

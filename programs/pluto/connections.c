@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: connections.c,v 1.46 2006/10/19 15:40:52 as Exp $
+ * RCSID $Id: connections.c,v 1.47 2007/01/10 00:36:19 as Exp $
  */
 
 #include <string.h>
@@ -3254,13 +3254,17 @@ find_host_connection(const ip_address *me, u_int16_t my_port
 
     if (policy != LEMPTY)
     {
+	lset_t auth_requested  = policy & POLICY_ID_AUTH_MASK;
+
 	/* if we have requirements for the policy,
 	 * choose the first matching connection.
 	 */
 	while (c != NULL)
 	{
-	    if ((c->policy & policy) == policy)
-	    break;
+	    if (c->policy & auth_requested)
+	    {
+		break;
+	    }
 	    c = c->hp_next;
 	}
     }
@@ -3367,11 +3371,20 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 	if (psk == NULL)
 	    return NULL;	/* cannot determine PSK! */
 	break;
-
+    case XAUTHInitPreShared:
+    case XAUTHRespPreShared:
+	auth_policy = POLICY_XAUTH_PSK;
+	psk = get_preshared_secret(c);
+	if (psk == NULL)
+	    return NULL;	/* cannot determine PSK! */
+	break;
     case OAKLEY_RSA_SIG:
 	auth_policy = POLICY_RSASIG;
 	break;
-
+    case XAUTHInitRSA:
+    case XAUTHRespRSA:
+	auth_policy = POLICY_XAUTH_RSASIG;
+	break;
     default:
 	bad_case(auth);
     }
@@ -3394,17 +3407,21 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 
 	    bool matching_id = match_id(peer_id
 					, &d->spd.that.id, &wildcards);
+	    bool matching_auth = (d->policy & auth_policy) != LEMPTY;
+
 	    bool matching_trust = trusted_ca(peer_ca
 					, d->spd.that.ca, &peer_pathlen);
 	    bool matching_request = match_requested_ca(c->requested_ca
 					, d->spd.this.ca, &our_pathlen);
-	    bool match = matching_id && matching_trust && matching_request;
-	    
+	    bool match = matching_id && matching_auth &&
+			 matching_trust && matching_request;
+
 	    DBG(DBG_CONTROLMORE,
-		DBG_log("%s: %s match (id: %s, trust: %s, request: %s)"
+		DBG_log("%s: %s match (id: %s, auth: %s, trust: %s, request: %s)"
 		    , d->name
 		    , match ? "full":" no"
 		    , match_name[matching_id]
+		    , match_name[matching_auth]
 		    , match_name[matching_trust]
 		    , match_name[matching_request])
 	    )
@@ -3423,13 +3440,11 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 		continue;
 #endif
 
-	    /* authentication used must fit policy of this connection */
-	    if ((d->policy & auth_policy) == LEMPTY)
-		continue;	/* our auth isn't OK for this connection */
-	    
 	    switch (auth)
 	    {
 	    case OAKLEY_PRESHARED_KEY:
+	    case XAUTHInitPreShared:
+	    case XAUTHRespPreShared:
 		/* secret must match the one we already used */
 		{
 		    const chunk_t *dpsk = get_preshared_secret(d);
@@ -3445,6 +3460,8 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 		break;
 
 	    case OAKLEY_RSA_SIG:
+	    case XAUTHInitRSA:
+	    case XAUTHRespRSA:
 		/*
 		 * We must at least be able to find our private key
 		.*/

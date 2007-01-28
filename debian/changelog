@@ -1,3 +1,9 @@
+strongswan (2.8.1-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 28 Jan 2007 20:59:11 +0000
+
 strongswan (2.8.0+dfsg-1) unstable; urgency=low
 
   * New upstream release.

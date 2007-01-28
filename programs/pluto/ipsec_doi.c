@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_doi.c,v 1.39 2006/04/22 21:59:20 as Exp $
+ * RCSID $Id: ipsec_doi.c,v 1.42 2007/01/10 00:36:19 as Exp $
  */
 
 #include <stdio.h>
@@ -84,13 +84,13 @@
 #endif /* !VENDORID */
 
 /*
- * are we sending an XAUTH VID (Cisco Mode Config Interoperability)?
+ * are we sending a Cisco Unity VID?
  */
-#ifdef XAUTH_VID
-#define SEND_XAUTH_VID	1
-#else /* !XAUTH_VID */
-#define SEND_XAUTH_VID	0
-#endif /* !XAUTH_VID */
+#ifdef CISCO_QUIRKS
+#define SEND_CISCO_UNITY_VID	1
+#else /* !CISCO_QUIRKS */
+#define SEND_CISCO_UNITY_VID	0
+#endif /* !CISCO_QUIRKS */
 
 /* MAGIC: perform f, a function that returns notification_t
  * and return from the ENCLOSING stf_status returning function if it fails.
@@ -896,9 +896,11 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
     /* determine how many Vendor ID payloads we will be sending */
     if (SEND_PLUTO_VID)
 	vids_to_send++;
-    if (SEND_XAUTH_VID)
+    if (SEND_CISCO_UNITY_VID)
 	vids_to_send++;
     if (c->spd.this.cert.type == CERT_PGP)
+	vids_to_send++;
+    /* always send XAUTH Vendor ID */
 	vids_to_send++;
     /* always send DPD Vendor ID */
 	vids_to_send++;
@@ -946,8 +948,8 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	u_char *sa_start = rbody.cur;
 	lset_t auth_policy = policy & POLICY_ID_AUTH_MASK;
 
-	if (!out_sa(&rbody, &oakley_sadb[auth_policy >> POLICY_ISAKMP_SHIFT]
-	, st, TRUE, vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE))
+	if (!out_sa(&rbody, &oakley_sadb, st, TRUE
+	, vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE))
 	{
 	    reset_cur_state();
 	    return STF_INTERNAL_ERROR;
@@ -970,17 +972,16 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	}
     }
 
-    /* if enabled send XAUTH Vendor ID */
-    if (SEND_XAUTH_VID)
+    /* if enabled send Cisco Unity Vendor ID */
+    if (SEND_CISCO_UNITY_VID)
     {
 	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
-	, &rbody, VID_MISC_XAUTH))
+	, &rbody, VID_CISCO_UNITY))
 	{
 	    reset_cur_state();
 	    return STF_INTERNAL_ERROR;
 	}
     }
-
     /* if we  have an OpenPGP certificate we assume an
      * OpenPGP peer and have to send the Vendor ID
      */
@@ -992,6 +993,14 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	    reset_cur_state();
 	    return STF_INTERNAL_ERROR;
 	}
+    }
+
+    /* Announce our ability to do eXtended AUTHentication to the peer */
+    if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+    , &rbody, VID_MISC_XAUTH))
+    {
+	reset_cur_state();
+	return STF_INTERNAL_ERROR;
     }
 
     /* Announce our ability to do Dead Peer Detection to the peer */
@@ -1199,11 +1208,15 @@ generate_skeyids_iv(struct state *st)
     switch (st->st_oakley.auth)
     {
 	case OAKLEY_PRESHARED_KEY:
+	case XAUTHInitPreShared:
+	case XAUTHRespPreShared:
 	    if (!skeyid_preshared(st))
 		return FALSE;
 	    break;
 
 	case OAKLEY_RSA_SIG:
+	case XAUTHInitRSA:
+	case XAUTHRespRSA:
 	    if (!skeyid_digisig(st))
 		return FALSE;
 	    break;
@@ -2972,8 +2985,7 @@ main_inI1_outR1(struct msg_digest *md)
 {
     struct payload_digest *const sa_pd = md->chain[ISAKMP_NEXT_SA];
     struct state *st;
-    struct connection *c = find_host_connection(&md->iface->addr, pluto_port
-				, &md->sender, md->sender_port, LEMPTY);
+    struct connection *c;
     struct isakmp_proposal proposal;
     pb_stream proposal_pbs;
     pb_stream r_sa_pbs;
@@ -2981,14 +2993,28 @@ main_inI1_outR1(struct msg_digest *md)
     lset_t policy = LEMPTY;
     int vids_to_send = 0;
 
+    /* We preparse the peer's proposal in order to determine
+     * the requested authentication policy (RSA or PSK)
+     */
     RETURN_STF_FAILURE(preparse_isakmp_sa_body(&sa_pd->payload.sa
 	, &sa_pd->pbs, &ipsecdoisit, &proposal_pbs, &proposal));
+
+    backup_pbs(&proposal_pbs);
+    RETURN_STF_FAILURE(parse_isakmp_policy(&proposal_pbs
+		     , proposal.isap_notrans, &policy));
+    restore_pbs(&proposal_pbs);
+
+    /* We are only considering candidate connections that match
+     * the requested authentication policy (RSA or PSK)
+     */
+    c = find_host_connection(&md->iface->addr, pluto_port
+			   , &md->sender, md->sender_port, policy);
 
 #ifdef NAT_TRAVERSAL
     if (c == NULL && md->iface->ike_float)
     {
 	c = find_host_connection(&md->iface->addr, NAT_T_IKE_FLOAT_PORT
-		, &md->sender, md->sender_port, LEMPTY);
+			       , &md->sender, md->sender_port, policy);
     }
 #endif
 
@@ -3006,11 +3032,6 @@ main_inI1_outR1(struct msg_digest *md)
 	 */
 	{
 	    struct connection *d;
-
-	    backup_pbs(&proposal_pbs);
-	    RETURN_STF_FAILURE(parse_isakmp_policy(&proposal_pbs
-		, proposal.isap_notrans, &policy));
-	    restore_pbs(&proposal_pbs);
 
 	    d = find_host_connection(&md->iface->addr
 		, pluto_port, (ip_address*)NULL, md->sender_port, policy);
@@ -3071,6 +3092,13 @@ main_inI1_outR1(struct msg_digest *md)
 			NULL);
 	}
     }
+    else if (c->kind == CK_TEMPLATE)
+    {
+	/* Create an instance
+	 * This is a rare case: wildcard peer ID but static peer IP address
+	 */
+	 c = rw_instantiate(c, &md->sender, md->sender_port, NULL, &c->spd.that.id);
+    }
 
     /* Set up state */
     md->st = st = new_state();
@@ -3109,9 +3137,11 @@ main_inI1_outR1(struct msg_digest *md)
     /* determine how many Vendor ID payloads we will be sending */
     if (SEND_PLUTO_VID)
 	vids_to_send++;
-    if (SEND_XAUTH_VID)
+    if (SEND_CISCO_UNITY_VID)
 	vids_to_send++;
     if (md->openpgp)
+	vids_to_send++;
+    /* always send XAUTH Vendor ID */
 	vids_to_send++;
     /* always send DPD Vendor ID */
 	vids_to_send++;
@@ -3146,7 +3176,7 @@ main_inI1_outR1(struct msg_digest *md)
 
     /* SA body in and out */
     RETURN_STF_FAILURE(parse_isakmp_sa_body(ipsecdoisit, &proposal_pbs
-	,&proposal, &r_sa_pbs, st));
+	,&proposal, &r_sa_pbs, st, FALSE));
 
     /* if enabled send Pluto Vendor ID */
     if (SEND_PLUTO_VID)
@@ -3158,11 +3188,11 @@ main_inI1_outR1(struct msg_digest *md)
 	}
     }
 
-    /* if enabled send XAUTH Vendor ID */
-    if (SEND_XAUTH_VID)
+    /* if enabled send Cisco Unity Vendor ID */
+    if (SEND_CISCO_UNITY_VID)
     {
 	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
-	, &md->rbody, VID_MISC_XAUTH))
+	, &md->rbody, VID_CISCO_UNITY))
 	{
 	    return STF_INTERNAL_ERROR;
 	}
@@ -3180,13 +3210,18 @@ main_inI1_outR1(struct msg_digest *md)
 	}
     }
 
-    /* Announce our ability to do Dead Peer Detection to the peer */
+    /* Announce our ability to do eXtended AUTHentication to the peer */
+    if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+    , &md->rbody, VID_MISC_XAUTH))
     {
-	if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
-	, &md->rbody, VID_MISC_DPD))
-	{
-	    return STF_INTERNAL_ERROR;
-	}
+	return STF_INTERNAL_ERROR;
+    }
+
+    /* Announce our ability to do Dead Peer Detection to the peer */
+    if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
+    , &md->rbody, VID_MISC_DPD))
+    {
+	return STF_INTERNAL_ERROR;
     }
 
 #ifdef NAT_TRAVERSAL
@@ -3249,7 +3284,7 @@ main_inR1_outI2(struct msg_digest *md)
 	    RETURN_STF_FAILURE(BAD_PROPOSAL_SYNTAX);
         }
 	RETURN_STF_FAILURE(parse_isakmp_sa_body(ipsecdoisit
-	    , &proposal_pbs, &proposal, NULL, st));
+	    , &proposal_pbs, &proposal, NULL, st, TRUE));
     }
 
 #ifdef NAT_TRAVERSAL
@@ -3342,9 +3377,11 @@ main_inI2_outR2(struct msg_digest *md)
     pb_stream *keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
  
     /* send CR if auth is RSA and no preloaded RSA public key exists*/
-    bool send_cr = !no_cr_send && (st->st_oakley.auth == OAKLEY_RSA_SIG) &&
-		   !has_preloaded_public_key(st);
-   
+    bool RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
+		 || st->st_oakley.auth == XAUTHInitRSA
+		 || st->st_oakley.auth == XAUTHRespRSA;
+    bool send_cr = !no_cr_send && RSA_auth && !has_preloaded_public_key(st);
+
     u_int8_t np = ISAKMP_NEXT_NONE;
 
     /* KE in */
@@ -3487,13 +3524,17 @@ main_inR2_outI3(struct msg_digest *md)
 {
     struct state *const st = md->st;
     pb_stream *const keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
-    int auth_payload = st->st_oakley.auth == OAKLEY_PRESHARED_KEY
-	? ISAKMP_NEXT_HASH : ISAKMP_NEXT_SIG;
     pb_stream id_pbs;	/* ID Payload; also used for hash calculation */
 
     certpolicy_t cert_policy = st->st_connection->spd.this.sendcert;
     cert_t mycert = st->st_connection->spd.this.cert;
     bool requested, send_cert, send_cr;
+
+    bool RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
+		 || st->st_oakley.auth == XAUTHInitRSA
+		 || st->st_oakley.auth == XAUTHRespRSA;
+
+    int auth_payload = RSA_auth ? ISAKMP_NEXT_SIG : ISAKMP_NEXT_HASH;
 
     /* KE in */
     RETURN_STF_FAILURE(accept_KE(&st->st_gr, "Gr", st->st_oakley.group, keyex_pbs));
@@ -3516,8 +3557,7 @@ main_inR2_outI3(struct msg_digest *md)
      */
     requested = cert_policy == CERT_SEND_IF_ASKED
 		&& st->st_connection->got_certrequest;
-    send_cert = st->st_oakley.auth == OAKLEY_RSA_SIG
-		&& mycert.type != CERT_NONE
+    send_cert = RSA_auth && mycert.type != CERT_NONE
 		&& (cert_policy == CERT_ALWAYS_SEND || requested);
 
     /* send certificate request if we don't have a preloaded RSA public key */
@@ -3560,7 +3600,7 @@ main_inR2_outI3(struct msg_digest *md)
     }
 
     /* CERT out */
-    if ( st->st_oakley.auth == OAKLEY_RSA_SIG)
+    if (RSA_auth)
     {
 	DBG(DBG_CONTROL,
 	    DBG_log("our certificate policy is %s"
@@ -3716,6 +3756,8 @@ main_id_and_auth(struct msg_digest *md
     switch (st->st_oakley.auth)
     {
     case OAKLEY_PRESHARED_KEY:
+    case XAUTHInitPreShared:
+    case XAUTHRespPreShared:
 	{
 	    pb_stream *const hash_pbs = &md->chain[ISAKMP_NEXT_HASH]->pbs;
 
@@ -3732,6 +3774,8 @@ main_id_and_auth(struct msg_digest *md
 	break;
 
     case OAKLEY_RSA_SIG:
+    case XAUTHInitRSA:
+    case XAUTHRespRSA:
 	r = RSA_check_signature(&peer, st, hash_val, hash_len
 	    , &md->chain[ISAKMP_NEXT_SIG]->pbs
 #ifdef USE_KEYRR
@@ -3909,6 +3953,7 @@ main_inI3_outR3_tail(struct msg_digest *md
     pb_stream r_id_pbs;	/* ID Payload; also used for hash calculation */
     certpolicy_t cert_policy;
     cert_t mycert;
+    bool RSA_auth;
     bool send_cert;
     bool requested;
 
@@ -3931,7 +3976,10 @@ main_inI3_outR3_tail(struct msg_digest *md
     mycert = st->st_connection->spd.this.cert;
     requested = cert_policy == CERT_SEND_IF_ASKED
 		&& st->st_connection->got_certrequest;
-    send_cert = st->st_oakley.auth == OAKLEY_RSA_SIG
+    RSA_auth = st->st_oakley.auth == OAKLEY_RSA_SIG
+	    || st->st_oakley.auth == XAUTHInitRSA
+            || st->st_oakley.auth == XAUTHRespRSA;
+    send_cert = RSA_auth
 		&& mycert.type != CERT_NONE
 		&& (cert_policy == CERT_ALWAYS_SEND || requested);
 
@@ -3949,8 +3997,7 @@ main_inI3_outR3_tail(struct msg_digest *md
      */
     echo_hdr(md, TRUE, ISAKMP_NEXT_ID);
 
-    auth_payload = st->st_oakley.auth == OAKLEY_PRESHARED_KEY
-	? ISAKMP_NEXT_HASH : ISAKMP_NEXT_SIG;
+    auth_payload = RSA_auth ? ISAKMP_NEXT_SIG : ISAKMP_NEXT_HASH;
 
     /* IDir out */
     {
@@ -3969,7 +4016,7 @@ main_inI3_outR3_tail(struct msg_digest *md
     }
 
     /* CERT out */
-    if (st->st_oakley.auth == OAKLEY_RSA_SIG)
+    if (RSA_auth)
     {
 	DBG(DBG_CONTROL,
 	    DBG_log("our certificate policy is %s"

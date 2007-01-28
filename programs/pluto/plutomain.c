@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: plutomain.c,v 1.16 2005/09/25 21:30:52 as Exp $
+ * RCSID $Id: plutomain.c,v 1.18 2007/01/14 10:11:56 as Exp $
  */
 
 #include <stdio.h>
@@ -57,6 +57,7 @@
 #include "ocsp.h"
 #include "crl.h"
 #include "fetch.h"
+#include "xauth.h"
 
 #include "sha1.h"
 #include "md5.h"
@@ -628,6 +629,7 @@ main(int argc, char **argv)
     init_virtual_ip(virtual_private);
 #endif
     scx_init(pkcs11_module_path);   /* load and initialize PKCS #11 module */
+    xauth_init();		    /* load and initialize XAUTH module */
     init_rnd_pool();
     init_secret();
     init_states();
@@ -678,6 +680,7 @@ exit_pluto(int status)
     free_ocsp();		/* free ocsp cache */
     free_ifaces();
     scx_finalize();		/* finalize and unload PKCS #11 module */
+    xauth_finalize();		/* finalize and unload XAUTH module */
     stop_adns();
     free_md_pool();
     delete_lock();

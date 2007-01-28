@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.h,v 1.9 2006/10/19 14:57:56 as Exp $
+ * RCSID $Id: keywords.h,v 1.10 2007/01/11 21:27:27 as Exp $
  */
 
 #ifndef _KEYWORDS_H_
@@ -77,9 +77,10 @@ typedef enum {
     KW_DPDTIMEOUT,
     KW_DPDACTION,
     KW_MODECONFIG,
+    KW_XAUTH,
 
 #define KW_CONN_FIRST	KW_CONN_SETUP
-#define KW_CONN_LAST	KW_MODECONFIG
+#define KW_CONN_LAST	KW_XAUTH
 
    /* ca section keywords */
     KW_CA_NAME,
