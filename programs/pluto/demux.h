@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: demux.h,v 1.4 2004/07/22 22:57:25 as Exp $
+ * RCSID $Id: demux.h,v 1.5 2007/01/11 05:44:02 as Exp $
  */
 
 #include "packet.h"
@@ -69,7 +69,7 @@ struct msg_digest {
     bool dpd;           	/* peer supports RFC 3706 DPD */
     bool openpgp;		/* peer supports OpenPGP certificates */
 
-#   define PAYLIMIT 20
+#   define PAYLIMIT 40
     struct payload_digest
 	digest[PAYLIMIT],
 	*digest_roof,

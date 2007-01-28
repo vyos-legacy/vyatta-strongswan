@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.h,v 1.22 2006/10/19 21:07:40 as Exp $
+ * RCSID $Id: constants.h,v 1.23 2007/01/10 00:36:19 as Exp $
  */
 
 #ifndef _CONSTANTS_H
@@ -504,13 +504,28 @@ enum state_kind {
     STATE_INFO,
     STATE_INFO_PROTECTED,
 
-    STATE_MODE_CFG_R0,           /* these states are used on the responder */
-    STATE_MODE_CFG_R1,
-    STATE_MODE_CFG_R2,
+    /* XAUTH states */
 
-    STATE_MODE_CFG_I1,           /* this is used on the initiator */
+    STATE_XAUTH_I0,              /* initiator state (client) */
+    STATE_XAUTH_R1,              /* responder state (server) */
+    STATE_XAUTH_I1,
+    STATE_XAUTH_R2,
+    STATE_XAUTH_I2,
+    STATE_XAUTH_R3,
+
+    /* Mode Config pull states */
+
+    STATE_MODE_CFG_R0,           /* responder state (server) */
+    STATE_MODE_CFG_I1,           /* initiator state (client) */
+    STATE_MODE_CFG_R1,
     STATE_MODE_CFG_I2,
+
+    /* Mode Config push states */
+
+    STATE_MODE_CFG_I0,           /* initiator state (client) */
+    STATE_MODE_CFG_R3,           /* responder state (server) */
     STATE_MODE_CFG_I3,
+    STATE_MODE_CFG_R4,
 
     STATE_IKE_ROOF
 };
@@ -519,22 +534,30 @@ enum state_kind {
 
 #define PHASE1_INITIATOR_STATES	 (LELEM(STATE_MAIN_I1) | LELEM(STATE_MAIN_I2) \
     | LELEM(STATE_MAIN_I3) | LELEM(STATE_MAIN_I4))
-#define ISAKMP_SA_ESTABLISHED_STATES  (LELEM(STATE_MAIN_R3) | LELEM(STATE_MAIN_I4) \
-    | LELEM(STATE_MODE_CFG_R1) | LELEM(STATE_MODE_CFG_R2) \
-    | LELEM(STATE_MODE_CFG_I2) | LELEM(STATE_MODE_CFG_I3))
+#define ISAKMP_SA_ESTABLISHED_STATES ( \
+      LELEM(STATE_MAIN_R3)     | LELEM(STATE_MAIN_I4)     \
+    | LELEM(STATE_XAUTH_R1)    | LELEM(STATE_XAUTH_R2) | LELEM(STATE_XAUTH_R3) \
+    | LELEM(STATE_XAUTH_I1)    | LELEM(STATE_XAUTH_I2)    \
+    | LELEM(STATE_MODE_CFG_I1) | LELEM(STATE_MODE_CFG_R1) | LELEM(STATE_MODE_CFG_I2) \
+    | LELEM(STATE_MODE_CFG_R3) | LELEM(STATE_MODE_CFG_I3) | LELEM(STATE_MODE_CFG_R4))
 
 #define IS_PHASE1(s) ((STATE_MAIN_R0 <= (s) && (s) <= STATE_MAIN_I4) \
-		   || (STATE_MODE_CFG_R0 <= (s) && (s) <= STATE_MODE_CFG_I3))
+		   || (STATE_XAUTH_I0 <= (s) && (s) <= STATE_XAUTH_R3) \
+		   || (STATE_MODE_CFG_R0 <= (s) && (s) <= STATE_MODE_CFG_R4))
+
 #define IS_QUICK(s) (STATE_QUICK_R0 <= (s) && (s) <= STATE_QUICK_R2)
 #define IS_ISAKMP_ENCRYPTED(s) (STATE_MAIN_I2 <= (s))
-#define IS_ISAKMP_SA_ESTABLISHED(s) (         \
-					 (s) == STATE_MAIN_R3     \
-				  || (s) == STATE_MAIN_I4     \
-				  || (s) == STATE_MODE_CFG_R0 \
-				  || (s) == STATE_MODE_CFG_R1 \
-				  || (s) == STATE_MODE_CFG_R2 \
-				  || (s) == STATE_MODE_CFG_I2 \
-				  || (s) == STATE_MODE_CFG_I3)
+
+#define IS_ISAKMP_SA_ESTABLISHED(s) (        \
+		   (s) == STATE_MAIN_R3      \
+		|| (s) == STATE_MAIN_I4      \
+		|| (s) == STATE_XAUTH_R3     \
+		|| (s) == STATE_XAUTH_I2     \
+		|| (s) == STATE_MODE_CFG_R1  \
+		|| (s) == STATE_MODE_CFG_I2  \
+		|| (s) == STATE_MODE_CFG_I3  \
+		|| (s) == STATE_MODE_CFG_R4)
+
 #define IS_IPSEC_SA_ESTABLISHED(s) ((s) == STATE_QUICK_I2 || (s) == STATE_QUICK_R2)
 #define IS_ONLY_INBOUND_IPSEC_SA_ESTABLISHED(s) ((s) == STATE_QUICK_R1)
 
@@ -638,7 +661,32 @@ extern enum_names attr_msg_type_names;
 #define    SUPPORTED_ATTRIBUTES       14
 #define    INTERNAL_IP6_SUBNET        15
 
+#define    MODECFG_ROOF               16
+
 extern enum_names modecfg_attr_names;
+/* XAUTH attribute values */
+#define    XAUTH_TYPE                16520
+#define    XAUTH_USER_NAME           16521
+#define    XAUTH_USER_PASSWORD       16522
+#define    XAUTH_PASSCODE            16523
+#define    XAUTH_MESSAGE             16524
+#define    XAUTH_CHALLENGE           16525
+#define    XAUTH_DOMAIN              16526
+#define    XAUTH_STATUS              16527
+#define    XAUTH_NEXT_PIN            16528
+#define    XAUTH_ANSWER              16529
+
+#define    XAUTH_BASE                XAUTH_TYPE
+
+extern enum_names xauth_attr_names;
+
+/* XAUTH authentication types */
+#define XAUTH_TYPE_GENERIC 0
+#define XAUTH_TYPE_CHAP    1
+#define XAUTH_TYPE_OTP     2
+#define XAUTH_TYPE_SKEY    3
+
+extern enum_names xauth_type_names;
 
 /* Exchange types
  * RFC2408 "Internet Security Association and Key Management Protocol (ISAKMP)"
@@ -752,7 +800,7 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_RSASIG        LELEM(1)
 
 #define POLICY_ISAKMP_SHIFT	0	/* log2(POLICY_PSK) */
-#define POLICY_ID_AUTH_MASK	LRANGES(POLICY_PSK, POLICY_RSASIG)
+#define POLICY_ID_AUTH_MASK	(POLICY_PSK | POLICY_RSASIG | POLICY_XAUTH_PSK | POLICY_XAUTH_RSASIG)
 #define POLICY_ISAKMP_MASK	POLICY_ID_AUTH_MASK	/* all so far */
 
 /* Quick Mode (IPSEC) attributes */
@@ -794,7 +842,9 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_GROUTED		LELEM(15)	/* do we want this group routed? */
 #define POLICY_UP		LELEM(16)	/* do we want this up? */
 #define POLICY_MODECFG_PUSH	LELEM(17)	/* is modecfg pushed by server? */
-
+#define POLICY_XAUTH_PSK	LELEM(18)	/* do we support XAUTH????PreShared? */
+#define POLICY_XAUTH_RSASIG	LELEM(19)	/* do we support XAUTH????RSA? */
+#define POLICY_XAUTH_SERVER	LELEM(20)	/* are we an XAUTH server? */
 
 /* Any IPsec policy?  If not, a connection description
  * is only for ISAKMP SA, not IPSEC SA.  (A pun, I admit.)
@@ -804,7 +854,7 @@ extern const char *prettypolicy(lset_t policy);
 #define HAS_IPSEC_POLICY(p) (((p) & POLICY_IPSEC_MASK) != 0)
 
 /* Don't allow negotiation? */
-#define NEVER_NEGOTIATE(p)  (LDISJOINT((p), POLICY_PSK | POLICY_RSASIG))
+#define NEVER_NEGOTIATE(p)  (LDISJOINT((p), POLICY_ID_AUTH_MASK))
 
 
 /* Oakley transform attributes

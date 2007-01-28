@@ -44,7 +44,7 @@ error "gperf generated tables don't work with this execution character set. Plea
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.c,v 1.8 2006/10/19 14:58:30 as Exp $
+ * RCSID $Id: keywords.c,v 1.9 2007/01/11 21:29:28 as Exp $
  */
 
 #include <string.h>
@@ -56,7 +56,7 @@ struct kw_entry {
     kw_token_t token;
 };
 
-#define TOTAL_KEYWORDS 80
+#define TOTAL_KEYWORDS 81
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 17
 #define MIN_HASH_VALUE 9
@@ -87,7 +87,7 @@ hash (str, len)
       157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
       157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
       157, 157, 157, 157, 157, 157, 157,  90, 157,  60,
-       50,  25,   0,  10,   5,  65, 157,  65,  70,   5,
+       50,  25,   0,  10,  30,  65, 157,  65,  70,   5,
         0,  75,  35, 157,  10,  20,   5,  70, 157, 157,
       157,  55,   0, 157, 157, 157, 157, 157, 157, 157,
       157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
@@ -114,7 +114,7 @@ static const struct kw_entry wordlist[] =
     {"leftupdown",        KW_LEFTUPDOWN},
     {""}, {""},
     {"leftcert",          KW_LEFTCERT,},
-    {"auth",              KW_AUTH},
+    {""},
     {"leftsubnet",        KW_LEFTSUBNET},
     {"leftsubnetwithin",  KW_LEFTSUBNETWITHIN},
     {"leftsendcert",      KW_LEFTSENDCERT},
@@ -135,7 +135,9 @@ static const struct kw_entry wordlist[] =
     {"compress",          KW_COMPRESS},
     {"lefthostaccess",    KW_LEFTHOSTACCESS},
     {"interfaces",        KW_INTERFACES},
-    {""}, {""}, {""}, {""}, {""},
+    {""}, {""}, {""},
+    {"auth",              KW_AUTH},
+    {""},
     {"rightgroups",       KW_RIGHTGROUPS},
     {""},
     {"pfs",               KW_PFS},
@@ -198,7 +200,7 @@ static const struct kw_entry wordlist[] =
     {"crluri2",           KW_CRLURI2},
     {"ldaphost",          KW_LDAPHOST},
     {"postpluto",         KW_POSTPLUTO},
-    {""},
+    {"xauth",             KW_XAUTH},
     {"overridemtu",       KW_OVERRIDEMTU},
     {"rightca",           KW_RIGHTCA},
     {"prepluto",          KW_PREPLUTO},

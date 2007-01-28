@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.c,v 1.22 2006/10/19 21:07:40 as Exp $
+ * RCSID $Id: constants.c,v 1.23 2007/01/10 00:36:19 as Exp $
  */
 
 /*
@@ -54,8 +54,8 @@ const char compile_time_interop_options[] = ""
 #ifdef VENDORID
 	" VENDORID"
 #endif
-#ifdef XAUTH_VID
-	" XAUTH_VID"
+#ifdef CISCO_QUIRKS
+	" CISCO_QUIRKS"
 #endif
 #ifdef USE_KEYRR
 	" KEYRR"
@@ -183,12 +183,22 @@ static const char *const state_name[] = {
 	"STATE_INFO",
 	"STATE_INFO_PROTECTED",
 
+	"STATE_XAUTH_I0",
+	"STATE_XAUTH_R1",
+	"STATE_XAUTH_I1",
+	"STATE_XAUTH_R2",
+	"STATE_XAUTH_I2",
+	"STATE_XAUTH_R3",
+
 	"STATE_MODE_CFG_R0",
-	"STATE_MODE_CFG_R1",
-	"STATE_MODE_CFG_R2",
 	"STATE_MODE_CFG_I1",
+	"STATE_MODE_CFG_R1",
 	"STATE_MODE_CFG_I2",
+
+	"STATE_MODE_CFG_I0",
+	"STATE_MODE_CFG_R3",
 	"STATE_MODE_CFG_I3",
+	"STATE_MODE_CFG_R4",
 
 	"STATE_IKE_ROOF"
     };
@@ -216,13 +226,23 @@ const char *const state_story[] = {
 
 	"got Informational Message in clear",	 /* STATE_INFO */
 	"got encrypted Informational Message",	 /* STATE_INFO_PROTECTED */
-	
-	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R0 */
-	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R1 */
-	"received ModeCfg ack",			 /* STATE_MODE_CFG_R2 */
+
+	"expecting XAUTH request",		 /* STATE_XAUTH_I0 */
+	"sent XAUTH request, expecting reply",	 /* STATE_XAUTH_R1 */
+	"sent XAUTH reply, expecting status",	 /* STATE_XAUTH_I1 */
+	"sent XAUTH status, expecting ack",	 /* STATE_XAUTH_R2 */
+	"sent XAUTH ack, established",		 /* STATE_XAUTH_I2 */
+	"received XAUTH ack, established",	 /* STATE_XAUTH_R3 */
+
+	"expecting ModeCfg request",		 /* STATE_MODE_CFG_R0 */
 	"sent ModeCfg request, expecting reply", /* STATE_MODE_CFG_I1 */
-	"received ModeCfg reply",		 /* STATE_MODE_CFG_I2 */
-	"received ModeCfg set, sent ack",	 /* STATE_MODE_CFG_I3 */
+	"sent ModeCfg reply, established",	 /* STATE_MODE_CFG_R1 */
+	"received ModeCfg reply, established",	 /* STATE_MODE_CFG_I2 */
+
+	"expecting ModeCfg set",		 /* STATE_MODE_CFG_I0 */
+	"sent ModeCfg set, expecting ack",	 /* STATE_MODE_CFG_R3 */
+	"sent ModeCfg ack, established",	 /* STATE_MODE_CFG_I3 */
+	"received ModeCfg ack, established",	 /* STATE_MODE_CFG_R4 */
     };
 
 /* kind of struct connection */
@@ -487,6 +507,9 @@ const char *const sa_policy_bit_names[] = {
 	"GROUTED",
 	"UP",
 	"MODECFGPUSH",
+	"XAUTHPSK",
+	"XAUTHRSASIG",
+	"XAUTHSERVER",
 	NULL
     };
 
@@ -675,7 +698,49 @@ enum_names auth_alg_names =
     { AUTH_ALGORITHM_HMAC_MD5, AUTH_ALGORITHM_HMAC_RIPEMD, auth_alg_name
 	, &extended_auth_alg_names };
 
-const char *const modecfg_attr_name[] = {
+/* From draft-beaulieu-ike-xauth */
+static const char *const xauth_type_name[] = {
+  "Generic",
+  "RADIUS-CHAP",
+  "OTP",
+  "S/KEY",
+};
+
+enum_names xauth_type_names =
+  { XAUTH_TYPE_GENERIC, XAUTH_TYPE_SKEY, xauth_type_name, NULL};
+
+/* From draft-beaulieu-ike-xauth */
+static const char *const xauth_attr_tv_name[] = {
+	"XAUTH_TYPE",
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	"XAUTH_STATUS",
+    };
+
+enum_names xauth_attr_tv_names = {
+    XAUTH_TYPE   + ISAKMP_ATTR_AF_TV,
+    XAUTH_STATUS + ISAKMP_ATTR_AF_TV, xauth_attr_tv_name, NULL };
+
+static const char *const xauth_attr_name[] = {
+	"XAUTH_USER_NAME",
+	"XAUTH_USER_PASSWORD",
+	"XAUTH_PASSCODE",
+	"XAUTH_MESSAGE",
+	"XAUTH_CHALLENGE",
+	"XAUTH_DOMAIN",
+	"XAUTH_STATUS (wrong TLV syntax, should be TV)",
+	"XAUTH_NEXT_PIN",
+	"XAUTH_ANSWER",
+    };
+
+enum_names xauth_attr_names =
+    { XAUTH_USER_NAME , XAUTH_ANSWER, xauth_attr_name , &xauth_attr_tv_names };
+
+static const char *const modecfg_attr_name[] = {
 	"INTERNAL_IP4_ADDRESS",
 	"INTERNAL_IP4_NETMASK",
 	"INTERNAL_IP4_DNS",
@@ -695,7 +760,7 @@ const char *const modecfg_attr_name[] = {
     };
 
 enum_names modecfg_attr_names =
-    { INTERNAL_IP4_ADDRESS , INTERNAL_IP6_SUBNET, modecfg_attr_name , NULL };
+    { INTERNAL_IP4_ADDRESS, INTERNAL_IP6_SUBNET, modecfg_attr_name , &xauth_attr_names };
 
 /* Oakley Lifetime Type attribute */
 

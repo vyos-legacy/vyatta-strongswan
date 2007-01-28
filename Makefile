@@ -11,7 +11,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: Makefile,v 1.5 2006/08/28 11:12:36 as Exp $
+# RCSID $Id: Makefile,v 1.6 2006/11/22 05:47:11 as Exp $
 
 
 FREESWANSRCDIR=$(shell pwd)
@@ -42,7 +42,7 @@ KVSHORTUTIL=${MAKEUTILS}/kernelversion-short
 KERNELREL=$(shell ${KVSHORTUTIL} ${KERNELSRC}/Makefile)
 
 # directories visited by all recursion
-SUBDIRS=doc lib programs linux
+SUBDIRS=lib programs linux
 
 # declaration for make's benefit
 .PHONY:	def insert kpatch klink klibcryptolink patches _patches _patches2.2 _patches2.4 \

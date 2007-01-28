@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: state.h,v 1.12 2006/10/17 10:30:54 as Exp $
+ * RCSID $Id: state.h,v 1.13 2007/01/10 00:36:19 as Exp $
  */
 
 #include <sys/types.h>
@@ -212,7 +212,13 @@ struct state
 	bool vars_set;
 	bool started;
     } st_modecfg;
-    
+
+    struct {
+	int attempt;
+	bool started;
+	bool status;
+    } st_xauth;
+
 #ifdef NAT_TRAVERSAL
     u_int32_t         nat_traversal;
     ip_address        nat_oa;

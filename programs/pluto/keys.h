@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keys.h,v 1.7 2006/01/26 20:10:34 as Exp $
+ * RCSID $Id: keys.h,v 1.8 2007/01/10 00:36:19 as Exp $
  */
 
 #ifndef _KEYS_H
@@ -31,14 +31,18 @@ const char *shared_secrets_file;
 extern void load_preshared_secrets(int whackfd);
 extern void free_preshared_secrets(void);
 
-struct state;	/* forward declaration */
-
 enum PrivateKeyKind {
     PPK_PSK,
  /* PPK_DSS, */	/* not implemented */
     PPK_RSA,
+    PPK_XAUTH,
     PPK_PIN
 };
+
+extern void xauth_defaults(void);
+
+/* forward declaration */
+struct connection;
 
 extern const chunk_t *get_preshared_secret(const struct connection *c);
 extern err_t unpack_RSA_public_key(RSA_public_key_t *rsa, const chunk_t *pubkey);

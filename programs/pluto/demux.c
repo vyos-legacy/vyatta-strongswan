@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: demux.c,v 1.16 2006/10/19 21:07:40 as Exp $
+ * RCSID $Id: demux.c,v 1.17 2007/01/10 00:36:19 as Exp $
  */
 
 /* Ordering Constraints on Payloads
@@ -454,41 +454,77 @@ static const struct state_microcode state_microcode_table[] = {
     , P(HASH), LEMPTY, PT(NONE)
     , EVENT_NULL, informational },
 
-    /* MODE_CFG_x:
-     * Case R0:  Responder  ->	Initiator
-     *			   <-	Req(addr=0)
-     *	    Reply(ad=x)	    ->
-     *
-     * Case R1: Set(addr=x) ->
-     *			   <-	Ack(ok)
-     */
-
-    { STATE_MODE_CFG_R0, STATE_MODE_CFG_R1
+    /* XAUTH state transitions */
+    { STATE_XAUTH_I0, STATE_XAUTH_I1
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
-    , EVENT_SA_REPLACE, modecfg_inR0 },
+    , EVENT_RETRANSMIT, xauth_inI0 },
 
-    { STATE_MODE_CFG_R1, STATE_MODE_CFG_R2
-    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    { STATE_XAUTH_R1, STATE_XAUTH_R2
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
-    , EVENT_SA_REPLACE, modecfg_inR1 },
+    , EVENT_RETRANSMIT, xauth_inR1 },
 
-    { STATE_MODE_CFG_R2, STATE_UNDEFINED
+    { STATE_XAUTH_I1, STATE_XAUTH_I2
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY | SMF_RELEASE_PENDING_P2
+    , P(ATTR) | P(HASH), P(VID), PT(HASH)
+    , EVENT_SA_REPLACE, xauth_inI1 },
+
+    { STATE_XAUTH_R2, STATE_XAUTH_R3
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_RELEASE_PENDING_P2
+    , P(ATTR) | P(HASH), P(VID), PT(NONE)
+    , EVENT_SA_REPLACE, xauth_inR2 },
+
+    { STATE_XAUTH_I2, STATE_UNDEFINED
     , SMF_ALL_AUTH | SMF_ENCRYPTED
     , LEMPTY, LEMPTY, PT(NONE)
     , EVENT_NULL, unexpected },
+
+    { STATE_XAUTH_R3, STATE_UNDEFINED
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    , LEMPTY, LEMPTY, PT(NONE)
+    , EVENT_NULL, unexpected },
+
+    /* ModeCfg pull mode state transitions */
+
+    { STATE_MODE_CFG_R0, STATE_MODE_CFG_R1
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY | SMF_RELEASE_PENDING_P2
+    , P(ATTR) | P(HASH), P(VID), PT(HASH)
+    , EVENT_SA_REPLACE, modecfg_inR0 },
 
     { STATE_MODE_CFG_I1, STATE_MODE_CFG_I2
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_RELEASE_PENDING_P2
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
     , EVENT_SA_REPLACE, modecfg_inI1 },
 
-    { STATE_MODE_CFG_I2, STATE_MODE_CFG_I3
+    { STATE_MODE_CFG_R1, STATE_UNDEFINED
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    , LEMPTY, LEMPTY, PT(NONE)
+    , EVENT_NULL, unexpected },
+
+    { STATE_MODE_CFG_I2, STATE_UNDEFINED
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    , LEMPTY, LEMPTY, PT(NONE)
+    , EVENT_NULL, unexpected },
+
+   /* ModeCfg push mode state transitions */
+
+    { STATE_MODE_CFG_I0, STATE_MODE_CFG_I3
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY | SMF_RELEASE_PENDING_P2
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
-    , EVENT_SA_REPLACE, modecfg_inI2 },
+    , EVENT_SA_REPLACE, modecfg_inI0 },
+
+    { STATE_MODE_CFG_R3, STATE_MODE_CFG_R4
+    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_RELEASE_PENDING_P2
+    , P(ATTR) | P(HASH), P(VID), PT(HASH)
+    , EVENT_SA_REPLACE, modecfg_inR3 },
 
     { STATE_MODE_CFG_I3, STATE_UNDEFINED
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
+    , LEMPTY, LEMPTY, PT(NONE)
+    , EVENT_NULL, unexpected },
+
+    { STATE_MODE_CFG_R4, STATE_UNDEFINED
     , SMF_ALL_AUTH | SMF_ENCRYPTED
     , LEMPTY, LEMPTY, PT(NONE)
     , EVENT_NULL, unexpected },
@@ -1258,6 +1294,11 @@ process_packet(struct msg_digest **mdp)
     {
 	plog("size (%u) differs from size specified in ISAKMP HDR (%u)"
 	    , (unsigned) pbs_room(&md->packet_pbs), md->hdr.isa_length);
+#ifdef CISCO_QUIRKS
+	if (pbs_room(&md->packet_pbs) - md->hdr.isa_length == 16)
+	    plog("Cisco VPN client appends 16 surplus NULL bytes");
+	else
+#endif
 	return;
     }
 
@@ -1447,11 +1488,6 @@ process_packet(struct msg_digest **mdp)
 		return;
 	    }
 
-	    if (st->st_state == STATE_MODE_CFG_R2)   /* Have we just give an IP address to peer? */
-	    {
-		st->st_state = STATE_MAIN_R3;	    /* ISAKMP is up... */
-	    }
-
 	    set_cur_state(st);
 
 	    if (!IS_ISAKMP_SA_ESTABLISHED(st->st_state))
@@ -1490,7 +1526,7 @@ process_packet(struct msg_digest **mdp)
     case ISAKMP_XCHG_MODE_CFG:
 	if (is_zero_cookie(md->hdr.isa_icookie))
 	{
-	    plog("Mode Config message is invalid because"
+	    plog("ModeCfg message is invalid because"
 		" it has an Initiator Cookie of 0");
 	    /* XXX Could send notification back */
 	    return;
@@ -1498,7 +1534,7 @@ process_packet(struct msg_digest **mdp)
 
 	if (is_zero_cookie(md->hdr.isa_rcookie))
 	{
-	    plog("Mode Config message is invalid because"
+	    plog("ModeCfg message is invalid because"
 		" it has a Responder Cookie of 0");
 	    /* XXX Could send notification back */
 	    return;
@@ -1506,7 +1542,7 @@ process_packet(struct msg_digest **mdp)
 
 	if (md->hdr.isa_msgid == 0)
 	{
-	    plog("Mode Config message is invalid because"
+	    plog("ModeCfg message is invalid because"
 		" it has a Message ID of 0");
 	    /* XXX Could send notification back */
 	    return;
@@ -1517,7 +1553,9 @@ process_packet(struct msg_digest **mdp)
 
 	if (st == NULL)
 	{
-	    /* No appropriate Mode Config state.
+	    bool has_xauth_policy;
+
+	    /* No appropriate ModeCfg state.
 	     * See if we have a Main Mode state.
 	     * ??? what if this is a duplicate of another message?
 	     */
@@ -1526,7 +1564,7 @@ process_packet(struct msg_digest **mdp)
 
 	    if (st == NULL)
 	    {
-		plog("Mode Config message is for a non-existent (expired?)"
+		plog("ModeCfg message is for a non-existent (expired?)"
 		    " ISAKMP SA");
 		/* XXX Could send notification back */
 		return;
@@ -1536,7 +1574,7 @@ process_packet(struct msg_digest **mdp)
 
 	    if (!IS_ISAKMP_SA_ESTABLISHED(st->st_state))
 	    {
-		loglog(RC_LOG_SERIOUS, "Mode Config message is unacceptable because"
+		loglog(RC_LOG_SERIOUS, "ModeCfg message is unacceptable because"
 	       		" it is for an incomplete ISAKMP SA (state=%s)"
 	       		, enum_name(&state_names, st->st_state));
 		/* XXX Could send notification back */
@@ -1565,7 +1603,16 @@ process_packet(struct msg_digest **mdp)
 	     *
 	     */
 
-	    if (st->st_connection->spd.that.modecfg
+	    has_xauth_policy = (st->st_connection->policy
+			       & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK))
+			       != LEMPTY;
+
+	    if (has_xauth_policy && !st->st_xauth.started
+	    && IS_PHASE1(st->st_state))
+	    {
+		from_state = STATE_XAUTH_I0;
+	    }
+	    else if (st->st_connection->spd.that.modecfg
 	    && IS_PHASE1(st->st_state))
 	    {
 		from_state = STATE_MODE_CFG_R0;
@@ -1573,12 +1620,12 @@ process_packet(struct msg_digest **mdp)
 	    else if (st->st_connection->spd.this.modecfg
 	    && IS_PHASE1(st->st_state))
 	    {
-		from_state = STATE_MODE_CFG_I2;
+		from_state = STATE_MODE_CFG_I0;
 	    }
 	    else
 	    {
 		/* XXX check if we are being a mode config server here */
-		plog("received MODECFG message when in state %s, and we aren't mode config client"
+		plog("received ModeCfg message when in state %s, and we aren't mode config client"
 		     , enum_name(&state_names, st->st_state));
 		return;
 	    }
@@ -1588,7 +1635,6 @@ process_packet(struct msg_digest **mdp)
 	    set_cur_state(st);
 	    from_state = st->st_state;
 	}
-
 	break;
 
 #ifdef NOTYET
@@ -1630,7 +1676,23 @@ process_packet(struct msg_digest **mdp)
 
     if (st != NULL)
     {
-	while (!LHAS(smc->flags, st->st_oakley.auth))
+	u_int16_t auth;
+
+	switch (st->st_oakley.auth)
+	{
+	case XAUTHInitPreShared:
+	case XAUTHRespPreShared:
+	    auth = OAKLEY_PRESHARED_KEY;
+	    break;
+	case XAUTHInitRSA:
+	case XAUTHRespRSA:
+	    auth = OAKLEY_RSA_SIG;
+	    break;
+	default:
+	    auth = st->st_oakley.auth;
+	}
+	
+	while (!LHAS(smc->flags, auth))
 	{
 	    smc++;
 	    passert(smc->state == from_state);
@@ -2046,6 +2108,8 @@ process_packet(struct msg_digest **mdp)
 void
 complete_state_transition(struct msg_digest **mdp, stf_status result)
 {
+    bool has_xauth_policy;
+    bool is_xauth_server;
     struct msg_digest *md = *mdp;
     const struct state_microcode *smc = md->smc;
     enum state_kind from_state = md->from_state;
@@ -2263,7 +2327,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		    }
 		    /* advance b to end of string */
 		    b = b + strlen(b);
-		    
+
 		    if (st->st_ah.present)
 		    {
 			snprintf(b, sizeof(sadetails)-(b-sadetails)-1
@@ -2276,7 +2340,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		    }
 		    /* advance b to end of string */
 		    b = b + strlen(b);
-		    
+
 		    if (st->st_ipcomp.present)
 		    {
 			snprintf(b, sizeof(sadetails)-(b-sadetails)-1
@@ -2319,7 +2383,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		}
 
 		if (IS_ISAKMP_SA_ESTABLISHED(st->st_state)
-		|| IS_IPSEC_SA_ESTABLISHED(st->st_state))
+		||  IS_IPSEC_SA_ESTABLISHED(st->st_state))
 		{
 		    /* log our success */
 		    plog("%s%s", story, sadetails);
@@ -2331,6 +2395,36 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		    , "%s: %s%s"
 		    , enum_name(&state_names, st->st_state)
 		    , story, sadetails);
+	    }
+
+	    has_xauth_policy = (st->st_connection->policy
+			       & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK))
+			       != LEMPTY;
+	    is_xauth_server =  (st->st_connection->policy
+			       & POLICY_XAUTH_SERVER)
+			       != LEMPTY;
+
+	    /* Should we start XAUTH as a server */
+	    if (has_xauth_policy && is_xauth_server
+	    && IS_ISAKMP_SA_ESTABLISHED(st->st_state)
+	    && !st->st_xauth.started)
+	    {
+		DBG(DBG_CONTROL,
+		    DBG_log("starting XAUTH server")
+		)
+		xauth_send_request(st);
+		break;
+	    }
+
+	    /* Wait for XAUTH request from server */
+	    if (has_xauth_policy && !is_xauth_server
+	    && IS_ISAKMP_SA_ESTABLISHED(st->st_state)
+	    && !st->st_xauth.started)
+	    {
+		DBG(DBG_CONTROL,
+		    DBG_log("waiting for XAUTH request from server")
+		)
+		break;
 	    }
 
 	    /* Should we start ModeConfig as a client? */
@@ -2384,7 +2478,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 	    }
 
 	    if (IS_ISAKMP_SA_ESTABLISHED(st->st_state)
-	    || IS_IPSEC_SA_ESTABLISHED(st->st_state))
+	    ||  IS_IPSEC_SA_ESTABLISHED(st->st_state))
 		release_whack(st);
 	    break;
 

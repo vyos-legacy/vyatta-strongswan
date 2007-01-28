@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: args.c,v 1.10 2006/10/19 14:58:30 as Exp $
+ * RCSID $Id: args.c,v 1.11 2007/01/11 21:27:27 as Exp $
  */
 
 #include <stddef.h>
@@ -192,6 +192,7 @@ static const token_info_t token_info[] =
     { ARG_TIME, offsetof(starter_conn_t, dpd_timeout), NULL                        },
     { ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
     { ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
+    { ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
 
     /* ca section keywords */
     { ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },

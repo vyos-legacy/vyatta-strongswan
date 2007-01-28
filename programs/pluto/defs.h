@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: defs.h,v 1.10 2006/01/04 21:00:43 as Exp $
+ * RCSID $Id: defs.h,v 1.11 2007/01/09 21:59:06 as Exp $
  */
 
 #ifndef _DEFS_H
@@ -82,7 +82,7 @@ typedef struct chunk chunk_t;
 #define chunkcpy(dst, chunk) \
     { memcpy(dst, chunk.ptr, chunk.len); dst += chunk.len;}
 #define same_chunk(a, b) \
-    (a).len == (b).len && memcmp((a).ptr, (b).ptr, (b).len) == 0
+    ( (a).len == (b).len && memcmp((a).ptr, (b).ptr, (b).len) == 0 )
 
 extern char* temporary_cyclic_buffer(void);
 extern const char* concatenate_paths(const char *a, const char *b);

@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: start-umls,v 1.5 2005/08/30 22:13:12 as Exp $
+# RCSID $Id: start-umls,v 1.6 2007/01/11 20:32:01 as Exp $
 
 DIR=`dirname $0`
 
@@ -90,14 +90,13 @@ do
 	exit 1
     fi
 
-    pid=`cat ~/.uml/$host/pid`
-    up=`ps up $pid | grep agetty | wc -l`
+    up=`uml_mconsole $host proc net/route 2> /dev/null | grep eth0 | wc -l`
 
     while [ $count -lt $count_max ] && [ $up -eq 0 ]
     do
 	cecho-n "."
 	sleep 5
-	up=`ps up $pid | grep agetty | wc -l`
+	up=`uml_mconsole $host proc net/route 2> /dev/null | grep eth0 | wc -l`
 	let "count+=1"
     done
 
