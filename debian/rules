@@ -49,7 +49,7 @@ build-stamp: patch
 			 USE_LDAP=true USE_LIBCURL=true HAVE_THREADS=true \
 			 USE_XAUTH=true USE_XAUTHPAM=true USE_KEYRR=true \
 			 USE_KERNEL26=true USE_NAT_TRAVERSAL=true \
-			 USE_IPSECPOLICY=true USE_VENDORID=true \
+			 USE_VENDORID=true \
 			 USE_CISCO_QUIRKS=true USE_SMARTCARD=true
 	# remove the temporary file, it will be created during install
 	rm -f $(CURDIR)/debian/ipsec.secrets
