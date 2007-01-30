@@ -71,7 +71,7 @@ are required for the strongSwan testing environment:
 
     * The latest strongSwan distribution
 
-      http://download.strongswan.org/strongswan-2.8.1.tar.gz
+      http://download.strongswan.org/strongswan-2.8.2.tar.gz
 
 
 3. Creating the environment
@@ -146,5 +146,5 @@ README document.
 
 -----------------------------------------------------------------------------
 
-This file is RCSID $Id: INSTALL,v 1.44 2007/01/14 12:17:50 as Exp $
+This file is RCSID $Id: INSTALL,v 1.45 2007/01/29 08:29:41 as Exp $
 

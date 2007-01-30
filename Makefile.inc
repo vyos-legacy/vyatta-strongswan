@@ -11,7 +11,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: Makefile.inc,v 1.13 2007/01/11 21:42:11 as Exp $
+# RCSID $Id: Makefile.inc,v 1.14 2007/01/29 08:19:56 as Exp $
 
 
 # Variables in this file with names starting with INC_ are not for use
@@ -244,10 +244,6 @@ USE_IPROUTE2?=true
 #  2.4  - iptables
 IPSEC_FIREWALLTYPE=iptables
 
-# whether or not to include ipsec policy code into pluto.
-# false for now, since it is still experimental.
-USE_IPSECPOLICY?=false
-
 # include IKEPING in the distribution
 USE_IKEPING?=false
 
@@ -286,9 +282,9 @@ USE_SMARTCARD?=false
 
 # Default PKCS11 library
 # Uncomment this line if using OpenSC <= 0.9.6
-PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
+#PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
 # Uncomment this line if using OpenSC >= 0.10.0
-#PKCS11_DEFAULT_LIB=\"/usr/lib/opensc-pkcs11.so\"
+PKCS11_DEFAULT_LIB=\"/usr/lib/opensc-pkcs11.so\"
 # Uncomment and complete this line if using another default library
 #PKCS11_DEFAULT_LIB=\"/usr/lib/...\"
 

@@ -11,13 +11,13 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterwhack.c,v 1.19 2006/10/19 15:02:46 as Exp $
+ * RCSID $Id: starterwhack.c,v 1.20 2007/01/18 21:16:45 as Exp $
  */
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <linux/stddef.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <errno.h>
 

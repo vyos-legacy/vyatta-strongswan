@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: plutomain.c,v 1.18 2007/01/14 10:11:56 as Exp $
+ * RCSID $Id: plutomain.c,v 1.19 2007/01/29 08:27:19 as Exp $
  */
 
 #include <stdio.h>
@@ -531,19 +531,6 @@ main(int argc, char **argv)
 	}
     }
 
-#ifdef IPSECPOLICY
-    /* create info socket. */
-    {
-	err_t ugh = init_info_socket();
-
-	if (ugh != NULL)
-	{
-	    fprintf(stderr, "pluto: %s", ugh);
-	    exit_pluto(1);
-	}
-    }
-#endif
-
     /* If not suppressed, do daemon fork */
 
     if (fork_desired)
@@ -595,12 +582,10 @@ main(int argc, char **argv)
 	int i;
 
 	for (i = getdtablesize() - 1; i >= 0; i--)  /* Bad hack */
-	    if ((!log_to_stderr || i != 2)
-#ifdef IPSECPOLICY
-	    && i != info_fd
-#endif
-	    && i != ctl_fd)
+	{
+	    if ((!log_to_stderr || i != 2) && i != ctl_fd)
 		close(i);
+	}
 
 	/* make sure that stdin, stdout, stderr are reserved */
 	if (open("/dev/null", O_RDONLY) != 0)

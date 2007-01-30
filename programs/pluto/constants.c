@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.c,v 1.23 2007/01/10 00:36:19 as Exp $
+ * RCSID $Id: constants.c,v 1.24 2007/01/21 08:35:47 as Exp $
  */
 
 /*
@@ -707,7 +707,7 @@ static const char *const xauth_type_name[] = {
 };
 
 enum_names xauth_type_names =
-  { XAUTH_TYPE_GENERIC, XAUTH_TYPE_SKEY, xauth_type_name, NULL};
+    { XAUTH_TYPE_GENERIC, XAUTH_TYPE_SKEY, xauth_type_name, NULL};
 
 /* From draft-beaulieu-ike-xauth */
 static const char *const xauth_attr_tv_name[] = {
@@ -725,6 +725,24 @@ enum_names xauth_attr_tv_names = {
     XAUTH_TYPE   + ISAKMP_ATTR_AF_TV,
     XAUTH_STATUS + ISAKMP_ATTR_AF_TV, xauth_attr_tv_name, NULL };
 
+static const char *const unity_attr_name[] = {
+	"UNITY_BANNER",
+	"UNITY_SAVE_PASSWD",
+	"UNITY_DEF_DOMAIN",
+	"UNITY_SPLITDNS_NAME",
+	"UNITY_SPLIT_INCLUDE",
+	"UNITY_NATT_PORT",
+	"UNITY_LOCAL_LAN",
+	"UNITY_PFS",
+	"UNITY_FW_TYPE",
+	"UNITY_BACKUP_SERVERS",
+	"UNITY_DDNS_HOSTNAME",
+};
+
+enum_names unity_attr_names =
+    { UNITY_BANNER , UNITY_DDNS_HOSTNAME, unity_attr_name , &xauth_attr_tv_names };
+
+
 static const char *const xauth_attr_name[] = {
 	"XAUTH_USER_NAME",
 	"XAUTH_USER_PASSWORD",
@@ -738,7 +756,7 @@ static const char *const xauth_attr_name[] = {
     };
 
 enum_names xauth_attr_names =
-    { XAUTH_USER_NAME , XAUTH_ANSWER, xauth_attr_name , &xauth_attr_tv_names };
+    { XAUTH_USER_NAME , XAUTH_ANSWER, xauth_attr_name , &unity_attr_names };
 
 static const char *const modecfg_attr_name[] = {
 	"INTERNAL_IP4_ADDRESS",
@@ -756,7 +774,6 @@ static const char *const modecfg_attr_name[] = {
 	"INTERNAL_IP4_SUBNET",
 	"SUPPORTED_ATTRIBUTES",
 	"INTERNAL_IP6_SUBNET",
-	NULL
     };
 
 enum_names modecfg_attr_names =

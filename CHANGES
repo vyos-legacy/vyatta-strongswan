@@ -1,3 +1,14 @@
+strongswan-2.8.2
+----------------
+
+- strongSwan now interoperates with the NCP Secure Entry Client,
+  the Shrew Soft VPN Client, and the Cisco VPN client, doing both
+  XAUTH and Mode Config.
+
+- UNITY attributes are now recognized and UNITY_BANNER is set
+  to a default string.
+
+
 strongswan-2.8.1
 ----------------
 

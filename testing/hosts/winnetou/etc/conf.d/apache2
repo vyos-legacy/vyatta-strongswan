@@ -1,6 +1,6 @@
 # Copyright 1999-2004 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /root/strongswan/testing/hosts/winnetou/etc/conf.d/apache2,v 1.2 2006/01/06 12:21:21 as Exp $
+# $Header: /var/cvsroot/strongswan/testing/hosts/winnetou/etc/conf.d/apache2,v 1.2 2006/01/06 12:21:21 as Exp $
 
 # Config file for /etc/init.d/apache2
 
