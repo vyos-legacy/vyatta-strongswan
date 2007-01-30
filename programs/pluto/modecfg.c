@@ -2,7 +2,7 @@
  * Copyright (C) 2001-2002 Colubris Networks
  * Copyright (C) 2003 Sean Mathews - Nu Tech Software Solutions, inc.
  * Copyright (C) 2003-2004 Xelerance Corporation
- * Copyright (C) 2006 Andreas Steffen - Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2006-2007 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: modecfg.c,v 1.10 2007/01/10 00:36:19 as Exp $
+ * RCSID $Id: modecfg.c,v 1.16 2007/01/29 08:27:54 as Exp $
  *
  * This code originally written by Colubris Networks, Inc.
  * Extraction of patch and porting to 1.99 codebases by Xelerance Corporation
@@ -43,11 +43,16 @@
 
 #define MAX_XAUTH_TRIES		3
 
-#define SUPPORTED_ATTR_SET   ( LELEM(INTERNAL_IP4_ADDRESS) \
-                             | LELEM(INTERNAL_IP4_NETMASK) \
-                             | LELEM(INTERNAL_IP4_DNS)     \
-                             | LELEM(INTERNAL_IP4_NBNS)    \
+#define SUPPORTED_ATTR_SET   ( LELEM(INTERNAL_IP4_ADDRESS)         \
+                             | LELEM(INTERNAL_IP4_NETMASK)         \
+                             | LELEM(INTERNAL_IP4_DNS)             \
+                             | LELEM(INTERNAL_IP4_NBNS)            \
+                             | LELEM(APPLICATION_VERSION)          \
                              )
+
+#define SUPPORTED_UNITY_ATTR_SET ( LELEM(UNITY_BANNER - UNITY_BASE) )
+
+#define UNITY_BANNER_STR    "Welcome to strongSwan - the Linux VPN Solution!\n"
 
 /*
  * Addresses assigned (usually via ModeCfg) to the Initiator
@@ -57,11 +62,15 @@ typedef struct internal_addr internal_addr_t;
 struct internal_addr
 {
     lset_t attr_set;
+    lset_t xauth_attr_set;
+    lset_t unity_attr_set;
 
     /* ModeCfg variables */
     ip_address ipaddr;
     ip_address dns[2];
     ip_address wins[2];
+
+    char *unity_banner;
 
     /* XAUTH variables */
     u_int16_t  xauth_type;
@@ -76,9 +85,13 @@ static void
 init_internal_addr(internal_addr_t *ia)
 {
     ia->attr_set = LEMPTY;
+    ia->xauth_attr_set = LEMPTY;
     ia->xauth_secret.user_name = empty_chunk;
     ia->xauth_secret.user_password = empty_chunk;
-    ia->xauth_status = FALSE;
+    ia->xauth_type = XAUTH_TYPE_GENERIC;
+    ia->xauth_status = XAUTH_STATUS_FAIL;
+    ia->unity_attr_set = LEMPTY;
+    ia->unity_banner = NULL;
 
     anyaddr(AF_INET, &ia->ipaddr);
     anyaddr(AF_INET, &ia->dns[0]);
@@ -93,8 +106,6 @@ init_internal_addr(internal_addr_t *ia)
 static void
 get_internal_addr(struct connection *c, internal_addr_t *ia)
 {
-    init_internal_addr(ia);
-
     if (isanyaddr(&c->spd.that.host_srcip))
     {
 	/* not defined in connection - fetch it from LDAP */
@@ -115,9 +126,9 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 	c->spd.that.client.maskbits = 32;
 	c->spd.that.has_client      = TRUE;
 	
-	ia->attr_set |= LELEM(INTERNAL_IP4_ADDRESS) | LELEM(INTERNAL_IP4_NETMASK);
+	ia->attr_set = LELEM(INTERNAL_IP4_ADDRESS)
+		     | LELEM(INTERNAL_IP4_NETMASK);
     }
-
 
     if (!isanyaddr(&ia->dns[0]))	/* We got DNS addresses, send them */
 	ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
@@ -210,6 +221,8 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 	int attr_type;
 	int dns_idx, wins_idx;
 	bool dont_advance;
+	bool is_xauth_attr_set = ia->xauth_attr_set != LEMPTY;
+	bool is_unity_attr_set = ia->unity_attr_set != LEMPTY;
 	lset_t attr_set = ia->attr_set;
 
 	attrh.isama_np         = ISAKMP_NEXT_NONE;
@@ -223,9 +236,26 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 	dns_idx = 0;
 	wins_idx = 0;
 
-	while (attr_set != 0)
+	while (attr_set != LEMPTY || is_xauth_attr_set || is_unity_attr_set)
 	{
+	    if (attr_set == LEMPTY)
+	    {
+		if (is_xauth_attr_set)
+	  	{
+		    attr_set = ia->xauth_attr_set;
+		    attr_type = XAUTH_BASE;
+		    is_xauth_attr_set = FALSE;
+		}
+		else
+		{
+		    attr_set = ia->unity_attr_set;
+		    attr_type = UNITY_BASE;
+		    is_unity_attr_set = FALSE;
+		}
+	    }
+	
 	    dont_advance = FALSE;
+
 	    if (attr_set & 1)
 	    {
 		const u_char *byte_ptr;
@@ -343,6 +373,14 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 		    break;
 		case XAUTH_STATUS:
 		    break;
+		case UNITY_BANNER:
+		    if (ia->unity_banner != NULL)
+		    {
+			out_raw(ia->unity_banner
+			      , strlen(ia->unity_banner)
+			      , &attrval, "UNITY_BANNER");
+		    }
+		    break;
 		default:
 		    plog("attempt to send unsupported mode cfg attribute %s."
 			 , enum_show(&modecfg_attr_names, attr_type));
@@ -353,10 +391,6 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 	    if (!dont_advance)
 	    {
 		attr_type++;
-		if (attr_type == MODECFG_ROOF)
-		{
-		    attr_type = XAUTH_BASE;
-		}
 		attr_set >>= 1;
 	    }
 	}
@@ -454,28 +488,81 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	    {
 		initaddr((char *)(strattr.cur), 4, AF_INET, &ia->ipaddr);
 	    }
-	    /* fall through to set attribute flags */
+	    /* fall through to set attribute flag */
 	case INTERNAL_IP4_NETMASK:
 	case INTERNAL_IP4_DNS:
 	case INTERNAL_IP4_SUBNET:
 	case INTERNAL_IP4_NBNS:
+	case INTERNAL_ADDRESS_EXPIRY:
+	case INTERNAL_IP4_DHCP:
+	case INTERNAL_IP6_ADDRESS:
+	case INTERNAL_IP6_NETMASK:
+	case INTERNAL_IP6_DNS:
+	case INTERNAL_IP6_NBNS:
+	case INTERNAL_IP6_DHCP:
+	case SUPPORTED_ATTRIBUTES:
+	case INTERNAL_IP6_SUBNET:
+	    ia->attr_set |= LELEM(attr_type);
+	    break;
+	case APPLICATION_VERSION:
+	    if (attr_len > 0)
+	    {
+		DBG(DBG_PARSING,
+		    DBG_log("   '%.*s'", attr_len, strattr.cur)
+		)
+	    }
 	    ia->attr_set |= LELEM(attr_type);
 	    break;
 	case XAUTH_TYPE:
 	    ia->xauth_type = attr.isaat_lv;
-	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
+	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
 	    break;
 	case XAUTH_USER_NAME:
 	    setchunk(ia->xauth_secret.user_name, strattr.cur, attr_len);
-	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
+	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
 	    break;
 	case XAUTH_USER_PASSWORD:
 	    setchunk(ia->xauth_secret.user_password, strattr.cur, attr_len);
-	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
+	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
 	    break;
 	case XAUTH_STATUS:
 	    ia->xauth_status = attr.isaat_lv;
-	    ia->attr_set |= LELEM(attr_type - XAUTH_BASE + MODECFG_ROOF);
+	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
+	    break;
+	case XAUTH_MESSAGE:
+	    if (attr_len > 0)
+	    {
+		DBG(DBG_PARSING,
+		    DBG_log("   '%.*s'", attr_len, strattr.cur)
+		)
+	    }
+	    /* fall through to set attribute flag */
+	case XAUTH_PASSCODE:
+	case XAUTH_CHALLENGE:
+	case XAUTH_DOMAIN:
+	case XAUTH_NEXT_PIN:
+	case XAUTH_ANSWER:
+	    ia->xauth_attr_set |= LELEM(attr_type - XAUTH_BASE);
+	    break;
+	case UNITY_DDNS_HOSTNAME:
+	    if (attr_len > 0)
+	    {
+		DBG(DBG_PARSING,
+		    DBG_log("   '%.*s'", attr_len, strattr.cur)
+		)
+	    }
+	    /* fall through to set attribute flag */
+	case UNITY_BANNER:
+	case UNITY_SAVE_PASSWD:
+	case UNITY_DEF_DOMAIN:
+	case UNITY_SPLITDNS_NAME:
+	case UNITY_SPLIT_INCLUDE:
+	case UNITY_NATT_PORT:
+	case UNITY_LOCAL_LAN:
+	case UNITY_PFS:
+	case UNITY_FW_TYPE:
+	case UNITY_BACKUP_SERVERS:
+	    ia->unity_attr_set |= LELEM(attr_type - UNITY_BASE);
 	    break;
 	default:
 	    plog("unsupported ModeCfg attribute %s received."
@@ -547,6 +634,7 @@ modecfg_send_request(struct state *st)
     internal_addr_t ia;
 
     init_internal_addr(&ia);
+
     ia.attr_set = LELEM(INTERNAL_IP4_ADDRESS)
 	        | LELEM(INTERNAL_IP4_NETMASK);
 
@@ -569,13 +657,23 @@ modecfg_inR0(struct msg_digest *md)
     struct state *const st = md->st;
     u_int16_t isama_id;
     internal_addr_t ia;
+    bool want_unity_banner;
     stf_status stat, stat_build;
 
     stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
     if (stat != STF_OK)
 	return stat;
- 
+
+    want_unity_banner = (ia.unity_attr_set & LELEM(UNITY_BANNER - UNITY_BASE)) != LEMPTY;
+
+    init_internal_addr(&ia);
     get_internal_addr(st->st_connection, &ia);
+
+    if (want_unity_banner)
+    {
+	ia.unity_banner = UNITY_BANNER_STR;
+	ia.unity_attr_set |= LELEM(UNITY_BANNER - UNITY_BASE);
+    }
 
     plog("sending ModeCfg reply");
 
@@ -624,9 +722,15 @@ modecfg_send_set(struct state *st)
     stf_status stat;
     internal_addr_t ia;
 
+    init_internal_addr(&ia);
     get_internal_addr(st->st_connection, &ia);
 
-    plog("sending ModeCfg set");
+#ifdef CISCO_QUIRKS
+    ia.unity_banner = UNITY_BANNER_STR;
+    ia.unity_attr_set |= LELEM(UNITY_BANNER - UNITY_BASE);
+#endif
+
+   plog("sending ModeCfg set");
     st->st_state = STATE_MODE_CFG_R3;
     stat = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
     if (stat == STF_OK)
@@ -645,7 +749,7 @@ modecfg_inI0(struct msg_digest *md)
     struct state *const st = md->st;
     u_int16_t isama_id;
     internal_addr_t ia;
-    lset_t attr_set;
+    lset_t attr_set, unity_attr_set;
     stf_status stat, stat_build;
 
     plog("parsing ModeCfg set");
@@ -658,8 +762,10 @@ modecfg_inI0(struct msg_digest *md)
 
     /* prepare ModeCfg ack which sends zero length attributes */
     attr_set = ia.attr_set;
+    unity_attr_set = ia.unity_attr_set;
     init_internal_addr(&ia);
     ia.attr_set = attr_set & SUPPORTED_ATTR_SET;
+    ia.unity_attr_set = unity_attr_set & SUPPORTED_UNITY_ATTR_SET;
 
     plog("sending ModeCfg ack");
 
@@ -707,8 +813,8 @@ xauth_send_request(struct state *st)
     internal_addr_t ia;
 
     init_internal_addr(&ia);
-    ia.attr_set = LELEM(XAUTH_USER_NAME     - XAUTH_BASE + MODECFG_ROOF)
-	        | LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE + MODECFG_ROOF);
+    ia.xauth_attr_set = LELEM(XAUTH_USER_NAME     - XAUTH_BASE)
+		      | LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE);
 
     plog("sending XAUTH request");
     st->st_state = STATE_XAUTH_R1;
@@ -730,6 +836,7 @@ xauth_inI0(struct msg_digest *md)
     u_int16_t isama_id;
     internal_addr_t ia;
     stf_status stat, stat_build;
+    bool xauth_type_present;
 
     plog("parsing XAUTH request");
 
@@ -738,18 +845,19 @@ xauth_inI0(struct msg_digest *md)
 	return stat;
  
     /* check XAUTH attributes */
-    if ((ia.attr_set & LELEM(XAUTH_TYPE - XAUTH_BASE + MODECFG_ROOF)) != LEMPTY
-    && ia.xauth_type != XAUTH_TYPE_GENERIC)
+    xauth_type_present = (ia.xauth_attr_set & LELEM(XAUTH_TYPE - XAUTH_BASE)) != LEMPTY;
+
+    if (xauth_type_present && ia.xauth_type != XAUTH_TYPE_GENERIC)
     {
 	plog("xauth type %s is not supported", enum_name(&xauth_type_names, ia.xauth_type));
 	stat = STF_FAIL;
     }
-    else if ((ia.attr_set & LELEM(XAUTH_USER_NAME - XAUTH_BASE + MODECFG_ROOF)) == LEMPTY)
+    else if ((ia.xauth_attr_set & LELEM(XAUTH_USER_NAME - XAUTH_BASE)) == LEMPTY)
     {
 	plog("user name attribute is missing in XAUTH request");
 	stat = STF_FAIL;
     }
-    else if ((ia.attr_set & LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE + MODECFG_ROOF)) == LEMPTY)
+    else if ((ia.xauth_attr_set & LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE)) == LEMPTY)
     {
 	plog("user password attribute is missing in XAUTH request");
 	stat = STF_FAIL;
@@ -779,13 +887,15 @@ xauth_inI0(struct msg_digest *md)
 		   , ia.xauth_secret.user_password.len
 		   , ia.xauth_secret.user_password.ptr)
 	)
-	ia.attr_set = LELEM(XAUTH_USER_NAME - XAUTH_BASE + MODECFG_ROOF)
-		    | LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE + MODECFG_ROOF);
+	ia.xauth_attr_set = LELEM(XAUTH_USER_NAME     - XAUTH_BASE)
+		 	  | LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE);
+        if (xauth_type_present)
+	    ia.xauth_attr_set |= LELEM(XAUTH_TYPE - XAUTH_BASE);
     }
     else
     {
-	ia.attr_set = LELEM(XAUTH_STATUS - XAUTH_BASE + MODECFG_ROOF);
-	ia.xauth_status = FALSE;
+	ia.xauth_attr_set = LELEM(XAUTH_STATUS - XAUTH_BASE);
+	ia.xauth_status = XAUTH_STATUS_FAIL;
     }
 
     plog("sending XAUTH reply");
@@ -800,6 +910,7 @@ xauth_inI0(struct msg_digest *md)
     if (stat == STF_OK)
     {
 	st->st_xauth.started = TRUE;
+	st->st_msgid = 0;
 	return STF_OK;
     }
     else
@@ -834,7 +945,7 @@ xauth_inR1(struct msg_digest *md)
 	return stat;
  
     /* did the client return an XAUTH FAIL status? */
-    if ((ia.attr_set & LELEM(XAUTH_STATUS - XAUTH_BASE + MODECFG_ROOF)) != LEMPTY)
+    if ((ia.xauth_attr_set & LELEM(XAUTH_STATUS - XAUTH_BASE)) != LEMPTY)
     {
 	plog("received FAIL status in XAUTH reply");
 
@@ -844,12 +955,12 @@ xauth_inR1(struct msg_digest *md)
     }
 
     /* check XAUTH reply */
-    if ((ia.attr_set & LELEM(XAUTH_USER_NAME - XAUTH_BASE + MODECFG_ROOF)) == LEMPTY)
+    if ((ia.xauth_attr_set & LELEM(XAUTH_USER_NAME - XAUTH_BASE)) == LEMPTY)
     {
 	plog("user name attribute is missing in XAUTH reply");
 	st->st_xauth.status = FALSE;
     }
-    else if ((ia.attr_set & LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE + MODECFG_ROOF)) == LEMPTY)
+    else if ((ia.xauth_attr_set & LELEM(XAUTH_USER_PASSWORD - XAUTH_BASE)) == LEMPTY)
     {
 	plog("user password attribute is missing in XAUTH reply");
 	st->st_xauth.status = FALSE;
@@ -873,16 +984,13 @@ xauth_inR1(struct msg_digest *md)
 
     /* prepare XAUTH set which sends the authentication status */
     init_internal_addr(&ia);
-    ia.attr_set = LELEM(XAUTH_STATUS - XAUTH_BASE + MODECFG_ROOF);
-    ia.xauth_status = st->st_xauth.status;
+    ia.xauth_attr_set = LELEM(XAUTH_STATUS - XAUTH_BASE);
+    ia.xauth_status = (st->st_xauth.status)? XAUTH_STATUS_OK : XAUTH_STATUS_FAIL;
 
     plog("sending XAUTH status:");
 
-    stat_build = modecfg_build_msg(st, &md->rbody
-			 	     , ISAKMP_CFG_SET
-			 	     , &ia
-			 	     , isama_id);
-     if (stat_build != STF_OK)
+    stat_build = modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
+    if (stat_build != STF_OK)
 	return stat_build;
     return STF_OK;
 }

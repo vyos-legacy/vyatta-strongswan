@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: demux.c,v 1.17 2007/01/10 00:36:19 as Exp $
+ * RCSID $Id: demux.c,v 1.18 2007/01/29 08:27:53 as Exp $
  */
 
 /* Ordering Constraints on Payloads
@@ -461,7 +461,7 @@ static const struct state_microcode state_microcode_table[] = {
     , EVENT_RETRANSMIT, xauth_inI0 },
 
     { STATE_XAUTH_R1, STATE_XAUTH_R2
-    , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY
+    , SMF_ALL_AUTH | SMF_ENCRYPTED
     , P(ATTR) | P(HASH), P(VID), PT(HASH)
     , EVENT_RETRANSMIT, xauth_inR1 },
 
@@ -1571,6 +1571,15 @@ process_packet(struct msg_digest **mdp)
 	    }
 
 	    set_cur_state(st);
+
+	    /* the XAUTH_STATUS message might have a new msgid */
+	    if (st->st_state == STATE_XAUTH_I1)
+	    {
+		init_phase2_iv(st, &md->hdr.isa_msgid);
+		new_iv_set = TRUE;
+		from_state = st->st_state;
+		break;
+	    }
 
 	    if (!IS_ISAKMP_SA_ESTABLISHED(st->st_state))
 	    {

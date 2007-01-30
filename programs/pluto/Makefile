@@ -12,7 +12,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: Makefile,v 1.47 2007/01/11 21:47:13 as Exp $
+# RCSID $Id: Makefile,v 1.49 2007/01/29 08:27:19 as Exp $
 
 # relative path to top directory of FreeS/WAN source
 # Note: referenced in ${FREESWANSRCDIR}/Makefile.inc
@@ -90,13 +90,6 @@ else
   BINNAMEADNSIFNEEDED=$(BINNAMEADNS)
 endif
 
-ifeq ($(USE_IPSECPOLICY),true)
-  IPSECPOLICY_FILES=rcv_info.c
-  IPSECPOLICY_DEFINES=-DIPSECPOLICY
-  IPSECPOLICY_LIBS=$(POLICYLIB)
-  IPSECPOLICY_OBJS=rcv_info.o
-endif
-
 ifeq ($(USE_KEYRR),true)
   KEYRR_DEFINES=-DUSE_KEYRR
 endif
@@ -130,7 +123,7 @@ DEFINES = $(EXTRA_DEFINES) \
 # libefence is a free memory allocation debugger
 # Solaris 2 needs -lsocket -lnsl
 LIBSPLUTO = $(OBJSGCRYPT) $(LIBDESLITE) $(FREESWANLIB) $(IPSECPOLICY_LIBS)
-LIBSPLUTO+= -lgmp -lresolv # -lefence
+LIBSPLUTO+= -lgmp -ldl -lresolv # -lefence
 
 
 ifeq ($(USE_VENDORID),true)
@@ -167,7 +160,6 @@ ifeq ($(USE_SMARTCARD),true)
   ifdef PKCS11_DEFAULT_LIB
     DEFINES+= -DPKCS11_DEFAULT_LIB=$(PKCS11_DEFAULT_LIB)
   endif
-  LIBSPLUTO+= -ldl
 endif
 
 # This compile option activates the leak detective
@@ -929,6 +921,7 @@ plutomain.o: ipsec_doi.h
 plutomain.o: ocsp.h
 plutomain.o: crl.h
 plutomain.o: fetch.h
+plutomain.o: xauth.h
 plutomain.o: sha1.h
 plutomain.o: md5.h
 plutomain.o: crypto.h
@@ -982,7 +975,6 @@ server.o: timer.h
 server.o: packet.h
 server.o: demux.h
 server.o: rcv_whack.h
-server.o: rcv_info.h
 server.o: keys.h
 server.o: adns.h
 server.o: dnskey.h
