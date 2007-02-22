@@ -22,6 +22,11 @@ OPENACDIR=../openac
 PROGRAM=scepclient
 EXTRA8PROC=${PROGRAM}.8
 
+# where to find sha2.h
+LIBCRYPTO=$(FREESWANSRCDIR)/lib/libcrypto
+LIBSHA2=$(LIBCRYPTO)/libsha2
+CFLAGS+= -I$(LIBCRYPTO)
+
 LIBS=${FREESWANLIB} $(LIBDESLITE) -lgmp
 CFLAGS+= -DDEBUG -DNO_PLUTO
 
@@ -38,7 +43,7 @@ endif
 
 X509_OBJS= asn1.o ca.o certs.o constants.o crl.o defs.o fetch.o id.o keys.o \
            lex.o md2.o md5.o mp_defs.o ocsp.o oid.o pem.o pgp.o pkcs1.o pkcs7.o \
-           rnd.o sha1.o smartcard.o x509.o
+           rnd.o sha1.o sha2.o smartcard.o x509.o
 
 OBJS= rsakey.o pkcs10.o loglite.o scep.o ${X509_OBJS}
 
@@ -119,6 +124,9 @@ rnd.o :		$(PLUTODIR)/rnd.c $(PLUTODIR)/rnd.h
 		$(CC) $(CFLAGS) -c -o $@ $<
 
 sha1.o :	$(PLUTODIR)/sha1.c $(PLUTODIR)/sha1.h
+		$(CC) $(CFLAGS) -c -o $@ $<
+
+sha2.o :	$(LIBSHA2)/sha2.c $(LIBSHA2)/sha2.h
 		$(CC) $(CFLAGS) -c -o $@ $<
 
 smartcard.o :	$(PLUTODIR)/smartcard.c $(PLUTODIR)/smartcard.h

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_doi.c,v 1.42 2007/01/10 00:36:19 as Exp $
+ * RCSID $Id: ipsec_doi.c,v 1.43 2007/02/21 14:21:48 as Exp $
  */
 
 #include <stdio.h>
@@ -1781,7 +1781,7 @@ RSA_check_signature(const struct id* peer
     {
 	char id_buf[BUF_LEN];	/* arbitrary limit on length of ID reported */
 
-	(void) idtoa(&st->st_connection->spd.that.id, id_buf, sizeof(id_buf));
+	(void) idtoa(peer, id_buf, sizeof(id_buf));
 
 	if (s.best_ugh == NULL)
 	{

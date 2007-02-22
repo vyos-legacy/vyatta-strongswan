@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: pkcs1.c,v 1.17 2006/01/04 21:00:43 as Exp $
+ * RCSID $Id: pkcs1.c,v 1.18 2007/02/21 14:21:05 as Exp $
  */
 
 #include <stddef.h>
@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include <freeswan.h>
+#include <libsha2/sha2.h>
 
 #include "constants.h"
 #include "defs.h"
@@ -290,29 +291,31 @@ compute_digest(chunk_t tbs, int alg, chunk_t *digest)
 {
     switch (alg)
     {
-	case OID_MD2:
-	case OID_MD2_WITH_RSA:
+    case OID_MD2:
+    case OID_MD2_WITH_RSA:
 	{
 	    MD2_CTX context;
+
 	    MD2Init(&context);
 	    MD2Update(&context, tbs.ptr, tbs.len);
 	    MD2Final(digest->ptr, &context);
 	    digest->len = MD2_DIGEST_SIZE;
 	    return TRUE;
 	}
-	case OID_MD5:
-	case OID_MD5_WITH_RSA:
+     case OID_MD5:
+     case OID_MD5_WITH_RSA:
 	{
 	    MD5_CTX context;
+
 	    MD5Init(&context);
 	    MD5Update(&context, tbs.ptr, tbs.len);
 	    MD5Final(digest->ptr, &context);
 	    digest->len = MD5_DIGEST_SIZE;
 	    return TRUE;
 	}
-	case OID_SHA1:
-	case OID_SHA1_WITH_RSA:
-	case OID_SHA1_WITH_RSA_OIW:
+     case OID_SHA1:
+     case OID_SHA1_WITH_RSA:
+     case OID_SHA1_WITH_RSA_OIW:
 	{
 	    SHA1_CTX context;
 
@@ -322,9 +325,45 @@ compute_digest(chunk_t tbs, int alg, chunk_t *digest)
 	    digest->len = SHA1_DIGEST_SIZE;
 	    return TRUE;
 	}
-	default:
-	    digest->len = 0;
-	    return FALSE;
+     case OID_SHA256:
+     case OID_SHA256_WITH_RSA:
+	{
+	    sha256_context context;
+
+	    sha256_init(&context);
+	    sha256_write(&context, tbs.ptr, tbs.len);
+	    sha256_final(&context);
+	    memcpy(digest->ptr, context.sha_out, SHA2_256_DIGEST_SIZE);
+	    digest->len = SHA2_256_DIGEST_SIZE;
+	    return TRUE;
+	}
+     case OID_SHA384:
+     case OID_SHA384_WITH_RSA:
+	{
+	    sha512_context context;
+
+	    sha384_init(&context);
+	    sha512_write(&context, tbs.ptr, tbs.len);
+	    sha512_final(&context);
+	    memcpy(digest->ptr, context.sha_out, SHA2_384_DIGEST_SIZE);
+	    digest->len = SHA2_384_DIGEST_SIZE;
+	    return TRUE;
+	}
+     case OID_SHA512:
+     case OID_SHA512_WITH_RSA:
+	{
+	    sha512_context context;
+
+	    sha512_init(&context);
+	    sha512_write(&context, tbs.ptr, tbs.len);
+	    sha512_final(&context);
+	    memcpy(digest->ptr, context.sha_out, SHA2_512_DIGEST_SIZE);
+	    digest->len = SHA2_512_DIGEST_SIZE;
+	    return TRUE;
+	}
+     default:
+	digest->len = 0;
+	return FALSE;
     }
 }
 

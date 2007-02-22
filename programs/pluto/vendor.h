@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: vendor.h,v 1.40 2007/01/20 18:01:13 as Exp $
+ * RCSID $Id: vendor.h,v 1.41 2007/02/21 14:20:25 as Exp $
  */
 
 #ifndef _VENDOR_H_
@@ -83,6 +83,7 @@ enum known_vendorid {
   VID_STRONGSWAN_2_7_3		= 62,
   VID_STRONGSWAN_2_8_0		= 63,
   VID_STRONGSWAN_2_8_1		= 64,
+  VID_STRONGSWAN_2_8_2		= 65,
 
   VID_STRONGSWAN_4_0_0		= 70,
   VID_STRONGSWAN_4_0_1		= 71,
