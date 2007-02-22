@@ -1,3 +1,10 @@
+strongswan (2.8.3-1) unstable; urgency=low
+
+  * New upstream release with fixes for the SHA-512-HMAC function and
+    added SHA-384 and SHA-2 implementations.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 22 Feb 2007 20:19:45 +0000
+
 strongswan (2.8.2-1) unstable; urgency=low
 
   * New upstream release with interoperability fixes for some VPN

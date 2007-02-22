@@ -63,6 +63,9 @@ extern const oid_t oid_names[];
 #define OID_DES_CBC			139
 #define OID_SHA1			140
 #define OID_SHA1_WITH_RSA_OIW		141
+#define OID_SHA256			157
+#define OID_SHA384			158
+#define OID_SHA512			159
 #define OID_NS_REVOCATION_URL		165
 #define OID_NS_CA_REVOCATION_URL	166
 #define OID_NS_CA_POLICY_URL		167

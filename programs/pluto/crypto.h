@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: crypto.h,v 1.6 2005/04/07 20:13:30 as Exp $
+ * RCSID $Id: crypto.h,v 1.7 2007/02/21 14:21:48 as Exp $
  */
 
 #include <gmp.h>    /* GNU MP library */
@@ -76,7 +76,8 @@ struct hmac_ctx {
     const struct hash_desc *h;	/* underlying hash function */
     size_t hmac_digest_size;	/* copy of h->hash_digest_size */
     union hash_ctx hash_ctx;	/* ctx for hash function */
-    u_char buf1[HMAC_BUFSIZE], buf2[HMAC_BUFSIZE];
+    u_char buf1[MAX_HASH_BLOCK_SIZE];
+    u_char buf2[MAX_HASH_BLOCK_SIZE];
     };
 
 extern void hmac_init(

@@ -41,7 +41,7 @@ Contents
 	6.1 Loading private key files in PKCS#1 format
 	6.2 Entering passphrases interactively
 	6.3 Multiple private keys
-   7. Configuring CA properties - ipsec.onf
+   7. Configuring CA properties - ipsec.conf
    8. Smartcard support
 	8.1 Configuring a smartcard-based connection
 	8.2 Entering the PIN code
@@ -3147,5 +3147,5 @@ by the pluto/xauth.h header file.
   for more details.
 -----------------------------------------------------------------------------
 
-This file is RCSID $Id: README,v 1.38 2007/01/14 18:16:51 as Exp $
+This file is RCSID $Id: README,v 1.39 2007/01/30 14:43:12 as Exp $
 
