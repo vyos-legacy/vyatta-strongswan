@@ -1,0 +1,69 @@
+                 -------------------------
+                  strongSwan - Roadmap
+                 -------------------------
+
+These notes mostly belong to charon, the new IKEv2 daemon. The plan is to
+migrate IKEv1 into charon. It's hard to say how much effort is needed to
+do that, and how much code we can reuse from pluto. But a port IS necessary to
+gain hassle-free confiugration, version negotiation and maintainability.
+
+Roadmap 2007
+============
+
+ Mar  !   - Cookie support, IP filter, other fixes to mature against DoS
+      !   - release IKEv2 p2p NATT draft 00
+      !
+ Apr  !   - PRF in CHILD_SA rekeying
+      !   - configuration managament refactoring
+      !   - credentials backend redesign
+      !   - interface in charon for the XML based SMP management interface
+      !   - reimplement IKEv2 p2p NATT support
+      !
+ May  !   - SMP configuration client
+      !
+ Jun  !   - start with IKEv1 migration strategy
+      !
+ Jul  !
+      !
+ Aug  !
+      !
+ Sep  !
+      !
+ Oct  !
+      !
+ Nov  !
+      !
+ Dec  !
+      !
+
+
+TODO-List
+=========
+
+A set of TODOs. This is only a list of things I write down to not forget them.
+Watch out for TODOs in the code.
+  
+Build system
+------------
+- configure flag which allows to ommit vendor id in pluto
+- reduce printf handlers count to 10, as uClibc does not support more
+
+Certificate support
+-------------------
+- New trustchain mechanism?
+- proper handling of multiple certificate payloads (import order)
+- synchronized CRL fetcher
+- Smartcard interface
+- Attribute certificates
+
+Stroke interface
+----------------
+- add a Rekey-Counter for SAs in "statusall"
+- ipsec statusall bytecount
+- proper handling of CTRL+C console detach (SIG_PIPE)
+
+Misc
+----
+- PFS support for creating/rekeying CHILD_SAs
+- Address pool/backend for virtual IP assignement
+- fix iterator->insert_before/after
