@@ -1,3 +1,12 @@
+strongswan (4.1.1-1) unstable; urgency=low
+
+  Major new upstream release:
+  * IKEv2 support with the new "charon" daemon in addition to the old "pluto"
+    which is still used for IKEv1.
+  * Switches to auto* tools build system.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 12 Apr 2007 21:33:56 +0100
+
 strongswan (2.8.3-1) unstable; urgency=low
 
   * New upstream release with fixes for the SHA-512-HMAC function and

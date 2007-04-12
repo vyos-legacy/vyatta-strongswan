@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: load-testconfig,v 1.3 2006/10/19 21:38:45 as Exp $
+# RCSID $Id: load-testconfig,v 1.2 2004/12/13 21:02:42 as Exp $
 
 DIR=`dirname $0`
 
@@ -53,12 +53,12 @@ fi
 
 
 ##########################################################################
-# clear the auth.log where IKE messages are logged
+# clear auth.log and daemon.log where IKE messages are logged
 #
 
 for host in $IPSECHOSTS
 do
     eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-    ssh $HOSTLOGIN 'rm -f /var/log/auth.log; \
+    ssh $HOSTLOGIN 'rm -f /var/log/auth.log /var/log/daemon.log; \
 		    kill -SIGHUP `cat /var/run/syslogd.pid`' > /dev/null 2>&1
 done
