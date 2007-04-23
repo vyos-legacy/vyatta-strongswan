@@ -19,9 +19,16 @@ else
 endif
 
 configure: configure-stamp
-configure-stamp:
+configure-stamp: patch
 	dh_testdir
 	# Add here commands to configure the package.
+	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+		--enable-http --enable-ldap --enable-smartcard \
+		--enable-cisco-quirks --enable-leak-detective
+	# Could enable --enable-nat-transport, but this is actually insecure,
+	# so don't!
+	# And for --enable-eap-sim we would need the library, which we don't
+	# have right now.
 
 	touch configure-stamp
 
@@ -31,28 +38,10 @@ patch:
 
 unpatch:
 	dpatch deapply-all
-	#rm -f patch-stamp
 
 build: build-stamp
-build-stamp: patch
-	# create a dummy ipsec.secrets file before building the package so
-	# that no RSA keys are created during the build process
-	# (a package should not include a RSA key, it should produce the key
-	# on demand, e.g. in the postinst script)
-	touch $(CURDIR)/debian/ipsec.secrets
-	$(MAKE) programs INC_USRLOCAL=/usr \
-        		 FINALBINDIR=/usr/lib/ipsec \
-			 FINALLIBEXECDIR=/usr/lib/ipsec \
-			 PUBDIR=/usr/sbin \
-			 MANTREE=/usr/share/man \
-			 CONFDIR=$(CURDIR)/debian \
-			 USE_LDAP=true USE_LIBCURL=true HAVE_THREADS=true \
-			 USE_XAUTH=true USE_XAUTHPAM=true USE_KEYRR=true \
-			 USE_KERNEL26=true USE_NAT_TRAVERSAL=true \
-			 USE_VENDORID=true \
-			 USE_CISCO_QUIRKS=true USE_SMARTCARD=true
-	# remove the temporary file, it will be created during install
-	rm -f $(CURDIR)/debian/ipsec.secrets
+build-stamp: configure-stamp
+	$(MAKE)
 
 	# also generate the fswcert tool
 	#$(MAKE) -C programs/fswcert/
@@ -105,16 +94,11 @@ install-strongswan: build
 	dh_installdirs
 
 	# Add here commands to install the package into debian/tmp.
-	$(MAKE) install INC_USRLOCAL=/usr \
-        		FINALBINDIR=/usr/lib/ipsec \
-			FINALLIBEXECDIR=/usr/lib/ipsec \
-			PUBDIR=$(CURDIR)/debian/strongswan/usr/sbin \
-			MANTREE=$(CURDIR)/debian/strongswan/usr/share/man \
-			DESTDIR=$(CURDIR)/debian/strongswan
-	rm -rf $(CURDIR)/debian/strongswan/usr/local
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/strongswan
 	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan/etc/ipsec.secrets
 
 	# use bash for init.d and _plutorun
+	# TODO: check if we still need this
 	patch $(CURDIR)/debian/strongswan/etc/init.d/ipsec < debian/use-bash1.diff
 	patch $(CURDIR)/debian/strongswan/usr/lib/ipsec/_plutorun < debian/use-bash2.diff
 
@@ -122,6 +106,7 @@ install-strongswan: build
 	#install $(CURDIR)/programs/fswcert/fswcert $(CURDIR)/debian/strongswan/usr/bin
 	#install $(CURDIR)/programs/fswcert/fswcert.8 $(CURDIR)/debian/strongswan/usr/share/man/man8
 
+	# TODO: check if we still need this
 	rm -f $(CURDIR)/debian/strongswan/etc/init.d/ipsec?*
 	rm -f $(CURDIR)/debian/strongswan/usr/lib/ipsec/_plutorun?*
 
@@ -131,6 +116,7 @@ install-strongswan: build
 	dh_installdocs -pstrongswan -n
 	# change the paths in the installed doc files (but only in regular 
 	# files, not in links to the outside of the build tree !)
+	# TODO: check if we still need this
 	( cd $(CURDIR)/debian/strongswan/; \
 	  for f in `grep "/usr/local/" --recursive --files-with-match *`; \
 	  do \
@@ -140,11 +126,6 @@ install-strongswan: build
 		    rm $$f.old; \
 		fi; \
 	  done )
-	# but remove the doc/src dir, which just duplicates the HTML files
-	rm -rf $(CURDIR)/debian/strongswan/usr/share/doc/strongswan/doc/src
-	# and the index file in the main doc directory - it's replicated under
-	# doc/
-	rm -f $(CURDIR)/debian/strongswan/usr/share/doc/strongswan/index.html
 	  
 	# the logcheck ignore files
 	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.paranoid $(CURDIR)/debian/strongswan/etc/logcheck/ignore.d.paranoid/strongswan
