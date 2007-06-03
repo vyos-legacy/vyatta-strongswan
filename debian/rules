@@ -23,6 +23,7 @@ configure-stamp: patch
 	dh_testdir
 	# Add here commands to configure the package.
 	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+		--libexecdir=/usr/lib \
 		--enable-http --enable-ldap \
 		--enable-smartcard --enable-cisco-quirks
 	#	--enable-dbus --enable-xml \
