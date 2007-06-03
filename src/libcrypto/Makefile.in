@@ -52,9 +52,9 @@ am_libcrypto_a_OBJECTS = aes_xcbc_mac.$(OBJEXT) aes_cbc.$(OBJEXT) \
 	aes.$(OBJEXT) bf_skey.$(OBJEXT) bf_enc.$(OBJEXT) \
 	hmac_sha2.$(OBJEXT) sha2.$(OBJEXT) serpent_cbc.$(OBJEXT) \
 	serpent.$(OBJEXT) twofish_cbc.$(OBJEXT) twofish.$(OBJEXT) \
-	des_enc.$(OBJEXT) set_key.$(OBJEXT) speed.$(OBJEXT) \
-	fcrypt_b.$(OBJEXT) fcrypt.$(OBJEXT) destest.$(OBJEXT) \
-	cbc_enc.$(OBJEXT) ecb_enc.$(OBJEXT) des_opts.$(OBJEXT)
+	des_enc.$(OBJEXT) set_key.$(OBJEXT) fcrypt_b.$(OBJEXT) \
+	fcrypt.$(OBJEXT) destest.$(OBJEXT) cbc_enc.$(OBJEXT) \
+	ecb_enc.$(OBJEXT)
 libcrypto_a_OBJECTS = $(am_libcrypto_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -116,6 +116,7 @@ LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
+LINUX_HEADERS = @LINUX_HEADERS@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -128,6 +129,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -138,8 +140,12 @@ USE_LEAK_DETECTIVE_FALSE = @USE_LEAK_DETECTIVE_FALSE@
 USE_LEAK_DETECTIVE_TRUE = @USE_LEAK_DETECTIVE_TRUE@
 USE_LIBCURL_FALSE = @USE_LIBCURL_FALSE@
 USE_LIBCURL_TRUE = @USE_LIBCURL_TRUE@
+USE_LIBDBUS_FALSE = @USE_LIBDBUS_FALSE@
+USE_LIBDBUS_TRUE = @USE_LIBDBUS_TRUE@
 USE_LIBLDAP_FALSE = @USE_LIBLDAP_FALSE@
 USE_LIBLDAP_TRUE = @USE_LIBLDAP_TRUE@
+USE_LIBXML_FALSE = @USE_LIBXML_FALSE@
+USE_LIBXML_TRUE = @USE_LIBXML_TRUE@
 USE_NAT_TRANSPORT_FALSE = @USE_NAT_TRANSPORT_FALSE@
 USE_NAT_TRANSPORT_TRUE = @USE_NAT_TRANSPORT_TRUE@
 USE_SMARTCARD_FALSE = @USE_SMARTCARD_FALSE@
@@ -161,6 +167,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+backenddir = @backenddir@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -170,6 +177,8 @@ build_vendor = @build_vendor@
 confdir = @confdir@
 datadir = @datadir@
 datarootdir = @datarootdir@
+dbus_CFLAGS = @dbus_CFLAGS@
+dbus_LIBS = @dbus_LIBS@
 docdir = @docdir@
 dvidir = @dvidir@
 eapdir = @eapdir@
@@ -183,9 +192,13 @@ htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
+interfacedir = @interfacedir@
 ipsecdir = @ipsecdir@
+ipsecgid = @ipsecgid@
+ipsecuid = @ipsecuid@
 libdir = @libdir@
 libexecdir = @libexecdir@
+linuxdir = @linuxdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
@@ -200,6 +213,8 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
+xml_CFLAGS = @xml_CFLAGS@
+xml_LIBS = @xml_LIBS@
 noinst_LIBRARIES = libcrypto.a
 libcrypto_a_SOURCES = \
 libaes/aes_xcbc_mac.c libaes/aes_cbc.c libaes/aes_xcbc_mac.h libaes/aes_cbc.h libaes/aes.c libaes/aes.h \
@@ -207,8 +222,8 @@ include/md32_common.h include/cbc_generic.h include/hmac_generic.h libblowfish/b
 libblowfish/bf_pi.h libblowfish/bf_locl.h libblowfish/bf_enc.c libsha2/hmac_sha2.c libsha2/sha2.h libsha2/hmac_sha2.h \
 libsha2/sha2.c libserpent/serpent_cbc.c libserpent/serpent_cbc.h libserpent/serpent.c libserpent/serpent.h \
 libtwofish/twofish_cbc.h libtwofish/twofish_cbc.c libtwofish/twofish.c libtwofish/twofish.h libdes/des_enc.c \
-libdes/podd.h libdes/sk.h libdes/set_key.c libdes/speed.c libdes/fcrypt_b.c libdes/fcrypt.c libdes/destest.c \
-libdes/spr.h libdes/cbc_enc.c libdes/ecb_enc.c libdes/des_opts.c libdes/des_locl.h libdes/des_ver.h libdes/des.h
+libdes/podd.h libdes/sk.h libdes/set_key.c libdes/fcrypt_b.c libdes/fcrypt.c libdes/destest.c \
+libdes/spr.h libdes/cbc_enc.c libdes/ecb_enc.c libdes/des_locl.h libdes/des_ver.h libdes/des.h
 
 INCLUDES = -I$(top_srcdir)/src/libcrypto/include
 all: all-am
@@ -265,7 +280,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bf_skey.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cbc_enc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/des_enc.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/des_opts.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/destest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ecb_enc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fcrypt.Po@am__quote@
@@ -275,7 +289,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serpent_cbc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/set_key.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sha2.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/speed.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/twofish.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/twofish_cbc.Po@am__quote@
 
@@ -482,20 +495,6 @@ set_key.obj: libdes/set_key.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o set_key.obj `if test -f 'libdes/set_key.c'; then $(CYGPATH_W) 'libdes/set_key.c'; else $(CYGPATH_W) '$(srcdir)/libdes/set_key.c'; fi`
 
-speed.o: libdes/speed.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT speed.o -MD -MP -MF "$(DEPDIR)/speed.Tpo" -c -o speed.o `test -f 'libdes/speed.c' || echo '$(srcdir)/'`libdes/speed.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/speed.Tpo" "$(DEPDIR)/speed.Po"; else rm -f "$(DEPDIR)/speed.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='libdes/speed.c' object='speed.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o speed.o `test -f 'libdes/speed.c' || echo '$(srcdir)/'`libdes/speed.c
-
-speed.obj: libdes/speed.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT speed.obj -MD -MP -MF "$(DEPDIR)/speed.Tpo" -c -o speed.obj `if test -f 'libdes/speed.c'; then $(CYGPATH_W) 'libdes/speed.c'; else $(CYGPATH_W) '$(srcdir)/libdes/speed.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/speed.Tpo" "$(DEPDIR)/speed.Po"; else rm -f "$(DEPDIR)/speed.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='libdes/speed.c' object='speed.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o speed.obj `if test -f 'libdes/speed.c'; then $(CYGPATH_W) 'libdes/speed.c'; else $(CYGPATH_W) '$(srcdir)/libdes/speed.c'; fi`
-
 fcrypt_b.o: libdes/fcrypt_b.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fcrypt_b.o -MD -MP -MF "$(DEPDIR)/fcrypt_b.Tpo" -c -o fcrypt_b.o `test -f 'libdes/fcrypt_b.c' || echo '$(srcdir)/'`libdes/fcrypt_b.c; \
 @am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/fcrypt_b.Tpo" "$(DEPDIR)/fcrypt_b.Po"; else rm -f "$(DEPDIR)/fcrypt_b.Tpo"; exit 1; fi
@@ -565,20 +564,6 @@ ecb_enc.obj: libdes/ecb_enc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='libdes/ecb_enc.c' object='ecb_enc.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ecb_enc.obj `if test -f 'libdes/ecb_enc.c'; then $(CYGPATH_W) 'libdes/ecb_enc.c'; else $(CYGPATH_W) '$(srcdir)/libdes/ecb_enc.c'; fi`
-
-des_opts.o: libdes/des_opts.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT des_opts.o -MD -MP -MF "$(DEPDIR)/des_opts.Tpo" -c -o des_opts.o `test -f 'libdes/des_opts.c' || echo '$(srcdir)/'`libdes/des_opts.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/des_opts.Tpo" "$(DEPDIR)/des_opts.Po"; else rm -f "$(DEPDIR)/des_opts.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='libdes/des_opts.c' object='des_opts.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o des_opts.o `test -f 'libdes/des_opts.c' || echo '$(srcdir)/'`libdes/des_opts.c
-
-des_opts.obj: libdes/des_opts.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT des_opts.obj -MD -MP -MF "$(DEPDIR)/des_opts.Tpo" -c -o des_opts.obj `if test -f 'libdes/des_opts.c'; then $(CYGPATH_W) 'libdes/des_opts.c'; else $(CYGPATH_W) '$(srcdir)/libdes/des_opts.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/des_opts.Tpo" "$(DEPDIR)/des_opts.Po"; else rm -f "$(DEPDIR)/des_opts.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='libdes/des_opts.c' object='des_opts.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o des_opts.obj `if test -f 'libdes/des_opts.c'; then $(CYGPATH_W) 'libdes/des_opts.c'; else $(CYGPATH_W) '$(srcdir)/libdes/des_opts.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

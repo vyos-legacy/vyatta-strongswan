@@ -23,6 +23,8 @@
  */
 
 #include <stdio.h>
+#include <linux/capability.h>
+#include <sys/prctl.h>
 #include <signal.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -42,10 +44,13 @@
 #include <crypto/ca.h>
 #include <utils/fetcher.h>
 #include <config/credentials/local_credential_store.h>
-#include <config/connections/local_connection_store.h>
-#include <config/policies/local_policy_store.h>
+#include <config/backends/local_backend.h>
 #include <sa/authenticators/eap/eap_method.h>
 
+/* on some distros, a capset definition is missing */
+#ifdef NO_CAPSET_DEFINED
+extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
+#endif /* NO_CAPSET_DEFINED */
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -165,7 +170,7 @@ static void destroy(private_daemon_t *this)
 	/* we don't want to receive anything anymore... */
 	DESTROY_IF(this->public.receiver);
 	/* ignore all incoming user requests */
-	DESTROY_IF(this->public.stroke);
+	DESTROY_IF(this->public.interfaces);
 	/* stop scheduing jobs */
 	DESTROY_IF(this->public.scheduler);
 	/* stop processing jobs */
@@ -177,11 +182,8 @@ static void destroy(private_daemon_t *this)
 	/* destroy other infrastructure */
 	DESTROY_IF(this->public.job_queue);
 	DESTROY_IF(this->public.event_queue);
-	DESTROY_IF(this->public.configuration);
 	DESTROY_IF(this->public.credentials);
-	DESTROY_IF(this->public.connections);
-	DESTROY_IF(this->public.policies);
-	sched_yield();
+	DESTROY_IF(this->public.backends);
 	/* we hope the sender could send the outstanding deletes, but 
 	 * we shut down here at any cost */
 	DESTROY_IF(this->public.sender);
@@ -194,6 +196,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.authlog);
 	free(this);
 }
+
 
 /**
  * Enforce daemon shutdown, with a given reason to do so.
@@ -219,10 +222,49 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 }
 
 /**
+ * drop daemon capabilities
+ */
+static void drop_capabilities(private_daemon_t *this, bool full)
+{
+	struct __user_cap_header_struct hdr;
+	struct __user_cap_data_struct data;
+	/* CAP_NET_ADMIN is needed to use netlink */
+	u_int32_t keep = (1<<CAP_NET_ADMIN);
+	
+	if (full)
+	{
+#		if IPSEC_GID
+			setgid(IPSEC_GID);
+#		endif
+#		if IPSEC_UID
+			setuid(IPSEC_UID);
+#		endif
+	}
+	else
+	{
+		/* CAP_NET_BIND_SERVICE to bind services below port 1024, 
+		 * CAP_NET_RAW to create RAW sockets.
+		 * CAP_DAC_READ_SEARCH is needed to read ipsec.secrets */
+		keep |= (1<<CAP_NET_BIND_SERVICE);
+		keep |= (1<<CAP_NET_RAW);
+		keep |= (1<<CAP_DAC_READ_SEARCH);
+	}
+
+	hdr.version = _LINUX_CAPABILITY_VERSION;
+	hdr.pid = 0;
+	data.effective = data.permitted = keep;
+	data.inheritable = 0;
+	
+	if (capset(&hdr, &data))
+	{
+		kill_daemon(this, "unable to drop threads capabilities");
+	}
+}
+
+/**
  * Initialize the daemon, optional with a strict crl policy
  */
-static void initialize(private_daemon_t *this, bool strict, bool syslog,
-					   level_t levels[])
+static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
 	credential_store_t* credentials;
 	signal_t signal;
@@ -245,12 +287,9 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	/* apply loglevels */
 	for (signal = 0; signal < DBG_MAX; signal++)
 	{
-		if (syslog)
-		{
-			this->public.syslog->set_level(this->public.syslog,
-										   signal, levels[signal]);
-		}
-		else
+		this->public.syslog->set_level(this->public.syslog,
+									   signal, levels[signal]);
+		if (!syslog)
 		{
 			this->public.outlog->set_level(this->public.outlog,
 										   signal, levels[signal]);
@@ -259,14 +298,12 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 	
-	this->public.configuration = configuration_create();
 	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
-	this->public.connections = (connection_store_t*)local_connection_store_create();
-	this->public.policies = (policy_store_t*)local_policy_store_create();
-	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
+	this->public.credentials = (credential_store_t*)local_credential_store_create();
+	this->public.backends = backend_manager_create();
 
 	/* initialize fetcher_t class */
 	fetcher_initialize();
@@ -274,12 +311,14 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	/* load secrets, ca certificates and crls */
 	credentials = this->public.credentials;
 	credentials->load_ca_certificates(credentials);
+	credentials->load_aa_certificates(credentials);
+	credentials->load_attr_certificates(credentials);
 	credentials->load_ocsp_certificates(credentials);
 	credentials->load_crls(credentials);
 	credentials->load_secrets(credentials);
 	
 	/* start building threads, we are multi-threaded NOW */
-	this->public.stroke = stroke_create();
+	this->public.interfaces = interface_manager_create();
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();
@@ -327,22 +366,21 @@ private_daemon_t *daemon_create(void)
 		
 	/* assign methods */
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
+	this->public.drop_capabilities = (void(*)(daemon_t*,bool))drop_capabilities;
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
 	this->public.ike_sa_manager = NULL;
 	this->public.job_queue = NULL;
 	this->public.event_queue = NULL;
-	this->public.configuration = NULL;
 	this->public.credentials = NULL;
-	this->public.connections = NULL;
-	this->public.policies = NULL;
+	this->public.backends = NULL;
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;
 	this->public.kernel_interface = NULL;
 	this->public.thread_pool = NULL;
-	this->public.stroke = NULL;
+	this->public.interfaces = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;
@@ -399,7 +437,7 @@ static void usage(const char *msg)
 int main(int argc, char *argv[])
 {
 	u_int crl_check_interval = 0;
-	bool strict_crl_policy = FALSE;
+	strict_t strict_crl_policy = STRICT_NO;
 	bool cache_crls = FALSE;
 	bool use_syslog = FALSE;
 	char *eapdir = IPSEC_EAPDIR;
@@ -411,6 +449,11 @@ int main(int argc, char *argv[])
 	host_t *host;
 	level_t levels[DBG_MAX];
 	int signal;
+	
+	prctl(PR_SET_KEEPCAPS, 1);
+	
+	/* drop the capabilities we won't need at all */
+	drop_capabilities(NULL, FALSE);
 	
 	/* use CTRL loglevel for default */
 	for (signal = 0; signal < DBG_MAX; signal++)
@@ -425,7 +468,7 @@ int main(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
-			{ "strictcrlpolicy", no_argument, NULL, 'r' },
+			{ "strictcrlpolicy", required_argument, NULL, 'r' },
 			{ "cachecrls", no_argument, NULL, 'C' },
 			{ "crlcheckinterval", required_argument, NULL, 'x' },
 			{ "eapdir", required_argument, NULL, 'e' },
@@ -458,7 +501,7 @@ int main(int argc, char *argv[])
 				use_syslog = TRUE;
 				continue;
 			case 'r':
-				strict_crl_policy = TRUE;
+				strict_crl_policy = atoi(optarg);
 				continue;
 			case 'C':
 				cache_crls = TRUE;
@@ -484,13 +527,13 @@ int main(int argc, char *argv[])
 	charon = (daemon_t*)private_charon;
 	
 	/* initialize daemon */
-	initialize(private_charon, strict_crl_policy, use_syslog, levels);
+	initialize(private_charon, use_syslog, levels);
 
 	/* load pluggable EAP modules */
 	eap_method_load(eapdir);
 	
-	/* set cache_crls and crl_check_interval options */
-	ca_info_set_options(cache_crls, crl_check_interval);
+	/* set strict_crl_policy, cache_crls and crl_check_interval options */
+	ca_info_set_options(strict_crl_policy, cache_crls, crl_check_interval);
 
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
@@ -516,6 +559,9 @@ int main(int argc, char *argv[])
 	}
 	list->destroy(list);
 	
+	/* drop additional capabilites (bind & root) */
+	drop_capabilities(private_charon, TRUE);
+	
 	/* run daemon */
 	run(private_charon);
 	
@@ -527,3 +573,4 @@ int main(int argc, char *argv[])
 	
 	return 0;
 }
+

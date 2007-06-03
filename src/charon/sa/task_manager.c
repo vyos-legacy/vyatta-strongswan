@@ -22,6 +22,8 @@
 
 #include "task_manager.h"
 
+#include <math.h>
+
 #include <daemon.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
@@ -35,7 +37,7 @@
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/child_delete.h>
 #include <encoding/payloads/delete_payload.h>
-#include <queues/jobs/retransmit_job.h>
+#include <processing/jobs/retransmit_job.h>
 
 typedef struct exchange_t exchange_t;
 
@@ -210,9 +212,12 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 		u_int32_t timeout;
 		job_t *job;
 
-		timeout = charon->configuration->get_retransmit_timeout(
-						charon->configuration, this->initiating.retransmitted);
-		if (timeout == 0)
+		if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
+		{
+			timeout = (u_int32_t)(RETRANSMIT_TIMEOUT *
+						pow(RETRANSMIT_BASE, this->initiating.retransmitted));
+		}
+		else
 		{
 			DBG1(DBG_IKE, "giving up after %d retransmits",
 				 this->initiating.retransmitted - 1);
@@ -262,6 +267,7 @@ static status_t build_request(private_task_manager_t *this)
 			case IKE_CREATED:
 				if (activate_task(this, IKE_INIT))
 				{
+					this->initiating.mid = 0;
 					exchange = IKE_SA_INIT;
 					activate_task(this, IKE_NATD);
 					activate_task(this, IKE_CERT);
@@ -274,7 +280,6 @@ static status_t build_request(private_task_manager_t *this)
 				if (activate_task(this, CHILD_CREATE))
 				{
 					exchange = CREATE_CHILD_SA;
-					activate_task(this, IKE_CONFIG);
 					break;
 				}
 				if (activate_task(this, CHILD_DELETE))
@@ -327,6 +332,11 @@ static status_t build_request(private_task_manager_t *this)
 					break;
 				case IKE_AUTHENTICATE:
 					exchange = IKE_AUTH;
+					break;
+				case CHILD_CREATE:
+				case CHILD_REKEY:
+				case IKE_REKEY:
+					exchange = CREATE_CHILD_SA;
 					break;
 				default:
 					continue;
@@ -577,7 +587,7 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_config_create(this->ike_sa, NULL);
+			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)child_create_create(this->ike_sa, NULL);
 			this->passive_tasks->insert_last(this->passive_tasks, task);

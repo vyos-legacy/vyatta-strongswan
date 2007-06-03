@@ -156,6 +156,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->id = push_string(msg, conn_end->id);
 	msg_end->cert = push_string(msg, conn_end->cert);
 	msg_end->ca = push_string(msg, conn_end->ca);
+	msg_end->groups = push_string(msg, conn_end->groups);
 	msg_end->updown = push_string(msg, conn_end->updown);
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
 	msg_end->address = push_string(msg, buffer);
@@ -167,7 +168,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->tohost = !conn_end->has_client;
 	msg_end->protocol = conn_end->protocol;
 	msg_end->port = conn_end->port;
-	msg_end->virtual_ip = conn_end->modecfg;
+	msg_end->virtual_ip = conn_end->modecfg || conn_end->has_srcip;
 	ip_address2string(&conn_end->srcip, buffer, sizeof(buffer));
 	msg_end->sourceip = push_string(msg, buffer);
 }

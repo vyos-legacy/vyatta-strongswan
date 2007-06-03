@@ -26,6 +26,7 @@
 #include <daemon.h>
 #include <crypto/diffie_hellman.h>
 #include <encoding/payloads/sa_payload.h>
+#include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
@@ -64,9 +65,9 @@ struct private_child_create_t {
 	chunk_t other_nonce;
 	
 	/**
-	 * policy to create the CHILD_SA from
+	 * config to create the CHILD_SA from
 	 */
-	policy_t *policy;
+	child_cfg_t *config;
 	
 	/**
 	 * list of proposal candidates
@@ -87,6 +88,16 @@ struct private_child_create_t {
 	 * traffic selectors for responders side
 	 */
 	linked_list_t *tsr;
+	
+	/**
+	 * optional diffie hellman exchange
+	 */
+	diffie_hellman_t *dh;
+	
+	/**
+	 * group used for DH exchange
+	 */
+	diffie_hellman_group_t dh_group;
 	
 	/**
 	 * mode the new CHILD_SA uses (transport/tunnel/beet)
@@ -162,20 +173,28 @@ static bool ts_list_is_host(linked_list_t *list, host_t *host)
 }
 
 /**
- * Install a CHILD_SA for usage
+ * Install a CHILD_SA for usage, return value:
+ * - FAILED: no acceptable proposal
+ * - INVALID_ARG: diffie hellman group inacceptable
+ * - NOT_FOUND: TS inacceptable
  */
-static status_t select_and_install(private_child_create_t *this)
+static status_t select_and_install(private_child_create_t *this, bool no_dh)
 {
 	prf_plus_t *prf_plus;
 	status_t status;
-	chunk_t nonce_i, nonce_r, seed;
+	chunk_t nonce_i, nonce_r, secret, seed;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other, *other_vip, *my_vip;
 	
-	if (this->proposals == NULL || this->tsi == NULL || this->tsr == NULL)
+	if (this->proposals == NULL)
 	{
-		SIG(CHILD_UP_FAILED, "SA/TS payloads missing in message");
+		SIG(CHILD_UP_FAILED, "SA payload missing in message");
 		return FAILED;
+	}
+	if (this->tsi == NULL || this->tsr == NULL)
+	{
+		SIG(CHILD_UP_FAILED, "TS payloads missing in message");
+		return NOT_FOUND;
 	}
 	
 	if (this->initiator)
@@ -198,36 +217,61 @@ static status_t select_and_install(private_child_create_t *this)
 	my_vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
 	other_vip = this->ike_sa->get_virtual_ip(this->ike_sa, FALSE);
 
-	this->proposal = this->policy->select_proposal(this->policy, this->proposals);
-	
+	this->proposal = this->config->select_proposal(this->config, this->proposals,
+												   no_dh);
 	if (this->proposal == NULL)
 	{
 		SIG(CHILD_UP_FAILED, "no acceptable proposal found");
 		return FAILED;
 	}
 	
-	if (this->initiator && my_vip)
-	{	/* if we have a virtual IP, shorten our TS to the minimum */
-		my_ts = this->policy->select_my_traffic_selectors(this->policy, my_ts,
-											 			  my_vip);
+	if (!this->proposal->has_dh_group(this->proposal, this->dh_group))
+	{
+		algorithm_t *algo;
+		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
+										  &algo))
+		{
+			u_int16_t group = algo->algorithm;
+			SIG(CHILD_UP_FAILED, "DH group %N inacceptable, requesting %N",
+				diffie_hellman_group_names, this->dh_group,
+				diffie_hellman_group_names, group);
+			this->dh_group = group;
+			return INVALID_ARG;
+		}
+		else
+		{
+			SIG(CHILD_UP_FAILED, "no acceptable proposal found");
+			return FAILED;
+		}
+	}
+	
+	if (my_vip == NULL)
+	{
+		my_vip = me;
+	}
+	else if (this->initiator)
+	{
 		/* to setup firewall rules correctly, CHILD_SA needs the virtual IP */
 		this->child_sa->set_virtual_ip(this->child_sa, my_vip);
 	}
-	else
-	{	/* shorten in the host2host case only */
-		my_ts = this->policy->select_my_traffic_selectors(this->policy, 
-															my_ts, me);
+	if (other_vip == NULL)
+	{
+		other_vip = other;
 	}
-	if (other_vip)
-	{	/* if other has a virtual IP, shorten it's traffic selectors to it */
-		other_ts = this->policy->select_other_traffic_selectors(this->policy,
-															other_ts, other_vip);
+	
+	my_ts = this->config->get_traffic_selectors(this->config, TRUE, my_ts,
+												my_vip);
+	other_ts = this->config->get_traffic_selectors(this->config, FALSE, other_ts, 
+												   other_vip);
+	
+	if (my_ts->get_count(my_ts) == 0 || other_ts->get_count(other_ts) == 0)
+	{
+		my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
+		other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
+		SIG(CHILD_UP_FAILED, "no acceptable traffic selectors found");
+		return NOT_FOUND;
 	}
-	else
-	{	/* use his host for the host2host case */
-		other_ts = this->policy->select_other_traffic_selectors(this->policy,
-															other_ts, other);
-	}
+	
 	this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
 	this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
 	if (this->initiator)
@@ -239,13 +283,6 @@ static status_t select_and_install(private_child_create_t *this)
 	{
 		this->tsr = my_ts;
 		this->tsi = other_ts;
-	}
-	
-	if (this->tsi->get_count(this->tsi) == 0 ||
-		this->tsr->get_count(this->tsr) == 0)
-	{
-		SIG(CHILD_UP_FAILED, "no acceptable traffic selectors found");
-		return FAILED;
 	}
 	
 	if (!this->initiator)
@@ -279,7 +316,20 @@ static status_t select_and_install(private_child_create_t *this)
 		}
 	}
 	
-	seed = chunk_cata("cc", nonce_i, nonce_r);
+	if (this->dh)
+	{
+		if (this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
+		{
+			SIG(CHILD_UP_FAILED, "DH exchange incomplete");
+			return FAILED;
+		}
+		DBG3(DBG_IKE, "DH secret %B", &secret);
+		seed = chunk_cata("mcc", secret, nonce_i, nonce_r);
+	}
+	else
+	{
+		seed = chunk_cata("cc", nonce_i, nonce_r);
+	}
 	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 	
 	if (this->initiator)
@@ -297,7 +347,7 @@ static status_t select_and_install(private_child_create_t *this)
 	if (status != SUCCESS)
 	{
 		SIG(CHILD_UP_FAILED, "unable to install IPsec SA (SAD) in kernel");
-		return status;
+		return FAILED;
 	}
 	
 	status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts,
@@ -306,7 +356,7 @@ static status_t select_and_install(private_child_create_t *this)
 	if (status != SUCCESS)
 	{	
 		SIG(CHILD_UP_FAILED, "unable to install IPsec policies (SPD) in kernel");
-		return status;
+		return NOT_FOUND;
 	}
 	/* add to IKE_SA, and remove from task */
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
@@ -321,8 +371,9 @@ static status_t select_and_install(private_child_create_t *this)
 static void build_payloads(private_child_create_t *this, message_t *message)
 {
 	sa_payload_t *sa_payload;
-	ts_payload_t *ts_payload;
 	nonce_payload_t *nonce_payload;
+	ke_payload_t *ke_payload;
+	ts_payload_t *ts_payload;
 
 	/* add SA payload */
 	if (this->initiator)
@@ -341,6 +392,13 @@ static void build_payloads(private_child_create_t *this, message_t *message)
 		nonce_payload = nonce_payload_create();
 		nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 		message->add_payload(message, (payload_t*)nonce_payload);
+	}
+	
+	/* diffie hellman exchange, if PFS enabled */
+	if (this->dh)
+	{
+		ke_payload = ke_payload_create_from_diffie_hellman(this->dh);
+		message->add_payload(message, (payload_t*)ke_payload);
 	}
 	
 	/* add TSi/TSr payloads */
@@ -371,6 +429,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 	iterator_t *iterator;
 	payload_t *payload;
 	sa_payload_t *sa_payload;
+	ke_payload_t *ke_payload;
 	ts_payload_t *ts_payload;
 	notify_payload_t *notify_payload;
 	
@@ -385,6 +444,19 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 			case SECURITY_ASSOCIATION:
 				sa_payload = (sa_payload_t*)payload;
 				this->proposals = sa_payload->get_proposals(sa_payload);
+				break;
+			case KEY_EXCHANGE:
+				ke_payload = (ke_payload_t*)payload;
+				if (!this->initiator)
+				{
+					this->dh_group = ke_payload->get_dh_group_number(ke_payload);
+					this->dh = diffie_hellman_create(this->dh_group);
+				}
+				if (this->dh)
+				{
+					this->dh->set_other_public_value(this->dh,
+								ke_payload->get_key_exchange_data(ke_payload));
+				}
 				break;
 			case TRAFFIC_SELECTOR_INITIATOR:
 				ts_payload = (ts_payload_t*)payload;
@@ -421,6 +493,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 static status_t build_i(private_child_create_t *this, message_t *message)
 {
 	host_t *me, *other, *vip;
+	peer_cfg_t *peer_cfg;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -431,6 +504,10 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 			{
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 				return SUCCESS;
+			}
+			if (this->dh_group == MODP_NONE)
+			{
+				this->dh_group = this->config->get_dh_group(this->config);
 			}
 			break;
 		case IKE_AUTH:
@@ -448,31 +525,41 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
-	vip = this->policy->get_virtual_ip(this->policy, NULL);
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	vip = peer_cfg->get_my_virtual_ip(peer_cfg);
 	
 	if (vip)
 	{	/* propose a 0.0.0.0/0 subnet when we use virtual ip */
-		this->tsi = this->policy->get_my_traffic_selectors(this->policy, NULL);
+		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
+														NULL, NULL);
 		vip->destroy(vip);
 	}
 	else
 	{	/* but shorten a 0.0.0.0/0 subnet to the actual address if host2host */
-		this->tsi = this->policy->get_my_traffic_selectors(this->policy, me);
+		this->tsi = this->config->get_traffic_selectors(this->config, TRUE,
+														NULL, me);
 	}
-	this->tsr = this->policy->get_other_traffic_selectors(this->policy, other);
-	this->proposals = this->policy->get_proposals(this->policy);
-	this->mode = this->policy->get_mode(this->policy);
+	this->tsr = this->config->get_traffic_selectors(this->config, FALSE, 
+													NULL, other);
+	this->proposals = this->config->get_proposals(this->config,
+												  this->dh_group == MODP_NONE);
+	this->mode = this->config->get_mode(this->config);
 	
 	this->child_sa = child_sa_create(me, other,
 									 this->ike_sa->get_my_id(this->ike_sa),
 									 this->ike_sa->get_other_id(this->ike_sa),
-									 this->policy, this->reqid,
+									 this->config, this->reqid,
 									 this->ike_sa->is_natt_enabled(this->ike_sa));
 	
 	if (this->child_sa->alloc(this->child_sa, this->proposals) != SUCCESS)
 	{
 		SIG(CHILD_UP_FAILED, "unable to allocate SPIs from kernel");
 		return FAILED;
+	}
+	
+	if (this->dh_group != MODP_NONE)
+	{
+		this->dh = diffie_hellman_create(this->dh_group);
 	}
 	
 	build_payloads(this, message);
@@ -492,6 +579,8 @@ static status_t build_i(private_child_create_t *this, message_t *message)
  */
 static status_t process_r(private_child_create_t *this, message_t *message)
 {
+	peer_cfg_t *peer_cfg;
+
 	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
@@ -517,18 +606,13 @@ static status_t process_r(private_child_create_t *this, message_t *message)
 		return NEED_MORE;
 	}
 		  
-	this->policy = charon->policies->get_policy(charon->policies,
-							this->ike_sa->get_my_id(this->ike_sa),
-							this->ike_sa->get_other_id(this->ike_sa), 
-							this->tsr, this->tsi,
-							this->ike_sa->get_my_host(this->ike_sa),
-							this->ike_sa->get_other_host(this->ike_sa));
-	
-	if (this->policy && this->ike_sa->get_policy(this->ike_sa) == NULL)
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	if (peer_cfg)
 	{
-		this->ike_sa->set_policy(this->ike_sa, this->policy);
+		this->config = peer_cfg->select_child_cfg(peer_cfg, this->tsr, this->tsi,
+									this->ike_sa->get_my_host(this->ike_sa),
+									this->ike_sa->get_other_host(this->ike_sa));
 	}
-	
 	return NEED_MORE;
 }
 
@@ -537,6 +621,8 @@ static status_t process_r(private_child_create_t *this, message_t *message)
  */
 static status_t build_r(private_child_create_t *this, message_t *message)
 {
+	bool no_dh = TRUE;
+
 	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
@@ -547,6 +633,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 				return SUCCESS;
 			}
+			no_dh = FALSE;
 			break;
 		case IKE_AUTH:
 			if (message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
@@ -565,10 +652,11 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		return SUCCESS;
 	}
 	
-	if (this->policy == NULL)
+	if (this->config == NULL)
 	{
-		SIG(CHILD_UP_FAILED, "no acceptable policy found");
-		message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		SIG(CHILD_UP_FAILED, "traffic selectors %#R=== %#R inacceptable",
+			this->tsr, this->tsi);
+		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
 		return SUCCESS;
 	}
 	
@@ -576,13 +664,27 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 									 this->ike_sa->get_other_host(this->ike_sa),
 									 this->ike_sa->get_my_id(this->ike_sa),
 									 this->ike_sa->get_other_id(this->ike_sa),
-									 this->policy, this->reqid,
+									 this->config, this->reqid,
 									 this->ike_sa->is_natt_enabled(this->ike_sa));
 	
-	if (select_and_install(this) != SUCCESS)
+	switch (select_and_install(this, no_dh))
 	{
-		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
-		return SUCCESS;
+		case SUCCESS:
+			break;
+		case NOT_FOUND:
+			message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);
+			return SUCCESS;
+		case INVALID_ARG:
+		{
+			u_int16_t group = htons(this->dh_group);
+			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
+								chunk_from_thing(group));
+			return SUCCESS;
+		}
+		case FAILED:
+		default:
+			message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+			return SUCCESS;
 	}
 	
 	build_payloads(this, message);
@@ -599,6 +701,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 {
 	iterator_t *iterator;
 	payload_t *payload;
+	bool no_dh = TRUE;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -606,6 +709,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 			return get_nonce(message, &this->other_nonce);
 		case CREATE_CHILD_SA:
 			get_nonce(message, &this->other_nonce);
+			no_dh = FALSE;
 			break;
 		case IKE_AUTH:
 			if (message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
@@ -643,6 +747,22 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 					/* an error in CHILD_SA creation is not critical */
 					return SUCCESS;
 				}
+				case INVALID_KE_PAYLOAD:
+				{
+					chunk_t data;
+					diffie_hellman_group_t bad_group;
+					
+					bad_group = this->dh_group;
+					data = notify->get_notification_data(notify);
+					this->dh_group = ntohs(*((u_int16_t*)data.ptr));
+					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
+						 "it requested %N", diffie_hellman_group_names,
+						 bad_group, diffie_hellman_group_names, this->dh_group);
+					
+					this->public.task.migrate(&this->public.task, this->ike_sa);
+					iterator->destroy(iterator);
+					return NEED_MORE;
+				}
 				default:
 					break;
 			}
@@ -652,7 +772,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 	
 	process_payloads(this, message);
 	
-	if (select_and_install(this) == SUCCESS)
+	if (select_and_install(this, no_dh) == SUCCESS)
 	{
 		SIG(CHILD_UP_SUCCESS, "established CHILD_SA successfully");
 	}
@@ -716,6 +836,7 @@ static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
 	}
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->dh);
 	if (this->proposals)
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
@@ -725,6 +846,7 @@ static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
 	this->proposals = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
+	this->dh = NULL;
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
 	this->reqid = 0;
@@ -751,19 +873,20 @@ static void destroy(private_child_create_t *this)
 		DESTROY_IF(this->child_sa);
 	}
 	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->dh);
 	if (this->proposals)
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 	}
 	
-	DESTROY_IF(this->policy);
+	DESTROY_IF(this->config);
 	free(this);
 }
 
 /*
  * Described in header.
  */
-child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
+child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config)
 {
 	private_child_create_t *this = malloc_thing(private_child_create_t);
 
@@ -773,12 +896,12 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	if (policy)
+	if (config)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
 		this->initiator = TRUE;
-		policy->get_ref(policy);
+		config->get_ref(config);
 	}
 	else
 	{
@@ -788,13 +911,15 @@ child_create_t *child_create_create(ike_sa_t *ike_sa, policy_t *policy)
 	}
 	
 	this->ike_sa = ike_sa;
-	this->policy = policy;
+	this->config = config;
 	this->my_nonce = chunk_empty;
 	this->other_nonce = chunk_empty;
 	this->proposals = NULL;
 	this->proposal = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
+	this->dh = NULL;
+	this->dh_group = MODP_NONE;
 	this->child_sa = NULL;
 	this->mode = MODE_TUNNEL;
 	this->reqid = 0;

@@ -172,7 +172,7 @@ extern kw_entry_t *in_word_set (char *str, unsigned int len);
 typedef union YYSTYPE
 #line 56 "parser.y"
 { char *s; }
-/* Line 193 of yacc.c.  */
+/* Line 187 of yacc.c.  */
 #line 177 "y.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

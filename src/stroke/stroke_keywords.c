@@ -1,6 +1,6 @@
 /* C code produced by gperf version 3.0.1 */
 /* Command-line: /usr/bin/gperf -C -G -t  */
-/* Computed positions: -k'2,7' */
+/* Computed positions: -k'1,5,7' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
       && ('%' == 37) && ('&' == 38) && ('\'' == 39) && ('(' == 40) \
@@ -56,12 +56,12 @@ struct stroke_token {
     stroke_keyword_t kw;
 };
 
-#define TOTAL_KEYWORDS 22
+#define TOTAL_KEYWORDS 27
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 15
-#define MIN_HASH_VALUE 2
-#define MAX_HASH_VALUE 33
-/* maximum key range = 32, duplicates = 0 */
+#define MIN_HASH_VALUE 3
+#define MAX_HASH_VALUE 40
+/* maximum key range = 38, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -77,32 +77,32 @@ hash (str, len)
 {
   static const unsigned char asso_values[] =
     {
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34,  0, 34,  0,
-      30,  0, 34, 34, 34,  5, 34, 34, 15, 34,
-       0,  0,  0, 34, 10,  5,  5, 10, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34, 34, 34, 34, 34,
-      34, 34, 34, 34, 34, 34
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41,  0, 41,  5,
+      28,  0, 41,  5, 41, 20, 41, 41,  0, 41,
+      41, 15,  0, 41, 10, 10,  0, 10, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41, 41, 41, 41, 41,
+      41, 41, 41, 41, 41, 41
     };
   register int hval = len;
 
@@ -113,10 +113,13 @@ hash (str, len)
       /*FALLTHROUGH*/
       case 6:
       case 5:
+        hval += asso_values[(unsigned char)str[4]];
+      /*FALLTHROUGH*/
       case 4:
       case 3:
       case 2:
-        hval += asso_values[(unsigned char)str[1]];
+      case 1:
+        hval += asso_values[(unsigned char)str[0]];
         break;
     }
   return hval;
@@ -124,35 +127,42 @@ hash (str, len)
 
 static const struct stroke_token wordlist[] =
   {
-    {""}, {""},
-    {"up",              STROKE_UP},
-    {"del",             STROKE_DEL},
-    {"down",            STROKE_DOWN},
-    {"route",           STROKE_ROUTE},
-    {"delete",          STROKE_DELETE},
-    {"unroute",         STROKE_UNROUTE},
+    {""}, {""}, {""},
+    {"add",             STROKE_ADD},
+    {""}, {""}, {""},
+    {"listall",         STROKE_LIST_ALL},
     {"loglevel",        STROKE_LOGLEVEL},
+    {""},
+    {"listacerts",      STROKE_LIST_ACERTS},
+    {""},
+    {"up",              STROKE_UP},
+    {"listcrls",        STROKE_LIST_CRLS},
+    {"purgeocsp",       STROKE_PURGE_OCSP},
+    {"route",           STROKE_ROUTE},
+    {"listaacerts",     STROKE_LIST_AACERTS},
+    {""}, {""},
     {"rereadall",       STROKE_REREAD_ALL},
+    {""},
+    {"listcacerts",     STROKE_LIST_CACERTS},
+    {"rereadacerts",    STROKE_REREAD_ACERTS,},
+    {"rereadaacerts",   STROKE_REREAD_AACERTS,},
+    {"listcerts",       STROKE_LIST_CERTS},
     {"rereadcrls",      STROKE_REREAD_CRLS},
     {"status",          STROKE_STATUS},
-    {""},
+    {"unroute",         STROKE_UNROUTE},
     {"rereadcacerts",   STROKE_REREAD_CACERTS},
     {"statusall",       STROKE_STATUSALL},
-    {"rereadocspcerts", STROKE_REREAD_OCSPCERTS},
-    {"listcacerts",     STROKE_LIST_CACERTS},
-    {""},
+    {"listgroups",      STROKE_LIST_GROUPS},
+    {"del",             STROKE_DEL},
+    {"down",            STROKE_DOWN},
     {"listocsp",        STROKE_LIST_OCSP},
-    {"purgeocsp",       STROKE_PURGE_OCSP},
+    {"delete",          STROKE_DELETE},
     {""},
     {"listcainfos",     STROKE_LIST_CAINFOS},
     {""},
     {"listocspcerts",   STROKE_LIST_OCSPCERTS},
-    {"listcerts",       STROKE_LIST_CERTS},
-    {""}, {""},
-    {"listall",         STROKE_LIST_ALL},
-    {"listcrls",        STROKE_LIST_CRLS},
-    {""}, {""}, {""}, {""},
-    {"add",             STROKE_ADD}
+    {""},
+    {"rereadocspcerts", STROKE_REREAD_OCSPCERTS}
   };
 
 #ifdef __GNUC__

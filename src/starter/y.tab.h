@@ -70,7 +70,7 @@
 typedef union YYSTYPE
 #line 56 "parser.y"
 { char *s; }
-/* Line 1528 of yacc.c.  */
+/* Line 1488 of yacc.c.  */
 #line 75 "y.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

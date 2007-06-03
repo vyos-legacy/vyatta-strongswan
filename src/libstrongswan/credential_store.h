@@ -88,15 +88,6 @@ struct credential_store_t {
 	rsa_public_key_t* (*get_rsa_public_key) (credential_store_t *this, identification_t *id);
 	
 	/**
-	 * @brief Returns the RSA public key of a specific ID if is trusted
-	 * 
-	 * @param this					calling object
-	 * @param id					identification_t object identifiying the key.
-	 * @return						public key, or NULL if not found or not trusted
-	 */
-	rsa_public_key_t* (*get_trusted_public_key) (credential_store_t *this, identification_t *id);
-	
-	/**
 	 * @brief Returns the RSA private key belonging to an RSA public key
 	 * 
 	 * The returned rsa_private_key_t must be destroyed by the caller after usage.
@@ -151,16 +142,29 @@ struct credential_store_t {
 	 * @param cert					certificate for which issuer ca info is required
 	 * @return						ca info, or NULL if not found
 	 */
-	ca_info_t* (*get_issuer) (credential_store_t *this, const x509_t* cert);
+	ca_info_t* (*get_issuer) (credential_store_t *this, x509_t* cert);
 
+	/**
+	 * @brief Verify an RSA signature given the ID of the signer
+	 * 
+	 * @param this					calling object
+	 * @param hash					hash value to be verified.
+	 * @param sig					signature to be verified.
+	 * @param id					identification_t object identifiying the signer.
+	 * @param issuer_p				issuer of the signer's certificate (if not self-signed).
+	 * @return						status of the verification - SUCCESS if successful
+	 */
+	status_t (*verify_signature) (credential_store_t *this, chunk_t hash, chunk_t sig, identification_t *id, ca_info_t **issuer_p);
+	
 	/**
 	 * @brief Verify an X.509 certificate up to trust anchor without any status checks
 	 *
 	 * @param this		calling object
+	 * @param label		label characterizing the certificate to be verified
 	 * @param cert		certificate to be verified
 	 * @return			TRUE if trusted
 	 */
-	bool (*is_trusted) (credential_store_t *this, x509_t *cert);
+	bool (*is_trusted) (credential_store_t *this, const char *label, x509_t *cert);
 
 	/**
 	 * @brief Verify an X.509 certificate up to trust anchor including status checks
@@ -196,8 +200,9 @@ struct credential_store_t {
 	 *
 	 * @param this		calling object
 	 * @param ca_info	ca info record to be added
+	 * @return			pointer to the added or already existing ca_info_t record
 	 */
-	void (*add_ca_info) (credential_store_t *this, ca_info_t *ca_info);
+	ca_info_t* (*add_ca_info) (credential_store_t *this, ca_info_t *ca_info);
 
 	/**
 	 * @brief Release a ca info record with a given name.
@@ -243,6 +248,24 @@ struct credential_store_t {
 	 */
 	void (*load_ca_certificates) (credential_store_t *this);
 	
+	/**
+	 * @brief Loads authorization authority certificates from a default directory.
+	 *
+	 * Certificates in both DER and PEM format are accepted
+	 *
+	 * @param this		calling object
+	 */
+	void (*load_aa_certificates) (credential_store_t *this);
+
+	/**
+	 * @brief Loads attribute certificates from a default directory.
+	 *
+	 * Certificates in both DER and PEM format are accepted
+	 *
+	 * @param this		calling object
+	 */
+	void (*load_attr_certificates) (credential_store_t *this);
+
 	/**
 	 * @brief Loads ocsp certificates from a default directory.
 	 *

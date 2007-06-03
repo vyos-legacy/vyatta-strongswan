@@ -27,7 +27,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <printf.h>
 
 #include <daemon.h>
 
@@ -154,9 +153,9 @@ struct private_child_sa_t {
 	host_t *virtual_ip;
 	
 	/**
-	 * policy used to create this child
+	 * config used to create this child
 	 */
-	policy_t *policy;
+	child_cfg_t *config;
 };
 
 /**
@@ -164,7 +163,7 @@ struct private_child_sa_t {
  */
 static char *get_name(private_child_sa_t *this)
 {
-	return this->policy->get_name(this->policy);;
+	return this->config->get_name(this->config);
 }
 
 /**
@@ -204,11 +203,57 @@ static child_sa_state_t get_state(private_child_sa_t *this)
 }
 
 /**
- * Implements child_sa_t.get_policy
+ * Implements child_sa_t.get_config
  */
-static policy_t* get_policy(private_child_sa_t *this)
+static child_cfg_t* get_config(private_child_sa_t *this)
 {
-	return this->policy;
+	return this->config;
+}
+
+/**
+ * Implementation of child_sa_t.get_stats.
+ */
+static void get_stats(private_child_sa_t *this, mode_t *mode,
+					  encryption_algorithm_t *encr_algo, size_t *encr_len,
+					  integrity_algorithm_t *int_algo, size_t *int_len,
+					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
+					  u_int32_t *use_fwd)
+{
+	sa_policy_t *policy;
+	iterator_t *iterator;
+	u_int32_t in = 0, out = 0, fwd = 0, time;
+	
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->iterate(iterator, (void**)&policy))
+	{
+
+		if (charon->kernel_interface->query_policy(charon->kernel_interface,
+				policy->other_ts, policy->my_ts, POLICY_IN, &time) == SUCCESS)
+		{
+			in = max(in, time);
+		}
+		if (charon->kernel_interface->query_policy(charon->kernel_interface,
+				policy->my_ts, policy->other_ts, POLICY_OUT, &time) == SUCCESS)
+		{
+			out = max(out, time);
+		}
+		if (charon->kernel_interface->query_policy(charon->kernel_interface,
+				policy->other_ts, policy->my_ts, POLICY_FWD, &time) == SUCCESS)
+		{
+			fwd = max(fwd, time);
+		}
+	}
+	iterator->destroy(iterator);
+
+	*mode = this->mode;
+	*encr_algo = this->encryption.algorithm;
+	*encr_len = this->encryption.key_size;
+	*int_algo = this->integrity.algorithm;
+	*int_len = this->integrity.key_size;
+	*rekey = this->rekey_time;
+	*use_in = in;
+	*use_out = out;
+	*use_fwd = fwd;
 }
 
 /**
@@ -220,7 +265,7 @@ static void updown(private_child_sa_t *this, bool up)
 	iterator_t *iterator;
 	char *script;
 	
-	script = this->policy->get_updown(this->policy);
+	script = this->config->get_updown(this->config);
 	
 	if (script == NULL)
 	{
@@ -300,7 +345,7 @@ static void updown(private_child_sa_t *this, bool up)
 				 policy->my_ts->is_host(policy->my_ts,
 							this->me.addr) ? "-host" : "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
-				 this->policy->get_name(this->policy),
+				 this->config->get_name(this->config),
 				 ifname ? ifname : "(unknown)",
 				 this->reqid,
 				 this->me.addr,
@@ -316,7 +361,7 @@ static void updown(private_child_sa_t *this, bool up)
 				 policy->other_ts->get_from_port(policy->other_ts),
 				 policy->other_ts->get_protocol(policy->other_ts),
 				 virtual_ip,
-				 this->policy->get_hostaccess(this->policy) ?
+				 this->config->get_hostaccess(this->config) ?
 				 	"PLUTO_HOST_ACCESS='1' " : "",
 				 script);
 		free(ifname);
@@ -528,8 +573,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 		natt = NULL;
 	}
 	
-	soft = this->policy->get_soft_lifetime(this->policy);
-	hard = this->policy->get_hard_lifetime(this->policy);
+	soft = this->config->get_lifetime(this->config, TRUE);
+	hard = this->config->get_lifetime(this->config, FALSE);
 	
 	/* send SA down to the kernel */
 	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
@@ -542,7 +587,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	this->encryption = *enc_algo;
 	this->integrity = *int_algo;
 	this->install_time = time(NULL);
-	this->rekey_time = soft;
+	this->rekey_time = this->install_time + soft;
 	
 	return status;
 }
@@ -628,7 +673,7 @@ static status_t add_policies(private_child_sa_t *this,
 			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
 			{
 				DBG2(DBG_CHD,
-					 "CHILD_SA policy uses two different IP families, ignored");
+					 "CHILD_SA policy uses two different IP families - ignored");
 				continue;
 			}
 			
@@ -637,7 +682,7 @@ static status_t add_policies(private_child_sa_t *this,
 				my_ts->get_protocol(my_ts) && other_ts->get_protocol(other_ts))
 			{
 				DBG2(DBG_CHD,
-					 "CHILD_SA policy uses two different protocols, ignored");
+					 "CHILD_SA policy uses two different protocols - ignored");
 				continue;
 			}
 			
@@ -665,10 +710,10 @@ static status_t add_policies(private_child_sa_t *this,
 			policy = malloc_thing(sa_policy_t);
 			policy->my_ts = my_ts->clone(my_ts);
 			policy->other_ts = other_ts->clone(other_ts);
-			this->policies->insert_last(this->policies, (void*)policy);
+			this->policies->insert_last(this->policies, policy);
 			/* add to separate list to query them via get_*_traffic_selectors() */
-			this->my_ts->insert_last(this->my_ts, (void*)policy->my_ts);
-			this->other_ts->insert_last(this->other_ts, (void*)policy->other_ts);
+			this->my_ts->insert_last(this->my_ts, policy->my_ts);
+			this->other_ts->insert_last(this->other_ts, policy->other_ts);
 		}
 	}
 	my_iter->destroy(my_iter);
@@ -685,18 +730,14 @@ static status_t add_policies(private_child_sa_t *this,
 }
 
 /**
- * Implementation of child_sa_t.get_my_traffic_selectors.
+ * Implementation of child_sa_t.get_traffic_selectors.
  */
-static linked_list_t *get_my_traffic_selectors(private_child_sa_t *this)
+static linked_list_t *get_traffic_selectors(private_child_sa_t *this, bool local)
 {
-	return this->my_ts;
-}
-
-/**
- * Implementation of child_sa_t.get_my_traffic_selectors.
- */
-static linked_list_t *get_other_traffic_selectors(private_child_sa_t *this)
-{
+	if (local)
+	{
+		return this->my_ts;
+	}
 	return this->other_ts;
 }
 
@@ -738,126 +779,6 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 	}
 	iterator->destroy(iterator);
 	return status;
-}
-
-/**
- * output handler in printf()
- */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
-{
-	private_child_sa_t *this = *((private_child_sa_t**)(args[0]));
-	iterator_t *iterator;
-	sa_policy_t *policy;
-	u_int32_t now, rekeying;
-	u_int32_t use, use_in, use_fwd;
-	status_t status;
-	size_t written = 0;
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
-	
-	now = time(NULL);
-	
-	written += fprintf(stream, "%12s{%d}:  %N, %N", 
-					   this->policy->get_name(this->policy), this->reqid,
-					   child_sa_state_names, this->state,
-					   mode_names, this->mode);
-	
-	if (this->state == CHILD_INSTALLED)
-	{
-		written += fprintf(stream, ", %N SPIs: 0x%0x_i 0x%0x_o",
-						   protocol_id_names, this->protocol,
-						   htonl(this->me.spi), htonl(this->other.spi));
-		
-		if (info->alt)
-		{
-			written += fprintf(stream, "\n%12s{%d}:  ",
-							   this->policy->get_name(this->policy),
-							   this->reqid);
-			
-			if (this->protocol == PROTO_ESP)
-			{
-				written += fprintf(stream, "%N", encryption_algorithm_names,
-								   this->encryption.algorithm);
-				
-				if (this->encryption.key_size)
-				{
-					written += fprintf(stream, "-%d", this->encryption.key_size);
-				}
-				written += fprintf(stream, "/");
-			}
-			
-			written += fprintf(stream, "%N", integrity_algorithm_names,
-							   this->integrity.algorithm);
-			if (this->integrity.key_size)
-			{
-				written += fprintf(stream, "-%d", this->integrity.key_size);
-			}
-			written += fprintf(stream, ", rekeying ");
-			
-			/* calculate rekey times */
-			if (this->rekey_time)
-			{
-				rekeying = this->install_time + this->rekey_time - now;
-				written += fprintf(stream, "in %ds", rekeying);
-			}
-			else
-			{
-				written += fprintf(stream, "disabled");
-			}
-		}
-	}
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&policy))
-	{
-		written += fprintf(stream, "\n%12s{%d}:   %R===%R, last use: ",
-						   this->policy->get_name(this->policy), this->reqid,
-						   policy->my_ts, policy->other_ts);
-		
-		/* query time of last policy use */
-
-		/* inbound: POLICY_IN or POLICY_FWD */
-		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-							policy->other_ts, policy->my_ts, POLICY_IN, &use_in);
-		use_in = (status == SUCCESS)? use_in : 0;
-		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-				policy->other_ts, policy->my_ts, POLICY_FWD, &use_fwd);
-		use_fwd = (status == SUCCESS)? use_fwd : 0;
-		use = max(use_in, use_fwd);
-		if (use)
-		{
-			written += fprintf(stream, "%ds_i ", now - use);
-		}
-		else
-		{
-			written += fprintf(stream, "no_i ");
-		}
-
-		/* outbound: POLICY_OUT */
-		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-							policy->my_ts, policy->other_ts, POLICY_OUT, &use);
-		if (status == SUCCESS && use)
-		{
-			written += fprintf(stream, "%ds_o ", now - use);
-		}
-		else
-		{
-			written += fprintf(stream, "no_o ");
-		}
-	}
-	iterator->destroy(iterator);
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_CHILD_SA, print, arginfo_ptr);
 }
 
 /**
@@ -1066,7 +987,7 @@ static void destroy(private_child_sa_t *this)
 	this->other.addr->destroy(this->other.addr);
 	this->me.id->destroy(this->me.id);
 	this->other.id->destroy(this->other.id);
-	this->policy->destroy(this->policy);
+	this->config->destroy(this->config);
 	DESTROY_IF(this->virtual_ip);
 	free(this);
 }
@@ -1076,7 +997,7 @@ static void destroy(private_child_sa_t *this)
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 identification_t *my_id, identification_t *other_id,
-							 policy_t *policy, u_int32_t rekey, bool use_natt)
+							 child_cfg_t *config, u_int32_t rekey, bool use_natt)
 {
 	static u_int32_t reqid = 0;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
@@ -1086,17 +1007,17 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.get_reqid = (u_int32_t(*)(child_sa_t*))get_reqid;
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
+	this->public.get_stats = (void(*)(child_sa_t*, mode_t*,encryption_algorithm_t*,size_t*,integrity_algorithm_t*,size_t*,u_int32_t*,u_int32_t*,u_int32_t*,u_int32_t*))get_stats;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_diff_t,host_diff_t))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t))add_policies;
-	this->public.get_my_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_my_traffic_selectors;
-	this->public.get_other_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_other_traffic_selectors;
+	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
-	this->public.get_policy = (policy_t*(*)(child_sa_t*))get_policy;
+	this->public.get_config = (child_cfg_t*(*)(child_sa_t*))get_config;
 	this->public.set_virtual_ip = (void(*)(child_sa_t*,host_t*))set_virtual_ip;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
@@ -1123,8 +1044,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
 	this->virtual_ip = NULL;
-	this->policy = policy;
-	policy->get_ref(policy);
+	this->config = config;
+	config->get_ref(config);
 	
 	return &this->public;
 }

@@ -49,11 +49,6 @@ struct private_ike_config_t {
 	bool initiator;
 	
 	/**
-	 * associated policy with virtual IP configuration
-	 */
-	policy_t *policy;
-	
-	/**
 	 * virtual ip
 	 */
 	host_t *virtual_ip;
@@ -266,7 +261,20 @@ static status_t build_i(private_ike_config_t *this, message_t *message)
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		message->get_payload(message, ID_INITIATOR))
 	{
-		this->virtual_ip = this->policy->get_virtual_ip(this->policy, NULL);
+		peer_cfg_t *config;
+		host_t *vip;
+		
+		/* reuse virtual IP if we already have one */
+		vip = this->ike_sa->get_virtual_ip(this->ike_sa, TRUE);
+		if (vip)
+		{
+			this->virtual_ip = vip->clone(vip);
+		}
+		else
+		{
+			config = this->ike_sa->get_peer_cfg(this->ike_sa);
+			this->virtual_ip = config->get_my_virtual_ip(config);
+		}
 		
 		build_payloads(this, message, CFG_REQUEST);
 	}
@@ -295,17 +303,18 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		message->get_payload(message, EXTENSIBLE_AUTHENTICATION) == NULL)
 	{
-		this->policy = this->ike_sa->get_policy(this->ike_sa);
+		peer_cfg_t *config = this->ike_sa->get_peer_cfg(this->ike_sa);
 		
-		if (this->policy && this->virtual_ip)
+		if (config && this->virtual_ip)
 		{
 			host_t *ip;
 			
 			DBG1(DBG_IKE, "peer requested virtual IP %H", this->virtual_ip);
-			ip = this->policy->get_virtual_ip(this->policy, this->virtual_ip);
+			ip = config->get_other_virtual_ip(config, this->virtual_ip);
 			if (ip == NULL || ip->is_anyaddr(ip))
 			{
 				DBG1(DBG_IKE, "not assigning a virtual IP to peer");
+				DESTROY_IF(ip);
 				return SUCCESS;
 			}
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer", ip);
@@ -340,13 +349,20 @@ static status_t process_i(private_ike_config_t *this, message_t *message)
 		!message->get_payload(message, EXTENSIBLE_AUTHENTICATION))
 	{
 		host_t *ip;
+		peer_cfg_t *config;
 		
 		DESTROY_IF(this->virtual_ip);
 		this->virtual_ip = NULL;
 
 		process_payloads(this, message);
+		
+		if (this->virtual_ip == NULL)
+		{	/* force a configured virtual IP, even server didn't return one */
+			config = this->ike_sa->get_peer_cfg(this->ike_sa);
+			this->virtual_ip = config->get_my_virtual_ip(config);
+		}
 
-		if (this->virtual_ip)
+		if (this->virtual_ip && !this->virtual_ip->is_anyaddr(this->virtual_ip))
 		{
 			this->ike_sa->set_virtual_ip(this->ike_sa, TRUE, this->virtual_ip);
 			
@@ -398,7 +414,7 @@ static void destroy(private_ike_config_t *this)
 /*
  * Described in header.
  */
-ike_config_t *ike_config_create(ike_sa_t *ike_sa, policy_t *policy)
+ike_config_t *ike_config_create(ike_sa_t *ike_sa, bool initiator)
 {
 	private_ike_config_t *this = malloc_thing(private_ike_config_t);
 
@@ -406,21 +422,18 @@ ike_config_t *ike_config_create(ike_sa_t *ike_sa, policy_t *policy)
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
 	
-	if (policy)
+	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
-		this->initiator = TRUE;
 	}
 	else
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
-		this->initiator = FALSE;
 	}
-	
+	this->initiator = initiator;
 	this->ike_sa = ike_sa;
-	this->policy = policy;
 	this->virtual_ip = NULL;
 	this->dns = linked_list_create();
 	

@@ -24,6 +24,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include <library.h>
 #include <utils/lexparser.h>
@@ -32,13 +33,13 @@
 #include <crypto/certinfo.h>
 #include <crypto/x509.h>
 #include <crypto/ca.h>
+#include <crypto/ac.h>
 #include <crypto/crl.h>
 #include <asn1/ttodata.h>
 
 #include "local_credential_store.h"
 
 #define PATH_BUF			256
-#define MAX_CA_PATH_LEN		7
 
 typedef struct shared_key_t shared_key_t;
 
@@ -103,24 +104,25 @@ static shared_key_t *shared_key_create(chunk_t secret)
   |                 | ca_info_t                |
   |                 +--------------------------+
 +---------------+   | char *name               |
-| x509_t        |<--| x509_t *cacert           |   +----------------------+
-+---------------+   | linked_list_t *certinfos |-->| certinfo_t           |
-| chunk_t keyid |   | linked_list_t *ocspuris  |   +----------------------+
-+---------------+   | crl_t *crl               |   | chunk_t serialNumber |
+| x509_t        |<--| x509_t *cacert           |
++---------------+   | linked_list_t *attrcerts |   +----------------------+
+| chunk_t keyid |   | linked_list_t *certinfos |-->| certinfo_t           |
++---------------+   | linked_list_t *ocspuris  |   +----------------------+
+  |                 | crl_t *crl               |   | chunk_t serialNumber |
   |                 | linked_list_t *crluris   |   | cert_status_t status |
-  |                 | pthread_mutex_t mutex    |   | time_t thisUpdate    |
-+---------------+   +--------------------------+   | time_t nextUpdate    |
-| x509_t        |                |                 | bool once            |
-+---------------+                |                 +----------------------+
-| chunk_t keyid |                |                   |
-+---------------+   +------------------------- +   +----------------------+
-  |                 | ca_info_t                |   | certinfo_t           |
-  |                 +--------------------------+   +----------------------+
-+---------------+   | char *name               |   | chunk_t serialNumber |
-| x509_t        |<--| x509_t *cacert           |   | cert_status_t status |
-+---------------+   | linked_list_t *certinfos |   | time_t thisUpdate    |
-| chunk_t keyid |   | linked_list_t *ocspuris  |   | time_t nextUpdate    |
-+---------------+   | crl_t *crl               |   | bool once            |
++---------------+   | pthread_mutex_t mutex    |   | time_t thisUpdate    |
+| x509_t        |   +--------------------------+   | time_t nextUpdate    |
++---------------+                |                 | bool once            |
+| chunk_t keyid |                |                 +----------------------+
++---------------+   +------------------------- +     |
+  |                 | ca_info_t                |   +----------------------+
+  |                 +--------------------------+   | certinfo_t           |
++---------------+   | char *name               |   +----------------------+
+| x509_t        |<--| x509_t *cacert           |   | chunk_t serialNumber |
++---------------+   | linked_list_t *attrcerts |   | cert_status_t status |
+| chunk_t keyid |   | linked_list_t *certinfos |   | time_t thisUpdate    |
++---------------+   | linked_list_t *ocspuris  |   | time_t nextUpdate    |
+  |                 | crl_t *crl               |   | bool once            |
   |                 | linked_list_t *crluris   |   +----------------------+
   |                 | pthread_mutex_t mutex;   |     |
   |                 +--------------------------+
@@ -169,11 +171,6 @@ struct private_local_credential_store_t {
 	 * list of X.509 CA information records
 	 */
 	linked_list_t *ca_infos;
-
-	/**
-	 * enforce strict crl policy
-	 */
-	bool strict;
 };
 
 
@@ -302,39 +299,29 @@ static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *th
 }
 
 /**
- * Implementation of local_credential_store_t.get_trusted_public_key.
+ * Implementation of credential_store_t.get_issuer.
  */
-static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t *this,
-												identification_t *id)
+static ca_info_t* get_issuer(private_local_credential_store_t *this, x509_t *cert)
 {
-	cert_status_t status;
-	err_t ugh;
+	ca_info_t *found = cert->get_ca_info(cert);
 
-	x509_t *cert = get_certificate(this, id);
-
-	if (cert == NULL)
-		return NULL;
-
-	ugh = cert->is_valid(cert, NULL);
-	if (ugh != NULL)
+	if (found == NULL)
 	{
-		DBG1(DBG_CFG, "certificate %s", ugh);
-		return NULL;
-	}
+		iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
+		ca_info_t *ca_info;
 
-	status = cert->get_status(cert);
-	if (status == CERT_REVOKED || status == CERT_UNTRUSTED || (this->strict && status != CERT_GOOD))
-	{
-		DBG1(DBG_CFG, "certificate status: %N", cert_status_names, status);
-		return NULL;
+		while (iterator->iterate(iterator, (void**)&ca_info))
+		{
+			if (ca_info->is_cert_issuer(ca_info, cert))
+			{
+				found = ca_info;
+				cert->set_ca_info(cert, found);
+				break;
+			}
+		}
+		iterator->destroy(iterator);
 	}
-	if (status == CERT_GOOD && cert->get_until(cert) < time(NULL))
-	{
-		DBG1(DBG_CFG, "certificate is good but crl is stale");
-		return NULL;
-	}
-
-	return cert->get_public_key(cert);
+	return found;
 }
 
 /**
@@ -435,29 +422,6 @@ static x509_t* get_ca_certificate_by_keyid(private_local_credential_store_t *thi
 }
 
 /**
- * Implementation of credential_store_t.get_issuer.
- */
-static ca_info_t* get_issuer(private_local_credential_store_t *this, const x509_t *cert)
-{
-	ca_info_t *found = NULL;
-	ca_info_t *ca_info;
-
-	iterator_t *iterator = this->ca_infos->create_iterator(this->ca_infos, TRUE);
-
-	while (iterator->iterate(iterator, (void**)&ca_info))
-	{
-		if (ca_info->is_cert_issuer(ca_info, cert))
-		{
-			found = ca_info;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-
-	return found;
-}
-
-/**
  * Find an exact copy of a certificate in a linked list
  */
 static x509_t* find_certificate(linked_list_t *certs, x509_t *cert)
@@ -509,13 +473,13 @@ static void add_uris(ca_info_t *issuer, x509_t *cert)
 /**
  * Implementation of credential_store_t.is_trusted
  */
-static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
+static bool is_trusted(private_local_credential_store_t *this, const char *label, x509_t *cert)
 {
 	int pathlen;
 	time_t until = UNDEFINED_TIME;
 	x509_t *cert_to_be_trusted = cert;
 
-	DBG2(DBG_CFG, "establishing trust in certificate:");
+	DBG1(DBG_CFG, "establishing trust in %s certificate:", label);
 
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
@@ -525,8 +489,8 @@ static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
 		rsa_public_key_t *issuer_public_key;
 		bool valid_signature;
 
-		DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
-		DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+		DBG1(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
+		DBG1(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
 
 		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)
@@ -558,18 +522,19 @@ static bool is_trusted(private_local_credential_store_t *this, x509_t *cert)
 		/* check if cert is a self-signed root ca */
 		if (pathlen > 0 && cert->is_self_signed(cert))
 		{
-			DBG2(DBG_CFG, "reached self-signed root ca");
+			DBG1(DBG_CFG, "reached self-signed root ca");
 			cert_to_be_trusted->set_until(cert_to_be_trusted, until);
 			cert_to_be_trusted->set_status(cert_to_be_trusted, CERT_GOOD);
 			return TRUE;
 		}
 		else
 		{
-			/* go up one step in the trust chain */
+			DBG1(DBG_CFG, "going up one step in the certificate trust chain (%d)",
+						   pathlen + 1);
 			cert = issuer_cert;
 		}
 	}
-	DBG1(DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	DBG1(DBG_CFG, "maximum ca path length of %d levels reached", MAX_CA_PATH_LEN);
 	return FALSE;
 }
 
@@ -584,7 +549,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 	x509_t *end_cert = cert;
 	x509_t *cert_copy = find_certificate(this->certs, end_cert);
 	
-	DBG2(DBG_CFG, "verifying end entity certificate:");
+	DBG1(DBG_CFG, "verifying end entity certificate up to trust anchor:");
 
 	*found = (cert_copy != NULL);
 	if (*found)
@@ -595,14 +560,16 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
+		bool valid_signature;
 		err_t ugh = NULL;
 		ca_info_t *issuer;
 		x509_t *issuer_cert;
 		rsa_public_key_t *issuer_public_key;
-		bool valid_signature;
+		chunk_t keyid = cert->get_keyid(cert);
 
 		DBG1(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
 		DBG1(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+		DBG1(DBG_CFG, "keyid:    %#B", &keyid);
 
 		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)
@@ -647,11 +614,10 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		}
 		else
 		{
+			bool strict;
 			time_t nextUpdate;
 			cert_status_t status;
 			certinfo_t *certinfo = certinfo_create(cert->get_serialNumber(cert));
-
-			certinfo->set_nextUpdate(certinfo, until);
 
 			if (pathlen == 0)
 			{
@@ -659,12 +625,18 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 				add_uris(issuer, cert);
 			}
 
+			strict = issuer->is_strict(issuer);
+			DBG1(DBG_CFG, "issuer %s a strict crl policy",
+				 strict ? "enforces":"does not enforce");
+
 			/* first check certificate revocation using ocsp */
 			status = issuer->verify_by_ocsp(issuer, certinfo, &this->public.credential_store);
 
 			/* if ocsp service is not available then fall back to crl */
-			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && this->strict))
+			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && strict))
 			{
+
+				certinfo->set_status(certinfo, CERT_UNKNOWN);
 				status = issuer->verify_by_crl(issuer, certinfo, CRL_DIR);
 			}
 			
@@ -674,23 +646,23 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			switch (status)
 			{
 				case CERT_GOOD:
-					/* set nextUpdate */
-					cert->set_until(cert, nextUpdate);
+					/* with strict crl policy the public key must have the same
+					 * lifetime as the validity of the ocsp status or crl lifetime
+					 */
+					if (strict)
+					{
+						cert->set_until(cert, nextUpdate);
+						until = (nextUpdate < until)? nextUpdate : until;
+					}
 
 					/* if status information is stale */
-					if (this->strict && nextUpdate < time(NULL))
+					if (strict && nextUpdate < time(NULL))
 					{
 						DBG2(DBG_CFG, "certificate is good but status is stale");
 						certinfo->destroy(certinfo);
 						return FALSE;
 					}
 					DBG1(DBG_CFG, "certificate is good");
-
-					/* with strict crl policy the public key must have the same
-					 * lifetime as the validity of the ocsp status or crl lifetime
-					 */
-					if (this->strict && nextUpdate < until)
-		    			until = nextUpdate;
 					break;
 				case CERT_REVOKED:
 					{
@@ -724,7 +696,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 				case CERT_UNDEFINED:
 				default:
 					DBG1(DBG_CFG, "certificate status unknown");
-					if (this->strict)
+					if (strict)
 					{
 						/* update status of end certificate in the credential store */
 						if (cert_copy)
@@ -738,11 +710,94 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 			}
 			certinfo->destroy(certinfo);
 		}
-		/* go up one step in the trust chain */
+		DBG1(DBG_CFG, "going up one step in the certificate trust chain (%d)",
+					   pathlen + 1);
 		cert = issuer_cert;
 	}
-	DBG1(DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	DBG1(DBG_CFG, "maximum ca path length of %d levels reached", MAX_CA_PATH_LEN);
 	return FALSE;
+}
+
+/**
+ * Implementation of local_credential_store_t.verify_signature.
+ */
+static status_t verify_signature(private_local_credential_store_t *this,
+								 chunk_t hash, chunk_t sig,
+								 identification_t *id, ca_info_t **issuer_p)
+{
+	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
+	status_t sig_status;
+	x509_t *cert;
+
+	/* default return values in case of failure */
+	sig_status = NOT_FOUND;
+	*issuer_p = NULL;
+
+	while (iterator->iterate(iterator, (void**)&cert))
+	{
+		if (id->equals(id, cert->get_subject(cert))
+		||	cert->equals_subjectAltName(cert, id))
+		{
+			rsa_public_key_t *public_key = cert->get_public_key(cert);
+			cert_status_t cert_status = cert->get_status(cert);
+			
+			DBG2(DBG_CFG, "found candidate peer certificate");
+
+			if (cert_status == CERT_UNDEFINED || cert->get_until(cert) < time(NULL))
+			{
+				bool found;
+
+				if (!verify(this, cert, &found))
+				{
+					sig_status = VERIFY_ERROR;
+					DBG1(DBG_CFG, "candidate peer certificate was not successfully verified");
+					continue;
+				}
+				*issuer_p = get_issuer(this, cert);
+			}
+			else
+			{
+				ca_info_t *issuer = get_issuer(this, cert);
+				chunk_t keyid = public_key->get_keyid(public_key);
+
+				DBG2(DBG_CFG, "subject: '%D'", cert->get_subject(cert));
+				DBG2(DBG_CFG, "issuer:  '%D'", cert->get_issuer(cert));
+				DBG2(DBG_CFG, "keyid:    %#B", &keyid);
+
+				if (issuer == NULL)
+				{
+					DBG1(DBG_CFG, "candidate peer certificate has no retrievable issuer");
+					sig_status = NOT_FOUND;
+					continue;
+				}
+				if (cert_status == CERT_REVOKED	|| cert_status == CERT_UNTRUSTED
+				|| ((issuer)->is_strict(issuer) && cert_status != CERT_GOOD))
+				{
+					DBG1(DBG_CFG, "candidate peer certificate has an inacceptable status: %N", cert_status_names, cert_status);
+					sig_status = VERIFY_ERROR;
+					continue;
+				}
+				*issuer_p = issuer;
+			}
+			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, sig);
+			if (sig_status == SUCCESS)
+			{
+				DBG2(DBG_CFG, "candidate peer certificate has a matching RSA public key");
+				break;
+			}
+			else
+			{
+				DBG1(DBG_CFG, "candidate peer certificate has a non-matching RSA public key");
+				*issuer_p = NULL;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	if (sig_status == NOT_FOUND)
+	{
+		DBG1(DBG_CFG, "no candidate peer certificate found");
+	}
+	return sig_status;
 }
 
 /**
@@ -770,7 +825,7 @@ static x509_t* add_certificate(linked_list_t *certs, x509_t *cert)
 /**
  * Add a unique ca info record to a linked list
  */
-static void add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_info)
+static ca_info_t* add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_info)
 {
 	ca_info_t *current_ca_info;
 	ca_info_t *found_ca_info = NULL;
@@ -791,11 +846,13 @@ static void add_ca_info(private_local_credential_store_t *this, ca_info_t *ca_in
 	{
 		current_ca_info->add_info(current_ca_info, ca_info);
 		ca_info->destroy(ca_info);
+		ca_info = found_ca_info;
 	}
 	else
 	{
 		this->ca_infos->insert_last(this->ca_infos, (void*)ca_info);
 	}
+	return ca_info;
 }
 
 /**
@@ -886,12 +943,12 @@ static void load_auth_certificates(private_local_credential_store_t *this,
 	struct stat stb;
 	DIR* dir;
 	
-	DBG1(DBG_CFG, "loading %s certificates from '%s/'", label, path);
+	DBG1(DBG_CFG, "loading %s certificates from '%s'", label, path);
 
 	dir = opendir(path);
 	if (dir == NULL)
 	{
-		DBG1(DBG_CFG, "error opening %s certs directory %s'", label, path);
+		DBG1(DBG_CFG, "error opening %s certs directory '%s'", label, path);
 		return;
 	}
 
@@ -962,16 +1019,87 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 
 		while (iterator->iterate(iterator, (void **)&ca_info))
 		{
-			x509_t *cacert = ca_info->get_certificate(ca_info);
-			ca_info_t *issuer = get_issuer(this, cacert);
-
-			if (issuer)
+			if (ca_info->is_ca(ca_info))
 			{
-				add_uris(issuer, cacert);
+				x509_t *cacert = ca_info->get_certificate(ca_info);
+				ca_info_t *issuer = get_issuer(this, cacert);
+
+				if (issuer)
+				{
+					add_uris(issuer, cacert);
+				}
 			}
 		}
 		iterator->destroy(iterator);
 	}
+}
+
+/**
+ * Implements local_credential_store_t.load_aa_certificates
+ */
+static void load_aa_certificates(private_local_credential_store_t *this)
+{
+	load_auth_certificates(this, AUTH_AA, "aa", AA_CERTIFICATE_DIR);
+}
+
+/**
+ * Add a unique attribute certificate to a linked list
+ */
+static void add_attr_certificate(private_local_credential_store_t *this, x509ac_t *cert)
+{
+  /* TODO add a new attribute certificate to the linked list */
+}
+
+/**
+ * Implements local_credential_store_t.load_attr_certificates
+ */
+static void load_attr_certificates(private_local_credential_store_t *this)
+{
+	struct dirent* entry;
+	struct stat stb;
+	DIR* dir;
+
+	const char *path = ATTR_CERTIFICATE_DIR;
+	
+	DBG1(DBG_CFG, "loading attribute certificates from '%s'", path);
+
+	dir = opendir(ATTR_CERTIFICATE_DIR);
+	if (dir == NULL)
+	{
+		DBG1(DBG_CFG, "error opening attribute certs directory '%s'", path);
+		return;
+	}
+
+	while ((entry = readdir(dir)) != NULL)
+	{
+		char file[PATH_BUF];
+
+		snprintf(file, sizeof(file), "%s/%s", path, entry->d_name);
+		
+		if (stat(file, &stb) == -1)
+		{
+			continue;
+		}
+		/* try to parse all regular files */
+		if (stb.st_mode & S_IFREG)
+		{
+			x509ac_t *cert = x509ac_create_from_file(file);
+
+			if (cert)
+			{
+				err_t ugh = cert->is_valid(cert, NULL);
+
+				if (ugh != NULL)
+				{
+					DBG1(DBG_CFG, "warning: attribute certificate %s", ugh);
+				}
+				add_attr_certificate(this, cert);
+			}
+		}
+	}
+	closedir(dir);
+
+
 }
 
 /**
@@ -993,7 +1121,7 @@ static void add_crl(private_local_credential_store_t *this, crl_t *crl, const ch
 
 	while (iterator->iterate(iterator, (void**)&ca_info))
 	{
-		if (ca_info->is_crl_issuer(ca_info, crl))
+		if (ca_info->is_ca(ca_info) && ca_info->is_crl_issuer(ca_info, crl))
 		{
 			char buffer[BUF_LEN];
 			chunk_t uri = { buffer, 7 + strlen(path) };
@@ -1027,12 +1155,12 @@ static void load_crls(private_local_credential_store_t *this)
 	DIR* dir;
 	crl_t *crl;
 	
-	DBG1(DBG_CFG, "loading crls from '%s/'", CRL_DIR);
+	DBG1(DBG_CFG, "loading crls from '%s'", CRL_DIR);
 
 	dir = opendir(CRL_DIR);
 	if (dir == NULL)
 	{
-		DBG1(DBG_CFG, "error opening crl directory %s'", CRL_DIR);
+		DBG1(DBG_CFG, "error opening crl directory '%s'", CRL_DIR);
 		return;
 	}
 
@@ -1300,7 +1428,8 @@ error:
 	}
 	else
 	{
-		DBG1(DBG_CFG, "could not open file '%s'", SECRETS_FILE);
+		DBG1(DBG_CFG, "could not open file '%s': %s", SECRETS_FILE,
+			 strerror(errno));
 	}
 }
 
@@ -1321,7 +1450,7 @@ static void destroy(private_local_credential_store_t *this)
 /**
  * Described in header.
  */
-local_credential_store_t * local_credential_store_create(bool strict)
+local_credential_store_t * local_credential_store_create(void)
 {
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
 	
@@ -1330,21 +1459,23 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t* (*) (credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
-	this->public.credential_store.get_trusted_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_trusted_public_key;
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
 	this->public.credential_store.get_auth_certificate = (x509_t* (*) (credential_store_t*,u_int,identification_t*))get_auth_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
-	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,const x509_t*))get_issuer;
-	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,x509_t*))is_trusted;
+	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,x509_t*))get_issuer;
+	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,const char*,x509_t*))is_trusted;
+	this->public.credential_store.verify_signature = (status_t (*) (credential_store_t*,chunk_t,chunk_t,identification_t*,ca_info_t**))verify_signature;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_auth_certificate = (x509_t* (*) (credential_store_t*,x509_t*,u_int))add_auth_certificate;
-	this->public.credential_store.add_ca_info = (void (*) (credential_store_t*,ca_info_t*))add_ca_info;
+	this->public.credential_store.add_ca_info = (ca_info_t* (*) (credential_store_t*,ca_info_t*))add_ca_info;
 	this->public.credential_store.release_ca_info = (status_t (*) (credential_store_t*,const char*))release_ca_info;
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
 	this->public.credential_store.create_auth_cert_iterator = (iterator_t* (*) (credential_store_t*))create_auth_cert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
+	this->public.credential_store.load_aa_certificates = (void (*) (credential_store_t*))load_aa_certificates;
+	this->public.credential_store.load_attr_certificates = (void (*) (credential_store_t*))load_attr_certificates;
 	this->public.credential_store.load_ocsp_certificates = (void (*) (credential_store_t*))load_ocsp_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
 	this->public.credential_store.load_secrets = (void (*) (credential_store_t*))load_secrets;
@@ -1357,7 +1488,6 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->certs = linked_list_create();
 	this->auth_certs = linked_list_create();
 	this->ca_infos = linked_list_create();
-	this->strict = strict;
 
 	return (&this->public);
 }

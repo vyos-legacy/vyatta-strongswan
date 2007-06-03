@@ -27,7 +27,7 @@
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/child_create.h>
 #include <sa/tasks/child_delete.h>
-#include <queues/jobs/rekey_child_sa_job.h>
+#include <processing/jobs/rekey_child_sa_job.h>
 
 
 typedef struct private_child_rekey_t private_child_rekey_t;
@@ -183,7 +183,12 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 	u_int32_t spi;
 	child_sa_t *to_delete;
 	
-	this->child_create->task.process(&this->child_create->task, message);
+	if (this->child_create->task.process(&this->child_create->task, message) == NEED_MORE)
+	{
+		/* bad DH group while rekeying, try again */
+		this->child_create->task.migrate(&this->child_create->task, this->ike_sa);
+		return NEED_MORE;
+	}
 	if (message->get_payload(message, SECURITY_ASSOCIATION) == NULL)
 	{
 		/* establishing new child failed, reuse old. but not when we
@@ -192,8 +197,8 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 			  this->collision->get_type(this->collision) == CHILD_DELETE))
 		{
 			job_t *job;
-			u_int32_t retry = charon->configuration->get_retry_interval(
-								charon->configuration);
+			u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+			
 			job = (job_t*)rekey_child_sa_job_create(
 								this->child_sa->get_reqid(this->child_sa),
 								this->child_sa->get_protocol(this->child_sa),
@@ -315,8 +320,8 @@ static void destroy(private_child_rekey_t *this)
  */
 child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
+	child_cfg_t *config;
 	private_child_rekey_t *this = malloc_thing(private_child_rekey_t);
-	policy_t *policy;
 
 	this->public.collide = (void (*)(child_rekey_t*,task_t*))collide;
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
@@ -327,8 +332,8 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
 		this->initiator = TRUE;
-		policy = child_sa->get_policy(child_sa);
-		this->child_create = child_create_create(ike_sa, policy);
+		config = child_sa->get_config(child_sa);
+		this->child_create = child_create_create(ike_sa, config);
 	}
 	else
 	{

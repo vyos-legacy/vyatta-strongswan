@@ -6,7 +6,12 @@
  */
 
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2000 Andreas Hess, Patric Lichtsteiner, Roger Wegmann
+ * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
+ * Copyright (C) 2002 Mario Strasser
+ * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2006 Martin Willi, Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -117,6 +122,11 @@ struct private_x509_t {
 	identification_t *issuer;
 	
 	/**
+	 * link to the info recored of the certificate issuer
+	 */
+	ca_info_t *ca_info;
+
+	/**
 	 * Start time of certificate validity
 	 */
 	time_t notBefore;
@@ -171,6 +181,11 @@ struct private_x509_t {
 	 */
 	chunk_t authKeySerialNumber;
 	
+	/**
+	 * Indicates if the certificate is self-signed
+	 */
+	bool isSelfSigned;
+
 	/**
 	 * CA basic constraints flag
 	 */
@@ -248,19 +263,6 @@ static const asn1Object_t basicConstraintsObjects[] = {
 };
 #define BASIC_CONSTRAINTS_CA	1
 #define BASIC_CONSTRAINTS_ROOF	4
-
-/**
- * ASN.1 definition of time
- */
-static const asn1Object_t timeObjects[] = {
-	{ 0,   "utcTime",		ASN1_UTCTIME,			ASN1_OPT|ASN1_BODY 	}, /*  0 */
-	{ 0,   "end opt",		ASN1_EOC,				ASN1_END  			}, /*  1 */
-	{ 0,   "generalizeTime",ASN1_GENERALIZEDTIME,	ASN1_OPT|ASN1_BODY 	}, /*  2 */
-	{ 0,   "end opt",		ASN1_EOC,				ASN1_END  			}  /*  3 */
-};
-#define TIME_UTC			0
-#define TIME_GENERALIZED	2
-#define TIME_ROOF			4
 
 /** 
  * ASN.1 definition of a keyIdentifier 
@@ -545,7 +547,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 /**
  * extracts one or several GNs and puts them into a chained list
  */
-static void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
+void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
@@ -569,33 +571,6 @@ static void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_l
 		objectID++;
 	}
 	return;
-}
-
-/**
- * extracts and converts a UTCTIME or GENERALIZEDTIME object
- */
-time_t parse_time(chunk_t blob, int level0)
-{
-	asn1_ctx_t ctx;
-	chunk_t object;
-	u_int level;
-	int objectID = 0;
-	
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
-	
-	while (objectID < TIME_ROOF)
-	{
-		if (!extract_object(timeObjects, &objectID, &object, &level, &ctx))
-			return 0;
-		
-		if (objectID == TIME_UTC || objectID == TIME_GENERALIZED)
-		{
-			return asn1totime(&object, (objectID == TIME_UTC)
-					? ASN1_UTCTIME : ASN1_GENERALIZEDTIME);
-		}
-		objectID++;
-	}
-	return 0;
 }
 
 /**
@@ -624,7 +599,11 @@ void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID,
 	u_int level;
 	int objectID = 0;
 	
+	*authKeyID = chunk_empty;
+	*authKeySerialNumber = chunk_empty;
+
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
+
 	while (objectID < AUTH_KEY_ID_ROOF)
 	{
 		if (!extract_object(authorityKeyIdentifierObjects, &objectID, &object, &level, &ctx))
@@ -763,7 +742,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0, linked_list_t 
 /**
  * Parses an X.509v3 certificate
  */
-static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
+static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 {
 	asn1_ctx_t ctx;
 	bool critical;
@@ -779,38 +758,41 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 		{
 			return FALSE;
 		}
+
 		/* those objects which will parsed further need the next higher level */
 		level++;
-		switch (objectID) {
+
+		switch (objectID)
+		{
 			case X509_OBJ_CERTIFICATE:
-				cert->certificate = object;
+				this->certificate = object;
 				break;
 			case X509_OBJ_TBS_CERTIFICATE:
-				cert->tbsCertificate = object;
+				this->tbsCertificate = object;
 				break;
 			case X509_OBJ_VERSION:
-				cert->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				DBG2("  v%d", cert->version);
+				this->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
+				DBG2("  v%d", this->version);
 				break;
 			case X509_OBJ_SERIAL_NUMBER:
-				cert->serialNumber = object;
+				this->serialNumber = object;
 				break;
 			case X509_OBJ_SIG_ALG:
-				cert->sigAlg = parse_algorithmIdentifier(object, level, NULL);
+				this->sigAlg = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case X509_OBJ_ISSUER:
-				cert->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", cert->issuer);
+				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
+				DBG2("  '%D'", this->issuer);
 				break;
 			case X509_OBJ_NOT_BEFORE:
-				cert->notBefore = parse_time(object, level);
+				this->notBefore = parse_time(object, level);
 				break;
 			case X509_OBJ_NOT_AFTER:
-				cert->notAfter = parse_time(object, level);
+				this->notAfter = parse_time(object, level);
 				break;
 			case X509_OBJ_SUBJECT:
-				cert->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", cert->subject);
+				this->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
+				DBG2("  '%D'", this->subject);
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
 				if (parse_algorithmIdentifier(object, level, NULL) != OID_RSA_ENCRYPTION)
@@ -832,7 +814,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 				}
 				break;
 			case X509_OBJ_RSA_PUBLIC_KEY:
-				cert->subjectPublicKey = object;
+				this->subjectPublicKey = object;
 				break;
 			case X509_OBJ_EXTN_ID:
 				extn_oid = known_oid(object);
@@ -843,27 +825,28 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_EXTN_VALUE:
 			{
-				switch (extn_oid) {
+				switch (extn_oid)
+				{
 					case OID_SUBJECT_KEY_ID:
-						cert->subjectKeyID = chunk_clone(parse_keyIdentifier(object, level, FALSE));
+						this->subjectKeyID = chunk_clone(parse_keyIdentifier(object, level, FALSE));
 						break;
 					case OID_SUBJECT_ALT_NAME:
-						parse_generalNames(object, level, FALSE, cert->subjectAltNames);
+						parse_generalNames(object, level, FALSE, this->subjectAltNames);
 						break;
 					case OID_BASIC_CONSTRAINTS:
-						cert->isCA = parse_basicConstraints(object, level);
+						this->isCA = parse_basicConstraints(object, level);
 						break;
 					case OID_CRL_DISTRIBUTION_POINTS:
-						parse_crlDistributionPoints(object, level, cert->crlDistributionPoints);
+						parse_crlDistributionPoints(object, level, this->crlDistributionPoints);
 						break;
 					case OID_AUTHORITY_KEY_ID:
-						parse_authorityKeyIdentifier(object, level , &cert->authKeyID, &cert->authKeySerialNumber);
+						parse_authorityKeyIdentifier(object, level , &this->authKeyID, &this->authKeySerialNumber);
 						break;
 					case OID_AUTHORITY_INFO_ACCESS:
-						parse_authorityInfoAccess(object, level, cert->ocspAccessLocations);
+						parse_authorityInfoAccess(object, level, this->ocspAccessLocations);
 						break;
 					case OID_EXTENDED_KEY_USAGE:
-						cert->isOcspSigner = parse_extendedKeyUsage(object, level);
+						this->isOcspSigner = parse_extendedKeyUsage(object, level);
 						break;
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
@@ -878,10 +861,10 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			}
 			case X509_OBJ_ALGORITHM:
-				cert->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case X509_OBJ_SIGNATURE:
-				cert->signature = object;
+				this->signature = object;
 				break;
 			default:
 				break;
@@ -889,15 +872,16 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *cert)
 		objectID++;
 	}
 
-	if (cert->subjectKeyID.ptr == NULL)
+	/* generate the subjectKeyID if it is missing in the certificate */
+	if (this->subjectKeyID.ptr == NULL)
 	{
 		hasher_t *hasher = hasher_create(HASH_SHA1);
 
-		hasher->allocate_hash(hasher, cert->subjectPublicKey, &cert->subjectKeyID);
+		hasher->allocate_hash(hasher, this->subjectPublicKey, &this->subjectKeyID);
 		hasher->destroy(hasher);
 	}
 
-	time(&cert->installed);
+	this->installed = time(NULL);
 	return TRUE;
 }
 
@@ -950,7 +934,7 @@ static bool is_ocsp_signer(const private_x509_t *this)
  */
 static bool is_self_signed(const private_x509_t *this)
 {
-	return this->subject->equals(this->subject, this->issuer);
+	return this->isSelfSigned;
 }
 
 /**
@@ -1043,6 +1027,22 @@ static identification_t *get_subject(const private_x509_t *this)
 }
 
 /**
+ * Implements x509_t.set_ca_info
+ */
+static void set_ca_info(private_x509_t *this, ca_info_t *ca_info)
+{
+	this->ca_info = ca_info;
+}
+
+/**
+ * Implements x509_t.get_ca_info
+ */
+static ca_info_t *get_ca_info(const private_x509_t *this)
+{
+	return this->ca_info;
+}
+
+/**
  * Implements x509_t.set_until
  */
 static void set_until(private_x509_t *this, time_t until)
@@ -1121,39 +1121,23 @@ static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
 {
 	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertificate, this->signature) == SUCCESS;
 }
-
+	
 /**
- * output handler in printf()
+ * Implementation of x509_t.list.
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+static void list(private_x509_t *this, FILE *out, bool utc)
 {
-	private_x509_t *this = *((private_x509_t**)(args[0]));
 	iterator_t *iterator;
-	bool utc = TRUE;
-	int written = 0;
-	
-	if (info->alt)
-	{
-		utc = *((bool*)(args[1]));
-	}
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
-	
-	/* determine the current time */
 	time_t now = time(NULL);
 
-	written += fprintf(stream, "%#T\n", &this->installed, utc);
+	fprintf(out, "%#T\n", &this->installed, utc);
 
 	if (this->subjectAltNames->get_count(this->subjectAltNames))
 	{
 		identification_t *subjectAltName;
 		bool first = TRUE;
 
-		written += fprintf(stream, "    altNames:  ");
+		fprintf(out, "    altNames:  ");
 		iterator = this->subjectAltNames->create_iterator(this->subjectAltNames, TRUE);
 		while (iterator->iterate(iterator, (void**)&subjectAltName))
 		{
@@ -1163,71 +1147,71 @@ static int print(FILE *stream, const struct printf_info *info,
 			}
 			else
 			{
-				written += fprintf(stream, ", ");
+				fprintf(out, ", ");
 			}
-			written += fprintf(stream, "'%D'", subjectAltName);
+			fprintf(out, "'%D'", subjectAltName);
 		}
 		iterator->destroy(iterator);
-		written += fprintf(stream, "\n");
+		fprintf(out, "\n");
 	}
-	written += fprintf(stream, "    subject:   '%D'\n", this->subject);
-	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
-	written += fprintf(stream, "    serial:     %#B\n", &this->serialNumber);
-	written += fprintf(stream, "    validity:   not before %#T, ", &this->notBefore, utc);
+	fprintf(out, "    subject:   '%D'\n", this->subject);
+	fprintf(out, "    issuer:    '%D'\n", this->issuer);
+	fprintf(out, "    serial:     %#B\n", &this->serialNumber);
+	fprintf(out, "    validity:   not before %#T, ", &this->notBefore, utc);
 	if (now < this->notBefore)
 	{
-		written += fprintf(stream, "not valid yet (valid in %V)\n", &now, &this->notBefore);
+		fprintf(out, "not valid yet (valid in %V)\n", &now, &this->notBefore);
 	}
 	else
 	{
-		written += fprintf(stream, "ok\n");
+		fprintf(out, "ok\n");
 	}
 	
-	written += fprintf(stream, "                not after  %#T, ", &this->notAfter, utc);
+	fprintf(out, "                not after  %#T, ", &this->notAfter, utc);
 	if (now > this->notAfter)
 	{
-		written += fprintf(stream, "expired (%V ago)\n", &now, &this->notAfter);
+		fprintf(out, "expired (%V ago)\n", &now, &this->notAfter);
 	}
 	else
 	{
-		written += fprintf(stream, "ok");
+		fprintf(out, "ok");
 		if (now > this->notAfter - CERT_WARNING_INTERVAL * 60 * 60 * 24)
 		{
-			written += fprintf(stream, " (expires in %V)", &now, &this->notAfter);
+			fprintf(out, " (expires in %V)", &now, &this->notAfter);
 		}
-		written += fprintf(stream, " \n");
+		fprintf(out, " \n");
 	}
 	
 	{
 		chunk_t keyid = this->public_key->get_keyid(this->public_key);
-		written += fprintf(stream, "    keyid:      %#B\n", &keyid);
+		fprintf(out, "    keyid:      %#B\n", &keyid);
 	}
 
 	if (this->subjectKeyID.ptr)
 	{
-		written += fprintf(stream, "    subjkey:    %#B\n", &this->subjectKeyID);
+		fprintf(out, "    subjkey:    %#B\n", &this->subjectKeyID);
 	}
 	if (this->authKeyID.ptr)
 	{
-		written += fprintf(stream, "    authkey:    %#B\n", &this->authKeyID);
+		fprintf(out, "    authkey:    %#B\n", &this->authKeyID);
 	}
 	if (this->authKeySerialNumber.ptr)
 	{
-		written += fprintf(stream, "    aserial:    %#B\n", &this->authKeySerialNumber);
+		fprintf(out, "    aserial:    %#B\n", &this->authKeySerialNumber);
 	}
 	
-	written += fprintf(stream, "    pubkey:     RSA %d bits", BITS_PER_BYTE *
-					   this->public_key->get_keysize(this->public_key));
-	written += fprintf(stream, ", status %N",
-					   cert_status_names, this->status);
+	fprintf(out, "    pubkey:     RSA %d bits", BITS_PER_BYTE *
+			this->public_key->get_keysize(this->public_key));
+	fprintf(out, ", status %N",
+		   cert_status_names, this->status);
 	
 	switch (this->status)
 	{
 		case CERT_GOOD:
-			written += fprintf(stream, " until %#T", &this->until, utc);
+			fprintf(out, " until %#T", &this->until, utc);
 			break;
 		case CERT_REVOKED:
-			written += fprintf(stream, " on %#T", &this->until, utc);
+			fprintf(out, " on %#T", &this->until, utc);
 			break;
 		case CERT_UNKNOWN:
 		case CERT_UNDEFINED:
@@ -1235,15 +1219,6 @@ static int print(FILE *stream, const struct printf_info *info,
 		default:
 			break;
 	}
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_X509, print, arginfo_ptr_alt_ptr_int);
 }
 
 /**
@@ -1277,6 +1252,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public_key = NULL;
 	this->subject = NULL;
 	this->issuer = NULL;
+	this->ca_info = NULL;
 	this->subjectAltNames = linked_list_create();
 	this->crlDistributionPoints = linked_list_create();
 	this->ocspAccessLocations = linked_list_create();
@@ -1284,6 +1260,8 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->authKeyID = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
 	this->authority_flags = AUTH_NONE;
+	this->isCA = FALSE;
+	this->isOcspSigner = FALSE;
 	
 	/* public functions */
 	this->public.equals = (bool (*) (const x509_t*,const x509_t*))equals;
@@ -1300,6 +1278,8 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.get_keyid = (chunk_t (*) (const x509_t*))get_keyid;
 	this->public.get_issuer = (identification_t* (*) (const x509_t*))get_issuer;
 	this->public.get_subject = (identification_t* (*) (const x509_t*))get_subject;
+	this->public.set_ca_info = (void (*) (x509_t*,ca_info_t*))set_ca_info;
+	this->public.get_ca_info = (ca_info_t* (*) (const x509_t*))get_ca_info;
 	this->public.set_until = (void (*) (x509_t*,time_t))set_until;
 	this->public.get_until = (time_t (*) (const x509_t*))get_until;
 	this->public.set_status = (void (*) (x509_t*,cert_status_t))set_status;
@@ -1310,6 +1290,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.create_crluri_iterator = (iterator_t* (*) (const x509_t*))create_crluri_iterator;
 	this->public.create_ocspuri_iterator = (iterator_t* (*) (const x509_t*))create_ocspuri_iterator;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
+	this->public.list = (void(*)(x509_t*, FILE *out, bool utc))list;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
 	if (!parse_certificate(chunk, level, this))
@@ -1325,9 +1306,27 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 		destroy(this);
 		return NULL;
 	}
+
 	/* set trusted lifetime of public key to notAfter */
-	this->status = is_self_signed(this)? CERT_GOOD:CERT_UNDEFINED;
 	this->until = this->notAfter;
+
+	/* check if the certificate is self-signed */
+	this->isSelfSigned = FALSE;
+	if (this->subject->equals(this->subject, this->issuer))
+	{
+		this->isSelfSigned = this->public_key->verify_emsa_pkcs1_signature(this->public_key,
+							 this->tbsCertificate, this->signature) == SUCCESS;
+	}
+	if (this->isSelfSigned)
+	{
+		DBG2("  certificate is self-signed");
+		this->status = CERT_GOOD;
+	}
+	else
+	{
+		this->status = CERT_UNDEFINED;
+	}
+
 	return &this->public;
 }
 
@@ -1338,17 +1337,13 @@ x509_t *x509_create_from_file(const char *filename, const char *label)
 {
 	bool pgp = FALSE;
 	chunk_t chunk = chunk_empty;
-	x509_t *cert = NULL;
 	char cert_label[BUF_LEN];
 
 	snprintf(cert_label, BUF_LEN, "%s certificate", label);
 
 	if (!pem_asn1_load_file(filename, NULL, cert_label, &chunk, &pgp))
+	{
 		return NULL;
-
-	cert = x509_create_from_chunk(chunk, 0);
-
-	if (cert == NULL)
-		free(chunk.ptr);
-	return cert;
+	}
+	return x509_create_from_chunk(chunk, 0);
 }
