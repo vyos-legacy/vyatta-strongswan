@@ -34,6 +34,22 @@ _Description: Do you wish to restart strongSwan?
  to restart, so this is generally a good idea. However this might take down
  existing connections and then bring them back up.
 
+Template: strongswan/ikev1
+Type: boolean
+Default: true
+_Description: Do you wish to support IKEv1?
+ strongSwan supports both versions of the Internet Key Exchange protocol,
+ IKEv1 and IKEv2. Do you want to start the "pluto" daemon for IKEv1 support
+ when strongSwan is started?
+
+Template: strongswan/ikev2
+Type: boolean
+Default: true
+_Description: Do you wish to support IKEv2?
+ strongSwan supports both versions of the Internet Key Exchange protocol,
+ IKEv1 and IKEv2. Do you want to start the "charon" daemon for IKEv2 support
+ when strongSwan is started?
+
 Template: strongswan/create_rsa_key
 Type: boolean
 Default: true

@@ -99,6 +99,46 @@ make_x509_cert() {
                        -days $2 $selfsigned >/dev/null
 }
 
+enable_daemon_start() {
+    daemon=$1
+    protocol=$2
+
+    echo -n "Enabling ${protocol} support by pluto ... "
+    if egrep -q "^\w+${daemon}start=yes\w*$" /etc/ipsec.conf; then
+        echo "already enabled"
+    elif egrep -q "^\w+${daemon}start=no\w*$" /etc/ipsec.conf; then
+      	sed "s/${daemon}start=no/${daemon}start=yes/" < /etc/ipsec.conf > /etc/ipsec.conf.tmp
+        cp /etc/ipsec.conf.tmp /etc/ipsec.conf
+	rm /etc/ipsec.conf.tmp
+        echo "done"
+    elif egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" /etc/ipsec.conf; then
+      	sed "s/^\w+#\w*${daemon}start=(yes|no)\w*$/\t${daemon}start=yes/" < /etc/ipsec.conf > /etc/ipsec.conf.tmp
+        cp /etc/ipsec.conf.tmp /etc/ipsec.conf
+	rm /etc/ipsec.conf.tmp
+        echo "done"
+    else
+        echo "ERROR: unknown or nonexistant ${daemon}start= directive, please fix manually!"
+    fi
+}
+
+disable_daemon_start() {
+    daemon=$1
+    protocol=$2
+
+    echo -n "Disabling ${protocol} support by pluto ... "
+    if egrep -q "^\w+${daemon}start=no\w*$" /etc/ipsec.conf ||
+       egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" /etc/ipsec.conf; then
+        echo "already disabled"
+    elif egrep -q "^\w+${daemon}start=yes\w*$" /etc/ipsec.conf; then
+      	sed "s/${daemon}start=yes/${daemon}start=no/" < /etc/ipsec.conf > /etc/ipsec.conf.tmp
+        cp /etc/ipsec.conf.tmp /etc/ipsec.conf
+	rm /etc/ipsec.conf.tmp
+        echo "done"
+    else
+        echo "ERROR: unknown or nonexistant ${daemon}start= directive, please fix manually!"
+    fi
+}
+
 . /usr/share/debconf/confmodule
 
 case "$1" in
@@ -240,6 +280,19 @@ include /etc/ipsec.d/examples/oe.conf
 EOF
               echo "done"
             fi
+        fi
+
+        db_get strongswan/ikev1
+        if [ "$RET" != "true" ]; then
+            enable_daemon_start "pluto" "IKEv1"
+	else
+            disable_daemon_start "pluto" "IKEv1"
+        fi
+        db_get strongswan/ikev2
+        if [ "$RET" != "true" ]; then
+            enable_daemon_start "charon" "IKEv2"
+	else
+            disable_daemon_start "charon" "IKEv2"
         fi
 
 	if [ -z "$2" ]; then
