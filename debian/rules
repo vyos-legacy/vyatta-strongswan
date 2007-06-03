@@ -24,8 +24,8 @@ configure-stamp: patch
 	# Add here commands to configure the package.
 	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-http --enable-ldap \
-		--enable-dbus --enable-xml \
 		--enable-smartcard --enable-cisco-quirks
+	#	--enable-dbus --enable-xml \
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!
 	# And for --enable-eap-sim we would need the library, which we don't
