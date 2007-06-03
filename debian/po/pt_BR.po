@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openswan\n"
 "Report-Msgid-Bugs-To: rmayr@debian.org\n"
-"POT-Creation-Date: 2006-08-25 17:56+0100\n"
+"POT-Creation-Date: 2007-06-03 21:36+0100\n"
 "PO-Revision-Date: 2005-01-24 21:53-0200\n"
 "Last-Translator: André Luís Lopes <andrelop@debian.org>\n"
 "Language-Team: Debian-BR Project <debian-l10n-portuguese@lists.debian.org>\n"
@@ -130,13 +130,45 @@ msgstr ""
 #. Description
 #: ../strongswan.templates.master:3001
 #, fuzzy
+msgid "Do you wish to support IKEv1?"
+msgstr "Você deseja reiniciar o Openswan ?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan.templates.master:3001
+msgid ""
+"strongSwan supports both versions of the Internet Key Exchange protocol, "
+"IKEv1 and IKEv2. Do you want to start the \"pluto\" daemon for IKEv1 support "
+"when strongSwan is started?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../strongswan.templates.master:4001
+#, fuzzy
+msgid "Do you wish to support IKEv2?"
+msgstr "Você deseja reiniciar o Openswan ?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan.templates.master:4001
+msgid ""
+"strongSwan supports both versions of the Internet Key Exchange protocol, "
+"IKEv1 and IKEv2. Do you want to start the \"charon\" daemon for IKEv2 "
+"support when strongSwan is started?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../strongswan.templates.master:5001
+#, fuzzy
 msgid "Do you want to create a RSA public/private keypair for this host?"
 msgstr ""
 "Você deseja criar um par de chaves RSA pública/privada para este host ?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:3001
+#: ../strongswan.templates.master:5001
 msgid ""
 "This installer can automatically create a RSA public/private keypair for "
 "this host. This keypair can be used to authenticate IPSec connections to "
@@ -156,7 +188,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:3001
+#: ../strongswan.templates.master:5001
 #, fuzzy
 msgid ""
 "If you do not want to create a new public/private keypair, you can choose to "
@@ -166,20 +198,20 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../strongswan.templates.master:4001
+#: ../strongswan.templates.master:6001
 msgid "x509, plain"
 msgstr "x509, pura"
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:4002
+#: ../strongswan.templates.master:6002
 #, fuzzy
 msgid "The type of RSA keypair to create:"
 msgstr "Qual tipo de par de chaves RSA você deseja criar ?"
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:4002
+#: ../strongswan.templates.master:6002
 #, fuzzy
 msgid ""
 "It is possible to create a plain RSA public/private keypair for use with "
@@ -192,7 +224,7 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:4002
+#: ../strongswan.templates.master:6002
 #, fuzzy
 msgid ""
 "If you only want to build up IPSec connections to hosts also running "
@@ -211,7 +243,7 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:4002
+#: ../strongswan.templates.master:6002
 #, fuzzy
 msgid ""
 "Therefore a X509 certificate is recommended since it is more flexible and "
@@ -224,7 +256,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:5001
+#: ../strongswan.templates.master:7001
 #, fuzzy
 msgid "Do you have an existing X509 certificate file for strongSwan?"
 msgstr ""
@@ -233,7 +265,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:5001
+#: ../strongswan.templates.master:7001
 #, fuzzy
 msgid ""
 "This installer can automatically extract the needed information from an "
@@ -250,7 +282,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:6001
+#: ../strongswan.templates.master:8001
 #, fuzzy
 msgid "File name of your X509 certificate in PEM format:"
 msgstr ""
@@ -258,7 +290,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:6001
+#: ../strongswan.templates.master:8001
 #, fuzzy
 msgid ""
 "Please enter the full location of the file containing your X509  certificate "
@@ -269,7 +301,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:7001
+#: ../strongswan.templates.master:9001
 #, fuzzy
 msgid "File name of your X509 private key in PEM format:"
 msgstr ""
@@ -277,7 +309,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:7001
+#: ../strongswan.templates.master:9001
 #, fuzzy
 msgid ""
 "Please enter the full location of the file containing the private RSA key "
@@ -290,14 +322,14 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:8001
+#: ../strongswan.templates.master:10001
 #, fuzzy
 msgid "The length of the created RSA key (in bits):"
 msgstr "Qual deve ser o tamanho da chave RSA criada ?"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:8001
+#: ../strongswan.templates.master:10001
 msgid ""
 "Please enter the length of the created RSA key. it should not be less than "
 "1024 bits because this should be considered unsecure and you will probably "
@@ -312,14 +344,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:9001
+#: ../strongswan.templates.master:11001
 #, fuzzy
 msgid "Do you want to create a self-signed X509 certificate?"
 msgstr "Deseja criar um certificado X509 auto-assinado ?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:9001
+#: ../strongswan.templates.master:11001
 #, fuzzy
 msgid ""
 "This installer can only create self-signed X509 certificates automatically, "
@@ -341,7 +373,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:9001
+#: ../strongswan.templates.master:11001
 msgid ""
 "If you do not want to create a self-signed certificate, then this installer "
 "will only create the RSA private key and the certificate request and you "
@@ -354,7 +386,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:10001
+#: ../strongswan.templates.master:12001
 #, fuzzy
 msgid "Country code for the X509 certificate request:"
 msgstr ""
@@ -362,7 +394,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:10001
+#: ../strongswan.templates.master:12001
 msgid ""
 "Please enter the 2 letter country code for your country. This code will be "
 "placed in the certificate request."
@@ -372,7 +404,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:10001
+#: ../strongswan.templates.master:12001
 msgid ""
 "You really need to enter a valid country code here, because openssl will "
 "refuse to generate certificates without one. An empty field is allowed for "
@@ -385,13 +417,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:10001
+#: ../strongswan.templates.master:12001
 msgid "Example: AT"
 msgstr "Exemplo: BR"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:11001
+#: ../strongswan.templates.master:13001
 #, fuzzy
 msgid "State or province name for the X509 certificate request:"
 msgstr ""
@@ -400,7 +432,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:11001
+#: ../strongswan.templates.master:13001
 msgid ""
 "Please enter the full name of the state or province you live in. This name "
 "will be placed in the certificate request."
@@ -410,13 +442,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:11001
+#: ../strongswan.templates.master:13001
 msgid "Example: Upper Austria"
 msgstr "Exemplo : Sao Paulo"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:12001
+#: ../strongswan.templates.master:14001
 #, fuzzy
 msgid "Locality name for the X509 certificate request:"
 msgstr ""
@@ -425,7 +457,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:12001
+#: ../strongswan.templates.master:14001
 msgid ""
 "Please enter the locality (e.g. city) where you live. This name will be "
 "placed in the certificate request."
@@ -435,13 +467,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:12001
+#: ../strongswan.templates.master:14001
 msgid "Example: Vienna"
 msgstr "Exemplo : Sao Paulo"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:13001
+#: ../strongswan.templates.master:15001
 #, fuzzy
 msgid "Organization name for the X509 certificate request:"
 msgstr ""
@@ -450,7 +482,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:13001
+#: ../strongswan.templates.master:15001
 msgid ""
 "Please enter the organization (e.g. company) that the X509 certificate "
 "should be created for. This name will be placed in the certificate request."
@@ -461,13 +493,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:13001
+#: ../strongswan.templates.master:15001
 msgid "Example: Debian"
 msgstr "Exemplo : Debian"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:14001
+#: ../strongswan.templates.master:16001
 #, fuzzy
 msgid "Organizational unit for the X509 certificate request:"
 msgstr ""
@@ -476,7 +508,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:14001
+#: ../strongswan.templates.master:16001
 msgid ""
 "Please enter the organizational unit (e.g. section) that the X509 "
 "certificate should be created for. This name will be placed in the "
@@ -488,20 +520,20 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:14001
+#: ../strongswan.templates.master:16001
 msgid "Example: security group"
 msgstr "Exemplo : Grupo de Segurança"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:15001
+#: ../strongswan.templates.master:17001
 #, fuzzy
 msgid "Common name for the X509 certificate request:"
 msgstr "Por favor, informe o nome comum para a requisição de certificado X509."
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:15001
+#: ../strongswan.templates.master:17001
 msgid ""
 "Please enter the common name (e.g. the host name of this machine) for which "
 "the X509 certificate should be created for. This name will be placed in the "
@@ -513,13 +545,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:15001
+#: ../strongswan.templates.master:17001
 msgid "Example: gateway.debian.org"
 msgstr "Exemplo : gateway.debian.org"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:16001
+#: ../strongswan.templates.master:18001
 #, fuzzy
 msgid "Email address for the X509 certificate request:"
 msgstr ""
@@ -528,7 +560,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:16001
+#: ../strongswan.templates.master:18001
 msgid ""
 "Please enter the email address of the person or organization who is "
 "responsible for the X509 certificate, This address will be placed in the "
@@ -540,14 +572,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:17001
+#: ../strongswan.templates.master:19001
 #, fuzzy
 msgid "Do you wish to enable opportunistic encryption in strongSwan?"
 msgstr "Você deseja habilitar a encriptação oportunística no Openswan ?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:17001
+#: ../strongswan.templates.master:19001
 #, fuzzy
 msgid ""
 "strongSwan comes with support for opportunistic encryption (OE), which "
@@ -571,7 +603,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:17001
+#: ../strongswan.templates.master:19001
 msgid ""
 "Please choose whether you want to enable support for OE. If unsure, do not "
 "enable it."

@@ -81,6 +81,22 @@ Description-ja.UTF-8: strongSwan を再起動しますか?
 Description-nl.UTF-8: Wilt u strongSwan herstarten?
  strongSwan herstarten is een goed idee omdat als er een veiligheidsherstelling is, het pas echt hersteld zal zijn vanaf dat de achtergronddienst is herstart. De meeste mensen verwachten dat de achtergronddienst herstart, dus dit is meestal een goed idee. Hoewel, dit kan bestaande verbindingen verbreken en ze dan opnieuw herstellen.
 
+Template: strongswan/ikev1
+Type: boolean
+Default: true
+Description: Do you wish to support IKEv1?
+ strongSwan supports both versions of the Internet Key Exchange protocol,
+ IKEv1 and IKEv2. Do you want to start the "pluto" daemon for IKEv1 support
+ when strongSwan is started?
+
+Template: strongswan/ikev2
+Type: boolean
+Default: true
+Description: Do you wish to support IKEv2?
+ strongSwan supports both versions of the Internet Key Exchange protocol,
+ IKEv1 and IKEv2. Do you want to start the "charon" daemon for IKEv2 support
+ when strongSwan is started?
+
 Template: strongswan/create_rsa_key
 Type: boolean
 Default: true
