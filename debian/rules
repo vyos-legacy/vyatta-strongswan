@@ -5,6 +5,9 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+# This is the debhelper compatability version to use.
+export DH_COMPAT=4
+
 export DH_OPTIONS
 
 ifeq (,$(wildcard /usr/bin/po2debconf))
@@ -40,11 +43,6 @@ unpatch:
 build: build-stamp
 build-stamp: configure-stamp
 	$(MAKE)
-
-	# also generate the fswcert tool
-	#$(MAKE) -C programs/fswcert/
-	# ugly hack....
-	#$(MAKE) -C programs/fswcert/ programs WERROR='-lcrypto'
 
 	touch build-stamp
 
@@ -138,7 +136,6 @@ install-strongswan: build
 	install --mode=0644 $(CURDIR)/debian/strongswan.lintian-overrides $(CURDIR)/debian/strongswan/usr/share/lintian/overrides/strongswan
 
 binary-common:
-	#dh_testversion 2
 	dh_testdir
 	dh_testroot
 	dh_installdebconf
