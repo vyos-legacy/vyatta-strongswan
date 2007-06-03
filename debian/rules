@@ -127,14 +127,11 @@ install-strongswan: build
 
 	# set permissions on ipsec.secrets
 	chmod 600 $(CURDIR)/debian/strongswan/etc/ipsec.secrets
-	chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.conf
+	#chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.conf
 	chmod 700 -R $(CURDIR)/debian/strongswan/etc/ipsec.d/private/
 	# don't know why they come with +x set by default...
-	chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.d/policies/*
-	chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.d/examples/*
-	# or why these are copied to the directory...
-	rm -f $(CURDIR)/debian/strongswan/usr/lib/ipsec/ipsec_pr.template
-	rm -f $(CURDIR)/debian/strongswan/usr/lib/ipsec/distro.txt
+	#chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.d/policies/*
+	#chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.d/examples/*
 
 	# more lintian cleanups
 	find $(CURDIR)/debian/strongswan -name ".cvsignore" | xargs --no-run-if-empty rm -f
@@ -148,7 +145,7 @@ binary-common:
 	dh_testdir
 	dh_testroot
 	dh_installdebconf
-	dh_installchangelogs CHANGES
+	dh_installchangelogs ChangeLog
 	dh_link
 	dh_strip
 	dh_compress
