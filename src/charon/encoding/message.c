@@ -24,7 +24,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <printf.h>
 
 #include "message.h"
 
@@ -603,72 +602,50 @@ static payload_t *get_payload(private_message_t *this, payload_type_t type)
 }
 
 /**
- * output handler in printf()
+ * get a string representation of the message
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+static char* get_string(private_message_t *this, char *buf, int len)
 {
-	private_message_t *this = *((private_message_t**)(args[0]));
 	iterator_t *iterator;
 	payload_t *payload;
-	bool first = TRUE;
-	size_t total_written = 0;
-	size_t written;
+	int written;
+	char *pos = buf;
 	
-	if (this == NULL)
+	written = snprintf(pos, len, "%N %s [", 
+					   exchange_type_names, this->exchange_type,
+					   this->is_request ? "request" : "response");
+	if (written >= len || written < 0)
 	{
-		return fprintf(stream, "(null)");
+		return "";
 	}
+	pos += written;
+	len -= written;
 	
-	written = fprintf(stream, "%N %s [", 
-					  exchange_type_names, this->exchange_type,
-					  this->is_request ? "request" : "response");
-	if (written < 0)
+	if (this->payloads->get_count(this->payloads) == 0)
 	{
-		return written;
+		snprintf(pos, len, "]");
+		return buf;
 	}
-	total_written += written;
 	
 	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	while (iterator->iterate(iterator, (void**)&payload))
 	{
-		if (!first)
+		written = snprintf(pos, len, "%N ", payload_type_short_names,
+				  		   payload->get_type(payload));
+		if (written >= len || written < 0)
 		{
-			written = fprintf(stream, " ");
-			if (written < 0)
-			{
-				return written;
-			}
-			total_written += written;
+			return buf;
 		}
-		else
-		{
-			first = FALSE;
-		}
-		written = fprintf(stream, "%N", payload_type_short_names,
-						  payload->get_type(payload));
-		if (written < 0)
-		{
-			return written;
-		}
-		total_written += written;
+		pos += written;
+		len -= written;
 	}
 	iterator->destroy(iterator);
-	written = fprintf(stream, "]");
-	if (written < 0)
-	{
-		return written;
-	}
-	total_written += written;
-	return total_written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_MESSAGE, print, arginfo_ptr);
+	
+	/* remove last space */
+	pos--;
+	len++;
+	snprintf(pos, len, "]");
+	return buf;
 }
 
 /**
@@ -757,6 +734,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	iterator_t *iterator;
 	status_t status;
 	chunk_t packet_data;
+	char str[128];
 	
 	if (is_encoded(this))
 	{
@@ -765,7 +743,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 		return SUCCESS;
 	}
 	
-	DBG1(DBG_ENC, "generating %M", this);
+	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -1162,6 +1140,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 {
 	status_t status = SUCCESS;
 	payload_type_t current_payload_type;
+	char str[128];
 		
 	current_payload_type = this->first_payload;	
 		
@@ -1231,7 +1210,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		return status;
 	}
 	
-	DBG1(DBG_ENC, "parsed %M", this);
+	DBG1(DBG_ENC, "parsed %s", get_string(this, str, sizeof(str)));
 	
 	return SUCCESS;
 }

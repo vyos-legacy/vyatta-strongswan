@@ -64,12 +64,12 @@ xauth.c xauth.h \
 x509.c x509.h \
 alg/ike_alg_aes.c alg/ike_alg_blowfish.c alg/ike_alg_twofish.c \
 alg/ike_alg_serpent.c alg/ike_alg_sha2.c alg/ike_alginit.c \
-linux26/netlink.h linux26/rtnetlink.h linux26/xfrm.h \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h
 
 INCLUDES = \
+-I${linuxdir} \
 -I$(top_srcdir)/src/libfreeswan \
 -I$(top_srcdir)/src/libcrypto \
 -I$(top_srcdir)/src/whack
@@ -137,4 +137,5 @@ install-exec-local :
 	mkdir -p -m 755 $(confdir)/ipsec.d/crls
 	mkdir -p -m 755 $(confdir)/ipsec.d/reqs
 	mkdir -p -m 700 $(confdir)/ipsec.d/private
+	chown -R $(ipsecuid):$(ipsecgid) $(confdir)/ipsec.d
 

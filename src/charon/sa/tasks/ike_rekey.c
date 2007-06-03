@@ -26,8 +26,8 @@
 #include <daemon.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/tasks/ike_init.h>
-#include <queues/jobs/delete_ike_sa_job.h>
-#include <queues/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/delete_ike_sa_job.h>
+#include <processing/jobs/rekey_ike_sa_job.h>
 
 
 typedef struct private_ike_rekey_t private_ike_rekey_t;
@@ -73,21 +73,20 @@ struct private_ike_rekey_t {
  */
 static status_t build_i(private_ike_rekey_t *this, message_t *message)
 {
-	connection_t *connection;
-	policy_t *policy;
+	peer_cfg_t *peer_cfg;
 	
-	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-														TRUE);
-	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	this->new_sa->set_connection(this->new_sa, connection);
-	this->new_sa->set_policy(this->new_sa, policy);
-
-	this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
+	/* create new SA only on first try */
+	if (this->new_sa == NULL)
+	{
+		this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+															TRUE);
+		
+		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
+		this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
+		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
+	}
 	this->ike_init->task.build(&this->ike_init->task, message);
-	
-	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 
 	return NEED_MORE;
 }
@@ -97,8 +96,7 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
  */
 static status_t process_r(private_ike_rekey_t *this, message_t *message)
 {
-	connection_t *connection;
-	policy_t *policy;
+	peer_cfg_t *peer_cfg;
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	
@@ -129,11 +127,8 @@ static status_t process_r(private_ike_rekey_t *this, message_t *message)
 	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 														FALSE);
 	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	this->new_sa->set_connection(this->new_sa, connection);
-	this->new_sa->set_policy(this->new_sa, policy);
-	
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
 	this->ike_init = ike_init_create(this->new_sa, FALSE, this->ike_sa);
 	this->ike_init->task.process(&this->ike_init->task, message);
 	
@@ -171,23 +166,29 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 	job_t *job;
 	ike_sa_id_t *to_delete;
 
-	if (this->ike_init->task.process(&this->ike_init->task, message) == FAILED)
+	switch (this->ike_init->task.process(&this->ike_init->task, message))
 	{
-		/* rekeying failed, fallback to old SA */
-		if (!(this->collision &&
-			this->collision->get_type(this->collision) == IKE_DELETE))
-		{
-			job_t *job;
-			u_int32_t retry = charon->configuration->get_retry_interval(
-									charon->configuration);
-			job = (job_t*)rekey_ike_sa_job_create(
-									this->ike_sa->get_id(this->ike_sa), FALSE);
-			DBG1(DBG_IKE, "IKE_SA rekeying failed, "
-				 					"trying again in %d seconds", retry);
-			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			charon->event_queue->add_relative(charon->event_queue, job, retry * 1000);
-		}
-		return SUCCESS;
+		case FAILED:
+			/* rekeying failed, fallback to old SA */
+			if (!(this->collision &&
+				this->collision->get_type(this->collision) == IKE_DELETE))
+			{
+				job_t *job;
+				u_int32_t retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+				job = (job_t*)rekey_ike_sa_job_create(
+										this->ike_sa->get_id(this->ike_sa), FALSE);
+				DBG1(DBG_IKE, "IKE_SA rekeying failed, "
+					 					"trying again in %d seconds", retry);
+				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+				charon->event_queue->add_relative(charon->event_queue, job, retry * 1000);
+			}
+			return SUCCESS;
+		case NEED_MORE:
+			/* bad dh group, try again */
+			this->ike_init->task.migrate(&this->ike_init->task, this->new_sa);
+			return NEED_MORE;
+		default:
+			break;
 	}
 
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);

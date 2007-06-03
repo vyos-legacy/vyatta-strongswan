@@ -29,6 +29,7 @@
 #include "x509.h"
 #include "crl.h"
 #include "ca.h"
+#include "ac.h"
 #include "certinfo.h"
 #include "ocsp.h"
 
@@ -65,6 +66,11 @@ struct private_ca_info_t {
 	x509_t *cacert;
 	
 	/**
+	 * List of attribute certificates
+	 */
+	linked_list_t *attrcerts;
+
+	/**
 	 * List of crl URIs
 	 */
 	linked_list_t *crluris;
@@ -94,6 +100,7 @@ struct private_ca_info_t {
 /**
  * static options set by ca_info_set_options()
  */
+static strict_t strict_crl_policy = STRICT_NO;
 static bool cache_crls = FALSE;
 static u_int crl_check_interval = 0;
 
@@ -148,6 +155,31 @@ static bool is_cert_issuer(private_ca_info_t *this, const x509_t *cert)
 static bool is_crl_issuer(private_ca_info_t *this, const crl_t *crl)
 {
 	return crl->is_issuer(crl, this->cacert);
+}
+
+/**
+ * Implements ca_info_t.is_ca
+ */
+static bool is_ca(private_ca_info_t *this)
+{
+	return this->cacert->is_ca(this->cacert);
+}
+
+/**
+ * Implements ca_info_t.is_strict
+ */
+static bool is_strict(private_ca_info_t *this)
+{
+	bool strict = strict_crl_policy != STRICT_NO;
+
+	if (strict_crl_policy == STRICT_IFURI)
+	{
+		pthread_mutex_lock(&(this->mutex));
+		strict = this->crluris->get_count(this->crluris)   > 0 ||
+				 this->ocspuris->get_count(this->ocspuris) > 0;
+		pthread_mutex_unlock(&(this->mutex));
+	}
+	return strict;
 }
 
 /**
@@ -213,11 +245,9 @@ static void add_crl(private_ca_info_t *this, crl_t *crl)
  */
 static void list_crl(private_ca_info_t *this, FILE *out, bool utc)
 {
-	pthread_mutex_lock(&(this->mutex));
-
-	fprintf(out, "%#U\n", this->crl, utc);
-
-	pthread_mutex_unlock(&(this->mutex));
+	pthread_mutex_lock(&this->mutex);
+	this->crl->list(this->crl, out, utc);
+	pthread_mutex_unlock(&this->mutex);
 }
 
 /**
@@ -225,26 +255,42 @@ static void list_crl(private_ca_info_t *this, FILE *out, bool utc)
  */
 static void list_certinfos(private_ca_info_t *this, FILE *out, bool utc)
 {
-	pthread_mutex_lock(&(this->mutex));
+	iterator_t *iterator;
+	certinfo_t *certinfo;
+	chunk_t authkey;
 
+	pthread_mutex_lock(&this->mutex);
+
+	authkey = this->cacert->get_subjectKeyID(this->cacert);
 	fprintf(out,"    authname:  '%D'\n", this->cacert->get_subject(this->cacert));
-	{
-		chunk_t authkey = this->cacert->get_subjectKeyID(this->cacert);
+	fprintf(out,"    authkey:    %#B\n", &authkey);
 
-		fprintf(out,"    authkey:    %#B\n", &authkey);
-	}
+	iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
+	while (iterator->iterate(iterator, (void**)&certinfo))
 	{
-		iterator_t *iterator = this->certinfos->create_iterator(this->certinfos, TRUE);
-		certinfo_t *certinfo;
-
-		while (iterator->iterate(iterator, (void**)&certinfo))
+		time_t nextUpdate, thisUpdate, now;
+		chunk_t serial;
+		
+		now = time(NULL);
+		nextUpdate = certinfo->get_nextUpdate(certinfo);
+		thisUpdate = certinfo->get_thisUpdate(certinfo);
+		serial = certinfo->get_serialNumber(certinfo);
+		
+		fprintf(out, "%#T, until %#T, ", &thisUpdate, utc, &nextUpdate, utc);
+		if (now > nextUpdate)
 		{
-			fprintf(out, "%#Y\n", certinfo, utc);
+			fprintf(out, "expired (%V ago)\n", &now, &nextUpdate);
 		}
-		iterator->destroy(iterator);
+		else
+		{
+			fprintf(out, "ok (expires in %V)\n", &now, &nextUpdate);
+		}
+		fprintf(out, "    serial:     %#B, %N\n", &serial,
+				cert_status_names, certinfo->get_status(certinfo));
 	}
+	iterator->destroy(iterator);
 
-	pthread_mutex_unlock(&(this->mutex));
+	pthread_mutex_unlock(&this->mutex);
 }
 
 /**
@@ -644,6 +690,8 @@ static void purge_ocsp(private_ca_info_t *this)
  */
 static void destroy(private_ca_info_t *this)
 {
+	this->attrcerts->destroy_offset(this->attrcerts,
+								  offsetof(x509ac_t, destroy));
 	this->crluris->destroy_offset(this->crluris,
 								  offsetof(identification_t, destroy));
 	this->ocspuris->destroy_offset(this->ocspuris,
@@ -656,92 +704,59 @@ static void destroy(private_ca_info_t *this)
 }
 
 /**
- * output handler in printf()
+ * list the info of this CA
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+static void list(private_ca_info_t* this, FILE* out, bool utc)
 {
-	private_ca_info_t *this = *((private_ca_info_t**)(args[0]));
-	bool utc = TRUE;
-	int written = 0;
-	const x509_t *cacert;
+	chunk_t chunk;
+	identification_t *uri;
+	iterator_t *iterator;
+	bool first;
 	
-	if (info->alt)
-	{
-		utc = *((bool*)args[1]);
-	}
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
-
 	pthread_mutex_lock(&(this->mutex));
-	written += fprintf(stream, "%#T", &this->installed, utc);
+	fprintf(out, "%#T", &this->installed, utc);
 
 	if (this->name)
 	{
-		written += fprintf(stream, ", \"%s\"\n", this->name);
+		fprintf(out, ", \"%s\"\n", this->name);
 	}
 	else
 	{
-		written += fprintf(stream, "\n");
+		fprintf(out, "\n");
 	}
 
-	cacert = this->cacert;
-	written += fprintf(stream, "    authname:  '%D'\n", cacert->get_subject(cacert));
+	fprintf(out, "    authname:  '%D'\n", this->cacert->get_subject(this->cacert));
+	chunk = this->cacert->get_subjectKeyID(this->cacert);
+	fprintf(out, "    authkey:    %#B\n", &chunk);
+	chunk = this->cacert->get_keyid(this->cacert);
+	fprintf(out, "    keyid:      %#B\n", &chunk);
+	
+	first = TRUE;
+	iterator = this->crluris->create_iterator(this->crluris, TRUE);
+	while (iterator->iterate(iterator, (void**)&uri))
 	{
-		chunk_t authkey = cacert->get_subjectKeyID(cacert);
-
-		written += fprintf(stream, "    authkey:    %#B\n", &authkey);
+		fprintf(out, "    %s   '%D'\n",  first ? "crluris:":"        ", uri);
+		first = FALSE;
 	}
+	iterator->destroy(iterator);
+	
+	first = TRUE;
+	iterator = this->ocspuris->create_iterator(this->ocspuris, TRUE);
+	while (iterator->iterate(iterator, (void**)&uri))
 	{
-		chunk_t keyid = cacert->get_keyid(cacert);
-
-		written += fprintf(stream, "    keyid:      %#B\n", &keyid);
+		fprintf(out, "    %s  '%D'\n", first ? "ocspuris:":"         ", uri);
+		first = FALSE;
 	}
-	{
-		identification_t *crluri;
-		iterator_t *iterator = this->crluris->create_iterator(this->crluris, TRUE);
-		bool first = TRUE;
-
-		while (iterator->iterate(iterator, (void**)&crluri))
-		{
-			written += fprintf(stream, "    %s   '%D'\n",
-							   first? "crluris:":"        ", crluri);
-			first = FALSE;
-		}
-		iterator->destroy(iterator);
-	}
-	{
-		identification_t *ocspuri;
-		iterator_t *iterator = this->ocspuris->create_iterator(this->ocspuris, TRUE);
-		bool first = TRUE;
-
-		while (iterator->iterate(iterator, (void**)&ocspuri))
-		{
-			written += fprintf(stream, "    %s  '%D'\n",
-							   first? "ocspuris:":"         ", ocspuri);
-			first = FALSE;
-		}
-		iterator->destroy(iterator);
-	}
+	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->mutex));
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_CAINFO, print, arginfo_ptr_alt_ptr_int);
 }
 
 /*
  * Described in header.
  */
-void ca_info_set_options(bool cache, u_int interval)
+void ca_info_set_options(strict_t strict, bool cache, u_int interval)
 {
+	strict_crl_policy = strict;
 	cache_crls = cache;
 	crl_check_interval = interval;
 }
@@ -757,6 +772,7 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->installed = time(NULL);
 	this->name = (name == NULL)? NULL:strdup(name);
 	this->cacert = cacert;
+	this->attrcerts = linked_list_create();
 	this->crluris = linked_list_create();
 	this->ocspuris = linked_list_create();
 	this->certinfos = linked_list_create();
@@ -770,10 +786,13 @@ ca_info_t *ca_info_create(const char *name, x509_t *cacert)
 	this->public.equals_name_release_info = (bool (*) (ca_info_t*,const char*))equals_name_release_info;
 	this->public.is_cert_issuer = (bool (*) (ca_info_t*,const x509_t*))is_cert_issuer;
 	this->public.is_crl_issuer = (bool (*) (ca_info_t*,const crl_t*))is_crl_issuer;
+	this->public.is_ca = (bool (*) (ca_info_t*))is_ca;
+	this->public.is_strict = (bool (*) (ca_info_t*))is_strict;
 	this->public.add_info = (void (*) (ca_info_t*,const ca_info_t*))add_info;
 	this->public.add_crl = (void (*) (ca_info_t*,crl_t*))add_crl;
 	this->public.has_crl = (bool (*) (ca_info_t*))has_crl;
 	this->public.has_certinfos = (bool (*) (ca_info_t*))has_certinfos;
+	this->public.list = (void (*) (ca_info_t*,FILE*,bool))list;
 	this->public.list_crl = (void (*) (ca_info_t*,FILE*,bool))list_crl;
 	this->public.list_certinfos = (void (*) (ca_info_t*,FILE*,bool))list_certinfos;
 	this->public.add_crluri = (void (*) (ca_info_t*,chunk_t))add_crluri;

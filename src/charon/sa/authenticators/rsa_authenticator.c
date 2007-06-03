@@ -25,7 +25,6 @@
 
 #include "rsa_authenticator.h"
 
-#include <config/policies/policy.h>
 #include <daemon.h>
 
 
@@ -61,8 +60,9 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 {
 	status_t status;
 	chunk_t auth_data, octets;
-	rsa_public_key_t *public_key;
 	identification_t *other_id;
+	ca_info_t *issuer;
+	prf_t *prf;
 	
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	
@@ -71,27 +71,20 @@ static status_t verify(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 		return INVALID_ARG;
 	}
 	auth_data = auth_payload->get_data(auth_payload);
-	public_key = charon->credentials->get_trusted_public_key(charon->credentials,
-															 other_id);
-	if (public_key == NULL)
-	{
-		DBG1(DBG_IKE, "no RSA public key found for '%D'", other_id);
-		return NOT_FOUND;
-	}
-	octets = build_tbs_octets(ike_sa_init, my_nonce, other_id,
-							  this->ike_sa->get_auth_verify(this->ike_sa));
-	status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
+	prf = this->ike_sa->get_prf(this->ike_sa);
+	prf->set_key(prf, this->ike_sa->get_skp_verify(this->ike_sa));
+	octets = build_tbs_octets(ike_sa_init, my_nonce, other_id, prf);
+	status = charon->credentials->verify_signature(charon->credentials,
+								  octets, auth_data, other_id, &issuer);
 	chunk_free(&octets);
 	
-	if (status != SUCCESS)
+	if (status == SUCCESS)
 	{
-		DBG1(DBG_IKE, "RSA signature verification failed");
-		return status;
+		this->ike_sa->set_other_ca(this->ike_sa, issuer);
+		DBG1(DBG_IKE, "authentication of '%D' with %N successful",
+					   other_id, auth_method_names, AUTH_RSA);
 	}
-	
-	DBG1(DBG_IKE, "authentication of '%D' with %N successful",
-		 other_id, auth_method_names, AUTH_RSA);
-	return SUCCESS;
+	return status;
 }
 
 /**
@@ -107,6 +100,7 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	rsa_public_key_t *my_pubkey;
 	rsa_private_key_t *my_key;
 	identification_t *my_id;
+	prf_t *prf;
 
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
@@ -131,8 +125,9 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	}
 	DBG2(DBG_IKE, "matching RSA private key found");
 
-	octets = build_tbs_octets(ike_sa_init, other_nonce, my_id,
-							  this->ike_sa->get_auth_build(this->ike_sa));
+	prf = this->ike_sa->get_prf(this->ike_sa);
+	prf->set_key(prf, this->ike_sa->get_skp_build(this->ike_sa));
+	octets = build_tbs_octets(ike_sa_init, other_nonce, my_id, prf);
 	status = my_key->build_emsa_pkcs1_signature(my_key, HASH_SHA1, octets, &auth_data);
 	chunk_free(&octets);
 

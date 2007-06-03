@@ -34,14 +34,42 @@ typedef struct ike_sa_t ike_sa_t;
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <sa/tasks/task.h>
-#include <config/configuration.h>
 #include <utils/randomizer.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
-#include <config/connections/connection.h>
-#include <config/policies/policy.h>
-#include <config/proposal.h>
+#include <crypto/ca.h>
+#include <config/peer_cfg.h>
+#include <config/ike_cfg.h>
+
+/**
+ * Timeout in milliseconds after that a half open IKE_SA gets deleted.
+ *
+ * @ingroup sa
+ */
+#define HALF_OPEN_IKE_SA_TIMEOUT 30000
+
+/**
+ * Interval to send keepalives when NATed, in seconds.
+ *
+ * @ingroup sa
+ */
+#define KEEPALIVE_INTERVAL 20
+
+/**
+ * After which time rekeying should be retried if it failed, in seconds.
+ *
+ * @ingroup sa
+ */
+#define RETRY_INTERVAL 30
+
+/**
+ * Jitter to subtract from RETRY_INTERVAL to randomize rekey retry.
+ *
+ * @ingroup sa
+ */
+#define RETRY_JITTER 20
+
 
 /**
  * @brief State of an IKE_SA.
@@ -157,6 +185,13 @@ struct ike_sa_t {
 	ike_sa_state_t (*get_state) (ike_sa_t *this);
 	
 	/**
+	 * @brief Get some statistics about this IKE_SA.
+	 *
+	 * @param next_rekeying			when the next rekeying is scheduled
+	 */
+	void (*get_stats)(ike_sa_t *this, u_int32_t *next_rekeying);	
+	
+	/**
 	 * @brief Set the state of the IKE_SA.
 	 *
 	 * @param this			calling object
@@ -221,7 +256,7 @@ struct ike_sa_t {
 	void (*set_my_id) (ike_sa_t *this, identification_t *me);
 	
 	/**
-	 * @brief Get the other peers identification.
+	 * @brief Get the other peer's identification.
 	 * 
 	 * @param this 			calling object
 	 * @return				identification
@@ -229,7 +264,7 @@ struct ike_sa_t {
 	identification_t* (*get_other_id) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the other peers identification.
+	 * @brief Set the other peer's identification.
 	 * 
 	 * @param this 			calling object
 	 * @param other			identification
@@ -237,51 +272,65 @@ struct ike_sa_t {
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
 	
 	/**
-	 * @brief Get the connection used by this IKE_SA.
+	 * @brief Get the other peer's certification authority
 	 * 
 	 * @param this 			calling object
-	 * @return				connection
+	 * @return			ca_info_t record of other ca
 	 */
-	connection_t* (*get_connection) (ike_sa_t *this);
+	ca_info_t* (*get_other_ca) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the connection to use with this IKE_SA.
+	 * @brief Set the other peer's certification authority
 	 * 
 	 * @param this 			calling object
-	 * @param connection	connection to use
+	 * @param other_ca		ca_info_t record of other ca
 	 */
-	void (*set_connection) (ike_sa_t *this, connection_t* connection);
+	void (*set_other_ca) (ike_sa_t *this, ca_info_t *other_ca);
+	
+	/**
+	 * @brief Get the config used to setup this IKE_SA.
+	 * 
+	 * @param this 			calling object
+	 * @return				ike_config
+	 */
+	ike_cfg_t* (*get_ike_cfg) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the config to setup this IKE_SA.
+	 * 
+	 * @param this 			calling object
+	 * @param config		ike_config to use
+	 */
+	void (*set_ike_cfg) (ike_sa_t *this, ike_cfg_t* config);
 
 	/**
-	 * @brief Get the policy used by this IKE_SA.
+	 * @brief Get the peer config used by this IKE_SA.
 	 * 
 	 * @param this 			calling object
-	 * @return				policy
+	 * @return				peer_config
 	 */
-	policy_t* (*get_policy) (ike_sa_t *this);
+	peer_cfg_t* (*get_peer_cfg) (ike_sa_t *this);
 	
 	/**
-	 * @brief Set the policy to use with this IKE_SA.
+	 * @brief Set the peer config to use with this IKE_SA.
 	 * 
 	 * @param this 			calling object
-	 * @param policy		policy to use
+	 * @param config		peer_config to use
 	 */
-	void (*set_policy) (ike_sa_t *this, policy_t *policy);
+	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
 
 	/**
 	 * @brief Initiate a new connection.
 	 *
-	 * The policy/connection is owned by the IKE_SA after the call, so
-	 * do not modify or destroy it.
+	 * The configs are owned by the IKE_SA after the call.
 	 * 
 	 * @param this 			calling object
-	 * @param connection	connection to initiate
-	 * @param policy		policy to set up
+	 * @param child_cfg		child config to create CHILD from
 	 * @return				
 	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
+	 * 						- DESTROY_ME if initialization failed
 	 */
-	status_t (*initiate) (ike_sa_t *this, connection_t *connection, policy_t *policy);
+	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg);
 
 	/**
 	 * @brief Route a policy in the kernel.
@@ -290,28 +339,27 @@ struct ike_sa_t {
 	 * the kernel requests connection setup from the IKE_SA via acquire().
 	 * 
 	 * @param this 			calling object
-	 * @param connection	connection definition used for routing
-	 * @param policy		policy to route
+	 * @param child_cfg		child config to route
 	 * @return				
 	 * 						- SUCCESS if routed successfully
 	 * 						- FAILED if routing failed
 	 */
-	status_t (*route) (ike_sa_t *this, connection_t *connection, policy_t *policy);
+	status_t (*route) (ike_sa_t *this, child_cfg_t *child_cfg);
 
 	/**
 	 * @brief Unroute a policy in the kernel previously routed.
 	 *
 	 * @param this 			calling object
-	 * @param policy		policy to route
+	 * @param reqid			reqid of CHILD_SA to unroute
 	 * @return				
 	 * 						- SUCCESS if route removed
-	 * 						- DESTROY_ME if last route was removed from
-	 * 						  an IKE_SA which was not established
+	 *						- NOT_FOUND if CHILD_SA not found
+	 * 						- DESTROY_ME if last CHILD_SA was unrouted
 	 */
-	status_t (*unroute) (ike_sa_t *this, policy_t *policy);
+	status_t (*unroute) (ike_sa_t *this, u_int32_t reqid);
 	
 	/**
-	 * @brief Acquire connection setup for a policy.
+	 * @brief Acquire connection setup for an installed kernel policy.
 	 *
 	 * If an installed policy raises an acquire, the kernel calls
 	 * this function to establish the CHILD_SA (and maybe the IKE_SA).
@@ -320,7 +368,7 @@ struct ike_sa_t {
 	 * @param reqid			reqid of the CHILD_SA the policy belongs to.
 	 * @return				
 	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
+	 * 						- DESTROY_ME if initialization failed
 	 */
 	status_t (*acquire) (ike_sa_t *this, u_int32_t reqid);
 	
@@ -456,7 +504,7 @@ struct ike_sa_t {
 							bool initiator, prf_t *child_prf, prf_t *old_prf);
 	
 	/**
-	 * @brief Get the multi purpose prf.
+	 * @brief Get a multi purpose prf for the negotiated PRF function.
 	 * 
 	 * @param this 			calling object
 	 * @return				pointer to prf_t object
@@ -472,20 +520,20 @@ struct ike_sa_t {
 	prf_t *(*get_child_prf) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the prf to build outgoing authentication data.
+	 * @brief Get the key to build outgoing authentication data.
 	 * 
 	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
-	prf_t *(*get_auth_build) (ike_sa_t *this);
+	chunk_t (*get_skp_build) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the prf to verify incoming authentication data.
+	 * @brief Get the key to verify incoming authentication data.
 	 * 
 	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
-	prf_t *(*get_auth_verify) (ike_sa_t *this);
+	chunk_t (*get_skp_verify) (ike_sa_t *this);
 	
 	/**
 	 * @brief Associates a child SA to this IKE SA

@@ -32,7 +32,7 @@ typedef struct child_sa_t child_sa_t;
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <config/proposal.h>
-#include <config/policies/policy.h>
+#include <config/child_cfg.h>
 
 /**
  * Where we should start with reqid enumeration
@@ -101,7 +101,7 @@ extern enum_name_t *child_sa_state_names;
 struct child_sa_t {
 	
 	/**
-	 * @brief Get the name of the policy this CHILD_SA uses.
+	 * @brief Get the name of the config this CHILD_SA uses.
 	 *
 	 * @param this			calling object
 	 * @return				name
@@ -139,6 +139,25 @@ struct child_sa_t {
 	 * @return 			AH | ESP
 	 */
 	protocol_id_t (*get_protocol) (child_sa_t *this);
+	
+	/**
+	 * @brief Get info and statistics about this CHILD_SA.
+	 *
+	 * @param mode		mode this IKE_SA uses
+	 * @param encr_algo	encryption algorithm used by this CHILD_SA.
+	 * @param encr_len	key length of the algorithm, if any
+	 * @param int_algo	integrity algorithm used by this CHILD_SA
+	 * @param int_len	key length of the algorithm, if any
+	 * @param rekey		time when rekeying is scheduled
+	 * @param use_in	time when last traffic was seen coming in
+	 * @param use_out	time when last traffic was seen going out
+	 * @param use_fwd	time when last traffic was getting forwarded
+	 */
+	void (*get_stats)(child_sa_t *this, mode_t *mode,
+					  encryption_algorithm_t *encr, size_t *encr_len,
+					  integrity_algorithm_t *int_algo, size_t *int_len,
+					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
+					  u_int32_t *use_fwd);
 	
 	/**
 	 * @brief Allocate SPIs for given proposals.
@@ -214,17 +233,10 @@ struct child_sa_t {
 	 * @brief Get the traffic selectors of added policies of local host.
 	 *
 	 * @param this 		calling object
+	 * @param local		TRUE for own traffic selectors, FALSE for remote
 	 * @return			list of traffic selectors
 	 */	
-	linked_list_t* (*get_my_traffic_selectors) (child_sa_t *this);
-	
-	/**
-	 * @brief Get the traffic selectors of added policies of remote host.
-	 *
-	 * @param this 		calling object
-	 * @return			list of traffic selectors
-	 */	
-	linked_list_t* (*get_other_traffic_selectors) (child_sa_t *this);
+	linked_list_t* (*get_traffic_selectors) (child_sa_t *this, bool local);
 	
 	/**
 	 * @brief Get the time of this child_sa_t's last use (i.e. last use of any of its policies)
@@ -251,12 +263,12 @@ struct child_sa_t {
 	void (*set_state) (child_sa_t *this, child_sa_state_t state);
 	
 	/**
-	 * @brief Get the policy used to set up this child sa.
+	 * @brief Get the config used to set up this child sa.
 	 *
 	 * @param this 		calling object
-	 * @return			policy
+	 * @return			child_cfg
 	 */
-	policy_t* (*get_policy) (child_sa_t *this);
+	child_cfg_t* (*get_config) (child_sa_t *this);
 	
 	/**
 	 * @brief Set the virtual IP used received from IRAS.
@@ -284,7 +296,7 @@ struct child_sa_t {
  * @param other			remote address
  * @param my_id			id of own peer
  * @param other_id		id of remote peer
- * @param policy		policy this CHILD_SA instantiates
+ * @param config		config to use for this CHILD_SA
  * @param reqid			reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param use_natt		TRUE if NAT traversal is used
  * @return				child_sa_t object
@@ -293,6 +305,6 @@ struct child_sa_t {
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other,
 							 identification_t *my_id, identification_t* other_id,
-							 policy_t *policy, u_int32_t reqid, bool use_natt);
+							 child_cfg_t *config, u_int32_t reqid, bool use_natt);
 
 #endif /*CHILD_SA_H_*/

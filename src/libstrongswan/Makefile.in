@@ -60,7 +60,7 @@ am__DEPENDENCIES_1 =
 libstrongswan_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_libstrongswan_la_OBJECTS = library.lo chunk.lo debug.lo enum.lo \
-	printf_hook.lo asn1.lo oid.lo pem.lo ttodata.lo ca.lo \
+	printf_hook.lo asn1.lo oid.lo pem.lo ttodata.lo ac.lo ca.lo \
 	certinfo.lo crl.lo crypter.lo aes_cbc_crypter.lo \
 	des_crypter.lo diffie_hellman.lo hasher.lo sha1_hasher.lo \
 	sha2_hasher.lo md5_hasher.lo hmac.lo ocsp.lo fips_prf.lo \
@@ -129,6 +129,7 @@ LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
+LINUX_HEADERS = @LINUX_HEADERS@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -141,6 +142,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -151,8 +153,12 @@ USE_LEAK_DETECTIVE_FALSE = @USE_LEAK_DETECTIVE_FALSE@
 USE_LEAK_DETECTIVE_TRUE = @USE_LEAK_DETECTIVE_TRUE@
 USE_LIBCURL_FALSE = @USE_LIBCURL_FALSE@
 USE_LIBCURL_TRUE = @USE_LIBCURL_TRUE@
+USE_LIBDBUS_FALSE = @USE_LIBDBUS_FALSE@
+USE_LIBDBUS_TRUE = @USE_LIBDBUS_TRUE@
 USE_LIBLDAP_FALSE = @USE_LIBLDAP_FALSE@
 USE_LIBLDAP_TRUE = @USE_LIBLDAP_TRUE@
+USE_LIBXML_FALSE = @USE_LIBXML_FALSE@
+USE_LIBXML_TRUE = @USE_LIBXML_TRUE@
 USE_NAT_TRANSPORT_FALSE = @USE_NAT_TRANSPORT_FALSE@
 USE_NAT_TRANSPORT_TRUE = @USE_NAT_TRANSPORT_TRUE@
 USE_SMARTCARD_FALSE = @USE_SMARTCARD_FALSE@
@@ -174,6 +180,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+backenddir = @backenddir@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -183,6 +190,8 @@ build_vendor = @build_vendor@
 confdir = @confdir@
 datadir = @datadir@
 datarootdir = @datarootdir@
+dbus_CFLAGS = @dbus_CFLAGS@
+dbus_LIBS = @dbus_LIBS@
 docdir = @docdir@
 dvidir = @dvidir@
 eapdir = @eapdir@
@@ -196,9 +205,13 @@ htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
+interfacedir = @interfacedir@
 ipsecdir = @ipsecdir@
+ipsecgid = @ipsecgid@
+ipsecuid = @ipsecuid@
 libdir = @libdir@
 libexecdir = @libexecdir@
+linuxdir = @linuxdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
@@ -213,6 +226,8 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
+xml_CFLAGS = @xml_CFLAGS@
+xml_LIBS = @xml_LIBS@
 lib_LTLIBRARIES = libstrongswan.la
 libstrongswan_la_SOURCES = \
 credential_store.h \
@@ -225,6 +240,7 @@ asn1/asn1.c asn1/asn1.h \
 asn1/oid.c asn1/oid.h \
 asn1/pem.c asn1/pem.h \
 asn1/ttodata.c asn1/ttodata.h \
+crypto/ac.c crypto/ac.h \
 crypto/ca.c crypto/ca.h \
 crypto/certinfo.c crypto/certinfo.h \
 crypto/crl.c crypto/crl.h \
@@ -333,6 +349,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ac.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aes_cbc_crypter.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asn1.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ca.Plo@am__quote@
@@ -420,6 +437,13 @@ ttodata.lo: asn1/ttodata.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='asn1/ttodata.c' object='ttodata.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ttodata.lo `test -f 'asn1/ttodata.c' || echo '$(srcdir)/'`asn1/ttodata.c
+
+ac.lo: crypto/ac.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ac.lo -MD -MP -MF "$(DEPDIR)/ac.Tpo" -c -o ac.lo `test -f 'crypto/ac.c' || echo '$(srcdir)/'`crypto/ac.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/ac.Tpo" "$(DEPDIR)/ac.Plo"; else rm -f "$(DEPDIR)/ac.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='crypto/ac.c' object='ac.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ac.lo `test -f 'crypto/ac.c' || echo '$(srcdir)/'`crypto/ac.c
 
 ca.lo: crypto/ca.c
 @am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ca.lo -MD -MP -MF "$(DEPDIR)/ca.Tpo" -c -o ca.lo `test -f 'crypto/ca.c' || echo '$(srcdir)/'`crypto/ca.c; \

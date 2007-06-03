@@ -164,6 +164,7 @@ LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
+LINUX_HEADERS = @LINUX_HEADERS@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
@@ -176,6 +177,7 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
+PKG_CONFIG = @PKG_CONFIG@
 RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -186,8 +188,12 @@ USE_LEAK_DETECTIVE_FALSE = @USE_LEAK_DETECTIVE_FALSE@
 USE_LEAK_DETECTIVE_TRUE = @USE_LEAK_DETECTIVE_TRUE@
 USE_LIBCURL_FALSE = @USE_LIBCURL_FALSE@
 USE_LIBCURL_TRUE = @USE_LIBCURL_TRUE@
+USE_LIBDBUS_FALSE = @USE_LIBDBUS_FALSE@
+USE_LIBDBUS_TRUE = @USE_LIBDBUS_TRUE@
 USE_LIBLDAP_FALSE = @USE_LIBLDAP_FALSE@
 USE_LIBLDAP_TRUE = @USE_LIBLDAP_TRUE@
+USE_LIBXML_FALSE = @USE_LIBXML_FALSE@
+USE_LIBXML_TRUE = @USE_LIBXML_TRUE@
 USE_NAT_TRANSPORT_FALSE = @USE_NAT_TRANSPORT_FALSE@
 USE_NAT_TRANSPORT_TRUE = @USE_NAT_TRANSPORT_TRUE@
 USE_SMARTCARD_FALSE = @USE_SMARTCARD_FALSE@
@@ -209,6 +215,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+backenddir = @backenddir@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -218,6 +225,8 @@ build_vendor = @build_vendor@
 confdir = @confdir@
 datadir = @datadir@
 datarootdir = @datarootdir@
+dbus_CFLAGS = @dbus_CFLAGS@
+dbus_LIBS = @dbus_LIBS@
 docdir = @docdir@
 dvidir = @dvidir@
 eapdir = @eapdir@
@@ -231,9 +240,13 @@ htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
+interfacedir = @interfacedir@
 ipsecdir = @ipsecdir@
+ipsecgid = @ipsecgid@
+ipsecuid = @ipsecuid@
 libdir = @libdir@
 libexecdir = @libexecdir@
+linuxdir = @linuxdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
@@ -248,6 +261,8 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
+xml_CFLAGS = @xml_CFLAGS@
+xml_LIBS = @xml_LIBS@
 pluto_SOURCES = \
 ac.c ac.h \
 alg_info.c alg_info.h \
@@ -308,11 +323,11 @@ xauth.c xauth.h \
 x509.c x509.h \
 alg/ike_alg_aes.c alg/ike_alg_blowfish.c alg/ike_alg_twofish.c \
 alg/ike_alg_serpent.c alg/ike_alg_sha2.c alg/ike_alginit.c \
-linux26/netlink.h linux26/rtnetlink.h linux26/xfrm.h \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h
 INCLUDES = \
+-I${linuxdir} \
 -I$(top_srcdir)/src/libfreeswan \
 -I$(top_srcdir)/src/libcrypto \
 -I$(top_srcdir)/src/whack
@@ -873,6 +888,7 @@ install-exec-local :
 	mkdir -p -m 755 $(confdir)/ipsec.d/crls
 	mkdir -p -m 755 $(confdir)/ipsec.d/reqs
 	mkdir -p -m 700 $(confdir)/ipsec.d/private
+	chown -R $(ipsecuid):$(ipsecgid) $(confdir)/ipsec.d
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

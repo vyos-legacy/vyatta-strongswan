@@ -29,22 +29,20 @@ typedef struct daemon_t daemon_t;
 
 #include <credential_store.h>
 
-#include <threads/sender.h>
-#include <threads/receiver.h>
-#include <threads/scheduler.h>
-#include <threads/kernel_interface.h>
-#include <threads/thread_pool.h>
-#include <threads/stroke_interface.h>
+#include <network/sender.h>
+#include <network/receiver.h>
 #include <network/socket.h>
+#include <processing/scheduler.h>
+#include <processing/thread_pool.h>
+#include <processing/job_queue.h>
+#include <processing/event_queue.h>
+#include <kernel/kernel_interface.h>
+#include <control/interface_manager.h>
 #include <bus/bus.h>
 #include <bus/listeners/file_logger.h>
 #include <bus/listeners/sys_logger.h>
 #include <sa/ike_sa_manager.h>
-#include <queues/job_queue.h>
-#include <queues/event_queue.h>
-#include <config/configuration.h>
-#include <config/connections/connection_store.h>
-#include <config/policies/policy_store.h>
+#include <config/backend_manager.h>
 
 /**
  * @defgroup charon charon
@@ -98,11 +96,51 @@ typedef struct daemon_t daemon_t;
  */
 
 /**
+ * @defgroup bus bus
+ *
+ * Signaling bus and its listeners.
+ *
+ * @ingroup charon
+ */
+
+/**
  * @defgroup config config
  *
  * Classes implementing configuration related things.
  *
  * @ingroup charon
+ */
+
+/**
+ * @defgroup backends backends
+ *
+ * Classes implementing configuration backends.
+ *
+ * @ingroup config
+ */
+
+/**
+ * @defgroup credentials credentials
+ *
+ * Trust chain verification and certificate store.
+ *
+ * @ingroup config
+ */
+
+/**
+ * @defgroup control control
+ *
+ * Handling of loadable control interface modules.
+ *
+ * @ingroup charon
+ */
+
+/**
+ * @defgroup interfaces interfaces
+ *
+ * Classes which control the daemon using IPC mechanisms.
+ *
+ * @ingroup control
  */
 
 /**
@@ -122,18 +160,25 @@ typedef struct daemon_t daemon_t;
  */
 
 /**
- * @defgroup network network
+ * @defgroup kernel kernel
  *
- * Classes for network relevant stuff.
+ * Classes to configure and query the kernel.
  *
  * @ingroup charon
  */
 
 /**
- * @defgroup queues queues
+ * @defgroup network network
  *
- * Different kind of queues
- * (thread save lists).
+ * Classes for sending and receiving UDP packets over the network.
+ *
+ * @ingroup charon
+ */
+
+/**
+ * @defgroup processing processing
+ *
+ * Queueing, scheduling and processing of jobs
  *
  * @ingroup charon
  */
@@ -141,33 +186,23 @@ typedef struct daemon_t daemon_t;
 /**
  * @defgroup jobs jobs
  *
- * Jobs used in job queue and event queue.
+ * Jobs to queue, schedule and process.
  *
- * @ingroup queues
+ * @ingroup processing
  */
 
 /**
  * @defgroup sa sa
  *
- * Security associations for IKE and IPSec,
- * and some helper classes.
+ * Security associations for IKE and IPSec, and its helper classes.
  *
  * @ingroup charon
  */
 
 /**
- * @defgroup tasks tasks
- *
- * Tasks process and build message payloads. They are used to create
- * and process multiple exchanges.
- *
- * @ingroup sa
- */
-
-/**
  * @defgroup authenticators authenticators
  *
- * Authenticator classes to prove identity of peer.
+ * Authenticator classes to prove identity of a peer.
  *
  * @ingroup sa
  */
@@ -175,25 +210,18 @@ typedef struct daemon_t daemon_t;
 /**
  * @defgroup eap eap
  *
- * EAP authentication module interface and it's implementations.
+ * EAP module loader, interface and it's implementations.
  *
  * @ingroup authenticators
  */
-
+ 
 /**
- * @defgroup threads threads
+ * @defgroup tasks tasks
  *
- * Threaded classes, which will do their job alone.
+ * Tasks process and build message payloads. They are used to create
+ * and process multiple exchanges.
  *
- * @ingroup charon
- */
-
-/**
- * @defgroup bus bus
- *
- * Signaling bus and its listeners.
- *
- * @ingroup charon
+ * @ingroup sa
  */
 
 /**
@@ -263,11 +291,25 @@ typedef struct daemon_t daemon_t;
 #define CERTIFICATE_DIR IPSEC_D_DIR "/certs"
 
 /**
- * Default directory for trusted CA certificates
+ * Default directory for trusted Certification Authority certificates
  * 
  * @ingroup charon
  */
 #define CA_CERTIFICATE_DIR IPSEC_D_DIR "/cacerts"
+
+/**
+ * Default directory for Authorization Authority certificates
+ * 
+ * @ingroup charon
+ */
+#define AA_CERTIFICATE_DIR IPSEC_D_DIR "/aacerts"
+
+/**
+ * Default directory for Attribute certificates
+ * 
+ * @ingroup charon
+ */
+#define ATTR_CERTIFICATE_DIR IPSEC_D_DIR "/acerts"
 
 /**
  * Default directory for OCSP signing certificates
@@ -317,19 +359,9 @@ struct daemon_t {
 	ike_sa_manager_t *ike_sa_manager;
 	
 	/**
-	 * A configuration_t instance.
+	 * Manager for the different configuration backends.
 	 */
-	configuration_t *configuration;
-	
-	/**
-	 * A connection_store_t instance.
-	 */
-	connection_store_t *connections;
-	
-	/**
-	 * A policy_store_t instance.
-	 */
-	policy_store_t *policies;
+	backend_manager_t *backends;
 	
 	/**
 	 * A credential_store_t instance.
@@ -382,15 +414,23 @@ struct daemon_t {
 	kernel_interface_t *kernel_interface;
 	
 	/**
-	 * IPC interface, as whack in pluto
+	 * Interfaces for IPC
 	 */
-	stroke_t *stroke;
+	interface_manager_t *interfaces;
+	
+	/**
+	 * @brief Let the calling thread drop its capabilities.
+	 * 
+	 * @param this			calling daemon
+	 * @param full			TRUE to drop as many as possible
+	 */
+	void (*drop_capabilities) (daemon_t *this, bool full);
 	
 	/**
 	 * @brief Shut down the daemon.
 	 * 
-	 * @param this		the daemon to kill
-	 * @param reason	describtion why it will be killed
+	 * @param this			the daemon to kill
+	 * @param reason		describtion why it will be killed
 	 */
 	void (*kill) (daemon_t *this, char *reason);
 };

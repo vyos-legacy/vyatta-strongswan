@@ -100,6 +100,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 {
     int pid, i;
     struct stat stb;
+    char buffer[BUF_LEN], buffer1[BUF_LEN];
     int argc = 1;
     char *arg[] = {
 	CHARON_CMD, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -115,6 +116,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     if (cfg->setup.strictcrlpolicy)
     {
 	arg[argc++] = "--strictcrlpolicy";
+	arg[argc++] = cfg->setup.strictcrlpolicy == STRICT_IFURI ? "2":"1";
     }
     if (cfg->setup.cachecrls)
     {
@@ -122,11 +124,9 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     }
     if (cfg->setup.crlcheckinterval > 0)
     {
-	char buffer[BUF_LEN];
-
-	snprintf(buffer, BUF_LEN, "%u", cfg->setup.crlcheckinterval);
+	snprintf(buffer1, BUF_LEN, "%u", cfg->setup.crlcheckinterval);
 	arg[argc++] = "--crlcheckinterval";
-	arg[argc++] = buffer;
+	arg[argc++] = buffer1;
     }
     if (cfg->setup.eapdir)
     {
@@ -135,7 +135,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     }
 
     {   /* parse debug string */
-    	char *pos, *level, *buf_pos, type[4], buffer[BUF_LEN];
+    	char *pos, *level, *buf_pos, type[4];
 	pos = cfg->setup.charondebug;
 	buf_pos = buffer;
 	while (pos && sscanf(pos, "%4s %d,", type, &level) == 2)
@@ -181,7 +181,11 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 	    FILE *f;
 
 	    plog("no %s file, generating RSA key", SECRETS_FILE);
+	    seteuid(IPSEC_UID);
+	    setegid(IPSEC_GID);
 	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
+	    seteuid(0);
+	    setegid(0);
 
 	    /* ipsec.secrets is root readable only */
 	    oldmask = umask(0066);
@@ -194,6 +198,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 		fprintf(f, ": RSA myKey.der\n");
 		fclose(f);
 	    }
+	    chown(SECRETS_FILE, IPSEC_UID, IPSEC_GID);
 	    umask(oldmask);
 	}
 
@@ -207,6 +212,8 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 	    /* child */
 	    setsid();
 	    sigprocmask(SIG_SETMASK, 0, NULL);
+	    /* disable glibc's malloc checker, conflicts with leak detective */
+	    setenv("MALLOC_CHECK_", "0", 1);
 	    execv(arg[0], arg);
 	    plog("can't execv(%s,...): %s", arg[0], strerror(errno));
 	    exit(1);

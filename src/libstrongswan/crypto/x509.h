@@ -6,7 +6,12 @@
  */
 
 /*
+ * Copyright (C) 2000 Andreas Hess, Patric Lichtsteiner, Roger Wegmann
+ * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
+ * Copyright (C) 2002 Mario Strasser
+ * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
  * Copyright (C) 2006 Martin Willi, Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,8 +33,10 @@ typedef struct x509_t x509_t;
 #include <library.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <crypto/certinfo.h>
+#include <crypto/ca.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
+#include <utils/linked_list.h>
 
 /* authority flags */
 
@@ -44,12 +51,8 @@ typedef struct x509_t x509_t;
  * @b Constructors:
  *  - x509_create_from_chunk()
  *  - x509_create_from_file()
- * 
- * @todo more code cleanup needed!
- * @todo fix unimplemented functions...
- * @todo handle memory management
  *
- * @ingroup transforms
+ * @ingroup crypto
  */
 struct x509_t {
 
@@ -151,7 +154,7 @@ struct x509_t {
 	chunk_t (*get_keyid) (const x509_t *this);
 
 	/**
-	 * @brief Get the certificate issuer's ID.
+	 * @brief Get the issuerDistinguishedName
 	 * 
 	 * The resulting ID is always a identification_t
 	 * of type ID_DER_ASN1_DN.
@@ -162,7 +165,7 @@ struct x509_t {
 	identification_t *(*get_issuer) (const x509_t *this);
 
 	/**
-	 * @brief Get the subjectDistinguisheName.
+	 * @brief Get the subjectDistinguishedName.
 	 * 
 	 * The resulting ID is always a identification_t
 	 * of type ID_DER_ASN1_DN. 
@@ -171,6 +174,26 @@ struct x509_t {
 	 * @return					subjects ID
 	 */
 	identification_t *(*get_subject) (const x509_t *this);
+
+	/**
+	 * @brief Set a link  ca info
+	 * 
+	 * @param this				calling object
+	 * @param ca_info			link to the info record of the issuing ca
+	 */
+	void (*set_ca_info) (x509_t *this, ca_info_t *ca_info);
+
+	/**
+	 * @brief Get the .
+	 * 
+	 * The resulting ID is always a identification_t
+	 * of type ID_DER_ASN1_DN. 
+	 * 
+	 * @param this				calling object
+	 * @return					link to the info record of the issuing ca
+	 *							or NULL if it does not [yet] exist
+	 */
+	ca_info_t *(*get_ca_info) (const x509_t *this);
 
 	/**
 	 * @brief Create an iterator for the crlDistributionPoints.
@@ -257,7 +280,16 @@ struct x509_t {
 	 * @return				TRUE if self-signed
 	 */
 	bool (*is_self_signed) (const x509_t *this);
-
+	
+	/**
+	 * @brief Log the certificate info to out.
+	 *
+	 * @param this			calling object
+	 * @param out			stream to write to
+	 * @param utc			TRUE for UTC times, FALSE for local time
+	 */
+	void (*list)(x509_t *this, FILE *out, bool utc);
+	
 	/**
 	 * @brief Destroys the certificate.
 	 * 
@@ -272,7 +304,7 @@ struct x509_t {
  * @param chunk 	chunk containing DER encoded data
  * @return 			created x509_t certificate, or NULL if invlid.
  * 
- * @ingroup transforms
+ * @ingroup crypto
  */
 x509_t *x509_create_from_chunk(chunk_t chunk, u_int level);
 
@@ -283,8 +315,32 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level);
  * @param label		label describing kind of certificate
  * @return 			created x509_t certificate, or NULL if invalid.
  * 
- * @ingroup transforms
+ * @ingroup crypto
  */
 x509_t *x509_create_from_file(const char *filename, const char *label);
+
+/**
+ * @brief Parses a DER encoded authorityKeyIdentifier
+ * 
+ * @param blob 					blob containing DER encoded data
+ * @param level0 				indicates the current parsing level
+ * @param authKeyID				assigns the authorityKeyIdentifier
+ * @param authKeySerialNumber	assigns the authKeySerialNumber
+ * 
+ * @ingroup crypto
+ */
+void parse_authorityKeyIdentifier(chunk_t blob, int level0, chunk_t *authKeyID, chunk_t *authKeySerialNumber);
+
+/**
+ * @brief Parses DER encoded generalNames
+ * 
+ * @param blob 			blob containing DER encoded data
+ * @param level0 		indicates the current parsing level
+ * @param implicit		implicit coding is used
+ * @param list			linked list of decoded generalNames
+ * 
+ * @ingroup crypto
+ */
+void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list);
 
 #endif /* X509_H_ */

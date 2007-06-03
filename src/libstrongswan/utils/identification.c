@@ -738,8 +738,15 @@ static bool contains_wildcards(private_identification_t *this)
  */
 static bool equals_binary(private_identification_t *this, private_identification_t *other)
 {
-	return this->type == other->type && 
-							chunk_equals(this->encoded, other->encoded);
+	if (this->type == other->type)
+	{
+		if (this->type == ID_ANY)
+		{
+			return TRUE;
+		}
+		return chunk_equals(this->encoded, other->encoded);
+	}
+	return FALSE;						
 }
 
 /**
@@ -956,7 +963,10 @@ static identification_t *clone_(private_identification_t *this)
 	private_identification_t *clone = identification_create();
 	
 	clone->type = this->type;
-	clone->encoded = chunk_clone(this->encoded);
+	if (this->encoded.len)
+	{
+		clone->encoded = chunk_clone(this->encoded);
+	}
 	clone->public.equals = this->public.equals;
 	clone->public.matches = this->public.matches;
 	

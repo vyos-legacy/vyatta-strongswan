@@ -39,10 +39,6 @@
 
 #define CRL_WARNING_INTERVAL	7	/* days */
 
-extern char* check_expiry(time_t expiration_date, int warning_interval, bool strict);
-extern time_t parse_time(chunk_t blob, int level0);
-extern void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID, chunk_t *authKeySerialNumber);
-
 /* access structure for a revoked certificate */
 
 typedef struct revokedCert_t revokedCert_t;
@@ -99,6 +95,11 @@ struct private_crl_t {
 	 */
 	identification_t *issuer;
 	
+	/**
+	 * CRL number
+	 */
+	chunk_t crlNumber;
+
 	/**
 	 * Time when the crl was generated
 	 */
@@ -291,6 +292,14 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 					{
 						parse_authorityKeyIdentifier(object, level, &crl->authKeyID, &crl->authKeySerialNumber);
 					}
+					else if (extn_oid == OID_CRL_NUMBER)
+					{
+						if (!parse_asn1_simple_object(&object, ASN1_INTEGER, level, "crlNumber"))
+						{
+							return FALSE;
+						}
+						crl->crlNumber = object;
+					}
 				}
 				break;
 			case CRL_OBJ_ALGORITHM:
@@ -416,66 +425,47 @@ static void destroy(private_crl_t *this)
 }
 
 /**
- * output handler in printf()
+ * Implementation of crl_t.list.
  */
-static int print(FILE *stream, const struct printf_info *info,
-				 const void *const *args)
+static void list(private_crl_t *this, FILE* out, bool utc)
 {
-	private_crl_t *this = *((private_crl_t**)(args[0]));
-	bool utc = TRUE;
-	int written = 0;
 	time_t now;
-	
-	if (info->alt)
-	{
-		utc = *((bool*)args[1]);
-	}
-	
-	if (this == NULL)
-	{
-		return fprintf(stream, "(null)");
-	}
 	
 	now = time(NULL);
 	
-	written += fprintf(stream, "%#T, revoked certs: %d\n", &this->installed, utc,
+	fprintf(out, "%#T, revoked certs: %d\n", &this->installed, utc,
 					   this->revokedCertificates->get_count(this->revokedCertificates));
-	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
-	written += fprintf(stream, "    updates:    this %#T\n", &this->thisUpdate, utc);
-	written += fprintf(stream, "                next %#T ",  &this->nextUpdate, utc);
+	fprintf(out, "    issuer:    '%D'\n", this->issuer);
+	if (this->crlNumber.ptr)
+	{
+		fprintf(out, "    crlnumber:  %#B\n", &this->crlNumber);
+	}
+	fprintf(out, "    updates:    this %#T\n", &this->thisUpdate, utc);
+	fprintf(out, "                next %#T ",  &this->nextUpdate, utc);
 	if (this->nextUpdate == UNDEFINED_TIME)
 	{
-		written += fprintf(stream, "ok (expires never)");
+		fprintf(out, "ok (expires never)\n");
 	}
 	else if (now > this->nextUpdate)
 	{
-		written += fprintf(stream, "expired (%V ago)", &now, &this->nextUpdate);
+		fprintf(out, "expired (%V ago)\n", &now, &this->nextUpdate);
 	}
 	else if (now > this->nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
 	{
-		written += fprintf(stream, "ok (expires in %V)", &now, &this->nextUpdate);
+		fprintf(out, "ok (expires in %V)\n", &now, &this->nextUpdate);
 	}
 	else
 	{
-		written += fprintf(stream, "ok");
+		fprintf(out, "ok\n");
 	}
 	if (this->authKeyID.ptr)
 	{
-		written += fprintf(stream, "\n    authkey:    %#B", &this->authKeyID);
+		fprintf(out, "    authkey:    %#B\n", &this->authKeyID);
 	}
 	if (this->authKeySerialNumber.ptr)
 	{
-		written += fprintf(stream, "\n    aserial:    %#B", &this->authKeySerialNumber);
+		fprintf(out, "    aserial:    %#B\n", &this->authKeySerialNumber);
 	}
-	return written;
-}
-
-/**
- * register printf() handlers
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(PRINTF_CRL, print, arginfo_ptr_alt_ptr_int);
 }
 
 /*
@@ -489,6 +479,7 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->crlDistributionPoints = linked_list_create();
 	this->tbsCertList = chunk_empty;
 	this->issuer = NULL;
+	this->crlNumber = chunk_empty;
 	this->revokedCertificates = linked_list_create();
 	this->authKeyID = chunk_empty;
 	this->authKeySerialNumber = chunk_empty;
@@ -502,6 +493,7 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->public.verify = (bool (*) (const crl_t*,const rsa_public_key_t*))verify;
 	this->public.get_status = (void (*) (const crl_t*,certinfo_t*))get_status;
 	this->public.write_to_file = (bool (*) (const crl_t*,const char*,mode_t,bool))write_to_file;
+	this->public.list = (void(*)(crl_t*, FILE* out, bool utc))list;
 	this->public.destroy = (void (*) (crl_t*))destroy;
 	
 	if (!parse_x509crl(chunk, 0, this))
@@ -520,14 +512,10 @@ crl_t *crl_create_from_file(const char *filename)
 {
 	bool pgp = FALSE;
 	chunk_t chunk = chunk_empty;
-	crl_t *crl = NULL;
 
 	if (!pem_asn1_load_file(filename, NULL, "crl", &chunk, &pgp))
+	{
 		return NULL;
-
-	crl = crl_create_from_chunk(chunk);
-
-	if (crl == NULL)
-		free(chunk.ptr);
-	return crl;
+	}
+	return crl_create_from_chunk(chunk);
 }
