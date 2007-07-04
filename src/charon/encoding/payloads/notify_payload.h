@@ -65,6 +65,8 @@ enum notify_type_t {
 	FAILED_CP_REQUIRED = 37,
 	TS_UNACCEPTABLE = 38,
 	INVALID_SELECTORS = 39,
+	UNACCEPTABLE_ADDRESSES = 40,
+	UNEXPECTED_NAT_DETECTED = 41,
 	/* notify status messages */
 	INITIAL_CONTACT = 16384,
 	SET_WINDOW_SIZE = 16385,
@@ -100,6 +102,13 @@ enum notify_type_t {
  * @ingroup payloads
  */
 extern enum_name_t *notify_type_names;
+
+/**
+ * enum name for notify_type_t (shorter strings).
+ *
+ * @ingroup payloads
+ */
+extern enum_name_t *notify_type_short_names;
 
 /**
  * @brief Class representing an IKEv2-Notify Payload.

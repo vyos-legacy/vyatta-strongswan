@@ -75,6 +75,7 @@ struct starter_end {
 	certpolicy_t	sendcert;
 	bool		firewall;
 	bool		hostaccess;
+	bool		allow_any;
 	char 		*updown;
 	u_int16_t	port;
 	u_int8_t	protocol;
@@ -177,6 +178,7 @@ struct starter_config {
 		char	 *virtual_private;
 		char	 *eapdir;
 		char	 *pkcs11module;
+		char	 *pkcs11initargs;
 		bool	 pkcs11keepstate;
 		bool	 pkcs11proxy;
 
@@ -191,7 +193,8 @@ struct starter_config {
 	defaultroute_t defaultroute;
 
 	/* number of encountered parsing errors */
-	u_int err;	
+	u_int err;
+	u_int non_fatal_err;
 
 	/* do we parse also statements */
 	bool parse_also;

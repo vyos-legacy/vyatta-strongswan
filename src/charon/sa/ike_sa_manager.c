@@ -525,19 +525,21 @@ static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
 			/* IKE_SA has no IDs yet, so we can't use it */
 			continue;
 		}
-		
+		DBG2(DBG_MGR, "candidate IKE_SA for \n\t%H[%D]...%H[%D]\n\t%H[%D]...%H[%D]",
+			 my_host, my_id, other_host, other_id,
+			 found_my_host, found_my_id, found_other_host, found_other_id);
 		/* compare ID and hosts. Supplied ID may contain wildcards, and IP
 		 * may be %any. */
-		if ((found_my_host->is_anyaddr(found_my_host) ||
+		if ((my_host->is_anyaddr(my_host) ||
 			 my_host->ip_equals(my_host, found_my_host)) &&
-			(found_other_host->is_anyaddr(found_other_host) ||
+			(other_host->is_anyaddr(other_host) ||
 			 other_host->ip_equals(other_host, found_other_host)) &&
 			found_my_id->matches(found_my_id, my_id, &wc) &&
 			found_other_id->matches(found_other_id, other_id, &wc))
 		{
 			/* looks good, we take this one */
 			DBG2(DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
-				 my_host, other_host, my_id, other_id);
+				 my_host, my_id, other_host, other_id);
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
 		}
@@ -682,16 +684,16 @@ static ike_sa_t* checkout_by_name(private_ike_sa_manager_t *this, char *name,
 /**
  * Iterator hook for iterate, gets ike_sas instead of entries
  */
-static bool iterator_hook(private_ike_sa_manager_t* this, entry_t *in,
-						  ike_sa_t **out)
+static hook_result_t iterator_hook(private_ike_sa_manager_t* this, entry_t *in,
+								   ike_sa_t **out)
 {
 	/* check out entry */
 	if (wait_for_entry(this, in))
 	{
 		*out = in->ike_sa;
-		return TRUE;
+		return HOOK_NEXT;
 	}
-	return FALSE;
+	return HOOK_SKIP;
 }
 
 /**
@@ -701,6 +703,7 @@ static iterator_t *create_iterator(private_ike_sa_manager_t* this)
 {
 	iterator_t *iterator = this->ike_sa_list->create_iterator_locked(
 											this->ike_sa_list, &this->mutex);
+	
 	/* register hook to iterator over ike_sas, not entries */
 	iterator->set_iterator_hook(iterator, (iterator_hook_t*)iterator_hook, this);
 	return iterator;

@@ -122,7 +122,7 @@ find_host_pair(const ip_address *myaddr, u_int16_t myport
     for (prev = NULL, p = host_pairs; p != NULL; prev = p, p = p->next)
     {
 	if (sameaddr(&p->me.addr, myaddr) && p->me.port == myport
-	&& sameaddr(&p->him.addr, hisaddr) && p->him.port == hisport)
+	&&  sameaddr(&p->him.addr, hisaddr) && p->him.port == hisport)
 	{
 	    if (prev != NULL)
 	    {
@@ -162,15 +162,21 @@ connect_to_host_pair(struct connection *c)
 {
     if (oriented(*c))
     {
-	struct host_pair *hp = find_host_pair(&c->spd.this.host_addr, c->spd.this.host_port
-	    , &c->spd.that.host_addr, c->spd.that.host_port);
+	struct host_pair *hp;
+
+	ip_address his_addr = (c->spd.that.allow_any)
+			      ? *aftoinfo(addrtypeof(&c->spd.that.host_addr))->any
+			      : c->spd.that.host_addr;
+
+	hp = find_host_pair(&c->spd.this.host_addr, c->spd.this.host_port
+	    , &his_addr, c->spd.that.host_port);
 
 	if (hp == NULL)
 	{
 	    /* no suitable host_pair -- build one */
 	    hp = alloc_thing(struct host_pair, "host_pair");
 	    hp->me.addr = c->spd.this.host_addr;
-	    hp->him.addr = c->spd.that.host_addr;
+	    hp->him.addr = his_addr;
 	    hp->me.port = nat_traversal_enabled ? pluto_port : c->spd.this.host_port;
 	    hp->him.port = nat_traversal_enabled ? pluto_port : c->spd.that.host_port;
 	    hp->initial_connection_sent = FALSE;
@@ -632,24 +638,15 @@ format_end(char *buf
 	strcpy(&host_id[len < 0? (ptrdiff_t)sizeof(host_id)-2 : 1 + len], "]");
     }
 
-    /* [---hop] */
-    hop[0] = '\0';
-    hop_sep = "";
-    if (that != NULL && !sameaddr(&this->host_nexthop, &that->host_addr))
-    {
-	addrtot(&this->host_nexthop, 0, hop, sizeof(hop));
-	hop_sep = "---";
-    }
-
     if (is_left)
-	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s%s"
-	    , open_brackets, client, close_brackets
-	    , client_sep, host, host_port, host_id
-	    , protoport, hop_sep, hop);
+	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s"
+	    , open_brackets, client, close_brackets, client_sep
+	    , this->allow_any? "%":""
+	    , host, host_port, host_id, protoport);
     else
-	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s%s"
-	    , hop, hop_sep, host, host_port, host_id
-	    , protoport, client_sep
+	snprintf(buf, buf_len, "%s%s%s%s%s%s%s%s%s"
+	    , this->allow_any? "%":""
+	    , host, host_port, host_id, protoport, client_sep
 	    , open_brackets, client, close_brackets);
     return strlen(buf);
 }
@@ -855,6 +852,7 @@ extract_end(struct end *dst, const whack_end_t *src, const char *which)
     dst->has_client_wildcard = src->has_client_wildcard;
     dst->modecfg = src->modecfg;
     dst->hostaccess = src->hostaccess;
+    dst->allow_any = src->allow_any;
     dst->sendcert = src->sendcert;
     dst->updown = src->updown;
     dst->host_port = src->host_port;
@@ -1067,7 +1065,8 @@ add_connection(const whack_message_t *wm)
 	 * or any wildcard ID to that end
 	 */
 	if (isanyaddr(&c->spd.this.host_addr) || c->spd.this.has_client_wildcard
-	|| c->spd.this.has_port_wildcard || c->spd.this.has_id_wildcards)
+	|| c->spd.this.has_port_wildcard || c->spd.this.has_id_wildcards
+	|| c->spd.this.allow_any)
 	{
 	    struct end t = c->spd.this;
 
@@ -1095,7 +1094,7 @@ add_connection(const whack_message_t *wm)
 	}
 	else if ((isanyaddr(&c->spd.that.host_addr) && !NEVER_NEGOTIATE(c->policy))
 	|| c->spd.that.has_client_wildcard || c->spd.that.has_port_wildcard
-	|| c->spd.that.has_id_wildcards)
+	|| c->spd.that.has_id_wildcards || c->spd.that.allow_any)
 	{
 	    /* Opportunistic or Road Warrior or wildcard client subnet
 	     * or wildcard ID */
@@ -1263,6 +1262,8 @@ instantiate(struct connection *c, const ip_address *him
 
     c->instance_serial++;
     d = clone_thing(*c, "temporary connection");
+    d->spd.that.allow_any = FALSE;
+
     if (his_id != NULL)
     {
 	passert(match_id(his_id, &d->spd.that.id, &wildcards));
@@ -1306,6 +1307,10 @@ instantiate(struct connection *c, const ip_address *him
     connect_to_host_pair(d);
 
     return d;
+    if (sameaddr(&d->spd.that.host_addr, &d->spd.this.host_nexthop))
+    {
+	d->spd.this.host_nexthop = *him;
+    }
 }
 
 struct connection *
@@ -1803,7 +1808,7 @@ initiate_connection(const char *name, int whackfd)
 	    loglog(RC_INITSHUNT
 		, "cannot initiate an authby=never connection");
 	}
-	else if (c->kind != CK_PERMANENT)
+	else if (c->kind != CK_PERMANENT && !c->spd.that.allow_any)
 	{
 	    if (isanyaddr(&c->spd.that.host_addr))
 		loglog(RC_NOPEERIP, "cannot initiate connection without knowing peer IP address");
@@ -1812,22 +1817,30 @@ initiate_connection(const char *name, int whackfd)
 	}
 	else
 	{
-	    /* We will only request an IPsec SA if policy isn't empty
-	     * (ignoring Main Mode items).
-	     * This is a fudge, but not yet important.
-	     * If we are to proceed asynchronously, whackfd will be NULL_FD.
-	     */
-	    c->policy |= POLICY_UP;
 	    /* do we have to prompt for a PIN code? */
 	    if (c->spd.this.sc != NULL && !c->spd.this.sc->valid && whackfd != NULL_FD)
+	    {
 		scx_get_pin(c->spd.this.sc, whackfd);
-
+	    }
 	    if (c->spd.this.sc != NULL && !c->spd.this.sc->valid)
 	    {
 		loglog(RC_NOVALIDPIN, "cannot initiate connection without valid PIN");
 	    }
 	    else
 	    {
+
+		if (c->spd.that.allow_any)
+		{
+		    c = instantiate(c, &c->spd.that.host_addr, c->spd.that.host_port
+				  , &c->spd.that.id);
+		}
+
+		/* We will only request an IPsec SA if policy isn't empty
+		 * (ignoring Main Mode items).
+		 * This is a fudge, but not yet important.
+		 * If we are to proceed asynchronously, whackfd will be NULL_FD.
+		 */
+		c->policy |= POLICY_UP;
 		ipsecdoi_initiate(whackfd, c, c->policy, 1, SOS_NOBODY);
 		whackfd = NULL_FD;	/* protect from close */
 	    }
@@ -2974,51 +2987,6 @@ terminate_connection(const char *nm)
 	c = n;
     } while (c != NULL);
 }
-
-/* check nexthop safety
- * Our nexthop must not be within a routed client subnet, and vice versa.
- * Note: we don't think this is true.  We think that KLIPS will
- * not process a packet output by an eroute.
- */
-#ifdef NEVER
-//bool
-//check_nexthop(const struct connection *c)
-//{
-//    struct connection *d;
-//
-//    if (addrinsubnet(&c->spd.this.host_nexthop, &c->spd.that.client))
-//    {
-//	loglog(RC_LOG_SERIOUS, "cannot perform routing for connection \"%s\""
-//	    " because nexthop is within peer's client network",
-//	    c->name);
-//	return FALSE;
-//    }
-//
-//    for (d = connections; d != NULL; d = d->next)
-//    {
-//	if (d->routing != RT_UNROUTED)
-//	{
-//	    if (addrinsubnet(&c->spd.this.host_nexthop, &d->spd.that.client))
-//	    {
-//		loglog(RC_LOG_SERIOUS, "cannot do routing for connection \"%s\"
-//		    " because nexthop is contained in"
-//		    " existing routing for connection \"%s\"",
-//		    c->name, d->name);
-//		return FALSE;
-//	    }
-//	    if (addrinsubnet(&d->spd.this.host_nexthop, &c->spd.that.client))
-//	    {
-//		loglog(RC_LOG_SERIOUS, "cannot do routing for connection \"%s\"
-//		    " because it contains nexthop of"
-//		    " existing routing for connection \"%s\"",
-//		    c->name, d->name);
-//		return FALSE;
-//	    }
-//	}
-//    }
-//    return TRUE;
-//}
-#endif /* NEVER */
 
 /* an ISAKMP SA has been established.
  * Note the serial number, and release any connections with

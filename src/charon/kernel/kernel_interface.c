@@ -48,6 +48,8 @@
 #include <processing/jobs/delete_child_sa_job.h>
 #include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/acquire_job.h>
+#include <processing/jobs/callback_job.h>
+#include <processing/jobs/roam_job.h>
 
 /** kernel level protocol identifiers */
 #define KERNEL_ESP 50
@@ -156,7 +158,7 @@ char* lookup_algorithm(kernel_algorithm_t *kernel_algo,
 		}
 		kernel_algo++;
 	}
-	return NULL;	
+	return NULL;
 }
 
 typedef struct route_entry_t route_entry_t;
@@ -216,54 +218,61 @@ struct policy_entry_t {
 	u_int refcount;
 };
 
-typedef struct vip_entry_t vip_entry_t;
+typedef struct addr_entry_t addr_entry_t;
 
 /**
- * Installed virtual ip
+ * IP address in an inface_entry_t
  */
-struct vip_entry_t {
-	/** Index of the interface the ip is bound to */
-	u_int8_t if_index;
+struct addr_entry_t {
 	
 	/** The ip address */
 	host_t *ip;
 	
-	/** Number of times this IP is used */
+	/** virtual IP managed by us */
+	bool virtual;
+	
+	/** scope of the address */
+	u_char scope;
+	
+	/** Number of times this IP is used, if virtual */
 	u_int refcount;
 };
 
 /**
- * destroy a vip_entry_t object
+ * destroy a addr_entry_t object
  */
-static void vip_entry_destroy(vip_entry_t *this)
+static void addr_entry_destroy(addr_entry_t *this)
 {
 	this->ip->destroy(this->ip);
 	free(this);
 }
 
-typedef struct address_entry_t address_entry_t;
+typedef struct iface_entry_t iface_entry_t;
 
 /**
- * an address found on the system, containg address and interface info 
+ * A network interface on this system, containing addr_entry_t's
  */
-struct address_entry_t {
-
-	/** address of this entry */
-	host_t *host;
+struct iface_entry_t {
 	
 	/** interface index */
 	int ifindex;
 	
-	/** name of the index */
+	/** name of the interface */
 	char ifname[IFNAMSIZ];
+	
+	/** interface flags, as in netdevice(7) SIOCGIFFLAGS */
+	u_int flags;
+	
+	/** list of addresses as host_t */
+	linked_list_t *addrs;
 };
 
 /**
- * destroy an address entry
+ * destroy an interface entry
  */
-static void address_entry_destroy(address_entry_t *this)
+static void iface_entry_destroy(iface_entry_t *this)
 {
-	this->host->destroy(this->host);
+	this->addrs->destroy_function(this->addrs, (void*)addr_entry_destroy);
 	free(this);
 }
 
@@ -279,29 +288,34 @@ struct private_kernel_interface_t {
 	kernel_interface_t public;
 	
 	/**
-	 * List of installed policies (kernel_entry_t)
+	 * mutex to lock access to the various lists
+	 */
+	pthread_mutex_t mutex;
+	
+	/**
+	 * List of installed policies (policy_entry_t)
 	 */
 	linked_list_t *policies;
 	
 	/**
-	 * Mutex locks access to policies
+	 * Cached list of interfaces and its adresses (iface_entry_t)
 	 */
-	pthread_mutex_t policies_mutex;
+	linked_list_t *ifaces;
 	
 	/**
-	 * List of installed virtual IPs. (vip_entry_t)
+	 * iterator used in hook()
 	 */
-	linked_list_t *vips;
+	iterator_t *hiter;
+	 
+	/**
+	 * job receiving netlink events
+	 */
+	callback_job_t *job;
 	
 	/**
-	 * Mutex to lock access to vips.
+	 * current sequence number for netlink request
 	 */
-	pthread_mutex_t vips_mutex;
-	
-	/**
-	 * netlink xfrm socket to receive acquire and expire events
-	 */
-	int socket_xfrm_events;
+	int seq;
 	
 	/**
 	 * Netlink xfrm socket (IPsec)
@@ -309,14 +323,19 @@ struct private_kernel_interface_t {
 	int socket_xfrm;
 	
 	/**
+	 * netlink xfrm socket to receive acquire and expire events
+	 */
+	int socket_xfrm_events;
+	
+	/**
 	 * Netlink rt socket (routing)
 	 */
 	int socket_rt;
 	
 	/**
-	 * Thread receiving events from kernel
+	 * Netlink rt socket to receive address change events
 	 */
-	pthread_t event_thread;
+	int socket_rt_events;
 };
 
 /**
@@ -442,107 +461,382 @@ static void add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 }
 
 /**
- * Receives events from kernel
+ * process a XFRM_MSG_ACQUIRE from kernel
  */
-static void receive_events(private_kernel_interface_t *this)
+static void process_acquire(private_kernel_interface_t *this, struct nlmsghdr *hdr)
 {
-	charon->drop_capabilities(charon, TRUE);
-
-	while(TRUE) 
+	u_int32_t reqid = 0;
+	job_t *job;
+	struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
+	size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
+	
+	if (RTA_OK(rtattr, rtsize))
 	{
-		unsigned char response[512];
-		struct nlmsghdr *hdr;
-		struct sockaddr_nl addr;
-		socklen_t addr_len = sizeof(addr);
-		int len;
-		
-		hdr = (struct nlmsghdr*)response;
-		len = recvfrom(this->socket_xfrm_events, response, sizeof(response),
-					   0, (struct sockaddr*)&addr, &addr_len);
-		if (len < 0)
+		if (rtattr->rta_type == XFRMA_TMPL)
 		{
-			if (errno == EINTR)
-			{
-				/* interrupted, try again */
-				continue;
-			}
-			charon->kill(charon, "unable to receive netlink events");
-		}
-		
-		if (!NLMSG_OK(hdr, len))
-		{
-			/* bad netlink message */
-			continue;
-		}
-
-		if (addr.nl_pid != 0)
-		{
-			/* not from kernel. not interested, try another one */
-			continue;
-		}
-		
-		/* we handle ACQUIRE and EXPIRE messages directly */
-		if (hdr->nlmsg_type == XFRM_MSG_ACQUIRE)
-		{
-			u_int32_t reqid = 0;
-			job_t *job;
-			struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_user_acquire);
-			size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
-			if (RTA_OK(rtattr, rtsize))
-			{
-				if (rtattr->rta_type == XFRMA_TMPL)
-				{
-					struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
-					reqid = tmpl->reqid;
-				}
-			}
-			if (reqid == 0)
-			{
-				DBG1(DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
-			}
-			else
-			{
-				DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
-				DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d",
-					 reqid);
-				job = (job_t*)acquire_job_create(reqid);
-				charon->job_queue->add(charon->job_queue, job);
-			}
-		}
-		else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
-		{
-			job_t *job;
-			protocol_id_t protocol;
-			u_int32_t spi, reqid;
-			struct xfrm_user_expire *expire;
-			
-			expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
-			protocol = expire->state.id.proto == KERNEL_ESP ?
-														PROTO_ESP : PROTO_AH;
-			spi = expire->state.id.spi;
-			reqid = expire->state.reqid;
-			
-			DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
-			DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
-				 expire->hard ? "delete" : "rekey",  protocol_id_names,
-				 protocol, ntohl(spi), reqid);
-			if (expire->hard)
-			{
-				job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
-			}
-			else
-			{
-				job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
-			}
-			charon->job_queue->add(charon->job_queue, job);
+			struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rtattr);
+			reqid = tmpl->reqid;
 		}
 	}
+	if (reqid == 0)
+	{
+		DBG1(DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
+		return;
+	}
+	DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
+	DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d", reqid);
+	job = (job_t*)acquire_job_create(reqid);
+	charon->processor->queue_job(charon->processor, job);
+}
+
+/**
+ * process a XFRM_MSG_EXPIRE from kernel
+ */
+static void process_expire(private_kernel_interface_t *this, struct nlmsghdr *hdr)
+{
+	job_t *job;
+	protocol_id_t protocol;
+	u_int32_t spi, reqid;
+	struct xfrm_user_expire *expire;
+	
+	expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
+	protocol = expire->state.id.proto == KERNEL_ESP ? PROTO_ESP : PROTO_AH;
+	spi = expire->state.id.spi;
+	reqid = expire->state.reqid;
+	
+	DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
+	DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
+		 expire->hard ? "delete" : "rekey",  protocol_id_names,
+		 protocol, ntohl(spi), reqid);
+	if (expire->hard)
+	{
+		job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
+	}
+	else
+	{
+		job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
+	}
+	charon->processor->queue_job(charon->processor, job);
+}
+
+/**
+ * process RTM_NEWLINK/RTM_DELLINK from kernel
+ */
+static void process_link(private_kernel_interface_t *this,
+						 struct nlmsghdr *hdr, bool event)
+{
+	struct ifinfomsg* msg = (struct ifinfomsg*)(NLMSG_DATA(hdr));
+	struct rtattr *rta = IFLA_RTA(msg);
+	size_t rtasize = IFLA_PAYLOAD (hdr);
+	iterator_t *iterator;
+	iface_entry_t *current, *entry = NULL;
+	char *name = NULL;
+	bool update = FALSE;
+	
+	while(RTA_OK(rta, rtasize))
+	{
+		switch (rta->rta_type)
+		{
+			case IFLA_IFNAME:
+				name = RTA_DATA(rta);
+				break;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	if (!name)
+	{
+		name = "(unknown)";
+	}
+	
+	switch (hdr->nlmsg_type)
+	{
+		case RTM_NEWLINK:
+		{
+			if (msg->ifi_flags & IFF_LOOPBACK)
+			{	/* ignore loopback interfaces */
+				break;
+			}
+			iterator = this->ifaces->create_iterator_locked(this->ifaces,
+															&this->mutex);
+			while (iterator->iterate(iterator, (void**)&current))
+			{
+				if (current->ifindex == msg->ifi_index)
+				{
+					entry = current;
+					break;
+				}
+			}
+			if (!entry)
+			{
+				entry = malloc_thing(iface_entry_t);
+				entry->ifindex = msg->ifi_index;
+				entry->flags = 0;
+				entry->addrs = linked_list_create();
+				this->ifaces->insert_last(this->ifaces, entry);
+			}
+			memcpy(entry->ifname, name, IFNAMSIZ);
+			entry->ifname[IFNAMSIZ-1] = '\0';
+			if (event)
+			{
+				if (!(entry->flags & IFF_UP) && (msg->ifi_flags & IFF_UP))
+				{
+					update = TRUE;
+					DBG1(DBG_KNL, "interface %s activated", name);
+				}
+				if ((entry->flags & IFF_UP) && !(msg->ifi_flags & IFF_UP))
+				{
+					update = TRUE;
+					DBG1(DBG_KNL, "interface %s deactivated", name);
+				}
+			}
+			entry->flags = msg->ifi_flags;
+			iterator->destroy(iterator);
+			break;
+		}
+		case RTM_DELLINK:
+		{
+			iterator = this->ifaces->create_iterator_locked(this->ifaces,
+															&this->mutex);
+			while (iterator->iterate(iterator, (void**)&current))
+			{
+				if (current->ifindex == msg->ifi_index)
+				{
+					/* we do not remove it, as an address may be added to a 
+					 * "down" interface and we wan't to know that. */
+					current->flags = msg->ifi_flags;
+					break;
+				}
+			}
+			iterator->destroy(iterator);
+			break;
+		}
+	}
+	
+	/* send an update to all IKE_SAs */
+	if (update && event)
+	{
+		charon->processor->queue_job(charon->processor,
+									 (job_t*)roam_job_create(TRUE));
+	}
+}
+
+/**
+ * process RTM_NEWADDR/RTM_DELADDR from kernel
+ */
+static void process_addr(private_kernel_interface_t *this,
+						 struct nlmsghdr *hdr, bool event)
+{
+	struct ifaddrmsg* msg = (struct ifaddrmsg*)(NLMSG_DATA(hdr));
+	struct rtattr *rta = IFA_RTA(msg);
+	size_t rtasize = IFA_PAYLOAD (hdr);
+	host_t *host = NULL;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	chunk_t local = chunk_empty, address = chunk_empty;
+	bool update = FALSE, found = FALSE, changed = FALSE;
+	
+	while(RTA_OK(rta, rtasize))
+	{
+		switch (rta->rta_type)
+		{
+			case IFA_LOCAL:
+				local.ptr = RTA_DATA(rta);
+				local.len = RTA_PAYLOAD(rta);
+				break;
+			case IFA_ADDRESS:
+				address.ptr = RTA_DATA(rta);
+				address.len = RTA_PAYLOAD(rta);
+				break;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	
+	/* For PPP interfaces, we need the IFA_LOCAL address,
+	 * IFA_ADDRESS is the peers address. But IFA_LOCAL is
+	 * not included in all cases (IPv6?), so fallback to IFA_ADDRESS. */
+	if (local.ptr)
+	{
+		host = host_create_from_chunk(msg->ifa_family, local, 0);
+	}
+	else if (address.ptr)
+	{
+		host = host_create_from_chunk(msg->ifa_family, address, 0);
+	}
+	
+	if (host == NULL)
+	{	/* bad family? */
+		return;
+	}
+	
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
+	{
+		if (iface->ifindex == msg->ifa_index)
+		{
+			addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+			while (addrs->iterate(addrs, (void**)&addr))
+			{
+				if (host->ip_equals(host, addr->ip))
+				{
+					found = TRUE;
+					if (hdr->nlmsg_type == RTM_DELADDR)
+					{
+						changed = TRUE;
+						addrs->remove(addrs);
+						addr_entry_destroy(addr);
+						DBG1(DBG_KNL, "%H disappeared from %s", host, iface->ifname);
+					}
+				}
+			}
+			addrs->destroy(addrs);
+		
+			if (hdr->nlmsg_type == RTM_NEWADDR)
+			{
+				if (!found)
+				{
+					found = TRUE;
+					changed = TRUE;
+					addr = malloc_thing(addr_entry_t);
+					addr->ip = host->clone(host);
+					addr->virtual = FALSE;
+					addr->refcount = 1;
+					addr->scope = msg->ifa_scope;
+					
+					iface->addrs->insert_last(iface->addrs, addr);
+					if (event)
+					{
+						DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
+					}
+				}
+			}
+			if (found && (iface->flags & IFF_UP))
+			{
+				update = TRUE;
+			}
+			break;
+		}
+	}
+	ifaces->destroy(ifaces);
+	host->destroy(host);
+	
+	/* send an update to all IKE_SAs */
+	if (update && event && changed)
+	{
+		charon->processor->queue_job(charon->processor,
+									 (job_t*)roam_job_create(TRUE));
+	}
+}
+
+/**
+ * Receives events from kernel
+ */
+static job_requeue_t receive_events(private_kernel_interface_t *this)
+{
+	char response[1024];
+	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
+	struct sockaddr_nl addr;
+	socklen_t addr_len = sizeof(addr);
+	int len, oldstate, maxfd, selected;
+	fd_set rfds;
+
+	FD_ZERO(&rfds);
+	FD_SET(this->socket_xfrm_events, &rfds);
+	FD_SET(this->socket_rt_events, &rfds);
+	maxfd = max(this->socket_xfrm_events, this->socket_rt_events);
+	
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	selected = select(maxfd + 1, &rfds, NULL, NULL, NULL);
+	pthread_setcancelstate(oldstate, NULL);
+	if (selected <= 0)
+	{
+		DBG1(DBG_KNL, "selecting on sockets failed: %s", strerror(errno));
+		return JOB_REQUEUE_FAIR;
+	}
+	if (FD_ISSET(this->socket_xfrm_events, &rfds))
+	{
+		selected = this->socket_xfrm_events;
+	}
+	else if (FD_ISSET(this->socket_rt_events, &rfds))
+	{
+		selected = this->socket_rt_events;
+	}
+	else
+	{
+		return JOB_REQUEUE_DIRECT;
+	}
+	
+	len = recvfrom(selected, response, sizeof(response), MSG_DONTWAIT,
+				   (struct sockaddr*)&addr, &addr_len);
+	if (len < 0)
+	{
+		switch (errno)
+		{
+			case EINTR:
+				/* interrupted, try again */
+				return JOB_REQUEUE_DIRECT;
+			case EAGAIN:
+				/* no data ready, select again */
+				return JOB_REQUEUE_DIRECT;
+			default:
+				DBG1(DBG_KNL, "unable to receive from xfrm event socket");
+				sleep(1);
+				return JOB_REQUEUE_FAIR;
+		}
+	}
+	if (addr.nl_pid != 0)
+	{	/* not from kernel. not interested, try another one */
+		return JOB_REQUEUE_DIRECT;
+	}
+	
+	while (NLMSG_OK(hdr, len))
+	{
+		/* looks good so far, dispatch netlink message */
+		if (selected == this->socket_xfrm_events)
+		{
+			switch (hdr->nlmsg_type)
+			{
+				case XFRM_MSG_ACQUIRE:
+					process_acquire(this, hdr);
+					break;
+				case XFRM_MSG_EXPIRE:
+					process_expire(this, hdr);
+					break;
+				default:
+					break;
+			}
+		}
+		else if (selected == this->socket_rt_events)
+		{
+			switch (hdr->nlmsg_type)
+			{
+				case RTM_NEWADDR:
+				case RTM_DELADDR:
+					process_addr(this, hdr, TRUE);
+					break;
+				case RTM_NEWLINK:
+				case RTM_DELLINK:
+					process_link(this, hdr, TRUE);
+					break;
+				case RTM_NEWROUTE:
+				case RTM_DELROUTE:
+					charon->processor->queue_job(charon->processor,
+												 (job_t*)roam_job_create(FALSE));
+					break;
+				default:
+					break;
+			}
+		}
+		hdr = NLMSG_NEXT(hdr, len);
+	}
+	return JOB_REQUEUE_DIRECT;
 }
 
 /**
  * send a netlink message and wait for a reply
  */
-static status_t netlink_send(int socket, struct nlmsghdr *in,
+static status_t netlink_send(private_kernel_interface_t *this,
+							 int socket, struct nlmsghdr *in,
 							 struct nlmsghdr **out, size_t *out_len)
 {
 	int len, addr_len;
@@ -550,13 +844,9 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 	chunk_t result = chunk_empty, tmp;
 	struct nlmsghdr *msg, peek;
 	
-	static int seq = 200;
-	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutex_lock(&this->mutex);
 	
-	
-	pthread_mutex_lock(&mutex);
-	
-	in->nlmsg_seq = ++seq;
+	in->nlmsg_seq = ++this->seq;
 	in->nlmsg_pid = getpid();
 	
 	memset(&addr, 0, sizeof(addr));
@@ -576,7 +866,7 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 				/* interrupted, try again */
 				continue;
 			}
-			pthread_mutex_unlock(&mutex);
+			pthread_mutex_unlock(&this->mutex);
 			DBG1(DBG_KNL, "error sending to netlink socket: %s", strerror(errno));
 			return FAILED;
 		}
@@ -585,7 +875,7 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 	
 	while (TRUE)
 	{	
-		char buf[1024];
+		char buf[4096];
 		tmp.len = sizeof(buf);
 		tmp.ptr = buf;
 		msg = (struct nlmsghdr*)tmp.ptr;
@@ -603,28 +893,28 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 		{
 			if (errno == EINTR)
 			{
-				DBG1(DBG_IKE, "got interrupted");
+				DBG1(DBG_KNL, "got interrupted");
 				/* interrupted, try again */
 				continue;
 			}
-			DBG1(DBG_IKE, "error reading from netlink socket: %s", strerror(errno));
-			pthread_mutex_unlock(&mutex);
+			DBG1(DBG_KNL, "error reading from netlink socket: %s", strerror(errno));
+			pthread_mutex_unlock(&this->mutex);
 			return FAILED;
 		}
 		if (!NLMSG_OK(msg, len))
 		{
-			DBG1(DBG_IKE, "received corrupted netlink message");
-			pthread_mutex_unlock(&mutex);
+			DBG1(DBG_KNL, "received corrupted netlink message");
+			pthread_mutex_unlock(&this->mutex);
 			return FAILED;
 		}
-		if (msg->nlmsg_seq != seq)
+		if (msg->nlmsg_seq != this->seq)
 		{
-			DBG1(DBG_IKE, "received invalid netlink sequence number");
-			if (msg->nlmsg_seq < seq)
+			DBG1(DBG_KNL, "received invalid netlink sequence number");
+			if (msg->nlmsg_seq < this->seq)
 			{
 				continue;
 			}
-			pthread_mutex_unlock(&mutex);
+			pthread_mutex_unlock(&this->mutex);
 			return FAILED;
 		}
 		
@@ -636,7 +926,7 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 		len = recvfrom(socket, &peek, sizeof(peek), MSG_PEEK | MSG_DONTWAIT,
 					   (struct sockaddr*)&addr, &addr_len);
 		
-		if (len == sizeof(peek) && peek.nlmsg_seq == seq)
+		if (len == sizeof(peek) && peek.nlmsg_seq == this->seq)
 		{
 			/* seems to be multipart */
 			continue;
@@ -647,7 +937,7 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 	*out_len = result.len;
 	*out = (struct nlmsghdr*)clalloc(result.ptr, result.len);
 	
-	pthread_mutex_unlock(&mutex);
+	pthread_mutex_unlock(&this->mutex);
 	
 	return SUCCESS;
 }
@@ -655,12 +945,13 @@ static status_t netlink_send(int socket, struct nlmsghdr *in,
 /**
  * send a netlink message and wait for its acknowlegde
  */
-static status_t netlink_send_ack(int socket, struct nlmsghdr *in)
+static status_t netlink_send_ack(private_kernel_interface_t *this,
+								 int socket, struct nlmsghdr *in)
 {
 	struct nlmsghdr *out, *hdr;
 	size_t len;
 
-	if (netlink_send(socket, in, &out, &len) != SUCCESS)
+	if (netlink_send(this, socket, in, &out, &len) != SUCCESS)
 	{
 		return FAILED;
 	}
@@ -697,132 +988,153 @@ static status_t netlink_send_ack(int socket, struct nlmsghdr *in)
 }
 	
 /**
- * Create a list of local addresses.
+ * Initialize a list of local addresses.
  */
-static linked_list_t *create_address_list(private_kernel_interface_t *this)
+static status_t init_address_list(private_kernel_interface_t *this)
 {
 	char request[BUFFER_SIZE];
-	struct nlmsghdr *out, *hdr;
+	struct nlmsghdr *out, *current, *in;
 	struct rtgenmsg *msg;
 	size_t len;
-	linked_list_t *list;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	
-	DBG2(DBG_IKE, "getting local address list");
-	
-	list = linked_list_create();
+	DBG1(DBG_KNL, "listening on interfaces:");
 	
 	memset(&request, 0, sizeof(request));
 
-	hdr = (struct nlmsghdr*)&request;
-	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtgenmsg));
-	hdr->nlmsg_type = RTM_GETADDR;
-	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_MATCH | NLM_F_ROOT;
-	msg = (struct rtgenmsg*)NLMSG_DATA(hdr);
+	in = (struct nlmsghdr*)&request;
+	in->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtgenmsg));
+	in->nlmsg_flags = NLM_F_REQUEST | NLM_F_MATCH | NLM_F_ROOT;
+	msg = (struct rtgenmsg*)NLMSG_DATA(in);
 	msg->rtgen_family = AF_UNSPEC;
-		
-	if (netlink_send(this->socket_rt, hdr, &out, &len) == SUCCESS)
+	
+	/* get all links */
+	in->nlmsg_type = RTM_GETLINK;
+	if (netlink_send(this, this->socket_rt, in, &out, &len) != SUCCESS)
 	{
-		hdr = out;
-		while (NLMSG_OK(hdr, len))
+		return FAILED;
+	}
+	current = out;
+	while (NLMSG_OK(current, len))
+	{
+		switch (current->nlmsg_type)
 		{
-			switch (hdr->nlmsg_type)
-			{
-				case RTM_NEWADDR:
-				{
-					struct ifaddrmsg* msg = (struct ifaddrmsg*)(NLMSG_DATA(hdr));
-	      			struct rtattr *rta = IFA_RTA(msg);
-	     			size_t rtasize = IFA_PAYLOAD (hdr);
-					host_t *host = NULL;
-					char *name = NULL;
-					chunk_t local = chunk_empty, address = chunk_empty;
-	     			
-					while(RTA_OK(rta, rtasize))
-					{
-						switch (rta->rta_type)
-						{
-							case IFA_LOCAL:
-								local.ptr = RTA_DATA(rta);
-								local.len = RTA_PAYLOAD(rta);
-								break;
-							case IFA_ADDRESS:
-								address.ptr = RTA_DATA(rta);
-								address.len = RTA_PAYLOAD(rta);
-								break;
-							case IFA_LABEL:
-								name = RTA_DATA(rta);
-								break;
-						}
-						rta = RTA_NEXT(rta, rtasize);
-					}
-					
-					/* For PPP interfaces, we need the IFA_LOCAL address,
-					 * IFA_ADDRESS is the peers address. But IFA_LOCAL is
-					 * not included in all cases, so fallback to IFA_ADDRESS. */
-					if (local.ptr)
-					{
-						host = host_create_from_chunk(msg->ifa_family, local, 0);
-					}
-					else if (address.ptr)
-					{
-						host = host_create_from_chunk(msg->ifa_family, address, 0);
-					}
-					
-					if (host)
-					{
-						address_entry_t *entry;
-						
-						entry = malloc_thing(address_entry_t);
-						entry->host = host;
-						entry->ifindex = msg->ifa_index;
-						if (name)
-						{
-							memcpy(entry->ifname, name, IFNAMSIZ);
-						}
-						else
-						{
-							strcpy(entry->ifname, "(unknown)");
-						}
-						list->insert_last(list, entry);
-					}
-					hdr = NLMSG_NEXT(hdr, len);
-					continue;
-				}
-				default:
-					hdr = NLMSG_NEXT(hdr, len);
-					continue;
-				case NLMSG_DONE:
-					break;
-			}
-			break;
+			case NLMSG_DONE:
+				break;
+			case RTM_NEWLINK:
+				process_link(this, current, FALSE);
+				/* fall through */
+			default:
+				current = NLMSG_NEXT(current, len);
+				continue;
 		}
-		free(out);
+		break;
 	}
-	else
+	free(out);
+	
+	/* get all interface addresses */
+	in->nlmsg_type = RTM_GETADDR;
+	if (netlink_send(this, this->socket_rt, in, &out, &len) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "unable to get local address list");
+		return FAILED;
 	}
-
-	return list;
+	current = out;
+	while (NLMSG_OK(current, len))
+	{
+		switch (current->nlmsg_type)
+		{
+			case NLMSG_DONE:
+				break;
+			case RTM_NEWADDR:
+				process_addr(this, current, FALSE);
+				/* fall through */
+			default:
+				current = NLMSG_NEXT(current, len);
+				continue;
+		}
+		break;
+	}
+	free(out);
+	
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
+	{
+		if (iface->flags & IFF_UP)
+		{
+			DBG1(DBG_KNL, "  %s", iface->ifname);
+			addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+			while (addrs->iterate(addrs, (void**)&addr))
+			{
+				DBG1(DBG_KNL, "    %H", addr->ip);
+			}
+			addrs->destroy(addrs);
+		}
+	}
+	ifaces->destroy(ifaces);
+	return SUCCESS;
 }
 
 /**
- * Implements kernel_interface_t.create_address_list.
+ * iterator hook to iterate over addrs
  */
-static linked_list_t *create_address_list_public(private_kernel_interface_t *this)
+static hook_result_t addr_hook(private_kernel_interface_t *this,
+							   addr_entry_t *in, host_t **out)
 {
-	linked_list_t *result, *list;
-	address_entry_t *entry;
-	
-	result = linked_list_create();
-	list = create_address_list(this);
-	while (list->remove_last(list, (void**)&entry) == SUCCESS)
-	{
-		result->insert_last(result, entry->host);
-		free(entry);
+	if (in->virtual)
+	{	/* skip virtual interfaces added by us */
+		return HOOK_SKIP;
 	}
-	list->destroy(list);
+	if (in->scope >= RT_SCOPE_LINK)
+	{	/* skip addresses with a unusable scope */
+		return HOOK_SKIP;
+	}
+	*out = in->ip;
+	return HOOK_NEXT;
+}
+								
+/**
+ * iterator hook to iterate over ifaces
+ */
+static hook_result_t iface_hook(private_kernel_interface_t *this,
+								iface_entry_t *in, host_t **out)
+{
+	if (!(in->flags & IFF_UP))
+	{	/* skip interfaces not up */
+		return HOOK_SKIP;
+	}
+
+	if (this->hiter == NULL)
+	{
+		this->hiter = in->addrs->create_iterator(in->addrs, TRUE);
+		this->hiter->set_iterator_hook(this->hiter,
+									   (iterator_hook_t*)addr_hook, this);
+	}
+	while (this->hiter->iterate(this->hiter, (void**)out))
+	{
+		return HOOK_AGAIN;
+	}
+	this->hiter->destroy(this->hiter);
+	this->hiter = NULL;
+	return HOOK_SKIP;
+}
+
+/**
+ * Implements kernel_interface_t.create_address_iterator.
+ */
+static iterator_t *create_address_iterator(private_kernel_interface_t *this)
+{
+	iterator_t *iterator;
 	
-	return result;
+	/* This iterator is not only hooked, is is double-hooked. As we have stored
+	 * our addresses in iface_entry->addr_entry->ip, we need to iterate the
+	 * entries in each interface we iterate. This does the iface_hook. The
+	 * addr_hook returns the ip instead of the addr_entry. */
+	
+	iterator = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	iterator->set_iterator_hook(iterator, (iterator_hook_t*)iface_hook, this);
+	return iterator;
 }
 
 /**
@@ -830,30 +1142,40 @@ static linked_list_t *create_address_list_public(private_kernel_interface_t *thi
  */
 static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 {
-	linked_list_t *list;
-	address_entry_t *entry;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	char *name = NULL;
 	
-	DBG2(DBG_IKE, "getting interface name for %H", ip);
+	DBG2(DBG_KNL, "getting interface name for %H", ip);
 	
-	list = create_address_list(this);
-	while (!name && list->remove_last(list, (void**)&entry) == SUCCESS)
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		if (ip->ip_equals(ip, entry->host))
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			name = strdup(entry->ifname);
+			if (ip->ip_equals(ip, addr->ip))
+			{
+				name = strdup(iface->ifname);
+				break;
+			}
 		}
-		address_entry_destroy(entry);
+		addrs->destroy(addrs);
+		if (name)
+		{
+			break;
+		}
 	}
-	list->destroy_function(list, (void*)address_entry_destroy);
+	ifaces->destroy(ifaces);
 	
 	if (name)
 	{
-		DBG2(DBG_IKE, "%H is on interface %s", ip, name);
+		DBG2(DBG_KNL, "%H is on interface %s", ip, name);
 	}
 	else
 	{
-		DBG2(DBG_IKE, "%H is not a local address", ip);
+		DBG2(DBG_KNL, "%H is not a local address", ip);
 	}
 	return name;
 }
@@ -865,13 +1187,14 @@ static char *get_interface_name(private_kernel_interface_t *this, host_t* ip)
 static status_t get_address_by_ts(private_kernel_interface_t *this,
 								  traffic_selector_t *ts, host_t **ip)
 {
-	address_entry_t *entry;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	host_t *host;
 	int family;
-	linked_list_t *list;
 	bool found = FALSE;
 	
-	DBG2(DBG_IKE, "getting a local address in traffic selector %R", ts);
+	DBG2(DBG_KNL, "getting a local address in traffic selector %R", ts);
 	
 	/* if we have a family which includes localhost, we do not
 	 * search for an IP, we use the default */
@@ -890,29 +1213,38 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
 	{
 		*ip = host_create_any(family);
 		host->destroy(host);
-		DBG2(DBG_IKE, "using host %H", *ip);
+		DBG2(DBG_KNL, "using host %H", *ip);
 		return SUCCESS;
 	}
 	host->destroy(host);
 	
-	list = create_address_list(this);
-	while (!found && list->remove_last(list, (void**)&entry) == SUCCESS)
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces,	&this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		if (ts->includes(ts, entry->host))
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			found = TRUE;
-			*ip = entry->host->clone(entry->host);
+			if (ts->includes(ts, addr->ip))
+			{
+				found = TRUE;
+				*ip = addr->ip->clone(addr->ip);
+				break;
+			}
 		}
-		address_entry_destroy(entry);
+		addrs->destroy(addrs);
+		if (found)
+		{
+			break;
+		}
 	}
-	list->destroy_function(list, (void*)address_entry_destroy);
+	ifaces->destroy(ifaces);
 	
 	if (!found)
 	{
-		DBG1(DBG_IKE, "no local address found in traffic selector %R", ts);
+		DBG1(DBG_KNL, "no local address found in traffic selector %R", ts);
 		return FAILED;
 	}
-	DBG2(DBG_IKE, "using host %H", *ip);
+	DBG2(DBG_KNL, "using host %H", *ip);
 	return SUCCESS;
 }
 
@@ -921,26 +1253,36 @@ static status_t get_address_by_ts(private_kernel_interface_t *this,
  */
 static int get_interface_index(private_kernel_interface_t *this, host_t* ip)
 {
-	linked_list_t *list;
-	address_entry_t *entry;
+	iterator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
 	int ifindex = 0;
 	
-	DBG2(DBG_IKE, "getting iface for %H", ip);
+	DBG2(DBG_KNL, "getting iface for %H", ip);
 	
-	list = create_address_list(this);
-	while (!ifindex && list->remove_last(list, (void**)&entry) == SUCCESS)
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces,	&this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		if (ip->ip_equals(ip, entry->host))
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			ifindex = entry->ifindex;
+			if (ip->ip_equals(ip, addr->ip))
+			{
+				ifindex = iface->ifindex;
+				break;
+			}
 		}
-		address_entry_destroy(entry);
+		addrs->destroy(addrs);
+		if (ifindex)
+		{
+			break;
+		}
 	}
-	list->destroy_function(list, (void*)address_entry_destroy);
-	
+	ifaces->destroy(ifaces);
+
 	if (ifindex == 0)
 	{
-		DBG1(DBG_IKE, "unable to get interface for %H", ip);
+		DBG1(DBG_KNL, "unable to get interface for %H", ip);
 	}
 	return ifindex;
 }
@@ -975,7 +1317,7 @@ static status_t manage_ipaddr(private_kernel_interface_t *this, int nlmsg_type,
 	
 	add_attribute(hdr, IFA_LOCAL, chunk, sizeof(request));
 
-	return netlink_send_ack(this->socket_rt, hdr);
+	return netlink_send_ack(this, this->socket_rt, hdr);
 }
 
 /**
@@ -1036,9 +1378,98 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 	chunk.len = sizeof(route->if_index);
 	add_attribute(hdr, RTA_OIF, chunk, sizeof(request));
 
-	return netlink_send_ack(this->socket_rt, hdr);
+	return netlink_send_ack(this, this->socket_rt, hdr);
 }
 
+/**
+ * Get the nexthop gateway for dest; or the source addr if gateway = FALSE
+ */
+static host_t* get_addr(private_kernel_interface_t *this,
+						host_t *dest, bool gateway)
+{
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *hdr, *out, *current;
+	struct rtmsg *msg;
+	chunk_t chunk;
+	size_t len;
+	host_t *addr = NULL;
+	
+	DBG2(DBG_KNL, "getting address to reach %H", dest);
+	
+	memset(&request, 0, sizeof(request));
+
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = RTM_GETROUTE;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+
+	msg = (struct rtmsg*)NLMSG_DATA(hdr);
+	msg->rtm_family = dest->get_family(dest);
+	msg->rtm_dst_len = msg->rtm_family == AF_INET ? 32 : 128;
+	msg->rtm_table = RT_TABLE_MAIN;
+	msg->rtm_protocol = RTPROT_STATIC;
+	msg->rtm_type = RTN_UNICAST;
+	msg->rtm_scope = RT_SCOPE_UNIVERSE;
+	
+	chunk = dest->get_address(dest);
+	add_attribute(hdr, RTA_DST, chunk, sizeof(request));
+			
+	if (netlink_send(this, this->socket_rt, hdr, &out, &len) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "getting address to %H failed", dest);
+		return NULL;
+	}
+	current = out;
+	while (NLMSG_OK(current, len))
+	{
+		switch (current->nlmsg_type)
+		{
+			case NLMSG_DONE:
+				break;
+			case RTM_NEWROUTE:
+			{
+				struct rtattr *rta;
+				size_t rtasize;
+				
+				msg = (struct rtmsg*)(NLMSG_DATA(current));
+				rta = RTM_RTA(msg);
+				rtasize = RTM_PAYLOAD(current);
+				while(RTA_OK(rta, rtasize))
+				{
+					if ((rta->rta_type == RTA_PREFSRC && !gateway) ||
+						(rta->rta_type == RTA_GATEWAY && gateway))
+					{
+						chunk.ptr = RTA_DATA(rta);
+						chunk.len = RTA_PAYLOAD(rta);
+						addr = host_create_from_chunk(msg->rtm_family, 
+													  chunk, 0);
+						break;
+					}
+					rta = RTA_NEXT(rta, rtasize);
+				}
+				break;
+			}
+			default:
+				current = NLMSG_NEXT(current, len);
+				continue;
+		}
+		break;
+	}
+	free(out);
+	if (addr == NULL)
+	{
+		DBG2(DBG_KNL, "no route found to %H", dest);
+	}
+	return addr;
+}
+
+/**
+ * Implementation of kernel_interface_t.get_source_addr.
+ */
+static host_t* get_source_addr(private_kernel_interface_t *this, host_t *dest)
+{
+	return get_addr(this, dest, FALSE);
+}
 
 /**
  * Implementation of kernel_interface_t.add_ip.
@@ -1046,97 +1477,107 @@ static status_t manage_srcroute(private_kernel_interface_t *this, int nlmsg_type
 static status_t add_ip(private_kernel_interface_t *this, 
 						host_t *virtual_ip, host_t *iface_ip)
 {
-	int targetif;
-	vip_entry_t *listed;
-	iterator_t *iterator;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	iterator_t *addrs, *ifaces;
 
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
-
-	targetif = get_interface_index(this, iface_ip);
-	if (targetif == 0)
-	{
-		DBG1(DBG_KNL, "unable to add virtual IP %H, no iface found for %H",
-			 virtual_ip, iface_ip);
-		return FAILED;
-	}
-
-	/* beware of deadlocks (e.g. send/receive packets while holding the lock) */
-	iterator = this->vips->create_iterator_locked(this->vips, &(this->vips_mutex));
-	while (iterator->iterate(iterator, (void**)&listed))
-	{
-		if (listed->if_index == targetif &&
-			virtual_ip->ip_equals(virtual_ip, listed->ip))
-		{
-			listed->refcount++;
-			iterator->destroy(iterator);
-			DBG2(DBG_KNL, "virtual IP %H already added to iface %d reusing it",
-				 virtual_ip, targetif);
-			return SUCCESS;
-		}
-	}
-	iterator->destroy(iterator);
-
-	if (manage_ipaddr(this, RTM_NEWADDR, NLM_F_CREATE | NLM_F_EXCL,
-					  targetif, virtual_ip) == SUCCESS)
-	{
-		listed = malloc_thing(vip_entry_t);
-		listed->ip = virtual_ip->clone(virtual_ip);
-		listed->if_index = targetif;
-		listed->refcount = 1;
-		this->vips->insert_last(this->vips, listed);
-		DBG2(DBG_KNL, "virtual IP %H added to iface %d",
-				 virtual_ip, targetif);
-		return SUCCESS;
-	}
 	
-	DBG2(DBG_KNL, "unable to add virtual IP %H to iface %d",
-		 virtual_ip, targetif);
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
+	{
+		bool iface_found = FALSE;
+	
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
+		{
+			if (iface_ip->ip_equals(iface_ip, addr->ip))
+			{
+				iface_found = TRUE;
+			}
+			else if (virtual_ip->ip_equals(virtual_ip, addr->ip))
+			{
+				addr->refcount++;
+				DBG2(DBG_KNL, "virtual IP %H already installed on %s",
+					 virtual_ip, iface->ifname);
+				addrs->destroy(addrs);
+				ifaces->destroy(ifaces);
+				return SUCCESS;
+			}
+		}
+		addrs->destroy(addrs);
+		
+		if (iface_found)
+		{
+			int ifindex = iface->ifindex;
+			ifaces->destroy(ifaces);
+			if (manage_ipaddr(this, RTM_NEWADDR, NLM_F_CREATE | NLM_F_EXCL,
+							  ifindex, virtual_ip) == SUCCESS)
+			{
+				addr = malloc_thing(addr_entry_t);
+				addr->ip = virtual_ip->clone(virtual_ip);
+				addr->refcount = 1;
+				addr->virtual = TRUE;
+				addr->scope = RT_SCOPE_UNIVERSE;
+				pthread_mutex_lock(&this->mutex);
+				iface->addrs->insert_last(iface->addrs, addr);
+				pthread_mutex_unlock(&this->mutex);
+				return SUCCESS;
+			}
+			DBG2(DBG_KNL, "adding virtual IP %H failed", virtual_ip);
+			return FAILED;
+			
+		}
+		
+	}
+	ifaces->destroy(ifaces);
+	
+	DBG2(DBG_KNL, "interface address %H not found, unable to install"
+		 "virtual IP %H", iface_ip, virtual_ip);
 	return FAILED;
 }
 
 /**
  * Implementation of kernel_interface_t.del_ip.
  */
-static status_t del_ip(private_kernel_interface_t *this,
-						host_t *virtual_ip, host_t *iface_ip)
+static status_t del_ip(private_kernel_interface_t *this, host_t *virtual_ip)
 {
-	int targetif;
-	vip_entry_t *listed;
-	iterator_t *iterator;
+	iface_entry_t *iface;
+	addr_entry_t *addr;
+	iterator_t *addrs, *ifaces;
 
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
-
-	targetif = get_interface_index(this, iface_ip);
-	if (targetif == 0)
+	
+	ifaces = this->ifaces->create_iterator_locked(this->ifaces, &this->mutex);
+	while (ifaces->iterate(ifaces, (void**)&iface))
 	{
-		DBG1(DBG_KNL, "unable to delete virtual IP %H, no iface found for %H",
-			 virtual_ip, iface_ip);
-		return FAILED;
-	}
-
-	/* beware of deadlocks (e.g. send/receive packets while holding the lock) */
-	iterator = this->vips->create_iterator_locked(this->vips, &(this->vips_mutex));
-	while (iterator->iterate(iterator, (void**)&listed))
-	{
-		if (listed->if_index == targetif &&
-			virtual_ip->ip_equals(virtual_ip, listed->ip))
+		addrs = iface->addrs->create_iterator(iface->addrs, TRUE);
+		while (addrs->iterate(addrs, (void**)&addr))
 		{
-			listed->refcount--;
-			if (listed->refcount == 0)
+			if (virtual_ip->ip_equals(virtual_ip, addr->ip))
 			{
-				iterator->remove(iterator);
-				vip_entry_destroy(listed);
-				iterator->destroy(iterator);
-				return manage_ipaddr(this, RTM_DELADDR, 0, targetif, virtual_ip);
+				int ifindex = iface->ifindex;
+				addr->refcount--;
+				if (addr->refcount == 0)
+				{
+					addrs->remove(addrs);
+					addrs->destroy(addrs);
+					ifaces->destroy(ifaces);
+					addr_entry_destroy(addr);
+					return manage_ipaddr(this, RTM_DELADDR, 0,
+										 ifindex, virtual_ip);
+				}
+				DBG2(DBG_KNL, "virtual IP %H used by other SAs, not deleting",
+					 virtual_ip);
+				addrs->destroy(addrs);
+				ifaces->destroy(ifaces);
+				return SUCCESS;
 			}
-			iterator->destroy(iterator);
-			DBG2(DBG_KNL, "virtual IP %H used by other SAs, not deleting",
-		 		 virtual_ip);
-			return SUCCESS;
 		}
+		addrs->destroy(addrs);
 	}
-	iterator->destroy(iterator);
- 
+	ifaces->destroy(ifaces);
+	
 	DBG2(DBG_KNL, "virtual IP %H not cached, unable to delete", virtual_ip);
 	return FAILED;
 }
@@ -1174,7 +1615,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 	userspi->min = 0xc0000000;
 	userspi->max = 0xcFFFFFFF;
 	
-	if (netlink_send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
+	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
 		while (NLMSG_OK(hdr, len))
@@ -1226,7 +1667,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 					   protocol_id_t protocol, u_int32_t reqid,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
 					   algorithm_t *enc_alg, algorithm_t *int_alg,
-					   prf_plus_t *prf_plus, natt_conf_t *natt, mode_t mode,
+					   prf_plus_t *prf_plus, mode_t mode, bool encap,
 					   bool replace)
 {
 	unsigned char request[BUFFER_SIZE];
@@ -1324,7 +1765,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	
 	/* TODO: add IPComp here */
 	
-	if (natt)
+	if (encap)
 	{
 		rthdr->rta_type = XFRMA_ENCAP;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
@@ -1335,11 +1776,11 @@ static status_t add_sa(private_kernel_interface_t *this,
 			return FAILED;
 		}
 
-		struct xfrm_encap_tmpl* encap = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
-		encap->encap_type = UDP_ENCAP_ESPINUDP;
-		encap->encap_sport = htons(natt->sport);
-		encap->encap_dport = htons(natt->dport);
-		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
+		struct xfrm_encap_tmpl* tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
+		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
+		tmpl->encap_sport = htons(src->get_port(src));
+		tmpl->encap_dport = htons(dst->get_port(dst));
+		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
 		/* encap_oa could probably be derived from the 
 		 * traffic selectors [rfc4306, p39]. In the netlink kernel implementation 
 		 * pluto does the same as we do here but it uses encap_oa in the 
@@ -1352,9 +1793,9 @@ static status_t add_sa(private_kernel_interface_t *this,
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 	
-	if (netlink_send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to add SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to add SAD entry with SPI 0x%x", spi);
 		return FAILED;
 	}
 	return SUCCESS;
@@ -1364,21 +1805,24 @@ static status_t add_sa(private_kernel_interface_t *this,
  * Implementation of kernel_interface_t.update_sa.
  */
 static status_t update_sa(private_kernel_interface_t *this,
-						  host_t *src, host_t *dst, 
-						  host_t *new_src, host_t *new_dst, 
-						  host_diff_t src_changes, host_diff_t dst_changes,
-						  u_int32_t spi, protocol_id_t protocol)
+						  u_int32_t spi, protocol_id_t protocol,
+						  host_t *src, host_t *dst,
+						  host_t *new_src, host_t *new_dst, bool encap)
 {
-	unsigned char request[BUFFER_SIZE];
+	unsigned char request[BUFFER_SIZE], *pos;
 	struct nlmsghdr *hdr, *out = NULL;
 	struct xfrm_usersa_id *sa_id;
-	struct xfrm_usersa_info *sa = NULL;
+	struct xfrm_usersa_info *out_sa = NULL, *sa;
 	size_t len;
+	struct rtattr *rta;
+	size_t rtasize;
+	struct xfrm_encap_tmpl* tmpl = NULL;
 	
 	memset(&request, 0, sizeof(request));
 	
-	DBG2(DBG_KNL, "querying SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "querying SAD entry with SPI 0x%x for update", spi);
 
+	/* query the exisiting SA first */
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
@@ -1390,7 +1834,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
 	
-	if (netlink_send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
+	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
 		while (NLMSG_OK(hdr, len))
@@ -1399,7 +1843,7 @@ static status_t update_sa(private_kernel_interface_t *this,
 			{
 				case XFRM_MSG_NEWSA:
 				{
-					sa = NLMSG_DATA(hdr);
+					out_sa = NLMSG_DATA(hdr);
 					break;
 				}
 				case NLMSG_ERROR:
@@ -1418,59 +1862,76 @@ static status_t update_sa(private_kernel_interface_t *this,
 			break;
 		}
 	}
-	if (sa == NULL)
+	if (out_sa == NULL ||
+		this->public.del_sa(&this->public, dst, spi, protocol) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
 		free(out);
 		return FAILED;
 	}
 	
-	DBG2(DBG_KNL, "updating SAD entry with SPI 0x%x", spi);
+	DBG2(DBG_KNL, "updating SAD entry with SPI 0x%x from %#H..%#H to %#H..%#H",
+		 spi, src, dst, new_src, new_dst);
 	
-	hdr = out;
+	/* copy over the SA from out to request */
+	hdr = (struct nlmsghdr*)request;
+	memcpy(hdr, out, min(out->nlmsg_len, sizeof(request)));
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;	
-	hdr->nlmsg_type = XFRM_MSG_UPDSA;
+	hdr->nlmsg_type = XFRM_MSG_NEWSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
+	sa = NLMSG_DATA(hdr);
+	sa->family = new_dst->get_family(new_dst);
 	
-	if (src_changes & HOST_DIFF_ADDR)
+	if (!src->ip_equals(src, new_src))
 	{
 		host2xfrm(new_src, &sa->saddr);
 	}
-
-	if (dst_changes & HOST_DIFF_ADDR)
+	if (!dst->ip_equals(dst, new_dst))
 	{
-		hdr->nlmsg_type = XFRM_MSG_NEWSA;
 		host2xfrm(new_dst, &sa->id.daddr);
 	}
 	
-	if (src_changes & HOST_DIFF_PORT || dst_changes & HOST_DIFF_PORT)
+	rta = XFRM_RTA(out, struct xfrm_usersa_info);
+	rtasize = XFRM_PAYLOAD(out, struct xfrm_usersa_info);
+	pos = (u_char*)XFRM_RTA(hdr, struct xfrm_usersa_info);
+	while(RTA_OK(rta, rtasize))
 	{
-		struct rtattr *rtattr = XFRM_RTA(hdr, struct xfrm_usersa_info);
-		size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_usersa_info);
-		while (RTA_OK(rtattr, rtsize))
+		/* copy all attributes, but not XFRMA_ENCAP if we are disabling it */
+		if (rta->rta_type != XFRMA_ENCAP || encap)
 		{
-			if (rtattr->rta_type == XFRMA_ENCAP)
-			{
-				struct xfrm_encap_tmpl* encap;
-				encap = (struct xfrm_encap_tmpl*)RTA_DATA(rtattr);
-				encap->encap_sport = ntohs(new_src->get_port(new_src));
-				encap->encap_dport = ntohs(new_dst->get_port(new_dst));
-				break;
-			}
-			rtattr = RTA_NEXT(rtattr, rtsize);
+			if (rta->rta_type == XFRMA_ENCAP)
+			{	/* update encap tmpl */
+				tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
+				tmpl->encap_sport = ntohs(new_src->get_port(new_src));
+				tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
+			}	
+			memcpy(pos, rta, rta->rta_len);
+			pos += rta->rta_len;
+			hdr->nlmsg_len += rta->rta_len;
 		}
+		rta = RTA_NEXT(rta, rtasize);
 	}
-	if (netlink_send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	if (tmpl == NULL && encap)
+	{	/* add tmpl if we are enabling it */
+		rta = (struct rtattr*)pos;
+		rta->rta_type = XFRMA_ENCAP;
+		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
+		hdr->nlmsg_len += rta->rta_len;
+		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
+		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
+		tmpl->encap_sport = ntohs(new_src->get_port(new_src));
+		tmpl->encap_dport = ntohs(new_dst->get_port(new_dst));
+		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
+	}
+	
+	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to update SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI 0x%x", spi);
 		free(out);
 		return FAILED;
 	}
 	free(out);
 	
-	if (dst_changes & HOST_DIFF_ADDR)
-	{
-		return this->public.del_sa(&this->public, dst, spi, protocol);
-	}
 	return SUCCESS;
 }
 
@@ -1501,7 +1962,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
 	
-	if (netlink_send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
+	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
 		while (NLMSG_OK(hdr, len))
@@ -1567,9 +2028,9 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
 	
-	if (netlink_send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
-		DBG1(DBG_KNL, "unalbe to delete SAD entry with SPI 0x%x", spi);
+		DBG1(DBG_KNL, "unable to delete SAD entry with SPI 0x%x", spi);
 		return FAILED;
 	}
 	DBG2(DBG_KNL, "deleted SAD entry with SPI 0x%x", spi);
@@ -1584,8 +2045,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
 						   policy_dir_t direction, protocol_id_t protocol,
-						   u_int32_t reqid, bool high_prio, mode_t mode,
-						   bool update)
+						   u_int32_t reqid, bool high_prio, mode_t mode)
 {
 	iterator_t *iterator;
 	policy_entry_t *current, *policy;
@@ -1601,7 +2061,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	policy->direction = direction;
 	
 	/* find the policy, which matches EXACTLY */
-	pthread_mutex_lock(&this->policies_mutex);
+	pthread_mutex_lock(&this->mutex);
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->iterate(iterator, (void**)&current))
 	{
@@ -1609,12 +2069,9 @@ static status_t add_policy(private_kernel_interface_t *this,
 			policy->direction == current->direction)
 		{
 			/* use existing policy */
-			if (!update)
-			{
-				current->refcount++;
-				DBG2(DBG_KNL, "policy %R===%R already exists, increasing ",
-					 "refcount", src_ts, dst_ts);
-			}
+			current->refcount++;
+			DBG2(DBG_KNL, "policy %R===%R already exists, increasing ",
+				 "refcount", src_ts, dst_ts);
 			free(policy);
 			policy = current;
 			found = TRUE;
@@ -1646,7 +2103,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	policy_info->priority -= policy->sel.sport_mask ? 1 : 0;
 	policy_info->action = XFRM_POLICY_ALLOW;
 	policy_info->share = XFRM_SHARE_ANY;
-	pthread_mutex_unlock(&this->policies_mutex);
+	pthread_mutex_unlock(&this->mutex);
 	
 	/* policies don't expire */
 	policy_info->lft.soft_byte_limit = XFRM_INF;
@@ -1680,7 +2137,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	host2xfrm(src, &tmpl->saddr);
 	host2xfrm(dst, &tmpl->id.daddr);
 	
-	if (netlink_send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to add policy %R===%R", src_ts, dst_ts);
 		return FAILED;
@@ -1698,7 +2155,13 @@ static status_t add_policy(private_kernel_interface_t *this,
 		policy->route = malloc_thing(route_entry_t);
 		if (get_address_by_ts(this, dst_ts, &policy->route->src_ip) == SUCCESS)
 		{
-			policy->route->gateway = dst->clone(dst);
+			/* if we have a gateway (via), we use it. If it's direct, we 
+			 * use the peers address (which is src, as we are in POLICY_FWD).*/
+			policy->route->gateway = get_addr(this, src, TRUE);
+			if (policy->route->gateway == NULL)
+			{
+				policy->route->gateway = src->clone(src);
+			}
 			policy->route->if_index = get_interface_index(this, dst);
 			policy->route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
 			memcpy(policy->route->dst_net.ptr, &policy->sel.saddr, policy->route->dst_net.len);
@@ -1750,7 +2213,7 @@ static status_t query_policy(private_kernel_interface_t *this,
 	policy_id->sel = ts2selector(src_ts, dst_ts);
 	policy_id->dir = direction;
 	
-	if (netlink_send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
+	if (netlink_send(this, this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
 		hdr = out;
 		while (NLMSG_OK(hdr, len))
@@ -1814,8 +2277,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 	policy.direction = direction;
 	
 	/* find the policy */
-	pthread_mutex_lock(&this->policies_mutex);
-	iterator = this->policies->create_iterator(this->policies, TRUE);
+	iterator = this->policies->create_iterator_locked(this->policies, &this->mutex);
 	while (iterator->iterate(iterator, (void**)&current))
 	{
 		if (memcmp(&current->sel, &policy.sel, sizeof(struct xfrm_selector)) == 0 &&
@@ -1827,7 +2289,6 @@ static status_t del_policy(private_kernel_interface_t *this,
 				/* is used by more SAs, keep in kernel */
 				DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
 				iterator->destroy(iterator);
-				pthread_mutex_unlock(&this->policies_mutex);
 				return SUCCESS;
 			}
 			/* remove if last reference */
@@ -1836,7 +2297,6 @@ static status_t del_policy(private_kernel_interface_t *this,
 		}
 	}
 	iterator->destroy(iterator);
-	pthread_mutex_unlock(&this->policies_mutex);
 	if (!to_delete)
 	{
 		DBG1(DBG_KNL, "deleting policy %R===%R failed, not found", src_ts, dst_ts);
@@ -1857,7 +2317,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 	route = to_delete->route;
 	free(to_delete);
 	
-	if (netlink_send_ack(this->socket_xfrm, hdr) != SUCCESS)
+	if (netlink_send_ack(this, this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete policy %R===%R", src_ts, dst_ts);
 		return FAILED;
@@ -1880,13 +2340,13 @@ static status_t del_policy(private_kernel_interface_t *this,
  */
 static void destroy(private_kernel_interface_t *this)
 {
-	pthread_cancel(this->event_thread);
-	pthread_join(this->event_thread, NULL);
+	this->job->cancel(this->job);
 	close(this->socket_xfrm_events);
 	close(this->socket_xfrm);
+	close(this->socket_rt_events);
 	close(this->socket_rt);
-	this->vips->destroy(this->vips);
 	this->policies->destroy(this->policies);
+	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
 	free(this);
 }
 
@@ -1900,41 +2360,29 @@ kernel_interface_t *kernel_interface_create()
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,mode_t,bool))add_sa;
-	this->public.update_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_diff_t,host_diff_t))update_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,mode_t,bool,bool))add_sa;
+	this->public.update_sa = (status_t(*)(kernel_interface_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_t*,host_t*,bool))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t,bool))add_policy;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,mode_t))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
-
 	this->public.get_interface = (char*(*)(kernel_interface_t*,host_t*))get_interface_name;
-	this->public.create_address_list = (linked_list_t*(*)(kernel_interface_t*))create_address_list_public;
+	this->public.create_address_iterator = (iterator_t*(*)(kernel_interface_t*))create_address_iterator;
+	this->public.get_source_addr = (host_t*(*)(kernel_interface_t*, host_t *dest))get_source_addr;
 	this->public.add_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) add_ip;
-	this->public.del_ip = (status_t(*)(kernel_interface_t*,host_t*,host_t*)) del_ip;
+	this->public.del_ip = (status_t(*)(kernel_interface_t*,host_t*)) del_ip;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
 
 	/* private members */
-	this->vips = linked_list_create();
 	this->policies = linked_list_create();
-	pthread_mutex_init(&this->policies_mutex,NULL);
-	pthread_mutex_init(&this->vips_mutex,NULL);
+	this->ifaces = linked_list_create();
+	this->hiter = NULL;
+	this->seq = 200;
+	pthread_mutex_init(&this->mutex,NULL);
 	
+	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
-	addr.nl_pid = 0;
-	addr.nl_groups = 0;
-	
-	/* create and bind XFRM socket */
-	this->socket_xfrm = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
-	if (this->socket_xfrm <= 0)
-	{
-		charon->kill(charon, "unable to create XFRM netlink socket");
-	}
-	
-	if (bind(this->socket_xfrm, (struct sockaddr*)&addr, sizeof(addr)))
-	{
-		charon->kill(charon, "unable to bind XFRM netlink socket");
-	}
 	
 	/* create and bind RT socket */
 	this->socket_rt = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
@@ -1942,33 +2390,58 @@ kernel_interface_t *kernel_interface_create()
 	{
 		charon->kill(charon, "unable to create RT netlink socket");
 	}
-	
+	addr.nl_groups = 0;
 	if (bind(this->socket_rt, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind RT netlink socket");
 	}
 	
+	/* create and bind RT socket for events (address/interface/route changes) */
+	this->socket_rt_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (this->socket_rt_events <= 0)
+	{
+		charon->kill(charon, "unable to create RT event socket");
+	}
+	addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | 
+					 RTMGRP_IPV4_ROUTE | RTMGRP_IPV4_ROUTE | RTMGRP_LINK;
+	if (bind(this->socket_rt_events, (struct sockaddr*)&addr, sizeof(addr)))
+	{
+		charon->kill(charon, "unable to bind RT event socket");
+	}
+	
+	/* create and bind XFRM socket */ 
+	this->socket_xfrm = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
+	if (this->socket_xfrm <= 0)
+	{
+		charon->kill(charon, "unable to create XFRM netlink socket");
+	}
+	addr.nl_groups = 0;
+	if (bind(this->socket_xfrm, (struct sockaddr*)&addr, sizeof(addr)))
+	{
+		charon->kill(charon, "unable to bind XFRM netlink socket");
+	}
+	
 	/* create and bind XFRM socket for ACQUIRE & EXPIRE */
-	addr.nl_groups = XFRMGRP_ACQUIRE | XFRMGRP_EXPIRE;
 	this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 	if (this->socket_xfrm_events <= 0)
 	{
 		charon->kill(charon, "unable to create XFRM event socket");
 	}
-	
+	addr.nl_groups = XFRMGRP_ACQUIRE | XFRMGRP_EXPIRE;
 	if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		charon->kill(charon, "unable to bind XFRM event socket");
 	}
 	
-	/* create a thread receiving ACQUIRE & EXPIRE events */
-	if (pthread_create(&this->event_thread, NULL,
-					   (void*(*)(void*))receive_events, this))
+	this->job = callback_job_create((callback_job_cb_t)receive_events,
+									this, NULL, NULL);
+	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	
+	if (init_address_list(this) != SUCCESS)
 	{
-		charon->kill(charon, "unable to create xfrm event dispatcher thread");
+		charon->kill(charon, "unable to get interface list");
 	}
 	
 	return &this->public;
 }
 
-/* vim: set ts=4 sw=4 noet: */
