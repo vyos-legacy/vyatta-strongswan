@@ -1,6 +1,12 @@
 strongswan (4.1.4-1) unstable; urgency=low
 
   * New upstream release.
+  * Fixed debconf descriptions.
+    Closes: #431157: strongswan: Minor errors in Debconf template
+  * Include Portugese and 
+    Closes: #415178: strongswan: [INTL:pt] Portuguese translation for debconf
+                     messages
+    Closes: #431154: strongswan: [INTL:de] initial German debconf translation
 
  -- Rene Mayrhofer <rmayr@debian.org>  Thu, 05 Jul 2007 00:53:01 +0100
 
@@ -16,6 +22,9 @@ strongswan (4.1.1-1) unreleased; urgency=low
   * IKEv2 support with the new "charon" daemon in addition to the old "pluto"
     which is still used for IKEv1.
   * Switches to auto* tools build system.
+  * The postinst script is still not quite as complete in updating the 2.8.x
+    config automatically to a new 4.x config, but I don't want to wait any
+    longer with the upload. It can be improved later on.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Thu, 12 Apr 2007 21:33:56 +0100
 
