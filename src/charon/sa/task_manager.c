@@ -27,6 +27,7 @@
 #include <daemon.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
+#include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
 #include <sa/tasks/ike_cert.h>
 #include <sa/tasks/ike_rekey.h>
@@ -130,6 +131,11 @@ struct private_task_manager_t {
 	 * List of tasks initiated by peer
 	 */
 	linked_list_t *passive_tasks;
+	
+	/**
+	 * the task manager has been reset 
+	 */
+	bool reset;
 };
 
 /**
@@ -140,7 +146,7 @@ static void flush(private_task_manager_t *this)
 	task_t *task;
 	
 	this->queued_tasks->destroy_offset(this->queued_tasks, 
-									   offsetof(task_t, destroy));
+										offsetof(task_t, destroy));
 	this->passive_tasks->destroy_offset(this->passive_tasks,
 										offsetof(task_t, destroy));
 	
@@ -235,7 +241,7 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 					this->initiating.packet->clone(this->initiating.packet));
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
-		charon->event_queue->add_relative(charon->event_queue, job, timeout);
+		charon->scheduler->schedule_job(charon->scheduler, job, timeout);
 	}
 	return SUCCESS;
 }
@@ -274,6 +280,7 @@ static status_t build_request(private_task_manager_t *this)
 					activate_task(this, IKE_AUTHENTICATE);
 					activate_task(this, IKE_CONFIG);
 					activate_task(this, CHILD_CREATE);
+					activate_task(this, IKE_MOBIKE);
 				}
 				break;
 			case IKE_ESTABLISHED:
@@ -302,7 +309,17 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = CREATE_CHILD_SA;
 					break;
 				}
-				if (activate_task(this, IKE_DEADPEER))
+				if (activate_task(this, IKE_REAUTH))
+				{
+					exchange = INFORMATIONAL;
+					break;
+				}
+				if (activate_task(this, IKE_MOBIKE))
+				{
+					exchange = INFORMATIONAL;
+					break;
+				}
+				if (activate_task(this, IKE_DPD))
 				{
 					exchange = INFORMATIONAL;
 					break;
@@ -338,6 +355,8 @@ static status_t build_request(private_task_manager_t *this)
 				case IKE_REKEY:
 					exchange = CREATE_CHILD_SA;
 					break;
+				case IKE_MOBIKE:
+					exchange = INFORMATIONAL;
 				default:
 					continue;
 			}
@@ -415,6 +434,8 @@ static status_t process_response(private_task_manager_t *this,
 		return DESTROY_ME;
 	}
 
+	/* catch if we get resetted while processing */
+	this->reset = FALSE;
 	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
@@ -434,6 +455,12 @@ static status_t process_response(private_task_manager_t *this,
 	            iterator->destroy(iterator);
 	            return DESTROY_ME;
 	    }
+	    if (this->reset)
+	    {	/* start all over again if we were reset */
+	    	this->reset = FALSE;
+	    	iterator->destroy(iterator);
+			return build_request(this);
+		}	
 	}
 	iterator->destroy(iterator);
 	
@@ -456,7 +483,7 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 	
 	/* do we have to check  */
 	if (type == IKE_REKEY || type == CHILD_REKEY ||
-		type == CHILD_DELETE || type == IKE_DELETE)
+		type == CHILD_DELETE || type == IKE_DELETE || type == IKE_REAUTH)
 	{
 	    /* find an exchange collision, and notify these tasks */
 	    iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
@@ -465,7 +492,8 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 	    	switch (active->get_type(active))
 	    	{
 	    		case IKE_REKEY:
-	    			if (type == IKE_REKEY || type == IKE_DELETE)
+	    			if (type == IKE_REKEY || type == IKE_DELETE ||
+	    				type == IKE_REAUTH)
 	    			{
 	    				ike_rekey_t *rekey = (ike_rekey_t*)active;
 	    				rekey->collide(rekey, task);
@@ -571,6 +599,7 @@ static status_t process_request(private_task_manager_t *this,
 	exchange_type_t exchange;
 	payload_t *payload;
 	notify_payload_t *notify;
+	delete_payload_t *delete;
 
 	exchange = message->get_exchange_type(message);
 
@@ -590,6 +619,8 @@ static status_t process_request(private_task_manager_t *this,
 			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)child_create_create(this->ike_sa, NULL);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+			task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			break;
 		}
@@ -646,27 +677,60 @@ static status_t process_request(private_task_manager_t *this,
 		}
 		case INFORMATIONAL:
 		{
-			delete_payload_t *delete;
-			
-			delete = (delete_payload_t*)message->get_payload(message, DELETE);
-			if (delete)
+			iterator = message->get_payload_iterator(message);
+			while (iterator->iterate(iterator, (void**)&payload))
 			{
-				if (delete->get_protocol_id(delete) == PROTO_IKE)
+				switch (payload->get_type(payload))
 				{
-					task = (task_t*)ike_delete_create(this->ike_sa, FALSE);
-					this->passive_tasks->insert_last(this->passive_tasks, task);
+					case NOTIFY:
+					{
+						notify = (notify_payload_t*)payload;
+						switch (notify->get_notify_type(notify))
+						{
+							case ADDITIONAL_IP4_ADDRESS:
+							case ADDITIONAL_IP6_ADDRESS:
+							case NO_ADDITIONAL_ADDRESSES:
+							case UPDATE_SA_ADDRESSES:
+							case NO_NATS_ALLOWED:
+							case UNACCEPTABLE_ADDRESSES:
+							case UNEXPECTED_NAT_DETECTED:
+							case COOKIE2:
+								task = (task_t*)ike_mobike_create(this->ike_sa,
+																  FALSE);
+								break;
+							default:
+								break;
+						}
+						break;
+					}
+					case DELETE:
+					{
+						delete = (delete_payload_t*)payload;
+						if (delete->get_protocol_id(delete) == PROTO_IKE)
+						{
+							task = (task_t*)ike_delete_create(this->ike_sa, FALSE);
+						}
+						else
+						{
+							task = (task_t*)child_delete_create(this->ike_sa, NULL);
+						}
+						break;
+					}
+					default:
+						break;
 				}
-				else
+				if (task)
 				{
-					task = (task_t*)child_delete_create(this->ike_sa, NULL);
-					this->passive_tasks->insert_last(this->passive_tasks, task);
+					break;
 				}
 			}
-			else
+			iterator->destroy(iterator);
+			
+			if (task == NULL)
 			{
 				task = (task_t*)ike_dpd_create(FALSE);
-				this->passive_tasks->insert_last(this->passive_tasks, task);
 			}
+			this->passive_tasks->insert_last(this->passive_tasks, task);
 			break;
 		}
 		default:
@@ -806,7 +870,7 @@ static void reset(private_task_manager_t *this)
 	this->responding.packet = NULL;
 	this->initiating.packet = NULL;
 	this->responding.mid = 0;
-	this->initiating.mid = -1;
+	this->initiating.mid = 0;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	
 	/* reset active tasks */
@@ -816,6 +880,8 @@ static void reset(private_task_manager_t *this)
 		task->migrate(task, this->ike_sa);
 		this->queued_tasks->insert_first(this->queued_tasks, task);
 	}
+	
+	this->reset = TRUE;
 }
 
 /**
@@ -859,6 +925,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->queued_tasks = linked_list_create();
 	this->active_tasks = linked_list_create();
 	this->passive_tasks = linked_list_create();
+	this->reset = FALSE;
 
 	return &this->public;
 }

@@ -47,14 +47,16 @@ ENUM_NEXT(notify_type_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PROPOSAL
 	"INVALID_KE_PAYLOAD");
 ENUM_NEXT(notify_type_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
 	"AUTHENTICATION_FAILED");
-ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, INVALID_SELECTORS, AUTHENTICATION_FAILED,
+ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED, AUTHENTICATION_FAILED,
 	"SINGLE_PAIR_REQUIRED",
 	"NO_ADDITIONAL_SAS",
 	"INTERNAL_ADDRESS_FAILURE",
 	"FAILED_CP_REQUIRED",
 	"TS_UNACCEPTABLE",
-	"INVALID_SELECTORS");
-ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, INVALID_SELECTORS,
+	"INVALID_SELECTORS",
+	"UNACCEPTABLE_ADDRESSES",
+	"UNEXPECTED_NAT_DETECTED");
+ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, UNEXPECTED_NAT_DETECTED,
 	"INITIAL_CONTACT",
 	"SET_WINDOW_SIZE",
 	"ADDITIONAL_TS_POSSIBLE",
@@ -78,6 +80,59 @@ ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, INVALID_SELECTORS,
 ENUM_NEXT(notify_type_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, AUTH_LIFETIME,
 	"EAP_ONLY_AUTHENTICATION");
 ENUM_END(notify_type_names, EAP_ONLY_AUTHENTICATION);
+
+
+ENUM_BEGIN(notify_type_short_names, UNSUPPORTED_CRITICAL_PAYLOAD, UNSUPPORTED_CRITICAL_PAYLOAD,
+	"CRIT");
+ENUM_NEXT(notify_type_short_names, INVALID_IKE_SPI, INVALID_MAJOR_VERSION, UNSUPPORTED_CRITICAL_PAYLOAD,
+	"INVAL_IKE_SPI",
+	"INVAL_MAJOR");
+ENUM_NEXT(notify_type_short_names, INVALID_SYNTAX, INVALID_SYNTAX, INVALID_MAJOR_VERSION,
+	"INVAL_SYN");
+ENUM_NEXT(notify_type_short_names, INVALID_MESSAGE_ID, INVALID_MESSAGE_ID, INVALID_SYNTAX,
+	"INVAL_MID");
+ENUM_NEXT(notify_type_short_names, INVALID_SPI, INVALID_SPI, INVALID_MESSAGE_ID,
+	"INVAL_SPI");
+ENUM_NEXT(notify_type_short_names, NO_PROPOSAL_CHOSEN, NO_PROPOSAL_CHOSEN, INVALID_SPI,
+	"NO_PROP");
+ENUM_NEXT(notify_type_short_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PROPOSAL_CHOSEN,
+	"INVAL_KE");
+ENUM_NEXT(notify_type_short_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
+	"AUTH_FAILED");
+ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED, AUTHENTICATION_FAILED,
+	"SINGLE_PAIR",
+	"NO_ADD_SAS",
+	"INT_ADDR_FAIL",
+	"FAIL_CP_REQ",
+	"TS_UNACCEPT",
+	"INVAL_SEL",
+	"UNACCEPT_ADDR",
+	"UNEXPECT_NAT");
+ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, AUTH_LIFETIME, UNEXPECTED_NAT_DETECTED,
+	"INIT_CONTACT",
+	"SET_WINSIZE",
+	"ADD_TS_POSS",
+	"IPCOMP_SUPP",
+	"NATD_S_IP",
+	"NATD_D_IP",
+	"COOKIE",
+	"USE_TRANSP",
+	"HTTP_CERT_LOOK",
+	"REKEY_SA",
+	"ESP_TFC_PAD_N",
+	"NON_FIRST_FRAG",
+	"MOBIKE_SUP",
+	"ADD_4_ADDR",
+	"ADD_6_ADDR",
+	"NO_ADD_ADDR",
+	"UPD_SA_ADDR",
+	"COOKIE2",
+	"NO_NATS",
+	"AUTH_LFT");
+ENUM_NEXT(notify_type_short_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, AUTH_LIFETIME,
+	"EAP_ONLY");
+ENUM_END(notify_type_short_names, EAP_ONLY_AUTHENTICATION);
+
 
 typedef struct private_notify_payload_t private_notify_payload_t;
 
@@ -189,6 +244,8 @@ encoding_rule_t notify_payload_encodings[] = {
  */
 static status_t verify(private_notify_payload_t *this)
 {
+	bool bad_length = FALSE;
+
 	switch (this->protocol_id)
 	{
 		case PROTO_NONE:
@@ -205,30 +262,9 @@ static status_t verify(private_notify_payload_t *this)
 	{
 		case INVALID_KE_PAYLOAD:
 		{
-			/* check notification data */
-			diffie_hellman_group_t dh_group;
 			if (this->notification_data.len != 2)
 			{
-				DBG1(DBG_ENC, "invalid notify data length for %N (%d)",
-					 notify_type_names, this->notify_type,
-					 this->notification_data.len);
-				return FAILED;
-			}
-			dh_group = ntohs(*((u_int16_t*)this->notification_data.ptr));
-			switch (dh_group)
-			{
-				case MODP_768_BIT:
-				case MODP_1024_BIT:
-				case MODP_1536_BIT:
-				case MODP_2048_BIT:
-				case MODP_3072_BIT:
-				case MODP_4096_BIT:
-				case MODP_6144_BIT:
-				case MODP_8192_BIT:
-					break;
-				default:
-					DBG1(DBG_ENC, "Bad DH group (%d)", dh_group);
-					return FAILED;
+				bad_length = TRUE;
 			}
 			break;
 		}
@@ -237,9 +273,7 @@ static status_t verify(private_notify_payload_t *this)
 		{
 			if (this->notification_data.len != HASH_SIZE_SHA1)
 			{
-				DBG1(DBG_ENC, "invalid %N notify length",
-					 notify_type_names, this->notify_type);
-				return FAILED;
+				bad_length = TRUE;
 			}
 			break;
 		}
@@ -249,15 +283,36 @@ static status_t verify(private_notify_payload_t *this)
 		{
 			if (this->notification_data.len != 0)
 			{
-				DBG1(DBG_ENC, "invalid %N notify",
-					 notify_type_names, this->notify_type);
-				return FAILED;
+				bad_length = TRUE;
+			}
+			break;
+		}
+		case ADDITIONAL_IP4_ADDRESS:
+		{
+			if (this->notification_data.len != 4)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		}
+		case ADDITIONAL_IP6_ADDRESS:
+		{
+			if (this->notification_data.len != 16)
+			{
+				bad_length = TRUE;
 			}
 			break;
 		}
 		default:
 			/* TODO: verify */
 			break;
+	}
+	if (bad_length)
+	{
+		DBG1(DBG_ENC, "invalid notify data length for %N (%d)",
+			 notify_type_names, this->notify_type,
+			 this->notification_data.len);
+		return FAILED;
 	}
 	return SUCCESS;
 }

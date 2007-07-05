@@ -25,6 +25,8 @@
 #ifndef IKE_SA_H_
 #define IKE_SA_H_
 
+typedef enum ike_extension_t ike_extension_t;
+typedef enum ike_condition_t ike_condition_t;
 typedef enum ike_sa_state_t ike_sa_state_t;
 typedef struct ike_sa_t ike_sa_t;
 
@@ -70,6 +72,47 @@ typedef struct ike_sa_t ike_sa_t;
  */
 #define RETRY_JITTER 20
 
+/**
+ * @brief Extensions (or optional features) the peer supports
+ */
+enum ike_extension_t {
+	
+	/**
+	 * peer supports NAT traversal as specified in RFC4306
+	 */
+	EXT_NATT = (1<<0),
+
+	/**
+	 * peer supports MOBIKE (RFC4555)
+	 */
+	EXT_MOBIKE = (1<<1),
+};
+
+/**
+ * @brief Conditions of an IKE_SA, change during its lifetime
+ */
+enum ike_condition_t {
+	
+	/**
+	 * Connection is natted somewhere
+	 */
+	COND_NAT_ANY = (1<<0),
+	
+	/**
+	 * we are behind NAT
+	 */
+	COND_NAT_HERE = (1<<1),
+	
+	/**
+	 * other is behind NAT
+	 */
+	COND_NAT_THERE = (1<<2),
+
+	/**
+	 * peer is currently not reachable (due missing route, ...)
+	 */
+	COND_STALE = (1<<3),
+};
 
 /**
  * @brief State of an IKE_SA.
@@ -240,6 +283,17 @@ struct ike_sa_t {
 	void (*set_other_host) (ike_sa_t *this, host_t *other);
 	
 	/**
+	 * @brief Update the IKE_SAs host.
+	 *
+	 * Hosts may be NULL to use current host.
+	 *
+	 * @param this			calling object
+	 * @param me			new local host address, or NULL
+	 * @param other			new remote host address, or NULL
+	 */
+	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other);
+	
+	/**
 	 * @brief Get the own identification.
 	 * 
 	 * @param this 			calling object
@@ -318,7 +372,82 @@ struct ike_sa_t {
 	 * @param config		peer_config to use
 	 */
 	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
+	
+	/**
+	 * @brief Add an additional address for the peer.
+	 *
+	 * In MOBIKE, a peer may transmit additional addresses where it is
+	 * reachable. These are stored in the IKE_SA.
+	 * The own list of addresses is not stored, they are queried from
+	 * the kernel when required.
+	 *
+	 * @param this			calling object
+	 * @param host			host to add to list
+	 */
+	void (*add_additional_address)(ike_sa_t *this, host_t *host);
+	
+	/**
+	 * @brief Create an iterator over all additional addresses of the peer.
+	 *
+	 * @param this			calling object
+	 * @return 				iterator over addresses
+	 */
+	iterator_t* (*create_additional_address_iterator)(ike_sa_t *this);
+	
+	/**
+	 * @brief Enable an extension the peer supports.
+	 *
+	 * If support for an IKE extension is detected, this method is called
+	 * to enable that extension and behave accordingly.
+	 *
+	 * @param this			calling object
+	 * @param extension		extension to enable
+	 */
+	void (*enable_extension)(ike_sa_t *this, ike_extension_t extension);
+	
+	/**
+	 * @brief Check if the peer supports an extension.
+	 *
+	 * @param this			calling object
+	 * @param extension		extension to check for support
+	 * @return				TRUE if peer supports it, FALSE otherwise
+	 */
+	bool (*supports_extension)(ike_sa_t *this, ike_extension_t extension);
+	
+	/**
+	 * @brief Enable/disable a condition flag for this IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @param condition		condition to enable/disable
+	 * @param enable		TRUE to enable condition, FALSE to disable
+	 */
+	void (*set_condition) (ike_sa_t *this, ike_condition_t condition, bool enable);
 
+	/**
+	 * @brief Check if a condition flag is set.
+	 *
+	 * @param this 			calling object
+	 * @param condition		condition to check
+	 * @return				TRUE if condition flag set, FALSE otherwise
+	 */
+	bool (*has_condition) (ike_sa_t *this, ike_condition_t condition);
+	
+	/**
+	 * @brief Get the number of queued MOBIKE address updates.
+	 *
+	 * @param this			calling object
+	 * @return				number of pending updates
+	 */
+	u_int32_t (*get_pending_updates)(ike_sa_t *this);
+	
+	/**
+	 * @brief Set the number of queued MOBIKE address updates.
+	 *
+	 * @param this			calling object
+	 * @param updates		number of pending updates
+	 */
+	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
+	
 	/**
 	 * @brief Initiate a new connection.
 	 *
@@ -389,6 +518,21 @@ struct ike_sa_t {
 	status_t (*delete) (ike_sa_t *this);
 	
 	/**
+	 * @brief Update IKE_SAs after network interfaces have changed.
+	 *
+	 * Whenever the network interface configuration changes, the kernel
+	 * interface calls roam() on each IKE_SA. The IKE_SA then checks if
+	 * the new network config requires changes, and handles appropriate.
+	 * If MOBIKE is supported, addresses are updated; If not, the tunnel is
+	 * restarted.
+	 *
+	 * @param this			calling object
+	 * @param address		TRUE if address list changed, FALSE otherwise
+	 * @return				SUCCESS, FAILED, DESTROY_ME
+	 */
+	status_t (*roam)(ike_sa_t *this, bool address);
+	
+	/**
 	 * @brief Processes a incoming IKEv2-Message.
 	 *
 	 * Message processing may fail. If a critical failure occurs, 
@@ -457,29 +601,6 @@ struct ike_sa_t {
 	 * @param this			calling object
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
-	
-	/**
-	 * @brief Check if NAT traversal is enabled for this IKE_SA.
-	 *
-	 * @param this 			calling object
-	 * @return 				TRUE if NAT traversal enabled
-	 */
-	bool (*is_natt_enabled) (ike_sa_t *this);
-
-	/**
-	 * @brief Enable NAT detection for this IKE_SA.
-	 *
-	 * If a Network address translation is detected with
-	 * NAT_DETECTION notifys, a SA must switch to ports
-	 * 4500. To enable this behavior, call enable_natt().
-	 * It is relevant which peer is NATted, this is specified
-	 * with the "local" parameter. Call it twice when both
-	 * are NATted.
-	 *
-	 * @param this 			calling object
-	 * @param local			TRUE, if we are NATted, FALSE if other
-	 */
-	void (*enable_natt) (ike_sa_t *this, bool local);
 
 	/**
 	 * @brief Derive all keys and create the transforms for IKE communication.
@@ -621,11 +742,12 @@ struct ike_sa_t {
 	 * @brief Restablish the IKE_SA.
 	 *
 	 * Create a completely new IKE_SA with authentication, recreates all children
-	 * within the IKE_SA, but lets the old IKE_SA untouched.
+	 * within the IKE_SA, closes this IKE_SA.
 	 *
 	 * @param this 			calling object
+	 * @return				DESTROY_ME to destroy the IKE_SA
 	 */
-	void (*reestablish) (ike_sa_t *this);
+	status_t (*reestablish) (ike_sa_t *this);
 	
 	/**
 	 * @brief Set the virtual IP to use for this IKE_SA and its children.

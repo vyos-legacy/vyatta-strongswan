@@ -45,13 +45,6 @@ struct send_dpd_job_t {
 	 * implements job_t interface
 	 */
 	job_t job_interface;
-	
-	/**
-	 * @brief Destroys an send_dpd_job_t object.
-	 *
-	 * @param this 	send_dpd_job_t object to destroy
-	 */
-	void (*destroy) (send_dpd_job_t *this);
 };
 
 /**

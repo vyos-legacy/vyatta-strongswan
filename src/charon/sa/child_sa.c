@@ -60,7 +60,7 @@ struct sa_policy_t {
 typedef struct private_child_sa_t private_child_sa_t;
 
 /**
- * Private data of a child_sa_t bject.
+ * Private data of a child_sa_t object.
  */
 struct private_child_sa_t {
 	/**
@@ -138,9 +138,9 @@ struct private_child_sa_t {
 	child_sa_state_t state;
 
 	/**
-	 * Specifies if NAT traversal is used
+	 * Specifies if UDP encapsulation is enabled (NAT traversal)
 	 */
-	bool use_natt;
+	bool encap;
 	
 	/**
 	 * mode this SA uses, tunnel/transport
@@ -156,6 +156,11 @@ struct private_child_sa_t {
 	 * config used to create this child
 	 */
 	child_cfg_t *config;
+	
+	/**
+	 * cached interface name for iptables
+	 */
+	char *iface;
 };
 
 /**
@@ -276,11 +281,10 @@ static void updown(private_child_sa_t *this, bool up)
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
 		char command[1024];
-		char *ifname = NULL;
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
 		char *pos, *virtual_ip;
 		FILE *shell;
-		
+
 		/* get subnet/bits from string */
 		asprintf(&my_client, "%R", policy->my_ts);
 		pos = strchr(my_client, '/');
@@ -301,18 +305,24 @@ static void updown(private_child_sa_t *this, bool up)
 			*pos = '\0';
 		}
 
-        if (this->virtual_ip)
-        {
-                asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ",
-                		 this->virtual_ip);
-        }
-        else
-        {
-                asprintf(&virtual_ip, "");
-        }
+		if (this->virtual_ip)
+		{
+			asprintf(&virtual_ip, "PLUTO_MY_SOURCEIP='%H' ",
+		        		 this->virtual_ip);
+		}
+		else
+		{
+			asprintf(&virtual_ip, "");
+		}
 
-		ifname = charon->kernel_interface->get_interface(charon->kernel_interface, 
-														 this->me.addr);
+		/* we cache the iface name, as it may not be available when
+		 * the SA gets deleted */
+		if (up)
+		{
+			free(this->iface); 
+			this->iface = charon->kernel_interface->get_interface(
+								charon->kernel_interface, this->me.addr);
+		}
 		
 		/* build the command with all env variables.
 		 * TODO: PLUTO_PEER_CA and PLUTO_NEXT_HOP are currently missing
@@ -346,7 +356,7 @@ static void updown(private_child_sa_t *this, bool up)
 							this->me.addr) ? "-host" : "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
 				 this->config->get_name(this->config),
-				 ifname ? ifname : "(unknown)",
+				 this->iface ? this->iface : "unknown",
 				 this->reqid,
 				 this->me.addr,
 				 this->me.id,
@@ -364,11 +374,11 @@ static void updown(private_child_sa_t *this, bool up)
 				 this->config->get_hostaccess(this->config) ?
 				 	"PLUTO_HOST_ACCESS='1' " : "",
 				 script);
-		free(ifname);
 		free(my_client);
 		free(other_client);
 		free(virtual_ip);
 		
+		DBG3(DBG_CHD, "running updown script: %s", command);
 		shell = popen(command, "r");
 
 		if (shell == NULL)
@@ -494,7 +504,6 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 	algorithm_t int_algo_none = {AUTH_UNDEFINED, 0};
 	host_t *src;
 	host_t *dst;
-	natt_conf_t *natt;
 	status_t status;
 	
 	this->protocol = proposal->get_protocol(proposal);
@@ -561,18 +570,6 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 		int_algo = &int_algo_none;
 	}
 	
-	/* setup nat-t */
-	if (this->use_natt)
-	{
-		natt = alloca(sizeof(natt_conf_t));
-		natt->sport = src->get_port(src);
-		natt->dport = dst->get_port(dst);
-	}
-	else
-	{
-		natt = NULL;
-	}
-	
 	soft = this->config->get_lifetime(this->config, TRUE);
 	hard = this->config->get_lifetime(this->config, FALSE);
 	
@@ -582,7 +579,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal,
 											  src, dst, spi, this->protocol,
 											  this->reqid, mine ? soft : 0,
 											  hard, enc_algo, int_algo,
-											  prf_plus, natt, mode, mine);
+											  prf_plus, mode, this->encap, mine);
 	
 	this->encryption = *enc_algo;
 	this->integrity = *int_algo;
@@ -689,15 +686,15 @@ static status_t add_policies(private_child_sa_t *this,
 			/* install 3 policies: out, in and forward */
 			status = charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->me.addr, this->other.addr, my_ts, other_ts, POLICY_OUT,
-					this->protocol, this->reqid, high_prio, mode, FALSE);
+					this->protocol, this->reqid, high_prio, mode);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_IN,
-					this->protocol, this->reqid, high_prio, mode, FALSE);
+					this->protocol, this->reqid, high_prio, mode);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr, other_ts, my_ts, POLICY_FWD,
-					this->protocol, this->reqid, high_prio, mode, FALSE);
+					this->protocol, this->reqid, high_prio, mode);
 			
 			if (status != SUCCESS)
 			{
@@ -782,139 +779,89 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 }
 
 /**
- * Update the host adress/port of a SA
- */
-static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other, 
-								int my_changes, int other_changes, bool mine)
-{
-	host_t *src, *dst, *new_src, *new_dst;
-	int src_changes, dst_changes;
-	status_t status;
-	u_int32_t spi;
-	
-	if (mine)
-	{
-		src = this->other.addr;
-		dst = this->me.addr;
-		new_src = new_other;
-		new_dst = new_me;
-		src_changes = other_changes;
-		dst_changes = my_changes;
-		spi = this->other.spi;
-	}
-	else
-	{
-		src = this->me.addr;
-		dst = this->other.addr;
-		new_src = new_me;
-		new_dst = new_other;
-		src_changes = my_changes;
-		dst_changes = other_changes;
-		spi = this->me.spi;
-	}
-	
-	DBG2(DBG_CHD, "updating %N SA 0x%x, from %#H..#H to %#H..%#H",
-		 protocol_id_names, this->protocol, ntohl(spi), src, dst, new_src, new_dst);
-	
-	status = charon->kernel_interface->update_sa(charon->kernel_interface,
-												 dst, spi, this->protocol, 
-												 new_src, new_dst, 
-												 src_changes, dst_changes);
-	
-	if (status != SUCCESS)
-	{
-		return FAILED;
-	}
-	return SUCCESS;
-}
-
-/**
- * Update the host adress/port of a policy
- */
-static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other)
-{
-	iterator_t *iterator;
-	sa_policy_t *policy;
-	status_t status;
-	/* we always use high priorities, as hosts getting updated are INSTALLED */
-	
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&policy))
-	{
-		status = charon->kernel_interface->add_policy(
-				charon->kernel_interface,
-				new_me, new_other,
-				policy->my_ts, policy->other_ts,
-				POLICY_OUT, this->protocol, this->reqid, TRUE, this->mode, TRUE);
-		
-		status |= charon->kernel_interface->add_policy(
-				charon->kernel_interface,
-				new_other, new_me,
-				policy->other_ts, policy->my_ts,
-				POLICY_IN, this->protocol, this->reqid, TRUE, this->mode, TRUE);
-		
-		status |= charon->kernel_interface->add_policy(
-				charon->kernel_interface,
-				new_other, new_me,
-				policy->other_ts, policy->my_ts,
-				POLICY_FWD, this->protocol, this->reqid, TRUE, this->mode, TRUE);
-		
-		if (status != SUCCESS)
-		{
-			iterator->destroy(iterator);
-			return FAILED;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	return SUCCESS;
-}
-
-/**
  * Implementation of child_sa_t.update_hosts.
  */
-static status_t update_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other, 
-							 host_diff_t my_changes, host_diff_t other_changes) 
+static status_t update_hosts(private_child_sa_t *this, 
+							 host_t *me, host_t *other, bool encap) 
 {
-	if (!my_changes && !other_changes)
+	/* anything changed at all? */
+	if (me->equals(me, this->me.addr) && 
+		other->equals(other, this->other.addr) && this->encap == encap)
 	{
 		return SUCCESS;
 	}
-
+	/* run updown script to remove iptables rules */
+	updown(this, FALSE);
+	
+	this->encap = encap;
+	
 	/* update our (initator) SAs */
-	if (update_sa_hosts(this, new_me, new_other, my_changes, other_changes, TRUE) != SUCCESS)
-	{
-		return FAILED;
-	}
-
+	charon->kernel_interface->update_sa(charon->kernel_interface, this->me.spi,
+			this->protocol, this->other.addr, this->me.addr, other, me, encap);
 	/* update his (responder) SAs */
-	if (update_sa_hosts(this, new_me, new_other, my_changes, other_changes, FALSE) != SUCCESS)
-	{
-		return FAILED;
-	}
+	charon->kernel_interface->update_sa(charon->kernel_interface, this->other.spi, 
+			this->protocol, this->me.addr, this->other.addr, me, other, encap);
 	
 	/* update policies */
-	if (my_changes & HOST_DIFF_ADDR || other_changes & HOST_DIFF_ADDR)
+	if (!me->ip_equals(me, this->me.addr) ||
+		!other->ip_equals(other, this->other.addr))
 	{
-		if (update_policy_hosts(this, new_me, new_other) != SUCCESS)
+		iterator_t *iterator;
+		sa_policy_t *policy;
+		
+		/* always use high priorities, as hosts getting updated are INSTALLED */
+		iterator = this->policies->create_iterator(this->policies, TRUE);
+		while (iterator->iterate(iterator, (void**)&policy))
 		{
-			return FAILED;
+			/* remove old policies first */
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+								policy->my_ts, policy->other_ts, POLICY_OUT);
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+								policy->other_ts, policy->my_ts,  POLICY_IN);
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+								policy->other_ts, policy->my_ts, POLICY_FWD);
+		
+			/* check wether we have to update a "dynamic" traffic selector */
+			if (!me->ip_equals(me, this->me.addr) &&
+				policy->my_ts->is_host(policy->my_ts, this->me.addr))
+			{
+				policy->my_ts->set_address(policy->my_ts, me);
+			}
+			if (!other->ip_equals(other, this->other.addr) &&
+				policy->other_ts->is_host(policy->other_ts, this->other.addr))
+			{
+				policy->other_ts->set_address(policy->other_ts, other);
+			}
+		
+			/* reinstall updated policies */
+			charon->kernel_interface->add_policy(charon->kernel_interface,
+					me, other, policy->my_ts, policy->other_ts, POLICY_OUT,
+					this->protocol,	this->reqid, TRUE, this->mode);
+			charon->kernel_interface->add_policy(charon->kernel_interface, 
+					other, me, policy->other_ts, policy->my_ts, POLICY_IN,
+					this->protocol, this->reqid, TRUE, this->mode);
+			charon->kernel_interface->add_policy(charon->kernel_interface,
+					other, me, policy->other_ts, policy->my_ts, POLICY_FWD,
+					this->protocol, this->reqid, TRUE, this->mode);
 		}
+		iterator->destroy(iterator);
 	}
 
-	/* update hosts */
-	if (my_changes)
+	/* apply hosts */
+	if (!me->equals(me, this->me.addr))
 	{
 		this->me.addr->destroy(this->me.addr);
-		this->me.addr = new_me->clone(new_me);
+		this->me.addr = me->clone(me);
 	}
-
-	if (other_changes)
+	if (!other->equals(other, this->other.addr))
 	{
 		this->other.addr->destroy(this->other.addr);
-		this->other.addr = new_other->clone(new_other);
-	}	
-
+		this->other.addr = other->clone(other);
+	}
+	
+	/* install new iptables rules */
+	updown(this, TRUE);
+	
 	return SUCCESS;
 }
 
@@ -988,6 +935,7 @@ static void destroy(private_child_sa_t *this)
 	this->me.id->destroy(this->me.id);
 	this->other.id->destroy(this->other.id);
 	this->config->destroy(this->config);
+	free(this->iface);
 	DESTROY_IF(this->virtual_ip);
 	free(this);
 }
@@ -997,7 +945,7 @@ static void destroy(private_child_sa_t *this)
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 identification_t *my_id, identification_t *other_id,
-							 child_cfg_t *config, u_int32_t rekey, bool use_natt)
+							 child_cfg_t *config, u_int32_t rekey, bool encap)
 {
 	static u_int32_t reqid = 0;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
@@ -1011,7 +959,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,mode_t,prf_plus_t*))update;
-	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_diff_t,host_diff_t))update_hosts;
+	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,bool))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*,mode_t))add_policies;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_sa_t*,bool))get_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
@@ -1030,7 +978,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->other.spi = 0;
 	this->alloc_ah_spi = 0;
 	this->alloc_esp_spi = 0;
-	this->use_natt = use_natt;
+	this->encap = encap;
 	this->state = CHILD_CREATED;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
@@ -1044,6 +992,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
 	this->virtual_ip = NULL;
+	this->iface = NULL;
 	this->config = config;
 	config->get_ref(config);
 	

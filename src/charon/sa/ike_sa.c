@@ -48,10 +48,12 @@
 #include <sa/task_manager.h>
 #include <sa/tasks/ike_init.h>
 #include <sa/tasks/ike_natd.h>
+#include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
 #include <sa/tasks/ike_config.h>
 #include <sa/tasks/ike_cert.h>
 #include <sa/tasks/ike_rekey.h>
+#include <sa/tasks/ike_reauth.h>
 #include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_dpd.h>
 #include <sa/tasks/child_create.h>
@@ -142,6 +144,16 @@ struct private_ike_sa_t {
 	 * CA that issued the certificate of other
 	 */
 	ca_info_t *other_ca;
+	
+	/**
+	 * set of extensions the peer supports
+	 */
+	ike_extension_t extensions;
+	
+	/**
+	 * set of condition flags currently enabled for this IKE_SA
+	 */
+	ike_condition_t conditions;
 
 	/**
 	 * Linked List containing the child sa's of the current IKE_SA.
@@ -189,16 +201,6 @@ struct private_ike_sa_t {
 	chunk_t skp_verify;
 	
 	/**
-	 * NAT status of local host.
-	 */
-	bool nat_here;
-	
-	/**
-	 * NAT status of remote host.
-	 */
-	bool nat_there;
-	
-	/**
 	 * Virtual IP on local host, if any
 	 */
 	host_t *my_virtual_ip;
@@ -212,6 +214,16 @@ struct private_ike_sa_t {
 	 * List of DNS servers installed by us
 	 */
 	linked_list_t *dns_servers;
+	
+	/**
+	 * list of peers additional addresses, transmitted via MOBIKE
+	 */
+	linked_list_t *additional_addresses;
+	
+	/**
+	 * number pending UPDATE_SA_ADDRESS (MOBIKE)
+	 */
+	u_int32_t pending_updates;
 
 	/**
 	 * Timestamps for this IKE_SA
@@ -356,30 +368,65 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 	if (this->my_host->is_anyaddr(this->my_host))
 	{
 		host_t *me = this->ike_cfg->get_my_host(this->ike_cfg);
-
 		set_my_host(this, me->clone(me));
 	}
 	if (this->other_host->is_anyaddr(this->other_host))
 	{
 		host_t *other = this->ike_cfg->get_other_host(this->ike_cfg);
-
 		set_other_host(this, other->clone(other));
 	}
 	/* apply IDs if they are not already set */
 	if (this->my_id->contains_wildcards(this->my_id))
 	{
-		identification_t *my_id = this->peer_cfg->get_my_id(this->peer_cfg);
-		
 		DESTROY_IF(this->my_id);
-		this->my_id = my_id->clone(my_id);
+		this->my_id = this->peer_cfg->get_my_id(this->peer_cfg);
+		this->my_id = this->my_id->clone(this->my_id);
 	}
 	if (this->other_id->contains_wildcards(this->other_id))
 	{
-		identification_t *other_id = this->peer_cfg->get_other_id(this->peer_cfg);
-
 		DESTROY_IF(this->other_id);
-		this->other_id = other_id->clone(other_id);
+		this->other_id = this->peer_cfg->get_other_id(this->peer_cfg);
+		this->other_id = this->other_id->clone(this->other_id);
 	}
+}
+
+/**
+ * Implementation of ike_sa_t.send_keepalive
+ */
+static void send_keepalive(private_ike_sa_t *this)
+{
+	send_keepalive_job_t *job;
+	time_t last_out, now, diff;
+	
+	if (!(this->conditions & COND_NAT_HERE))
+	{	/* disable keep alives if we are not NATed anymore */
+		return;
+	}
+	
+	last_out = get_use_time(this, FALSE);
+	now = time(NULL);
+	
+	diff = now - last_out;
+	
+	if (diff >= KEEPALIVE_INTERVAL)
+	{
+		packet_t *packet;
+		chunk_t data;
+		
+		packet = packet_create();
+		packet->set_source(packet, this->my_host->clone(this->my_host));
+		packet->set_destination(packet, this->other_host->clone(this->other_host));
+		data.ptr = malloc(1);
+		data.ptr[0] = 0xFF;
+		data.len = 1;
+		packet->set_data(packet, data);
+		DBG1(DBG_IKE, "sending keep alive");
+		charon->sender->send(charon->sender, packet);
+		diff = 0;
+	}
+	job = send_keepalive_job_create(this->ike_sa_id);
+	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
+									(KEEPALIVE_INTERVAL - diff) * 1000);
 }
 
 /**
@@ -397,6 +444,80 @@ static void set_ike_cfg(private_ike_sa_t *this, ike_cfg_t *ike_cfg)
 {
 	ike_cfg->get_ref(ike_cfg);
 	this->ike_cfg = ike_cfg;
+}
+/**
+ * Implementation of ike_sa_t.enable_extension.
+ */
+static void enable_extension(private_ike_sa_t *this, ike_extension_t extension)
+{
+	this->extensions |= extension;
+}
+
+/**
+ * Implementation of ike_sa_t.has_extension.
+ */
+static bool supports_extension(private_ike_sa_t *this, ike_extension_t extension)
+{
+	return (this->extensions & extension) != FALSE;
+}
+
+/**
+ * Implementation of ike_sa_t.has_condition.
+ */
+static bool has_condition(private_ike_sa_t *this, ike_condition_t condition)
+{
+	return (this->conditions & condition) != FALSE;
+}
+
+/**
+ * Implementation of ike_sa_t.enable_condition.
+ */
+static void set_condition(private_ike_sa_t *this, ike_condition_t condition,
+						  bool enable)
+{
+	if (has_condition(this, condition) != enable)
+	{
+		if (enable)
+		{
+			this->conditions |= condition;
+			switch (condition)
+			{
+				case COND_STALE:
+					DBG1(DBG_IKE, "no route to %H, setting IKE_SA to stale",
+						 this->other_host);
+					break;
+				case COND_NAT_HERE:
+					DBG1(DBG_IKE, "local host is behind NAT, sending keep alives");
+					this->conditions |= COND_NAT_ANY;
+					send_keepalive(this);
+					break;
+				case COND_NAT_THERE:
+					DBG1(DBG_IKE, "remote host is behind NAT");
+					this->conditions |= COND_NAT_ANY;
+					break;
+				default:
+					break;
+			}
+		}
+		else
+		{
+			this->conditions &= ~condition;
+			switch (condition)
+			{
+				case COND_STALE:
+					DBG1(DBG_IKE, "new route to %H found", this->other_host);
+					break;
+				case COND_NAT_HERE:
+				case COND_NAT_THERE:
+					set_condition(this, COND_NAT_ANY,
+								  has_condition(this, COND_NAT_HERE) ||
+								  has_condition(this, COND_NAT_THERE));
+					break;
+				default:
+					break;
+			}
+		}
+	}
 }
 
 /**
@@ -442,43 +563,9 @@ static status_t send_dpd(private_ike_sa_t *this)
 	}
 	/* recheck in "interval" seconds */
 	job = send_dpd_job_create(this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (delay - diff) * 1000);
+	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
+									(delay - diff) * 1000);
 	return SUCCESS;
-}
-
-/**
- * Implementation of ike_sa_t.send_keepalive
- */
-static void send_keepalive(private_ike_sa_t *this)
-{
-	send_keepalive_job_t *job;
-	time_t last_out, now, diff;
-	
-	last_out = get_use_time(this, FALSE);
-	now = time(NULL);
-	
-	diff = now - last_out;
-	
-	if (diff >= KEEPALIVE_INTERVAL)
-	{
-		packet_t *packet;
-		chunk_t data;
-		
-		packet = packet_create();
-		packet->set_source(packet, this->my_host->clone(this->my_host));
-		packet->set_destination(packet, this->other_host->clone(this->other_host));
-		data.ptr = malloc(1);
-		data.ptr[0] = 0xFF;
-		data.len = 1;
-		packet->set_data(packet, data);
-		charon->sender->send(charon->sender, packet);
-		DBG1(DBG_IKE, "sending keep alive");
-		diff = 0;
-	}
-	job = send_keepalive_job_create(this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (KEEPALIVE_INTERVAL - diff) * 1000);
 }
 
 /**
@@ -524,16 +611,16 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 				{
 					this->time.rekey = now + soft;
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, reauth);
-					charon->event_queue->add_relative(charon->event_queue, job,
-													  soft * 1000);
+					charon->scheduler->schedule_job(charon->scheduler, job,
+													soft * 1000);
 				}
 				
 				if (hard)
 				{
 					this->time.delete = now + hard;
 					job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-					charon->event_queue->add_relative(charon->event_queue, job,
-													  hard * 1000);
+					charon->scheduler->schedule_job(charon->scheduler, job,
+													hard * 1000);
 				}
 			}
 			break;
@@ -542,8 +629,8 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 		{
 			/* delete may fail if a packet gets lost, so set a timeout */
 			job_t *job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-			charon->event_queue->add_relative(charon->event_queue, job, 
-											  HALF_OPEN_IKE_SA_TIMEOUT);
+			charon->scheduler->schedule_job(charon->scheduler, job, 
+											HALF_OPEN_IKE_SA_TIMEOUT);
 			break;
 		}
 		default:
@@ -570,67 +657,151 @@ static void reset(private_ike_sa_t *this)
 }
 
 /**
- * Update hosts, as addresses may change (NAT)
+ * Implementation of ike_sa_t.set_virtual_ip
  */
-static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
+static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
 {
-	iterator_t *iterator = NULL;
-	child_sa_t *child_sa = NULL;
-	host_diff_t my_diff, other_diff;
-	
-	if (this->my_host->is_anyaddr(this->my_host) ||
-		this->other_host->is_anyaddr(this->other_host))
+	if (local)
 	{
-		/* on first received message */
-		this->my_host->destroy(this->my_host);
-		this->my_host = me->clone(me);
-		this->other_host->destroy(this->other_host);
-		this->other_host = other->clone(other);
-		return;
-	}
-	
-	my_diff = me->get_differences(me, this->my_host);
-	other_diff = other->get_differences(other, this->other_host);
-	
-	if (!my_diff && !other_diff)
-	{
-		return;
-	}
-	
-	if (my_diff)
-	{
-		this->my_host->destroy(this->my_host);
-		this->my_host = me->clone(me);
-	}
-	
-	if (!this->nat_here)
-	{
-		/* update without restrictions if we are not NATted */
-		if (other_diff)
+		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
+		if (this->my_virtual_ip)
 		{
-			this->other_host->destroy(this->other_host);
-			this->other_host = other->clone(other);
+			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
+			charon->kernel_interface->del_ip(charon->kernel_interface,
+											 this->my_virtual_ip);
+			this->my_virtual_ip->destroy(this->my_virtual_ip);
+		}
+		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
+											 this->my_host) == SUCCESS)
+		{
+			this->my_virtual_ip = ip->clone(ip);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
+			this->my_virtual_ip = NULL;
 		}
 	}
 	else
 	{
-		/* if we are natted, only port may change */
-		if (other_diff & HOST_DIFF_ADDR)
-		{
-			return;
-		}
-		else if (other_diff & HOST_DIFF_PORT)
-		{
-			this->other_host->set_port(this->other_host, other->get_port(other));
-		}
+		DESTROY_IF(this->other_virtual_ip);
+		this->other_virtual_ip = ip->clone(ip);
 	}
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+}
+
+/**
+ * Implementation of ike_sa_t.get_virtual_ip
+ */
+static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
+{
+	if (local)
 	{
-		child_sa->update_hosts(child_sa, this->my_host, this->other_host, 
-							   my_diff, other_diff);
+		return this->my_virtual_ip;
 	}
-	iterator->destroy(iterator);
+	else
+	{
+		return this->other_virtual_ip;
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.add_additional_address.
+ */
+static void add_additional_address(private_ike_sa_t *this, host_t *host)
+{
+	this->additional_addresses->insert_last(this->additional_addresses, host);
+}
+	
+/**
+ * Implementation of ike_sa_t.create_additional_address_iterator.
+ */
+static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
+{
+	return this->additional_addresses->create_iterator(
+											this->additional_addresses, TRUE);
+}
+	
+/**
+ * Implementation of ike_sa_t.set_pending_updates.
+ */
+static void set_pending_updates(private_ike_sa_t *this, u_int32_t updates)
+{
+	this->pending_updates = updates;
+}
+
+/**
+ * Implementation of ike_sa_t.get_pending_updates.
+ */
+static u_int32_t get_pending_updates(private_ike_sa_t *this)
+{
+	return this->pending_updates;
+}
+
+/**
+ * Update hosts, as addresses may change (NAT)
+ */
+static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
+{
+	bool update = FALSE;
+	
+	if (supports_extension(this, EXT_MOBIKE))
+	{	/* if peer speaks mobike, address updates are explicit only */
+		return;
+	}
+	
+	if (me == NULL)
+	{
+		me = this->my_host;
+	}
+	if (other == NULL)
+	{
+		other = this->other_host;
+	}
+	
+	/* apply hosts on first received message */
+	if (this->my_host->is_anyaddr(this->my_host) ||
+		this->other_host->is_anyaddr(this->other_host))
+	{
+		set_my_host(this, me->clone(me));
+		set_other_host(this, other->clone(other));
+		update = TRUE;
+	}
+	else
+	{
+		/* update our address in any case */
+		if (!me->equals(me, this->my_host))
+		{
+			set_my_host(this, me->clone(me));
+			update = TRUE;
+		}
+		
+		if (!other->equals(other, this->other_host))
+		{
+			/* update others adress if we are NOT NATed,
+			 * and allow port changes if we are NATed */
+			if (!has_condition(this, COND_NAT_HERE) ||
+				other->ip_equals(other, this->other_host))
+			{
+				set_other_host(this, other->clone(other));
+				update = TRUE;
+			}
+		}
+	}
+	
+	/* update all associated CHILD_SAs, if required */
+	if (update)
+	{
+		iterator_t *iterator;
+		child_sa_t *child_sa;
+	
+		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+		while (iterator->iterate(iterator, (void**)&child_sa))
+		{
+			child_sa->update_hosts(child_sa, this->my_host, this->other_host,
+								   has_condition(this, COND_NAT_ANY));
+		}
+		iterator->destroy(iterator);
+	}
 }
 
 /**
@@ -761,12 +932,12 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			}
 			/* add a timeout if peer does not establish it completely */
 			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
-			charon->event_queue->add_relative(charon->event_queue, job,
-											  HALF_OPEN_IKE_SA_TIMEOUT);
+			charon->scheduler->schedule_job(charon->scheduler, job,
+											HALF_OPEN_IKE_SA_TIMEOUT);
 		}
 		
 		/* check if message is trustworthy, and update host information */
-		if (this->state == IKE_CREATED ||
+		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
 		{
 			update_hosts(this, me, other);
@@ -788,6 +959,7 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		
 		if (this->other_host->is_anyaddr(this->other_host))
 		{
+			child_cfg->destroy(child_cfg);
 			SIG(IKE_UP_START, "initiating IKE_SA");
 			SIG(IKE_UP_FAILED, "unable to initiate to %%any");
 			return DESTROY_ME;
@@ -802,6 +974,8 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_mobike_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
@@ -863,6 +1037,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_mobike_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
 	}
 	
 	child_cfg = child_sa->get_config(child_sa);
@@ -881,6 +1057,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	child_sa_t *child_sa;
 	iterator_t *iterator;
 	linked_list_t *my_ts, *other_ts;
+	host_t *me, *other;
 	status_t status;
 	
 	SIG(CHILD_ROUTE_START, "routing CHILD_SA");
@@ -916,11 +1093,19 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	/* install kernel policies */
 	child_sa = child_sa_create(this->my_host, this->other_host, this->my_id,
 							   this->other_id, child_cfg, FALSE, 0);
+	me = this->my_host;
+	if (this->my_virtual_ip)
+	{
+		me = this->my_virtual_ip;
+	}
+	other = this->other_host;
+	if (this->other_virtual_ip)
+	{
+		other = this->other_virtual_ip;
+	}
 	
-	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL,
-											 this->my_host);
-	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL,
-												this->other_host);
+	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, me);
+	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, other);
 	status = child_sa->add_policies(child_sa, my_ts, other_ts,
 									child_cfg->get_mode(child_cfg));
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
@@ -1063,6 +1248,16 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 			/* use actual used host, not the wildcarded one in config */
 			new->other_host->destroy(new->other_host);
 			new->other_host = this->other_host->clone(this->other_host);
+			/* reset port to 500, but only if peer is not NATed */
+			if (!has_condition(this, COND_NAT_THERE))
+			{
+				new->other_host->set_port(new->other_host, IKEV2_UDP_PORT);
+			}
+			/* take over virtual ip, as we need it for a proper route */
+			if (this->my_virtual_ip)
+			{
+				set_virtual_ip(new, TRUE, this->my_virtual_ip);
+			}
 			
 			/* install routes */
 			while (to_route->remove_last(to_route, (void**)&child_cfg) == SUCCESS)
@@ -1089,6 +1284,8 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 					task = (task_t*)child_create_create(&new->public, child_cfg);
 					new->task_manager->queue_task(new->task_manager, task);
 				}
+				task = (task_t*)ike_mobike_create(&new->public, TRUE);
+				new->task_manager->queue_task(new->task_manager, task);
 				new->task_manager->initiate(new->task_manager);
 			}
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, &new->public);
@@ -1188,55 +1385,6 @@ static ca_info_t* get_other_ca(private_ike_sa_t *this)
 static void set_other_ca(private_ike_sa_t *this, ca_info_t *other_ca)
 {
 	this->other_ca = other_ca;
-}
-
-/**
- * Implementation of ike_sa_t.set_virtual_ip
- */
-static void set_virtual_ip(private_ike_sa_t *this, bool local, host_t *ip)
-{
-	if (local)
-	{
-		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
-		if (this->my_virtual_ip)
-		{
-			DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
-			charon->kernel_interface->del_ip(charon->kernel_interface,
-											 this->my_virtual_ip,
-											 this->my_host);
-			this->my_virtual_ip->destroy(this->my_virtual_ip);
-		}
-		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
-											 this->my_host) == SUCCESS)
-		{
-			this->my_virtual_ip = ip->clone(ip);
-		}
-		else
-		{
-			DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
-			this->my_virtual_ip = NULL;
-		}
-	}
-	else
-	{
-		DESTROY_IF(this->other_virtual_ip);
-		this->other_virtual_ip = ip->clone(ip);
-	}
-}
-
-/**
- * Implementation of ike_sa_t.get_virtual_ip
- */
-static host_t* get_virtual_ip(private_ike_sa_t *this, bool local)
-{
-	if (local)
-	{
-		return this->my_virtual_ip;
-	}
-	else
-	{
-		return this->other_virtual_ip;
-	}
 }
 
 /**
@@ -1560,72 +1708,78 @@ static status_t rekey(private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.reestablish
  */
-static void reestablish(private_ike_sa_t *this)
+static status_t reestablish(private_ike_sa_t *this)
 {
-	private_ike_sa_t *other;
-	iterator_t *iterator;
-	child_sa_t *child_sa;
-	child_cfg_t *child_cfg;
 	task_t *task;
-	job_t *job;
 	
-	other = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
-											charon->ike_sa_manager, TRUE);
+	task = (task_t*)ike_reauth_create(&this->public);
+	this->task_manager->queue_task(this->task_manager, task);
 	
-	set_peer_cfg(other, this->peer_cfg);
-	other->other_host->destroy(other->other_host);
-	other->other_host = this->other_host->clone(this->other_host);
-	if (this->my_virtual_ip)
+	return this->task_manager->initiate(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.roam.
+ */
+static status_t roam(private_ike_sa_t *this, bool address)
+{
+	host_t *me, *other;
+	ike_mobike_t *mobike;
+	
+	/* responder just updates the peer about changed address config */
+	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
-		/* if we already have a virtual IP, we reuse it */
-		set_virtual_ip(other, TRUE, this->my_virtual_ip);
-	}
-		
-	if (this->state == IKE_ESTABLISHED)
-	{
-		task = (task_t*)ike_init_create(&other->public, TRUE, NULL);
-		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_natd_create(&other->public, TRUE);
-		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_cert_create(&other->public, TRUE);
-		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_config_create(&other->public, TRUE);
-		other->task_manager->queue_task(other->task_manager, task);
-		task = (task_t*)ike_auth_create(&other->public, TRUE);
-		other->task_manager->queue_task(other->task_manager, task);
-	}
-	
-	other->task_manager->adopt_tasks(other->task_manager, this->task_manager);
-	
-	/* Create task for established children, adopt routed children directly */
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while(iterator->iterate(iterator, (void**)&child_sa))
-	{
-		switch (child_sa->get_state(child_sa))
+		if (supports_extension(this, EXT_MOBIKE) && address)
 		{
-			case CHILD_ROUTED:
-			{
-				iterator->remove(iterator);
-				other->child_sas->insert_first(other->child_sas, child_sa);
-				break;
-			}
-			default:
-			{
-				child_cfg = child_sa->get_config(child_sa);
-				task = (task_t*)child_create_create(&other->public, child_cfg);
-				other->task_manager->queue_task(other->task_manager, task);
-				break;
-			}
+			DBG1(DBG_IKE, "sending address list update using MOBIKE");
+			mobike = ike_mobike_create(&this->public, TRUE);
+			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+			return this->task_manager->initiate(this->task_manager);
 		}
+		return SUCCESS;
 	}
-	iterator->destroy(iterator);
 	
-	other->task_manager->initiate(other->task_manager);
+	/* get best address pair to use */
+	other = this->other_host;
+	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+												   other);
+												   
+	/* TODO: find a better path using additional addresses of peer */
 	
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, &other->public);
+	if (!me)
+	{
+		/* no route found to host, set to stale, wait for a new route */
+		set_condition(this, COND_STALE, TRUE);
+		return FAILED;
+	}
 	
-	job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-	charon->job_queue->add(charon->job_queue, job);
+	set_condition(this, COND_STALE, FALSE);
+	if (me->ip_equals(me, this->my_host) &&
+		other->ip_equals(other, this->other_host))
+	{
+		DBG2(DBG_IKE, "%H still reached through %H, no update needed",
+			 this->other_host, me);
+		me->destroy(me);
+		return SUCCESS;
+	}
+	me->set_port(me, this->my_host->get_port(this->my_host));
+	other = other->clone(other);
+	other->set_port(other, this->other_host->get_port(this->other_host));
+	set_my_host(this, me);
+	set_other_host(this, other);
+	
+	/* update addresses with mobike, if supported ... */
+	if (supports_extension(this, EXT_MOBIKE))
+	{
+		DBG1(DBG_IKE, "requesting address change using MOBIKE");
+		mobike = ike_mobike_create(&this->public, TRUE);
+		mobike->roam(mobike, address);
+		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+		return this->task_manager->initiate(this->task_manager);
+	}
+	DBG1(DBG_IKE, "reestablishing IKE_SA due address change");
+	/* ... reestablish if not */
+	return reestablish(this);
 }
 
 /**
@@ -1677,32 +1831,6 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	
 	/* we have to initate here, there may be new tasks to handle */
 	return this->task_manager->initiate(this->task_manager);
-}
-
-/**
- * Implementation of ike_sa_t.is_natt_enabled.
- */
-static bool is_natt_enabled(private_ike_sa_t *this)
-{
-	return this->nat_here || this->nat_there;
-}
-
-/**
- * Implementation of ike_sa_t.enable_natt.
- */
-static void enable_natt(private_ike_sa_t *this, bool local)
-{
-	if (local)
-	{
-		DBG1(DBG_IKE, "local host is behind NAT, scheduling keep alives");
-		this->nat_here = TRUE;
-		send_keepalive(this);
-	}
-	else
-	{
-		DBG1(DBG_IKE, "remote host is behind NAT");
-		this->nat_there = TRUE;
-	}
 }
 
 /**
@@ -1857,13 +1985,16 @@ static void destroy(private_ike_sa_t *this)
 	if (this->my_virtual_ip)
 	{
 		charon->kernel_interface->del_ip(charon->kernel_interface,
-										 this->my_virtual_ip, this->my_host);
+										 this->my_virtual_ip);
 		this->my_virtual_ip->destroy(this->my_virtual_ip);
 	}
 	DESTROY_IF(this->other_virtual_ip);
 	
 	remove_dns_servers(this);
-	this->dns_servers->destroy_offset(this->dns_servers, offsetof(host_t, destroy));
+	this->dns_servers->destroy_offset(this->dns_servers,
+													offsetof(host_t, destroy));
+	this->additional_addresses->destroy_offset(this->additional_addresses,
+													offsetof(host_t, destroy));
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -1905,12 +2036,21 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_host = (void (*)(ike_sa_t*,host_t*)) set_my_host;
 	this->public.get_other_host = (host_t* (*)(ike_sa_t*)) get_other_host;
 	this->public.set_other_host = (void (*)(ike_sa_t*,host_t*)) set_other_host;
+	this->public.update_hosts = (void(*)(ike_sa_t*, host_t *me, host_t *other))update_hosts;
 	this->public.get_my_id = (identification_t* (*)(ike_sa_t*)) get_my_id;
 	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
 	this->public.get_other_id = (identification_t* (*)(ike_sa_t*)) get_other_id;
 	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
 	this->public.get_other_ca = (ca_info_t* (*)(ike_sa_t*)) get_other_ca;
 	this->public.set_other_ca = (void (*)(ike_sa_t*,ca_info_t*)) set_other_ca;
+	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
+	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
+	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
+	this->public.has_condition = (bool (*)(ike_sa_t*,ike_condition_t)) has_condition;
+	this->public.set_pending_updates = (void(*)(ike_sa_t*, u_int32_t updates))set_pending_updates;
+	this->public.get_pending_updates = (u_int32_t(*)(ike_sa_t*))get_pending_updates;
+	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
+	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
 	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
 	this->public.delete = (status_t (*)(ike_sa_t*))delete_;
 	this->public.destroy = (void (*)(ike_sa_t*))destroy;
@@ -1927,10 +2067,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.rekey_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
 	this->public.delete_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
-	this->public.enable_natt = (void (*)(ike_sa_t*, bool)) enable_natt;
-	this->public.is_natt_enabled = (bool (*)(ike_sa_t*)) is_natt_enabled;
 	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
-	this->public.reestablish = (void (*)(ike_sa_t*))reestablish;
+	this->public.reestablish = (status_t (*)(ike_sa_t*))reestablish;
+	this->public.roam = (status_t(*)(ike_sa_t*,bool))roam;
 	this->public.inherit = (status_t (*)(ike_sa_t*,ike_sa_t*))inherit;
 	this->public.generate_message = (status_t (*)(ike_sa_t*,message_t*,packet_t**))generate_message;
 	this->public.reset = (void (*)(ike_sa_t*))reset;
@@ -1947,6 +2086,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_ca = NULL;
+	this->extensions = 0;
+	this->conditions = 0;
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;
@@ -1955,8 +2096,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->skp_verify = chunk_empty;
 	this->skp_build = chunk_empty;
  	this->child_prf = NULL;
-	this->nat_here = FALSE;
-	this->nat_there = FALSE;
 	this->state = IKE_CREATED;
 	this->time.inbound = this->time.outbound = time(NULL);
 	this->time.established = 0;
@@ -1969,6 +2108,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->my_virtual_ip = NULL;
 	this->other_virtual_ip = NULL;
 	this->dns_servers = linked_list_create();
+	this->additional_addresses = linked_list_create();
+	this->pending_updates = 0;
 	this->keyingtry = 0;
 	
 	return &this->public;

@@ -35,11 +35,6 @@ typedef struct child_sa_t child_sa_t;
 #include <config/child_cfg.h>
 
 /**
- * Where we should start with reqid enumeration
- */
-#define REQID_START 2000000000
-
-/**
  * @brief States of a CHILD_SA
  */
 enum child_sa_state_t {
@@ -200,19 +195,18 @@ struct child_sa_t {
 					   prf_plus_t *prf_plus);
 
 	/**
-	 * @brief Update the hosts in the kernel SAs and policies
+	 * @brief Update the hosts in the kernel SAs and policies.
 	 *
-	 * @warning only call this after update() has been called.
+	 * The CHILD must be INSTALLED to do this update.
 	 *
-	 * @param this			calling object
-	 * @param new_me		the new local host
-	 * @param new_other		the new remote host
-	 * @param my_diff		differences to apply for me
-	 * @param other_diff	differences to apply for other
-	 * @return				SUCCESS or FAILED
+	 * @param this		calling object
+	 * @param me		the new local host
+	 * @param other		the new remote host
+	 * @param			TRUE to use UDP encapsulation for NAT traversal
+	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*update_hosts)(child_sa_t *this, host_t *new_me, host_t *new_other,
-							 host_diff_t my_diff, host_diff_t other_diff);
+	status_t (*update_hosts)(child_sa_t *this, host_t *me, host_t *other,
+							 bool encap);
 	
 	/**
 	 * @brief Install the policies using some traffic selectors.
@@ -298,13 +292,13 @@ struct child_sa_t {
  * @param other_id		id of remote peer
  * @param config		config to use for this CHILD_SA
  * @param reqid			reqid of old CHILD_SA when rekeying, 0 otherwise
- * @param use_natt		TRUE if NAT traversal is used
+ * @param encap			TRUE to enable UDP encapsulation (NAT traversal)
  * @return				child_sa_t object
  * 
  * @ingroup sa
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other,
 							 identification_t *my_id, identification_t* other_id,
-							 child_cfg_t *config, u_int32_t reqid, bool use_natt);
+							 child_cfg_t *config, u_int32_t reqid, bool encap);
 
 #endif /*CHILD_SA_H_*/

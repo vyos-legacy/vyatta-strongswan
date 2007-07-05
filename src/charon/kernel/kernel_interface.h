@@ -25,7 +25,6 @@
 #ifndef KERNEL_INTERFACE_H_
 #define KERNEL_INTERFACE_H_
 
-typedef struct natt_conf_t natt_conf_t;
 typedef enum policy_dir_t policy_dir_t;
 typedef struct kernel_interface_t kernel_interface_t;
 
@@ -33,17 +32,6 @@ typedef struct kernel_interface_t kernel_interface_t;
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 
-/**
- * Configuration for NAT-T
- *
- * @ingroup kernel
- */
-struct natt_conf_t {
-	/** source port to use for UDP-encapsulated packets */
-	u_int16_t sport;
-	/** dest port to use for UDP-encapsulated packets */
-	u_int16_t dport;
-};
 
 /**
  * Direction of a policy. These are equal to those
@@ -121,8 +109,8 @@ struct kernel_interface_t {
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
 	 * @param int_alg		Algorithm to use for integrity protection
 	 * @param prf_plus		PRF to derive keys from
-	 * @param natt			NAT-T Configuration, or NULL of no NAT-T used
 	 * @param mode			mode of the SA (tunnel, transport)
+	 * @param encap			enable UDP encapsulation for NAT traversal
 	 * @param replace		Should an already installed SA be updated?
 	 * @return
 	 * 						- SUCCESS
@@ -133,8 +121,8 @@ struct kernel_interface_t {
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int64_t expire_soft, u_int64_t expire_hard,
 						algorithm_t *enc_alg, algorithm_t *int_alg,
-						prf_plus_t *prf_plus, natt_conf_t *natt,
-						mode_t mode, bool update);
+						prf_plus_t *prf_plus, mode_t mode, bool encap,
+						bool update);
 	
 	/**
 	 * @brief Update the hosts on an installed SA.
@@ -145,21 +133,21 @@ struct kernel_interface_t {
 	 * create a new SA and delete the old one.
 	 *
 	 * @param this			calling object
-	 * @param dst			destination address for this SA
 	 * @param spi			SPI of the SA
 	 * @param protocol		protocol for this SA (ESP/AH)
-	 * @param new_src		new source address for this SA
-	 * @param new_dst		new destination address for this SA
-	 * @param src_changes	changes in src
-	 * @param dst_changes	changes in dst
+	 * @param src			current source address
+	 * @param dst			current destination address
+	 * @param new_src		new source address
+	 * @param new_dst		new destination address
+	 * @param encap			use UDP encapsulation
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
-	status_t (*update_sa)(kernel_interface_t *this, host_t *dst, u_int32_t spi,
-						  protocol_id_t protocol,
-						  host_t *new_src, host_t *new_dst,
-						  host_diff_t src_changes, host_diff_t dst_changes);
+	status_t (*update_sa)(kernel_interface_t *this,
+						  u_int32_t spi, protocol_id_t protocol,
+						  host_t *src, host_t *dst, 
+						  host_t *new_src, host_t *new_dst, bool encap);
 	
 	/**
 	 * @brief Query the use time of an SA.
@@ -198,10 +186,6 @@ struct kernel_interface_t {
 	 * 
 	 * A policy is always associated to an SA. Traffic which matches a
 	 * policy is handled by the SA with the same reqid.
-	 * If the update flag is set, the policy is updated with the new
-	 * src/dst addresses.
-	 * If the update flag is not set, but a such policy is already in the
-	 * kernel, the reference count to this policy is increased.
 	 * 
 	 * @param this			calling object
 	 * @param src			source address of SA
@@ -213,7 +197,6 @@ struct kernel_interface_t {
 	 * @param reqid			uniqe ID of an SA to use to enforce policy
 	 * @param high_prio		if TRUE, uses a higher priority than any with FALSE
 	 * @param mode			mode of SA (tunnel, transport)
-	 * @param update		update an existing policy, if TRUE
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
@@ -223,8 +206,7 @@ struct kernel_interface_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool high_prio, 
-							mode_t mode, bool update);
+							u_int32_t reqid, bool high_prio, mode_t mode);
 	
 	/**
 	 * @brief Query the use time of a policy.
@@ -268,6 +250,18 @@ struct kernel_interface_t {
 							policy_dir_t direction);
 	
 	/**
+	 * @brief Get our outgoing source address for a destination.
+	 *
+	 * Does a route lookup to get the source address used to reach dest.
+	 * The returned host is allocated and must be destroyed.
+	 *
+	 * @param this			calling object
+	 * @param dest			target destination address
+	 * @return				outgoing source address, NULL if unreachable
+	 */
+	host_t* (*get_source_addr)(kernel_interface_t *this, host_t *dest);
+	
+	/**
 	 * @brief Get the interface name of a local address.
 	 *
 	 * @param this			calling object
@@ -277,12 +271,16 @@ struct kernel_interface_t {
 	char* (*get_interface) (kernel_interface_t *this, host_t *host);
 	
 	/**
-	 * @brief Creates a list of all local addresses.
+	 * @brief Creates an iterator over all local addresses.
+	 *
+	 * This function blocks an internal cached address list until the
+	 * iterator gets destroyed.
+	 * These hosts are read-only, do not modify or free.
 	 *
 	 * @param this			calling object
-	 * @return 				allocated list with host_t objects
+	 * @return 				iterator over host_t's
 	 */
-	linked_list_t *(*create_address_list) (kernel_interface_t *this);
+	iterator_t *(*create_address_iterator) (kernel_interface_t *this);
 	
 	/**
 	 * @brief Add a virtual IP to an interface.
@@ -309,13 +307,11 @@ struct kernel_interface_t {
 	 *
 	 * @param this			calling object
 	 * @param virtual_ip	virtual ip address to assign
-	 * @param iface_ip		IP of an interface to remove virtual IP from
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
-	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip,
-						host_t *iface_ip);
+	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip);
 	
 	/**
 	 * @brief Destroys a kernel_interface object.

@@ -25,9 +25,9 @@ typedef enum {
     KW_CHARONSTART,
     KW_PLUTOSTART,
 
-	/* pluto/charon keywords */
+    /* pluto/charon keywords */
     KW_PLUTODEBUG,
-	KW_CHARONDEBUG,
+    KW_CHARONDEBUG,
     KW_PREPLUTO,
     KW_POSTPLUTO,
     KW_UNIQUEIDS,
@@ -41,6 +41,7 @@ typedef enum {
     KW_VIRTUAL_PRIVATE,
     KW_EAPDIR,
     KW_PKCS11MODULE,
+    KW_PKCS11INITARGS,
     KW_PKCS11KEEPSTATE,
     KW_PKCS11PROXY,
 
@@ -112,6 +113,7 @@ typedef enum {
     KW_NATIP,
     KW_FIREWALL,
     KW_HOSTACCESS,
+    KW_ALLOWANY,
     KW_UPDOWN,
     KW_ID,
     KW_RSASIGKEY,
@@ -134,6 +136,7 @@ typedef enum {
     KW_LEFTNATIP,
     KW_LEFTFIREWALL,
     KW_LEFTHOSTACCESS,
+    KW_LEFTALLOWANY,
     KW_LEFTUPDOWN,
     KW_LEFTID,
     KW_LEFTRSASIGKEY,
@@ -155,6 +158,7 @@ typedef enum {
     KW_RIGHTNATIP,
     KW_RIGHTFIREWALL,
     KW_RIGHTHOSTACCESS,
+    KW_RIGHTALLOWANY,
     KW_RIGHTUPDOWN,
     KW_RIGHTID,
     KW_RIGHTRSASIGKEY,

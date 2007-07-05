@@ -79,6 +79,8 @@ do
         eval ipv6_sun1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
         ;;
     alice)
+        eval ipv4_alice1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        eval ipv6_alice1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
         ;;
     venus)
         ;;
@@ -191,7 +193,7 @@ do
 	echo "    <tr>" >> $INDEX
     echo "      <td>$FIRST</td>">> $INDEX
     echo "      <td><a href=\"$SUBDIR/index.html\">$SUBDIR</a></td>" >> $INDEX
-    echo "      <td align=\"right\"></td>" >> $INDEX
+    echo "      <td align=\"right\">x</td>" >> $INDEX
     echo "      <td>&nbsp;</td>" >> $INDEX
     echo "    </tr>" >> $INDEX
 	SUBTESTSINDEX=$TODAYDIR/$SUBDIR/index.html
@@ -278,8 +280,10 @@ do
 		searchandreplace PH_IP6_SUN      $ipv6_sun  $TESTDIR
 		;;
 	    alice)
-		searchandreplace PH_IP_ALICE     $ipv4_alice $TESTDIR
-		searchandreplace PH_IP6_ALICE    $ipv6_alice $TESTDIR
+		searchandreplace PH_IP_ALICE1    $ipv4_alice1 $TESTDIR
+		searchandreplace PH_IP_ALICE     $ipv4_alice  $TESTDIR
+		searchandreplace PH_IP6_ALICE1   $ipv6_alice1 $TESTDIR
+		searchandreplace PH_IP6_ALICE    $ipv6_alice  $TESTDIR
 		;;
 	    venus)
 		searchandreplace PH_IP_VENUS     $ipv4_venus $TESTDIR

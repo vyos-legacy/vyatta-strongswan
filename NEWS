@@ -1,3 +1,55 @@
+strongswan-4.1.4
+----------------
+
+- The pluto IKEv1 daemon now exhibits the same behaviour as its
+  IKEv2 companion charon by inserting an explicit route via the
+  _updown script only if a sourceip exists. This is admissible
+  since routing through the IPsec tunnel is handled automatically
+  by NETKEY's IPsec policies. As a consequence the left|rightnexthop
+  parameter is not required any more.
+
+- The new IKEv1 parameter right|leftallowany parameters helps to handle
+  the case where both peers possess dynamic IP addresses that are
+  usually resolved using DynDNS or a similar service. The configuration
+
+    right=peer.foo.bar
+    rightallowany=yes
+
+  can be used by the initiator to start up a connection to a peer
+  by resolving peer.foo.bar into the currently allocated IP address.
+  Thanks to the rightallowany flag the connection behaves later on
+  as
+
+   right=%any
+
+  so that the peer can rekey the connection as an initiator when his
+  IP address changes. An alternative notation is
+
+    right=%peer.foo.bar
+
+  which will implicitly set rightallowany=yes.
+
+- ipsec starter now fails more gracefully in the presence of parsing
+  errors. Flawed ca and conn section are discarded and pluto is started
+  if non-fatal errors only were encountered. If right=%peer.foo.bar
+  cannot be resolved by DNS then right=%any will be used so that passive
+  connections as a responder are still possible.
+
+- The new pkcs11initargs parameter that can be placed in the
+  setup config section of /etc/ipsec.conf allows the definition
+  of an argument string that is used with the PKCS#11 C_Initialize()
+  function. This non-standard feature is required by the NSS softoken
+  library. This patch was contributed by Robert Varga.
+	
+- Fixed a bug in ipsec starter introduced by strongswan-2.8.5
+  which caused a segmentation fault in the presence of unknown
+  or misspelt keywords in ipsec.conf. This bug fix was contributed
+  by Robert Varga.
+
+- Partial support for MOBIKE in IKEv2. The initiator acts on interface/
+  address configuration changes and updates IKE and IPsec SAs dynamically.
+
+
 strongswan-4.1.3
 ----------------
 

@@ -1,10 +1,16 @@
-strongswan (4.1.3-1) unstable; urgency=low
+strongswan (4.1.4-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 05 Jul 2007 00:53:01 +0100
+
+strongswan (4.1.3-1) unreleased; urgency=low
 
   * New upstream release.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 03 Jun 2007 18:39:11 +0100
 
-strongswan (4.1.1-1) unstable; urgency=low
+strongswan (4.1.1-1) unreleased; urgency=low
 
   Major new upstream release:
   * IKEv2 support with the new "charon" daemon in addition to the old "pluto"
