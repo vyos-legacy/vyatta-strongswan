@@ -19,7 +19,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: strongswan_2.7.3+dfsg-1_nl\n"
 "Report-Msgid-Bugs-To: rmayr@debian.org\n"
-"POT-Creation-Date: 2007-06-03 21:36+0100\n"
+"POT-Creation-Date: 2007-07-05 01:24+0100\n"
 "PO-Revision-Date: 2006-09-28 19:50+0200\n"
 "Last-Translator: Kurt De Bree <kdebree@telenet.be>\n"
 "Language-Team: Dutch <debian-l10n-dutch@lists.debian.org>\n"
@@ -280,8 +280,12 @@ msgstr "Bestandsnaam van uw X509-certificaat in PEM-formaat:"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:8001
+#, fuzzy
+#| msgid ""
+#| "Please enter the full location of the file containing your X509  "
+#| "certificate in PEM format."
 msgid ""
-"Please enter the full location of the file containing your X509  certificate "
+"Please enter the full location of the file containing your X509 certificate "
 "in PEM format."
 msgstr ""
 "Geef de volledige locatie van het bestand dat uw X509-certificaat in PEM-"
@@ -314,8 +318,14 @@ msgstr "Lengte van de aangemaakte RSA-sleutel (in bits):"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:10001
+#, fuzzy
+#| msgid ""
+#| "Please enter the length of the created RSA key. it should not be less "
+#| "than 1024 bits because this should be considered unsecure and you will "
+#| "probably not need anything more than 2048 bits because it only slows the "
+#| "authentication process down and is not needed at the moment."
 msgid ""
-"Please enter the length of the created RSA key. it should not be less than "
+"Please enter the length of the created RSA key. It should not be less than "
 "1024 bits because this should be considered unsecure and you will probably "
 "not need anything more than 2048 bits because it only slows the "
 "authentication process down and is not needed at the moment."
@@ -355,10 +365,17 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:11001
+#, fuzzy
+#| msgid ""
+#| "If you do not want to create a self-signed certificate, then this "
+#| "installer will only create the RSA private key and the certificate "
+#| "request and you will have to sign the certificate request with your "
+#| "certificate authority."
 msgid ""
 "If you do not want to create a self-signed certificate, then this installer "
 "will only create the RSA private key and the certificate request and you "
-"will have to sign the certificate request with your certificate authority."
+"will have to get the certificate request signed by your certificate "
+"authority."
 msgstr ""
 "Als u geen door uzelf getekend certificaat wilt aanmaken, dan zal deze "
 "installatie enkel de private RSA-sleutel en de certificaataanvraag aanmaken "

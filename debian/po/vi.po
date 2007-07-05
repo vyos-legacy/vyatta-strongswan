@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openswan 1/2.2.0-10\n"
 "Report-Msgid-Bugs-To: rmayr@debian.org\n"
-"POT-Creation-Date: 2007-06-03 21:36+0100\n"
+"POT-Creation-Date: 2007-07-05 01:24+0100\n"
 "PO-Revision-Date: 2005-07-03 13:49+0930\n"
 "Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
 "Language-Team: Vietnamese <gnomevi-list@lists.sourceforge.net>\n"
@@ -278,7 +278,7 @@ msgstr "Hãy nhập địa điểm của chứng nhận X509 của bạn, có d�
 #: ../strongswan.templates.master:8001
 #, fuzzy
 msgid ""
-"Please enter the full location of the file containing your X509  certificate "
+"Please enter the full location of the file containing your X509 certificate "
 "in PEM format."
 msgstr ""
 "Hãy nhập địa điểm của tập tin chứa chứng nhận X509 của bạn, có dạng PEM."
@@ -312,8 +312,14 @@ msgstr "Khóa RSA mới được tạo nên có độ dài nào?"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:10001
+#, fuzzy
+#| msgid ""
+#| "Please enter the length of the created RSA key. it should not be less "
+#| "than 1024 bits because this should be considered unsecure and you will "
+#| "probably not need anything more than 2048 bits because it only slows the "
+#| "authentication process down and is not needed at the moment."
 msgid ""
-"Please enter the length of the created RSA key. it should not be less than "
+"Please enter the length of the created RSA key. It should not be less than "
 "1024 bits because this should be considered unsecure and you will probably "
 "not need anything more than 2048 bits because it only slows the "
 "authentication process down and is not needed at the moment."
@@ -355,10 +361,17 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:11001
+#, fuzzy
+#| msgid ""
+#| "If you do not want to create a self-signed certificate, then this "
+#| "installer will only create the RSA private key and the certificate "
+#| "request and you will have to sign the certificate request with your "
+#| "certificate authority."
 msgid ""
 "If you do not want to create a self-signed certificate, then this installer "
 "will only create the RSA private key and the certificate request and you "
-"will have to sign the certificate request with your certificate authority."
+"will have to get the certificate request signed by your certificate "
+"authority."
 msgstr ""
 "Nếu bạn không muốn tạo một chứng nhận tự ký, thì trình cài đặt này sẽ tạo "
 "chỉ khóa RSA riêng và lời yêu cầu chứng nhận, và bạn sẽ phải ký lời yêu cầu "
