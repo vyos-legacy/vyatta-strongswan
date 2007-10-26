@@ -146,10 +146,12 @@ binary-common:
 	dh_makeshlibs
 	dh_installdeb
 	# this also flags ipsec.conf and ipsec.secrets as conffiles, which is wrong...
-	cp $(CURDIR)/debian/strongswan/DEBIAN/conffiles $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp
+	sh -c "[ -e $(CURDIR)/debian/strongswan/DEBIAN/conffiles ] && ( \
+	cp $(CURDIR)/debian/strongswan/DEBIAN/conffiles \
+		$(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp; \
 	sed '/ipsec.conf/d,/ipsec.secrets/d' $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp \
-		> $(CURDIR)/debian/strongswan/DEBIAN/conffiles
-	rm $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp
+		> $(CURDIR)/debian/strongswan/DEBIAN/conffiles; \
+	rm $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp ) || true"
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
@@ -164,8 +166,8 @@ binary-arch: install-strongswan
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 
 # Any other binary targets build just one binary package at a time.
-#binary-%: build install
-#	make -f debian/rules binary-common DH_OPTIONS=-p$*
+binary-%: build install
+	make -f debian/rules binary-common DH_OPTIONS=-p$*
              
 binary: binary-indep binary-arch
 .PHONY: clean binary-indep binary-arch
