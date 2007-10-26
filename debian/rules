@@ -149,7 +149,7 @@ binary-common:
 	sh -c "[ -e $(CURDIR)/debian/strongswan/DEBIAN/conffiles ] && ( \
 	cp $(CURDIR)/debian/strongswan/DEBIAN/conffiles \
 		$(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp; \
-	sed '/ipsec.conf/d,/ipsec.secrets/d' $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp \
+	sed '/ipsec.conf/d;/ipsec.secrets/d' $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp \
 		> $(CURDIR)/debian/strongswan/DEBIAN/conffiles; \
 	rm $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp ) || true"
 	dh_shlibdeps
