@@ -84,9 +84,19 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
 bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask, bool force);
 
 /**
+ * convert a chunk to an allocated hex string 
+ */
+char *chunk_to_hex(chunk_t chunk, bool uppercase);
+
+/**
  * Free contents of a chunk
  */
 void chunk_free(chunk_t *chunk);
+
+/**
+ * Overwrite the contents of a chunk with pseudo-random bytes and free them
+ */
+void chunk_free_randomized(chunk_t *chunk);
 
 /**
  * Initialize a chunk to point to buffer inspectable by sizeof()

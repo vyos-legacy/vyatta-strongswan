@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -39,6 +40,10 @@
 #include <sa/tasks/child_delete.h>
 #include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/retransmit_job.h>
+
+#ifdef P2P
+#include <sa/tasks/ike_p2p.h>
+#endif
 
 typedef struct exchange_t exchange_t;
 
@@ -217,28 +222,73 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 	{
 		u_int32_t timeout;
 		job_t *job;
-
-		if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
+		iterator_t *iterator;
+		packet_t *packet;
+		task_t *task;
+		ike_mobike_t *mobike = NULL;
+		
+		/* check if we are retransmitting a MOBIKE routability check */
+		iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
+		while (iterator->iterate(iterator, (void*)&task))
 		{
-			timeout = (u_int32_t)(RETRANSMIT_TIMEOUT *
-						pow(RETRANSMIT_BASE, this->initiating.retransmitted));
+			if (task->get_type(task) == IKE_MOBIKE)
+			{
+				mobike = (ike_mobike_t*)task;
+				if (!mobike->is_probing(mobike))
+				{
+					mobike = NULL;
+				}
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+
+		if (mobike == NULL)
+		{
+			if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
+			{
+				timeout = (u_int32_t)(RETRANSMIT_TIMEOUT *
+							pow(RETRANSMIT_BASE, this->initiating.retransmitted));
+			}
+			else
+			{
+				DBG1(DBG_IKE, "giving up after %d retransmits",
+					 this->initiating.retransmitted - 1);
+				return DESTROY_ME;
+			}
+			
+			if (this->initiating.retransmitted)
+			{
+				DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
+					 this->initiating.retransmitted, message_id);
+			}
+			packet = this->initiating.packet->clone(this->initiating.packet);
 		}
 		else
-		{
-			DBG1(DBG_IKE, "giving up after %d retransmits",
-				 this->initiating.retransmitted - 1);
-			return DESTROY_ME;
+		{	/* for routeability checks, we use a more aggressive behavior */
+			if (this->initiating.retransmitted <= ROUTEABILITY_CHECK_TRIES)
+			{
+				timeout = ROUTEABILITY_CHECK_INTERVAL;
+			}
+			else
+			{
+				DBG1(DBG_IKE, "giving up after %d path probings",
+					 this->initiating.retransmitted - 1);
+				return DESTROY_ME;
+			}
+			
+			if (this->initiating.retransmitted)
+			{
+				DBG1(DBG_IKE, "path probing attempt %d",
+					 this->initiating.retransmitted);
+			}
+			packet = this->initiating.packet->clone(this->initiating.packet);
+			mobike->transmit(mobike, packet);
 		}
 		
-		if (this->initiating.retransmitted)
-		{
-			DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
-				 this->initiating.retransmitted, message_id);
-		}
+		charon->sender->send(charon->sender, packet);
+		
 		this->initiating.retransmitted++;
-		
-		charon->sender->send(charon->sender,
-					this->initiating.packet->clone(this->initiating.packet));
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
 		charon->scheduler->schedule_job(charon->scheduler, job, timeout);
@@ -255,6 +305,7 @@ static status_t build_request(private_task_manager_t *this)
 	iterator_t *iterator;
 	task_t *task;
 	message_t *message;
+	host_t *me, *other;
 	status_t status;
 	exchange_type_t exchange = 0;
 	
@@ -277,6 +328,13 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = IKE_SA_INIT;
 					activate_task(this, IKE_NATD);
 					activate_task(this, IKE_CERT);
+#ifdef P2P
+					/* this task has to be activated before the IKE_AUTHENTICATE
+					 * task, because that task pregenerates the packet after
+					 * which no payloads can be added to the message anymore.
+					 */
+					activate_task(this, IKE_P2P);
+#endif /* P2P */
 					activate_task(this, IKE_AUTHENTICATE);
 					activate_task(this, IKE_CONFIG);
 					activate_task(this, CHILD_CREATE);
@@ -324,6 +382,13 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = INFORMATIONAL;
 					break;
 				}
+#ifdef P2P
+				if (activate_task(this, IKE_P2P))
+				{
+					exchange = P2P_CONNECT;
+					break;
+				}
+#endif /* P2P */
 			case IKE_REKEYING:
 				if (activate_task(this, IKE_DELETE))
 				{
@@ -372,8 +437,13 @@ static status_t build_request(private_task_manager_t *this)
 		return SUCCESS;
 	}
 	
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
+	
 	message = message_create();
 	message->set_message_id(message, this->initiating.mid);
+	message->set_source(message, me->clone(me));
+	message->set_destination(message, other->clone(other));
 	message->set_exchange_type(message, exchange);
 	this->initiating.type = exchange;
 	this->initiating.retransmitted = 0;
@@ -412,7 +482,7 @@ static status_t build_request(private_task_manager_t *this)
 		 * close the SA */
 		flush(this);
 	    return DESTROY_ME;
-	}						
+	}
 	
 	return retransmit(this, this->initiating.mid);
 }
@@ -523,17 +593,23 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 /**
  * build a response depending on the "passive" task list
  */
-static status_t build_response(private_task_manager_t *this,
-							   exchange_type_t exchange)
+static status_t build_response(private_task_manager_t *this, message_t *request)
 {
 	iterator_t *iterator;
 	task_t *task;
 	message_t *message;
+	host_t *me, *other;
 	bool delete = FALSE;
 	status_t status;
 
+	me = request->get_destination(request);
+	other = request->get_source(request);
+
 	message = message_create();
-	message->set_exchange_type(message, exchange);
+	message->set_exchange_type(message, request->get_exchange_type(request));
+	/* send response along the path the request came in */
+	message->set_source(message, me->clone(me));
+	message->set_destination(message, other->clone(other));
 	message->set_message_id(message, this->responding.mid);
 	message->set_request(message, FALSE);
 
@@ -563,7 +639,7 @@ static status_t build_response(private_task_manager_t *this,
 	iterator->destroy(iterator);
 	
 	/* remove resonder SPI if IKE_SA_INIT failed */
-	if (delete && exchange == IKE_SA_INIT)
+	if (delete && request->get_exchange_type(request) == IKE_SA_INIT)
 	{
 		ike_sa_id_t *id = this->ike_sa->get_id(this->ike_sa);
 		id->set_responder_spi(id, 0);
@@ -596,15 +672,12 @@ static status_t process_request(private_task_manager_t *this,
 {
 	iterator_t *iterator;
 	task_t *task = NULL;
-	exchange_type_t exchange;
 	payload_t *payload;
 	notify_payload_t *notify;
 	delete_payload_t *delete;
 
-	exchange = message->get_exchange_type(message);
-
 	/* create tasks depending on request type */
-	switch (exchange)
+	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
 		{
@@ -614,6 +687,10 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_cert_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
+#ifdef P2P			
+			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+#endif /* P2P */			
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
@@ -625,7 +702,7 @@ static status_t process_request(private_task_manager_t *this,
 			break;
 		}
 		case CREATE_CHILD_SA:
-		{
+		{//FIXME: we should prevent this on mediation connections
 			bool notify_found = FALSE, ts_found = FALSE;
 			iterator = message->get_payload_iterator(message);
 			while (iterator->iterate(iterator, (void**)&payload))
@@ -733,6 +810,13 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			break;
 		}
+#ifdef P2P
+		case P2P_CONNECT:
+		{
+			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+		}
+#endif /* P2P */
 		default:
 			break;
 	}
@@ -760,7 +844,7 @@ static status_t process_request(private_task_manager_t *this,
 	}
 	iterator->destroy(iterator);
 
-	return build_response(this, exchange);
+	return build_response(this, message);
 }
 
 /**
@@ -783,14 +867,21 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		}
 		else if ((mid == this->responding.mid - 1) && this->responding.packet)
 		{
+			packet_t *clone;
+			host_t *me, *other;
+			
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 			 	 "retransmitting response", mid);
-			charon->sender->send(charon->sender,
-					 this->responding.packet->clone(this->responding.packet));
+			clone = this->responding.packet->clone(this->responding.packet);
+			me = msg->get_destination(msg);
+			other = msg->get_source(msg);
+			clone->set_source(clone, me->clone(me));
+			clone->set_destination(clone, other->clone(other));
+			charon->sender->send(charon->sender, clone);
 		}
 		else
 		{
-			DBG1(DBG_IKE, "received message ID %d, excepted %d. Ignored",
+			DBG1(DBG_IKE, "received message ID %d, expected %d. Ignored",
 				 mid, this->responding.mid);
 		}
 	}
@@ -806,7 +897,7 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		}
 		else
 		{
-			DBG1(DBG_IKE, "received message ID %d, excepted %d. Ignored",
+			DBG1(DBG_IKE, "received message ID %d, expected %d. Ignored",
 				 mid, this->initiating.mid);
 			return SUCCESS;
 		}
@@ -819,6 +910,23 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
  */
 static void queue_task(private_task_manager_t *this, task_t *task)
 {
+	if (task->get_type(task) == IKE_MOBIKE)
+	{	/*  there is no need to queue more than one mobike task */
+		iterator_t *iterator;
+		task_t *current;
+		
+		iterator = this->queued_tasks->create_iterator(this->queued_tasks, TRUE);
+		while (iterator->iterate(iterator, (void**)&current))
+		{
+			if (current->get_type(current) == IKE_MOBIKE)
+			{
+				iterator->destroy(iterator);
+				task->destroy(task);
+				return;
+			}
+		}
+		iterator->destroy(iterator);
+	}
 	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
 	this->queued_tasks->insert_last(this->queued_tasks, task);
 }

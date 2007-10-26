@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_xform.h,v 1.3 2004/09/29 22:26:13 as Exp $
+ * RCSID $Id: ipsec_xform.h 3265 2007-10-08 19:52:55Z andreas $
  */
 
 #ifndef _IPSEC_XFORM_H_

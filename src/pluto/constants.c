@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.c,v 1.21 2006/03/27 07:38:59 as Exp $
+ * RCSID $Id: constants.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 /*
@@ -507,6 +507,8 @@ const char *const sa_policy_bit_names[] = {
 	"XAUTHRSASIG",
 	"XAUTHSERVER",
 	"DONTREAUTH",
+	"BEET",
+	"MOBIKE",
 	NULL
     };
 

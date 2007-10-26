@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: start-switches,v 1.2 2004/12/19 19:17:25 as Exp $
+# RCSID $Id: start-switches 3273 2007-10-08 20:18:34Z andreas $
 
 DIR=`dirname $0`
 
@@ -31,9 +31,9 @@ do
 	cecho " * Great, umlswitch$n is already running!"
     else
 	cecho-n " * Starting umlswitch$n.."
-	uml_switch -tap tap$n -unix /tmp/umlswitch$n >/dev/null 2>&1 </dev/null &
+	uml_switch -tap tap$n -unix /tmp/umlswitch$n -daemon >/dev/null 2>&1 </dev/null
 	sleep 2
 	eval ifconfig "tap$n \$IFCONFIG_$n up"
-	cecho "\033[1;32mdone"
+	cgecho "done"
     fi
 done

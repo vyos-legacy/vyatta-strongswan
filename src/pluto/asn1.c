@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: asn1.c,v 1.16 2006/01/04 21:00:43 as Exp $
+ * RCSID $Id: asn1.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <stdlib.h>
@@ -24,7 +24,7 @@
 #include "defs.h"
 #include "mp_defs.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "log.h"
 
 /* some common prefabricated ASN.1 constants */

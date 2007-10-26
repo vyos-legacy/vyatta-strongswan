@@ -1,4 +1,5 @@
 /* strongSwan keywords
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -12,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.h,v 1.8 2006/04/17 10:30:27 as Exp $
+ * RCSID $Id: keywords.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _KEYWORDS_H_
@@ -70,6 +71,8 @@ typedef enum {
     KW_AUTH,
     KW_AUTHBY,
     KW_EAP,
+    KW_MOBIKE,
+    KW_FORCEENCAPS,
     KW_IKELIFETIME,
     KW_KEYLIFE,
     KW_REKEYMARGIN,
@@ -85,9 +88,12 @@ typedef enum {
     KW_DPDACTION,
     KW_MODECONFIG,
     KW_XAUTH,
+    KW_P2P_MEDIATION,
+    KW_P2P_MEDIATED_BY,
+    KW_P2P_PEERID,
 
 #define KW_CONN_FIRST	KW_CONN_SETUP
-#define KW_CONN_LAST	KW_XAUTH
+#define KW_CONN_LAST	KW_P2P_PEERID
 
    /* ca section keywords */
     KW_CA_NAME,

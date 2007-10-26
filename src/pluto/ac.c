@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ac.c,v 1.12 2005/12/06 22:49:32 as Exp $
+ * RCSID $Id: ac.c 3253 2007-10-06 21:39:00Z andreas $
  */
 
 #include <stdlib.h>
@@ -28,7 +28,7 @@
 #include "constants.h"
 #include "defs.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "ac.h"
 #include "x509.h"
 #include "crl.h"
@@ -460,9 +460,9 @@ parse_ac(chunk_t blob, x509acert_t *ac)
     bool critical;
     chunk_t object;
     u_int level;
-    u_int type = OID_UNKNOWN;
-    u_int extn_oid = OID_UNKNOWN;
     int objectID = 0;
+    int type = OID_UNKNOWN;
+    int extn_oid = OID_UNKNOWN;
 
     asn1_init(&ctx, blob, 0, FALSE, DBG_RAW);
 

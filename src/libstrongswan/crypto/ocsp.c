@@ -466,11 +466,11 @@ static chunk_t ocsp_build_request(private_ocsp_t *this)
 static bool ocsp_parse_basic_response(chunk_t blob, int level0, response_t *res)
 {
 	u_int level, version;
-	u_int extn_oid = OID_UNKNOWN;
 	asn1_ctx_t ctx;
 	bool critical;
 	chunk_t object;
 	int objectID = 0;
+	int extn_oid = OID_UNKNOWN;
 
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 
@@ -546,9 +546,8 @@ static response_status ocsp_parse_response(response_t *res)
 	chunk_t object;
 	u_int level;
 	int objectID = 0;
-
+	int ocspResponseType = OID_UNKNOWN;
 	response_status rStatus = STATUS_INTERNALERROR;
-	u_int ocspResponseType = OID_UNKNOWN;
 
 	asn1_init(&ctx, res->chunk, 0, FALSE, FALSE);
 
@@ -615,6 +614,13 @@ static bool ocsp_valid_response(response_t *res, x509_t *ocsp_cert)
 	rsa_public_key_t *public_key;
 	time_t until = UNDEFINED_TIME;
 	err_t ugh;
+	hash_algorithm_t algorithm = hasher_algorithm_from_oid(res->algorithm);
+
+	if (algorithm == HASH_UNKNOWN)
+	{
+		DBG1("unknown signature algorithm");
+		return FALSE;
+	}
 
 	DBG2("verifying ocsp response signature:");
 	DBG2("signer:  '%D'", ocsp_cert->get_subject(ocsp_cert));
@@ -627,8 +633,8 @@ static bool ocsp_valid_response(response_t *res, x509_t *ocsp_cert)
 		return FALSE;
 	}
 	public_key = ocsp_cert->get_public_key(ocsp_cert);
-
-	return public_key->verify_emsa_pkcs1_signature(public_key, res->tbs, res->signature) == SUCCESS;
+	
+	return public_key->verify_emsa_pkcs1_signature(public_key, algorithm, res->tbs, res->signature) == SUCCESS;
 }
 
 /**

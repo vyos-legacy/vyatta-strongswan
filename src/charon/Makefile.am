@@ -1,5 +1,3 @@
-
-
 ipsec_PROGRAMS = charon
 
 charon_SOURCES = \
@@ -87,9 +85,17 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/task.c sa/tasks/task.h
 
+if USE_P2P
+  charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
+    processing/jobs/initiate_mediation_job.c processing/jobs/initiate_mediation_job.h \
+    processing/jobs/mediation_job.c processing/jobs/mediation_job.h \
+    sa/connect_manager.c sa/connect_manager.h \
+    sa/mediation_manager.c sa/mediation_manager.h \
+    sa/tasks/ike_p2p.c sa/tasks/ike_p2p.h
+endif
 
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
-AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
+AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
 	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\"
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm -ldl
 
@@ -119,6 +125,13 @@ backend_LTLIBRARIES =
 backend_LTLIBRARIES += liblocal.la
 liblocal_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
 liblocal_la_LDFLAGS = -module
+
+if USE_LIBSQLITE
+  backend_LTLIBRARIES += libsqlite.la
+  libsqlite_la_SOURCES = config/backends/sqlite_backend.h config/backends/sqlite_backend.c
+  libsqlite_la_LIBADD = -lsqlite3
+  libsqlite_la_LDFLAGS = -module
+endif
 
 # build control interfaces, stroke interface is always built
 ############################################################

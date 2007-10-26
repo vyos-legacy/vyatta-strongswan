@@ -1,3 +1,77 @@
+strongswan-4.1.8
+----------------
+
+- Removed recursive pthread mutexes since uClib doesn't support them.
+
+
+strongswan-4.1.7
+----------------
+
+- In NAT traversal situations and multiple queued Quick Modes,
+  those pending connections inserted by auto=start after the
+  port floating from 500 to 4500 were erronously deleted.
+
+- Added a "forceencaps" connection parameter to enforce UDP encapsulation
+  to surmount restrictive firewalls. NAT detection payloads are faked to
+  simulate a NAT situation and trick the other peer into NAT mode (IKEv2 only).
+
+- Preview of strongSwan Manager, a web based configuration and monitoring
+  application. It uses a new XML control interface to query the IKEv2 daemon
+  (see http://trac.strongswan.org/wiki/Manager).
+
+- Experimental SQLite configuration backend which will provide the configuration
+  interface for strongSwan Manager in future releases.
+
+- Further improvements to MOBIKE support.
+
+
+strongswan-4.1.6
+----------------
+
+- Since some third party IKEv2 implementations run into
+  problems with strongSwan announcing MOBIKE capability per
+  default, MOBIKE can be disabled on a per-connection-basis
+  using the mobike=no option. Whereas mobike=no disables the
+  sending of the MOBIKE_SUPPORTED notification and the floating
+  to UDP port 4500 with the IKE_AUTH request even if no NAT
+  situation has been detected, strongSwan will still support
+  MOBIKE acting as a responder.
+
+- the default ipsec routing table plus its corresponding priority
+  used for inserting source routes has been changed from 100 to 220.
+  It can be configured using the --with-ipsec-routing-table and
+  --with-ipsec-routing-table-prio options. 
+  
+- the --enable-integrity-test configure option tests the
+  integrity of the libstrongswan crypto code during the charon
+  startup.
+  
+- the --disable-xauth-vid configure option disables the sending
+  of the XAUTH vendor ID. This can be used as a workaround when
+  interoperating with some Windows VPN clients that get into
+  trouble upon reception of an XAUTH VID without eXtended
+  AUTHentication having been configured.
+  
+- ipsec stroke now supports the rereadsecrets, rereadaacerts,
+  rereadacerts, and listacerts options.
+
+
+strongswan-4.1.5
+----------------
+
+- If a DNS lookup failure occurs when resolving right=%<FQDN>
+  or right=<FQDN> combined with rightallowany=yes then the
+  connection is not updated by ipsec starter thus preventing
+  the disruption of an active IPsec connection. Only if the DNS
+  lookup successfully returns with a changed IP address the
+  corresponding connection definition is updated.
+
+- Routes installed by the keying daemons are now in a separate
+  routing table with the ID 100 to avoid conflicts with the main
+  table. Route lookup for IKEv2 traffic is done in userspace to ignore
+  routes installed for IPsec, as IKE traffic shouldn't get encapsulated.
+
+
 strongswan-4.1.4
 ----------------
 

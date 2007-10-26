@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: rsa_public_key.h 3303 2007-10-12 22:49:39Z andreas $
  */
 
 #ifndef RSA_PUBLIC_KEY_H_
@@ -29,6 +31,7 @@ typedef struct rsa_public_key_t rsa_public_key_t;
 #include <gmp.h>
 
 #include <library.h>
+#include <crypto/hashers/hasher.h>
 
 /**
  * @brief RSA public key with associated functions.
@@ -58,6 +61,7 @@ struct rsa_public_key_t {
 	 * 
 	 * @param this				rsa_public_key to use
 	 * @param data				data to sign
+	 # @param algorithm			hash algorithm the signature is based on
 	 * @param signature			signature to verify
 	 * @return
 	 * 							- SUCCESS, if signature ok
@@ -66,34 +70,9 @@ struct rsa_public_key_t {
 	 * 							- INVALID_ARG, if signature is not a signature
 	 * 							- FAILED if signature invalid or unable to verify
 	 */
-	status_t (*verify_emsa_pkcs1_signature) (const rsa_public_key_t *this, chunk_t data, chunk_t signature);
-	
-	/**
-	 * @brief Gets the key.
-	 * 
-	 * Currently uses a proprietary format which is only inteded
-	 * for testing. This should be replaced with a proper
-	 * ASN1 encoded key format, when charon gets the ASN1 
-	 * capabilities.
-	 * 
-	 * @param this				calling object
-	 * @param key				key (in a propriarity format)
-	 * @return					
-	 * 							- SUCCESS
-	 * 							- INVALID_STATE, if key not set
-	 */
-	status_t (*get_key) (const rsa_public_key_t *this, chunk_t *key);
-	
-	/**
-	 * @brief Saves a key to a file.
-	 * 
-	 * Not implemented!
-	 * 
-	 * @param this				calling object
-	 * @param file				file to which the key should be written.
-	 * @return					NOT_SUPPORTED
-	 */
-	status_t (*save_key) (const rsa_public_key_t *this, char *file);
+	status_t (*verify_emsa_pkcs1_signature) (const rsa_public_key_t *this,
+											 hash_algorithm_t algorithm,
+											 chunk_t data, chunk_t signature);
 	
 	/**
 	 * @brief Get the modulus of the key.
@@ -110,6 +89,14 @@ struct rsa_public_key_t {
 	 * @return					size of the modulus (n) in bytes
 	 */
 	size_t (*get_keysize) (const rsa_public_key_t *this);
+
+	/**
+	 * @brief Get the DER encoded publicKeyInfo object.
+	 * 
+	 * @param this				calling object
+	 * @return					DER encoded publicKeyInfo object
+	 */
+	chunk_t (*get_publicKeyInfo) (const rsa_public_key_t *this);
 
 	/**
 	 * @brief Get the keyid formed as the SHA-1 hash of a publicKeyInfo object.

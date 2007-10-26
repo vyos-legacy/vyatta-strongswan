@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: hasher.h 3307 2007-10-17 02:56:24Z andreas $
  */
 
 #ifndef HASHER_H_
@@ -42,17 +44,18 @@ typedef struct hasher_t hasher_t;
  * @ingroup hashers
  */
 enum hash_algorithm_t {
-	HASH_MD2 = 0,
+	HASH_UNKNOWN = 0,
+	HASH_MD2 =     1,
 	/** Implemented in class md5_hasher_t */
-	HASH_MD5 = 1,
+	HASH_MD5 =     2,
 	/** Implemented in class sha1_hasher_t */
-	HASH_SHA1 = 2,
+	HASH_SHA1 =    3,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA256 = 3,
+	HASH_SHA256 =  4,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA384 = 4,
+	HASH_SHA384 =  5,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA512 = 5,
+	HASH_SHA512 =  6,
 };
 
 #define HASH_SIZE_MD2		16
@@ -68,7 +71,6 @@ enum hash_algorithm_t {
  */
 extern enum_name_t *hash_algorithm_names;
 
-
 /**
  * @brief Generic interface for all hash functions.
  * 
@@ -82,7 +84,7 @@ struct hasher_t {
 	 * @brief Hash data and write it in the buffer.
 	 * 
 	 * If the parameter hash is NULL, no result is written back
-	 * an more data can be appended to already hashed data.
+	 * and more data can be appended to already hashed data.
 	 * If not, the result is written back and the hasher is reset.
 	 * 
 	 * The hash output parameter must hold at least
@@ -98,7 +100,7 @@ struct hasher_t {
 	 * @brief Hash data and allocate space for the hash.
 	 * 
 	 * If the parameter hash is NULL, no result is written back
-	 * an more data can be appended to already hashed data.
+	 * and more data can be appended to already hashed data.
 	 * If not, the result is written back and the hasher is reset.
 	 * 
 	 * @param this			calling object
@@ -155,5 +157,29 @@ struct hasher_t {
  * @ingroup hashers
  */
 hasher_t *hasher_create(hash_algorithm_t hash_algorithm);
+
+/**
+ * @brief Conversion of ASN.1 OID to hash algorithm.
+ * 
+ * @param oid				ASN.1 OID
+ * @return
+ * 							- hash algorithm
+ * 							- HASH_UNKNOWN if OID unsuported
+ * 
+ * @ingroup hashers
+ */
+hash_algorithm_t hasher_algorithm_from_oid(int oid);
+
+/**
+ * @brief Conversion of hash signature algorithm ASN.1 OID.
+ * 
+ * @param alg				hash algorithm
+ * @return
+ * 							- ASN.1 OID if known hash algorithm
+ * 							- OID_UNKNOW
+ * 
+ * @ingroup hashers
+ */
+int hasher_signature_algorithm_to_oid(hash_algorithm_t alg);
 
 #endif /* HASHER_H_ */

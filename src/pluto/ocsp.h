@@ -12,6 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
+ * RCSID $Id: ocsp.h 3253 2007-10-06 21:39:00Z andreas $
  */
 
 #include "constants.h"

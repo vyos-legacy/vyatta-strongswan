@@ -1,4 +1,5 @@
 /* automatic handling of confread struct arguments
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2006 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -12,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: args.c,v 1.9 2006/04/17 10:32:36 as Exp $
+ * RCSID $Id: args.c 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <stddef.h>
@@ -193,6 +194,8 @@ static const token_info_t token_info[] =
     { ARG_MISC, 0, NULL  /* KW_AUTH */                                             },
     { ARG_MISC, 0, NULL  /* KW_AUTHBY */                                           },
     { ARG_MISC, 0, NULL  /* KW_EAP */                                              },
+    { ARG_MISC, 0, NULL  /* KW_MOBIKE */                                           },
+    { ARG_MISC, 0, NULL  /* KW_FORCEENCAPS */                                      },
     { ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },
     { ARG_TIME, offsetof(starter_conn_t, sa_ipsec_life_seconds), NULL              },
     { ARG_TIME, offsetof(starter_conn_t, sa_rekey_margin), NULL                    },
@@ -208,6 +211,9 @@ static const token_info_t token_info[] =
     { ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
     { ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
     { ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
+    { ARG_ENUM, offsetof(starter_conn_t, p2p_mediation), LST_bool                  },
+    { ARG_STR,  offsetof(starter_conn_t, p2p_mediated_by), NULL                    },
+    { ARG_STR,  offsetof(starter_conn_t, p2p_peerid), NULL                         },
 
     /* ca section keywords */
     { ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },

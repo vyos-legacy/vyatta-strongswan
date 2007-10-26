@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: server.h,v 1.2 2004/03/22 21:53:20 as Exp $
+ * RCSID $Id: server.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 extern int ctl_fd;	/* file descriptor of control (whack) socket */

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.h,v 1.8 2006/04/17 10:30:27 as Exp $
+ * RCSID $Id: stroke_keywords.h 3271 2007-10-08 20:12:25Z andreas $
  */
 
 #ifndef _STROKE_KEYWORDS_H_
@@ -39,6 +39,7 @@ typedef enum {
 	STROKE_LIST_CRLS,
 	STROKE_LIST_OCSP,
 	STROKE_LIST_ALL,
+	STROKE_REREAD_SECRETS,
 	STROKE_REREAD_CACERTS,
 	STROKE_REREAD_OCSPCERTS,
 	STROKE_REREAD_AACERTS,
@@ -49,7 +50,7 @@ typedef enum {
 } stroke_keyword_t;
 
 #define STROKE_LIST_FIRST		STROKE_LIST_CERTS
-#define STROKE_REREAD_FIRST		STROKE_REREAD_CACERTS
+#define STROKE_REREAD_FIRST		STROKE_REREAD_SECRETS
 #define STROKE_PURGE_FIRST		STROKE_PURGE_OCSP
 
 typedef struct stroke_token stroke_token_t;

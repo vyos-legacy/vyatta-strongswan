@@ -11,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: asn1.h 3299 2007-10-12 19:29:00Z andreas $
  */
 
 #ifndef _ASN1_H
@@ -23,7 +25,11 @@
 #include <asn1/oid.h>
 
 
-/* Defines some primitive ASN1 types */
+/**
+ * @brief Definition of some primitive ASN1 types
+ *
+ * @ingroup asn1
+ */
 typedef enum {
     ASN1_EOC =				0x00,
     ASN1_BOOLEAN =			0x01,
@@ -109,8 +115,13 @@ extern const chunk_t ASN1_INTEGER_1;
 extern const chunk_t ASN1_INTEGER_2;
 
 /* some popular algorithmIdentifiers */
+extern const chunk_t ASN1_md2_id;
 extern const chunk_t ASN1_md5_id;
 extern const chunk_t ASN1_sha1_id;
+extern const chunk_t ASN1_sha256_id;
+extern const chunk_t ASN1_sha384_id;
+extern const chunk_t ASN1_sha512_id;
+
 extern const chunk_t ASN1_rsaEncryption_id;
 extern const chunk_t ASN1_md5WithRSA_id;
 extern const chunk_t ASN1_sha1WithRSA_id;
@@ -120,6 +131,7 @@ extern int known_oid(chunk_t object);
 extern u_int asn1_length(chunk_t *blob);
 extern bool is_printablestring(chunk_t str);
 extern time_t asn1totime(const chunk_t *utctime, asn1_t type);
+extern chunk_t timetoasn1(const time_t *time, asn1_t type);
 extern void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit, bool private);
 extern bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *object, u_int *level, asn1_ctx_t *ctx);
 extern bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name);

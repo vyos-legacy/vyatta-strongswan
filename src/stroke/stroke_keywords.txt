@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt,v 1.6 2006/04/17 10:30:27 as Exp $
+ * RCSID $Id: stroke_keywords.txt 3271 2007-10-08 20:12:25Z andreas $
  */
 
 #include <string.h>
@@ -46,6 +46,7 @@ listcainfos,     STROKE_LIST_CAINFOS
 listcrls,        STROKE_LIST_CRLS
 listocsp,        STROKE_LIST_OCSP
 listall,         STROKE_LIST_ALL
+rereadsecrets,   STROKE_REREAD_SECRETS
 rereadcacerts,   STROKE_REREAD_CACERTS
 rereadocspcerts, STROKE_REREAD_OCSPCERTS
 rereadaacerts,   STROKE_REREAD_AACERTS,

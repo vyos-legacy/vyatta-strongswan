@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: x509.c,v 1.36 2006/04/10 16:08:33 as Exp $
+ * RCSID $Id: x509.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <stdlib.h>
@@ -34,7 +34,7 @@
 #include "log.h"
 #include "id.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "pkcs1.h"
 #include "x509.h"
 #include "crl.h"
@@ -1701,8 +1701,7 @@ parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessLocation)
     chunk_t object;
     u_int level;
     int objectID = 0;
-
-    u_int accessMethod = OID_UNKNOWN;
+    int accessMethod = OID_UNKNOWN;
 
     asn1_init(&ctx, blob, level0, FALSE, DBG_RAW);
 
@@ -1829,8 +1828,8 @@ parse_x509cert(chunk_t blob, u_int level0, x509cert_t *cert)
     bool critical;
     chunk_t object;
     u_int level;
-    u_int extn_oid = OID_UNKNOWN;
     int objectID = 0;
+    int extn_oid = OID_UNKNOWN;
 
     asn1_init(&ctx, blob, level0, FALSE, DBG_RAW);
 

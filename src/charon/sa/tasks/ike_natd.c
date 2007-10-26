@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include <daemon.h>
+#include <config/peer_cfg.h>
 #include <crypto/hashers/hasher.h>
 #include <encoding/payloads/notify_payload.h>
 
@@ -90,7 +91,7 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
 	u_int64_t spi_i, spi_r;
 	u_int16_t port;
 	
-	/* prepare all requred chunks */
+	/* prepare all required chunks */
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
 	spi_r = ike_sa_id->get_responder_spi(ike_sa_id);
 	spi_i_chunk.ptr = (void*)&spi_i;
@@ -113,6 +114,25 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
 }
 
 /**
+ * build a faked NATD payload to enforce UDP encap
+ */
+static chunk_t generate_natd_hash_faked(private_ike_natd_t *this)
+{
+	randomizer_t *randomizer;
+	chunk_t chunk;
+	
+	randomizer = randomizer_create();
+	if (randomizer->allocate_pseudo_random_bytes(randomizer, HASH_SIZE_SHA1,
+												 &chunk) != SUCCESS)
+	{
+		DBG1(DBG_IKE, "unable to get random bytes for NATD fake");
+		chunk = chunk_empty;
+	}
+	randomizer->destroy(randomizer);
+	return chunk;
+}
+
+/**
  * Build a NAT detection notify payload.
  */
 static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
@@ -120,12 +140,21 @@ static notify_payload_t *build_natd_payload(private_ike_natd_t *this,
 {
 	chunk_t hash;
 	notify_payload_t *notify;	
-	ike_sa_id_t *ike_sa_id;	
+	ike_sa_id_t *ike_sa_id;
+	ike_cfg_t *config;
 	
 	ike_sa_id = this->ike_sa->get_id(this->ike_sa);
+	config = this->ike_sa->get_ike_cfg(this->ike_sa);
+	if (config->force_encap(config) && type == NAT_DETECTION_SOURCE_IP)
+	{
+		hash = generate_natd_hash_faked(this);
+	}
+	else
+	{
+		hash = generate_natd_hash(this, ike_sa_id, host);
+	}
 	notify = notify_payload_create();
 	notify->set_notify_type(notify, type);
-	hash = generate_natd_hash(this, ike_sa_id, host);
 	notify->set_notification_data(notify, hash);
 	chunk_free(&hash);
 	
@@ -143,11 +172,12 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	chunk_t hash, src_hash, dst_hash;
 	ike_sa_id_t *ike_sa_id;
 	host_t *me, *other;
+	ike_cfg_t *config;
 	
 	/* Precompute NAT-D hashes for incoming NAT notify comparison */
 	ike_sa_id = message->get_ike_sa_id(message);
-	me = this->ike_sa->get_my_host(this->ike_sa);
-	other = this->ike_sa->get_other_host(this->ike_sa);
+	me = message->get_destination(message);
+	other = message->get_source(message);
 	dst_hash = generate_natd_hash(this, ike_sa_id, me);
 	src_hash = generate_natd_hash(this, ike_sa_id, other);
 	
@@ -208,7 +238,13 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 		this->ike_sa->set_condition(this->ike_sa, COND_NAT_HERE,
 									!this->dst_matched);
 		this->ike_sa->set_condition(this->ike_sa, COND_NAT_THERE,
-									!this->src_matched);
+									!this->src_matched);	
+		config = this->ike_sa->get_ike_cfg(this->ike_sa);
+		if (this->dst_matched && this->src_matched &&
+			config->force_encap(config))
+		{
+			this->ike_sa->set_condition(this->ike_sa, COND_NAT_FAKE, TRUE);	
+		}
 	}
 }
 
@@ -218,18 +254,46 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 static status_t process_i(private_ike_natd_t *this, message_t *message)
 {
 	process_payloads(this, message);
-			
-	/* if peer supports NAT-T, we switch to port 4500 even
-	 * if no NAT is detected. MOBIKE requires this. */
-	if (message->get_exchange_type(message) == IKE_SA_INIT &&
-		this->ike_sa->supports_extension(this->ike_sa, EXT_NATT))
-	{
-		host_t *me, *other;
 	
-		me = this->ike_sa->get_my_host(this->ike_sa);
-		me->set_port(me, IKEV2_NATT_PORT);
-		other = this->ike_sa->get_other_host(this->ike_sa);
-		other->set_port(other, IKEV2_NATT_PORT);
+	if (message->get_exchange_type(message) == IKE_SA_INIT)
+	{
+		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+
+#ifdef P2P		
+		/* if we are on a mediated connection we have already switched to
+		 * port 4500 and the correct destination port is already configured,
+		 * therefore we must not switch again */
+		if (peer_cfg->get_mediated_by(peer_cfg))
+		{
+			return SUCCESS;
+		}
+#endif /* P2P */
+		
+		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
+#ifdef P2P
+			/* if we are on a mediation connection we swith to port 4500 even
+			 * if no NAT is detected. */
+			peer_cfg->is_mediation(peer_cfg) ||
+#endif /* P2P */
+			/* if peer supports NAT-T, we switch to port 4500 even
+			 * if no NAT is detected. MOBIKE requires this. */
+			(peer_cfg->use_mobike(peer_cfg) &&
+			 this->ike_sa->supports_extension(this->ike_sa, EXT_NATT)))
+		{
+			host_t *me, *other;
+		
+			/* do not switch if we have a custom port from mobike/NAT */
+			me = this->ike_sa->get_my_host(this->ike_sa);
+			if (me->get_port(me) == IKEV2_UDP_PORT)
+			{
+				me->set_port(me, IKEV2_NATT_PORT);
+			}
+			other = this->ike_sa->get_other_host(this->ike_sa);
+			if (other->get_port(other) == IKEV2_UDP_PORT)
+			{
+				other->set_port(other, IKEV2_NATT_PORT);
+			}
+		}
 	}
 	
 	return SUCCESS;
@@ -245,7 +309,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	host_t *host;
 	
 	/* destination is always set */
-	host = this->ike_sa->get_other_host(this->ike_sa);
+	host = message->get_destination(message);
 	notify = build_natd_payload(this, NAT_DETECTION_DESTINATION_IP, host);
 	message->add_payload(message, (payload_t*)notify);
 	
@@ -254,7 +318,7 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	 * 2. We do a routing lookup in the kernel interface
 	 * 3. Include all possbile addresses
 	 */
-	host = this->ike_sa->get_my_host(this->ike_sa);
+	host = message->get_source(message);
 	if (!host->is_anyaddr(host))
 	{	/* 1. */
 		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
@@ -305,11 +369,11 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
 	if (this->src_seen && this->dst_seen)
 	{
 		/* initiator seems to support NAT detection, add response */
-		me = this->ike_sa->get_my_host(this->ike_sa);
+		me = message->get_source(message);
 		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, me);
 		message->add_payload(message, (payload_t*)notify);
 		
-		other = this->ike_sa->get_other_host(this->ike_sa);
+		other = message->get_destination(message);
 		notify = build_natd_payload(this, NAT_DETECTION_DESTINATION_IP, other);
 		message->add_payload(message, (payload_t*)notify);
 	}

@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: rsa_private_key.c 3306 2007-10-17 02:55:53Z andreas $
  */
 
 #include <gmp.h>
@@ -29,32 +31,20 @@
 #include "rsa_public_key.h"
 #include "rsa_private_key.h"
 
+#include <debug.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
 #include <utils/randomizer.h>
-
-/**
- * OIDs for hash algorithms are defined in rsa_public_key.c.
- */
-extern u_int8_t md2_oid[18];
-extern u_int8_t md5_oid[18];
-extern u_int8_t sha1_oid[15];
-extern u_int8_t sha256_oid[19];
-extern u_int8_t sha384_oid[19];
-extern u_int8_t sha512_oid[19];
-
 
 /**
  * defined in rsa_public_key.c
  */
 extern chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e);
 
-
 /**
  *  Public exponent to use for key generation.
  */
 #define PUBLIC_EXPONENT 0x10001
-
 
 typedef struct private_rsa_private_key_t private_rsa_private_key_t;
 
@@ -153,23 +143,23 @@ struct private_rsa_private_key_t {
 
 /* ASN.1 definition of a PKCS#1 RSA private key */
 static const asn1Object_t privkey_objects[] = {
-	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
-	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
-	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
-	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  3 */
-	{ 1,   "privateExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  4 */
-	{ 1,   "prime1",			ASN1_INTEGER,      ASN1_BODY }, /*  5 */
-	{ 1,   "prime2",			ASN1_INTEGER,      ASN1_BODY }, /*  6 */
-	{ 1,   "exponent1",			ASN1_INTEGER,      ASN1_BODY }, /*  7 */
-	{ 1,   "exponent2",			ASN1_INTEGER,      ASN1_BODY }, /*  8 */
-	{ 1,   "coefficient",		ASN1_INTEGER,      ASN1_BODY }, /*  9 */
-	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,     ASN1_OPT |
-												   ASN1_LOOP }, /* 10 */
-	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
-	{ 3,       "prime",			ASN1_INTEGER,      ASN1_BODY }, /* 12 */
-	{ 3,       "exponent",		ASN1_INTEGER,      ASN1_BODY }, /* 13 */
-	{ 3,       "coefficient",	ASN1_INTEGER,      ASN1_BODY }, /* 14 */
-	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }  /* 15 */
+	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,	ASN1_NONE }, /*  0 */
+	{ 1,   "version",			ASN1_INTEGER,	ASN1_BODY }, /*  1 */
+	{ 1,   "modulus",			ASN1_INTEGER,	ASN1_BODY }, /*  2 */
+	{ 1,   "publicExponent",	ASN1_INTEGER,	ASN1_BODY }, /*  3 */
+	{ 1,   "privateExponent",	ASN1_INTEGER,	ASN1_BODY }, /*  4 */
+	{ 1,   "prime1",			ASN1_INTEGER,	ASN1_BODY }, /*  5 */
+	{ 1,   "prime2",			ASN1_INTEGER,	ASN1_BODY }, /*  6 */
+	{ 1,   "exponent1",			ASN1_INTEGER,	ASN1_BODY }, /*  7 */
+	{ 1,   "exponent2",			ASN1_INTEGER,	ASN1_BODY }, /*  8 */
+	{ 1,   "coefficient",		ASN1_INTEGER,	ASN1_BODY }, /*  9 */
+	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,	ASN1_OPT |
+												ASN1_LOOP }, /* 10 */
+	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,	ASN1_NONE }, /* 11 */
+	{ 3,       "prime",			ASN1_INTEGER,	ASN1_BODY }, /* 12 */
+	{ 3,       "exponent",		ASN1_INTEGER,	ASN1_BODY }, /* 13 */
+	{ 3,       "coefficient",	ASN1_INTEGER,	ASN1_BODY }, /* 14 */
+	{ 1,   "end opt or loop",	ASN1_EOC,		ASN1_END  }  /* 15 */
 };
 
 #define PRIV_KEY_VERSION		 1
@@ -184,6 +174,26 @@ static const asn1Object_t privkey_objects[] = {
 #define PRIV_KEY_ROOF			16
 
 static private_rsa_private_key_t *rsa_private_key_create_empty(void);
+
+/**
+ * Auxiliary function overwriting private key material with
+ * pseudo-random bytes before releasing it
+ */
+static void mpz_clear_randomized(mpz_t z)
+{
+	size_t len = mpz_size(z) * GMP_LIMB_BITS / BITS_PER_BYTE;
+	u_int8_t *random_bytes = alloca(len);
+
+	randomizer_t *randomizer = randomizer_create();
+	
+	randomizer->get_pseudo_random_bytes(randomizer, len, random_bytes);
+
+	/* overwrite mpz_t with pseudo-random bytes before clearing it */
+	mpz_import(z, len, 1, 1, 1, 0, random_bytes);
+	mpz_clear(z);
+
+	randomizer->destroy(randomizer);
+}
 
 /**
  * Implementation of private_rsa_private_key_t.compute_prime.
@@ -216,7 +226,8 @@ static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_size
 		/* get next prime */
 		mpz_nextprime (*prime, *prime);
 		
-		free(random_bytes.ptr);
+		/* free the random_bytes after overwriting them with a pseudo-random sequence */
+		chunk_free_randomized(&random_bytes);
 	}
 	/* check if it isnt too large */
 	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
@@ -251,59 +262,96 @@ static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 	decrypted.len = this->k;
 	decrypted.ptr = mpz_export(NULL, NULL, 1, decrypted.len, 1, 0, t1);
 	
-	mpz_clear(t1);
-	mpz_clear(t2);
+	mpz_clear_randomized(t1);
+	mpz_clear_randomized(t2);
 	
 	return decrypted;
 }
 
 /**
- * Implementation of rsa_private_key.build_emsa_signature.
+ * Implementation of rsa_private_key_t.eme_pkcs1_decrypt.
  */
-static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature)
+static status_t pkcs1_decrypt(private_rsa_private_key_t *this,
+							  chunk_t in, chunk_t *out)
+{
+	status_t status = FAILED;
+	chunk_t em, em_ori;
+
+	/* decrypt the input data */
+	em = em_ori = this->rsadp(this, in);
+
+	/* PKCS#1 v1.5 EME encryption formatting
+	 * EM = 00 || 02 || PS || 00 || M
+	 * PS = pseudo-random nonzero octets
+	 */
+
+	/* check for magic bytes */
+	if (*(em.ptr) != 0x00 || *(em.ptr+1) != 0x02)
+	{
+		DBG1("incorrect padding - probably wrong RSA key");
+		goto end;
+	}
+	em.ptr += 2;
+	em.len -= 2;
+
+	/* the plaintext data starts after first 0x00 byte */
+	while (em.len-- > 0 && *em.ptr++ != 0x00);
+
+	if (em.len == 0)
+	{
+		DBG1("no plaintext data found");
+		goto end;
+	}
+
+    *out = chunk_clone(em);
+    status = SUCCESS;
+
+end:
+	free(em_ori.ptr);
+	return status;
+}
+
+/**
+ * Implementation of rsa_private_key_t.build_emsa_pkcs1_signature.
+ */
+static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this,
+										   hash_algorithm_t hash_algorithm,
+										   chunk_t data, chunk_t *signature)
 {
 	hasher_t *hasher;
-	chunk_t hash;
-	chunk_t em;
-	chunk_t oid;
+	chunk_t em, digestInfo, hash_id, hash;
 	
 	/* get oid string prepended to hash */
 	switch (hash_algorithm)
 	{	
 		case HASH_MD2:
 		{
-			oid.ptr = md2_oid;
-			oid.len = sizeof(md2_oid);
+			hash_id =ASN1_md2_id;
 			break;
 		}
 		case HASH_MD5:
 		{
-			oid.ptr = md5_oid;
-			oid.len = sizeof(md5_oid);
+			hash_id = ASN1_md5_id;
 			break;
 		}
 		case HASH_SHA1:
 		{
-			oid.ptr = sha1_oid;
-			oid.len = sizeof(sha1_oid);
+			hash_id = ASN1_sha1_id;
 			break;
 		}
 		case HASH_SHA256:
 		{
-			oid.ptr = sha256_oid;
-			oid.len = sizeof(sha256_oid);
+			hash_id = ASN1_sha256_id;
 			break;
 		}
 		case HASH_SHA384:
 		{
-			oid.ptr = sha384_oid;
-			oid.len = sizeof(sha384_oid);
+			hash_id = ASN1_sha384_id;
 			break;
 		}
 		case HASH_SHA512:
 		{
-			oid.ptr = sha512_oid;
-			oid.len = sizeof(sha512_oid);
+			hash_id = ASN1_sha512_id;
 			break;
 		}
 		default:
@@ -323,10 +371,17 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 	hasher->allocate_hash(hasher, data, &hash);
 	hasher->destroy(hasher);
 	
+	/* build DER-encoded digestInfo */
+	digestInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
+					hash_id,
+					asn1_simple_object(ASN1_OCTET_STRING, hash)
+				  );
+	chunk_free(&hash);
+
 	/* build chunk to rsa-decrypt:
 	 * EM = 0x00 || 0x01 || PS || 0x00 || T. 
 	 * PS = 0xFF padding, with length to fill em
-	 * T = oid || hash
+	 * T = encoded_hash
 	 */
 	em.len = this->k;
 	em.ptr = malloc(em.len);
@@ -336,78 +391,44 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 	/* set magic bytes */
 	*(em.ptr) = 0x00;
 	*(em.ptr+1) = 0x01;
-	*(em.ptr + em.len - hash.len - oid.len - 1) = 0x00;
-	/* set hash */
-	memcpy(em.ptr + em.len - hash.len, hash.ptr, hash.len);
-	/* set oid */
-	memcpy(em.ptr + em.len - hash.len - oid.len, oid.ptr, oid.len);
-	
+	*(em.ptr + em.len - digestInfo.len - 1) = 0x00;
+	/* set DER-encoded hash */
+	memcpy(em.ptr + em.len - digestInfo.len, digestInfo.ptr, digestInfo.len);
+
 	/* build signature */
 	*signature = this->rsasp1(this, em);
 	
-	free(hash.ptr);
+	free(digestInfo.ptr);
 	free(em.ptr);
 	
 	return SUCCESS;	
 }
 
 /**
- * Implementation of rsa_private_key.get_key.
+ * Implementation of rsa_private_key_t.pkcs1_write.
  */
-static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
-{	
-	chunk_t n, e, p, q, d, exp1, exp2, coeff;
-
-	n.len = this->k;
-	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, this->n);
-	e.len = this->k;
-	e.ptr = mpz_export(NULL, NULL, 1, e.len, 1, 0, this->e);
-	p.len = this->k;
-	p.ptr = mpz_export(NULL, NULL, 1, p.len, 1, 0, this->p);
-	q.len = this->k;
-	q.ptr = mpz_export(NULL, NULL, 1, q.len, 1, 0, this->q);
-	d.len = this->k;
-	d.ptr = mpz_export(NULL, NULL, 1, d.len, 1, 0, this->d);
-	exp1.len = this->k;
-	exp1.ptr = mpz_export(NULL, NULL, 1, exp1.len, 1, 0, this->exp1);
-	exp2.len = this->k;
-	exp2.ptr = mpz_export(NULL, NULL, 1, exp2.len, 1, 0, this->exp2);
-	coeff.len = this->k;
-	coeff.ptr = mpz_export(NULL, NULL, 1, coeff.len, 1, 0, this->coeff);
-	
-	key->len = this->k * 8;
-	key->ptr = malloc(key->len);
-	memcpy(key->ptr + this->k * 0, n.ptr , n.len);
-	memcpy(key->ptr + this->k * 1, e.ptr, e.len);
-	memcpy(key->ptr + this->k * 2, p.ptr, p.len);
-	memcpy(key->ptr + this->k * 3, q.ptr, q.len);
-	memcpy(key->ptr + this->k * 4, d.ptr, d.len);
-	memcpy(key->ptr + this->k * 5, exp1.ptr, exp1.len);
-	memcpy(key->ptr + this->k * 6, exp2.ptr, exp2.len);
-	memcpy(key->ptr + this->k * 7, coeff.ptr, coeff.len);
-	
-	free(n.ptr);
-	free(e.ptr);
-	free(p.ptr);
-	free(q.ptr);
-	free(d.ptr);
-	free(exp1.ptr);
-	free(exp2.ptr);
-	free(coeff.ptr);
-	
-	return SUCCESS;
-}
-
-/**
- * Implementation of rsa_private_key.save_key.
- */
-static status_t save_key(private_rsa_private_key_t *this, char *file)
+static bool pkcs1_write(private_rsa_private_key_t *this, const char *filename, bool force)
 {
-	return NOT_SUPPORTED;
+	bool status;
+
+    chunk_t pkcs1 = asn1_wrap(ASN1_SEQUENCE, "cmmmmmmmm",
+						ASN1_INTEGER_0,
+						asn1_integer_from_mpz(this->n),
+						asn1_integer_from_mpz(this->e),
+						asn1_integer_from_mpz(this->d),
+						asn1_integer_from_mpz(this->p),
+						asn1_integer_from_mpz(this->q),
+						asn1_integer_from_mpz(this->exp1),
+						asn1_integer_from_mpz(this->exp2),
+						asn1_integer_from_mpz(this->coeff));
+
+	status = chunk_write(pkcs1, filename, "pkcs1", 0066, force);
+	chunk_free_randomized(&pkcs1);
+	return status;
 }
 
 /**
- * Implementation of rsa_private_key.get_public_key.
+ * Implementation of rsa_private_key_t.get_public_key.
  */
 rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
 {
@@ -510,31 +531,10 @@ static status_t check(private_rsa_private_key_t *this)
 		status = FAILED;
 	}
 	
-	mpz_clear(t);
-	mpz_clear(u);
-	mpz_clear(q1);
+	mpz_clear_randomized(t);
+	mpz_clear_randomized(u);
+	mpz_clear_randomized(q1);
 	return status;
-}
-
-/**
- * Implementation of rsa_private_key.clone.
- */
-static rsa_private_key_t* _clone(private_rsa_private_key_t *this)
-{
-	private_rsa_private_key_t *clone = rsa_private_key_create_empty();
-	
-	mpz_init_set(clone->n, this->n);
-	mpz_init_set(clone->e, this->e);
-	mpz_init_set(clone->p, this->p);
-	mpz_init_set(clone->q, this->q);
-	mpz_init_set(clone->d, this->d);
-	mpz_init_set(clone->exp1, this->exp1);
-	mpz_init_set(clone->exp2, this->exp2);
-	mpz_init_set(clone->coeff, this->coeff);
-	clone->keyid = chunk_clone(this->keyid);
-	clone->k = this->k;
-	
-	return &clone->public;
 }
 
 /**
@@ -542,15 +542,15 @@ static rsa_private_key_t* _clone(private_rsa_private_key_t *this)
  */
 static void destroy(private_rsa_private_key_t *this)
 {
-	mpz_clear(this->n);
-	mpz_clear(this->e);
-	mpz_clear(this->p);
-	mpz_clear(this->q);
-	mpz_clear(this->d);
-	mpz_clear(this->exp1);
-	mpz_clear(this->exp2);
-	mpz_clear(this->coeff);
-	free(this->keyid.ptr);
+	mpz_clear_randomized(this->n);
+	mpz_clear_randomized(this->e);
+	mpz_clear_randomized(this->p);
+	mpz_clear_randomized(this->q);
+	mpz_clear_randomized(this->d);
+	mpz_clear_randomized(this->exp1);
+	mpz_clear_randomized(this->exp2);
+	mpz_clear_randomized(this->coeff);
+	chunk_free_randomized(&this->keyid);
 	free(this);
 }
 
@@ -562,18 +562,19 @@ static private_rsa_private_key_t *rsa_private_key_create_empty(void)
 	private_rsa_private_key_t *this = malloc_thing(private_rsa_private_key_t);
 	
 	/* public functions */
+	this->public.pkcs1_decrypt = (status_t (*) (rsa_private_key_t*,chunk_t,chunk_t*))pkcs1_decrypt;
 	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
-	this->public.get_key = (status_t (*) (rsa_private_key_t*,chunk_t*))get_key;
-	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
-	this->public.get_public_key = (rsa_public_key_t *(*) (rsa_private_key_t*))get_public_key;
+	this->public.pkcs1_write = (bool (*) (rsa_private_key_t*,const char*,bool))pkcs1_write;
+	this->public.get_public_key = (rsa_public_key_t* (*) (rsa_private_key_t*))get_public_key;
 	this->public.belongs_to = (bool (*) (rsa_private_key_t*,rsa_public_key_t*))belongs_to;
-	this->public.clone = (rsa_private_key_t*(*)(rsa_private_key_t*))_clone;
 	this->public.destroy = (void (*) (rsa_private_key_t*))destroy;
 	
 	/* private functions */
 	this->rsadp = rsadp;
 	this->rsasp1 = rsadp; /* same algorithm */
 	this->compute_prime = compute_prime;
+	
+	this->keyid = chunk_empty;
 	
 	return this;
 }
@@ -613,9 +614,7 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	/* Swapping Primes so p is larger then q */
 	if (mpz_cmp(p, q) < 0)
 	{
-		mpz_set(t, p);
-		mpz_set(p, q);
-		mpz_set(q, t);
+		mpz_swap(p, q);
 	}
 	
 	mpz_mul(n, p, q);						/* n = p*q */
@@ -645,9 +644,9 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 		mpz_add(coeff, coeff, p);
 	}
 
-	mpz_clear(q1);
-	mpz_clear(m);
-	mpz_clear(t);
+	mpz_clear_randomized(q1);
+	mpz_clear_randomized(m);
+	mpz_clear_randomized(t);
 
 	/* apply values */
 	*(this->p) = *p;
@@ -733,7 +732,7 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 		objectID++;
 	}
 	
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
 
 	/* form the keyid as a SHA-1 hash of a publicKeyInfo object */
 	{
@@ -769,6 +768,6 @@ rsa_private_key_t *rsa_private_key_create_from_file(char *filename, chunk_t *pas
 		return NULL;
 
 	key = rsa_private_key_create_from_chunk(chunk);
-	free(chunk.ptr);
+	chunk_free_randomized(&chunk);
 	return key;
 }

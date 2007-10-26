@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: certs.h,v 1.7 2005/11/06 22:55:41 as Exp $
+ * RCSID $Id: certs.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #ifndef _CERTS_H

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: plutomain.c,v 1.16 2005/09/25 21:30:52 as Exp $
+ * RCSID $Id: plutomain.c 3253 2007-10-06 21:39:00Z andreas $
  */
 
 #include <stdio.h>
@@ -619,8 +619,8 @@ main(int argc, char **argv)
     /* drop unneeded capabilities and change UID/GID */
     hdr.version = _LINUX_CAPABILITY_VERSION;
     hdr.pid = 0;
-    data.effective = data.permitted = 1<<CAP_NET_ADMIN | 1<<CAP_NET_BIND_SERVICE;
-    data.inheritable = 0;
+    data.inheritable = data.effective = data.permitted = 
+				1<<CAP_NET_ADMIN | 1<<CAP_NET_BIND_SERVICE;
 
     prctl(PR_SET_KEEPCAPS, 1);
 

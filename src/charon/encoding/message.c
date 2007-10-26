@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -149,9 +150,15 @@ static payload_rule_t ike_auth_i_payload_rules[] = {
 	{CERTIFICATE,0,1,TRUE,FALSE},
 	{CERTIFICATE_REQUEST,0,1,TRUE,FALSE},
 	{ID_RESPONDER,0,1,TRUE,FALSE},
+#ifdef P2P
+	{SECURITY_ASSOCIATION,0,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
+#else
 	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE,FALSE},
+#endif /* P2P */
 	{CONFIGURATION,0,1,TRUE,FALSE},
 	{VENDOR_ID,0,10,TRUE,FALSE},
 };
@@ -222,6 +229,24 @@ static payload_rule_t create_child_sa_r_payload_rules[] = {
 	{VENDOR_ID,0,10,TRUE,FALSE},
 };
 
+#ifdef P2P
+/**
+ * Message rule for P2P_CONNECT from initiator.
+ */
+static payload_rule_t p2p_connect_i_payload_rules[] = {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
+	{ID_PEER,1,1,TRUE,FALSE},
+	{VENDOR_ID,0,10,TRUE,FALSE}
+};
+
+/**
+ * Message rule for P2P_CONNECT from responder.
+ */
+static payload_rule_t p2p_connect_r_payload_rules[] = {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
+	{VENDOR_ID,0,10,TRUE,FALSE}
+};
+#endif /* P2P */
 
 /**
  * Message rules, defines allowed payloads.
@@ -235,6 +260,10 @@ static message_rule_t message_rules[] = {
 	{INFORMATIONAL,FALSE,TRUE,(sizeof(informational_r_payload_rules)/sizeof(payload_rule_t)),informational_r_payload_rules},
 	{CREATE_CHILD_SA,TRUE,TRUE,(sizeof(create_child_sa_i_payload_rules)/sizeof(payload_rule_t)),create_child_sa_i_payload_rules},
 	{CREATE_CHILD_SA,FALSE,TRUE,(sizeof(create_child_sa_r_payload_rules)/sizeof(payload_rule_t)),create_child_sa_r_payload_rules},
+#ifdef P2P
+	{P2P_CONNECT,TRUE,TRUE,(sizeof(p2p_connect_i_payload_rules)/sizeof(payload_rule_t)),p2p_connect_i_payload_rules},
+	{P2P_CONNECT,FALSE,TRUE,(sizeof(p2p_connect_r_payload_rules)/sizeof(payload_rule_t)),p2p_connect_r_payload_rules},
+#endif /* P2P */	
 };
 
 
@@ -443,6 +472,14 @@ static void set_exchange_type (private_message_t *this,exchange_type_t exchange_
 static exchange_type_t get_exchange_type (private_message_t *this)
 {
 	return this->exchange_type;
+}
+
+/**
+ * Implementation of message_t.get_first_payload_type.
+ */
+static payload_type_t get_first_payload_type (private_message_t *this)
+{
+	return this->first_payload;
 }
 
 /**
@@ -668,6 +705,13 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 	if (!this->message_rule->encrypted_content)
 	{
 		DBG2(DBG_ENC, "message doesn't have to be encrypted");
+		/* message contains no content to encrypt */
+		return SUCCESS;
+	}
+	
+	if (!crypter || !signer)
+	{
+		DBG2(DBG_ENC, "no crypter or signer specified, do not encrypt message");
 		/* message contains no content to encrypt */
 		return SUCCESS;
 	}
@@ -1255,6 +1299,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_ike_sa_id = (ike_sa_id_t*(*)(message_t*))get_ike_sa_id;
 	this->public.set_exchange_type = (void(*)(message_t*, exchange_type_t))set_exchange_type;
 	this->public.get_exchange_type = (exchange_type_t(*)(message_t*))get_exchange_type;
+	this->public.get_first_payload_type = (payload_type_t(*)(message_t*))get_first_payload_type;
 	this->public.set_request = (void(*)(message_t*, bool))set_request;
 	this->public.get_request = (bool(*)(message_t*))get_request;
 	this->public.add_payload = (void(*)(message_t*,payload_t*))add_payload;

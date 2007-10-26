@@ -368,7 +368,7 @@ static ike_sa_t *checkout_new(private_ike_sa_manager_t* this, bool initiator)
 }
 
 /**
- * Implementation of of ike_sa_manager.checkout_by_id.
+ * Implementation of of ike_sa_manager.checkout_by_message.
  */
 static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 									 message_t *message)
@@ -483,7 +483,7 @@ static ike_sa_t* checkout_by_message(private_ike_sa_manager_t* this,
 }
 
 /**
- * Implementation of of ike_sa_manager.checkout_by_id.
+ * Implementation of of ike_sa_manager.checkout_by_peer.
  */
 static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
 								  host_t *my_host, host_t *other_host,
@@ -542,6 +542,7 @@ static ike_sa_t* checkout_by_peer(private_ike_sa_manager_t *this,
 				 my_host, my_id, other_host, other_id);
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
+			break;
 		}
 	}
 	iterator->destroy(iterator);

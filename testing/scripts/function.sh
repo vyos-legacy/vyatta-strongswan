@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: function.sh,v 1.3 2005/02/16 22:20:52 as Exp $
+# RCSID $Id: function.sh 3273 2007-10-08 20:18:34Z andreas $
 
 
 ############################################
@@ -23,6 +23,9 @@
 
 function cecho {
     echo -e "\033[1;31m$1\033[0m"
+}
+function cgecho {
+    echo -e "\033[1;32m$1\033[0m"
 }
 
 function cecho-n {

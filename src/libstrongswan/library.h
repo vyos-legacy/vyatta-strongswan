@@ -18,6 +18,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: library.h 3255 2007-10-07 13:35:42Z andreas $
  */
 
 #ifndef LIBRARY_H_
@@ -26,13 +28,14 @@
 /**
  * @defgroup libstrongswan libstrongswan
  *
- * libstrongswan: library with various crypto related things.
+ * libstrongswan: library with various cryptographic, X.509 trust chain and
+ * identity management functions.
  */
 
 /**
  * @defgroup asn1 asn1
  *
- * ASN1 definitions, parser and generator functions.
+ * ASN.1 definitions, parser and generator functions.
  *
  * @ingroup libstrongswan
  */
@@ -40,7 +43,7 @@
 /**
  * @defgroup crypto crypto
  *
- * Crypto algorithms of different kind.
+ * Various cryptographic algorithms.
  *
  * @ingroup libstrongswan
  */
@@ -89,6 +92,14 @@
  */
 
 /**
+ * @defgroup fips fips
+ *
+ * Code integrity check of libstrongswan
+ *
+ * @ingroup libstrongswan
+ */
+
+/**
  * @defgroup utils utils
  *
  * Generic helper classes.
@@ -120,6 +131,11 @@
 #define streq(x,y) (strcmp(x, y) == 0)
 
 /**
+ * Macro compares two strings for equality
+ */
+#define strneq(x,y,len) (strncmp(x, y, len) == 0)
+
+/**
  * Macro compares two binary blobs for equality
  */
 #define memeq(x,y,len) (memcmp(x, y, len) == 0)
@@ -135,9 +151,19 @@
 #define min(x,y) ((x) < (y) ? (x):(y))
 
 /**
- * Call destructor of a object if object != NULL
+ * Call destructor of an object, if object != NULL
  */
 #define DESTROY_IF(obj) if (obj) obj->destroy(obj)
+
+/**
+ * Call offset destructor of an object, if object != NULL
+ */
+#define DESTROY_OFFSET_IF(obj, offset) if (obj) obj->destroy_offset(obj, offset);
+
+/**
+ * Call function destructor of an object, if object != NULL
+ */
+#define DESTROY_FUNCTION_IF(obj, fn) if (obj) obj->destroy_function(obj, fn);
 
 /**
  * Debug macro to follow control flow

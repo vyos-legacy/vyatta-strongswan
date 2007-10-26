@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -139,6 +140,52 @@ struct private_iterator_t {
 	 */
 	void *hook_param;
 };
+
+typedef struct private_enumerator_t private_enumerator_t;
+
+/**
+ * linked lists enumerator implementation
+ */
+struct private_enumerator_t {
+
+	/**
+	 * implements enumerator interface
+	 */
+	enumerator_t enumerator;
+	
+	/**
+	 * next item to enumerate
+	 */
+	element_t *next;
+};
+
+/**
+ * Implementation of private_enumerator_t.enumerator.enumerate.
+ */
+static bool enumerate(private_enumerator_t *this, void **item)
+{
+	if (this->next == NULL)
+	{
+		return FALSE;
+	}
+	*item = this->next->value;
+	this->next = this->next->next;
+	return TRUE;
+}
+
+/**
+ * Implementation of linked_list_t.create_enumerator.
+ */
+static enumerator_t* create_enumerator(private_linked_list_t *this)
+{
+	private_enumerator_t *enumerator = malloc_thing(private_enumerator_t);
+	
+	enumerator->enumerator.enumerate = (void*)enumerate;
+	enumerator->enumerator.destroy = (void*)free;
+	enumerator->next = this->first;
+	
+	return &enumerator->enumerator;
+}
 
 /**
  * Implementation of iterator_t.get_count.
@@ -630,9 +677,9 @@ static status_t get_last(private_linked_list_t *this, void **item)
 }
 
 /**
- * Implementation of linked_list_t.invoke.
+ * Implementation of linked_list_t.invoke_offset.
  */
-static void invoke(private_linked_list_t *this, size_t offset)
+static void invoke_offset(private_linked_list_t *this, size_t offset)
 {
 	element_t *current = this->first;
 	
@@ -645,13 +692,62 @@ static void invoke(private_linked_list_t *this, size_t offset)
 }
 
 /**
+ * Implementation of linked_list_t.invoke_function.
+ */
+static void invoke_function(private_linked_list_t *this, void(*fn)(void*))
+{
+	element_t *current = this->first;
+	
+	while (current)
+	{
+		fn(current->value);
+		current = current->next;
+	}
+}
+
+/**
+ * Implementation of linked_list_t.clone_offset
+ */
+static linked_list_t *clone_offset(private_linked_list_t *this, size_t offset)
+{
+	linked_list_t *clone = linked_list_create();
+	element_t *current = this->first;
+	
+	while (current)
+	{
+		void* (**method)(void*) = current->value + offset;
+		clone->insert_last(clone, (*method)(current->value));
+		current = current->next;
+	}
+	
+	return clone;
+}
+
+/**
+ * Implementation of linked_list_t.clone_function
+ */
+static linked_list_t *clone_function(private_linked_list_t *this, void* (*fn)(void*))
+{
+	linked_list_t *clone = linked_list_create();
+	element_t *current = this->first;
+	
+	while (current)
+	{
+		clone->insert_last(clone, fn(current->value));
+		current = current->next;
+	}
+	
+	return clone;
+}
+
+/**
  * Implementation of linked_list_t.destroy.
  */
 static void destroy(private_linked_list_t *this)
 {
 	void *value;
 	/* Remove all list items before destroying list */
-	while (this->public.remove_first(&(this->public), &value) == SUCCESS)
+	while (remove_first(this, &value) == SUCCESS)
 	{
 		/* values are not destroyed so memory leaks are possible
 		 * if list is not empty when deleting */
@@ -744,6 +840,7 @@ linked_list_t *linked_list_create()
 	this->public.get_count = (int (*) (linked_list_t *)) get_count;
 	this->public.create_iterator = (iterator_t * (*) (linked_list_t *,bool))create_iterator;
 	this->public.create_iterator_locked = (iterator_t * (*) (linked_list_t *,pthread_mutex_t*))create_iterator_locked;
+	this->public.create_enumerator = (enumerator_t*(*)(linked_list_t*))create_enumerator;
 	this->public.get_first = (status_t (*) (linked_list_t *, void **item))get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *, void **item))get_last;
 	this->public.insert_first = (void (*) (linked_list_t *, void *item))insert_first;
@@ -753,7 +850,10 @@ linked_list_t *linked_list_create()
 	this->public.insert_at_position = (status_t (*) (linked_list_t *,size_t, void *))insert_at_position;
 	this->public.remove_at_position = (status_t (*) (linked_list_t *,size_t, void **))remove_at_position;
 	this->public.get_at_position = (status_t (*) (linked_list_t *,size_t, void **))get_at_position;
-	this->public.invoke = (void (*)(linked_list_t*,size_t))invoke;
+	this->public.invoke_offset = (void (*)(linked_list_t*,size_t))invoke_offset;
+	this->public.invoke_function = (void (*)(linked_list_t*,void(*)(void*)))invoke_function;
+	this->public.clone_offset = (linked_list_t * (*)(linked_list_t*,size_t))clone_offset;
+	this->public.clone_function = (linked_list_t * (*)(linked_list_t*,void*(*)(void*)))clone_function;
 	this->public.destroy = (void (*) (linked_list_t *))destroy;
 	this->public.destroy_offset = (void (*) (linked_list_t *,size_t))destroy_offset;
 	this->public.destroy_function = (void (*)(linked_list_t*,void(*)(void*)))destroy_function;

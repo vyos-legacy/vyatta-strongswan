@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: start-umls,v 1.5 2005/08/30 22:13:12 as Exp $
+# RCSID $Id: start-umls 3273 2007-10-08 20:18:34Z andreas $
 
 DIR=`dirname $0`
 
@@ -62,7 +62,7 @@ do
 	    ubda=$UMLHOSTFS \
 	    \$SWITCH_${host} \
 	    mem=${MEM}M con=pty con0=fd:0,fd:1"
-        cecho "done"
+        cgecho "done"
     fi
 done
 
@@ -105,7 +105,7 @@ do
 	cecho "exit"
 	exit 1
     else
-	cecho "up"
+	cgecho "up"
     fi
 done
 

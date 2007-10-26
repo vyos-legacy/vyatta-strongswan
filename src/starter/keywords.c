@@ -31,6 +31,7 @@ error "gperf generated tables don't work with this execution character set. Plea
 
 
 /* strongSwan keywords
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -44,7 +45,7 @@ error "gperf generated tables don't work with this execution character set. Plea
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt,v 1.6 2006/04/17 10:30:27 as Exp $
+ * RCSID $Id: keywords.txt 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <string.h>
@@ -56,12 +57,12 @@ struct kw_entry {
     kw_token_t token;
 };
 
-#define TOTAL_KEYWORDS 93
+#define TOTAL_KEYWORDS 98
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 17
 #define MIN_HASH_VALUE 15
-#define MAX_HASH_VALUE 209
-/* maximum key range = 195, duplicates = 0 */
+#define MAX_HASH_VALUE 236
+/* maximum key range = 222, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -77,32 +78,32 @@ hash (str, len)
 {
   static const unsigned char asso_values[] =
     {
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210,  40,
-        5, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210,  90, 210,  25,
-       75,   5,  85,   0,  95,   0, 210,  55,   0,  25,
-        0,  70,  20, 210,  15,  70,  40,  20,   5, 210,
-        5,  65,   0, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210, 210, 210, 210, 210,
-      210, 210, 210, 210, 210, 210
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237,  40,
+        5, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237,  90, 237,  25,
+       75,   5,  85,   0,  95,   0, 237,  55,   0,  45,
+        0,  70,  20, 237,  15,  70,  40,  20,   5, 237,
+        5,  65,   0, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237, 237, 237, 237, 237,
+      237, 237, 237, 237, 237, 237
     };
   return len + asso_values[(unsigned char)str[1]] + asso_values[(unsigned char)str[0]] + asso_values[(unsigned char)str[len - 1]];
 }
@@ -130,7 +131,8 @@ static const struct kw_entry wordlist[] =
     {""},
     {"leftnexthop",       KW_LEFTNEXTHOP},
     {"leftsourceip",      KW_LEFTSOURCEIP},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {"p2p_mediation",     KW_P2P_MEDIATION},
+    {""}, {""}, {""}, {""}, {""}, {""},
     {"rightnatip",        KW_RIGHTNATIP},
     {"crluri",            KW_CRLURI},
     {"rightnexthop",      KW_RIGHTNEXTHOP},
@@ -186,11 +188,13 @@ static const struct kw_entry wordlist[] =
     {"ocspuri",           KW_OCSPURI},
     {"nat_traversal",     KW_NAT_TRAVERSAL},
     {"dpdaction",         KW_DPDACTION},
-    {"modeconfig",        KW_MODECONFIG},
+    {"p2p_mediated_by",   KW_P2P_MEDIATED_BY},
     {"overridemtu",       KW_OVERRIDEMTU},
     {""},
     {"ocspuri2",          KW_OCSPURI2},
-    {""}, {""}, {""},
+    {""},
+    {"p2p_peerid",        KW_P2P_PEERID},
+    {""},
     {"rightca",           KW_RIGHTCA},
     {"prepluto",          KW_PREPLUTO},
     {"type",              KW_TYPE},
@@ -202,7 +206,10 @@ static const struct kw_entry wordlist[] =
     {"reauth",            KW_REAUTH},
     {""},
     {"ldaphost",          KW_LDAPHOST},
-    {""}, {""}, {""}, {""},
+    {""},
+    {"modeconfig",        KW_MODECONFIG},
+    {"mobike",	           KW_MOBIKE},
+    {""},
     {"fragicmp",          KW_FRAGICMP},
     {""}, {""},
     {"charondebug",       KW_CHARONDEBUG},
@@ -245,7 +252,11 @@ static const struct kw_entry wordlist[] =
     {"xauth",             KW_XAUTH},
     {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
     {""}, {""}, {""}, {""},
-    {"auth",              KW_AUTH}
+    {"auth",              KW_AUTH},
+    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {"forceencaps",       KW_FORCEENCAPS}
   };
 
 #ifdef __GNUC__

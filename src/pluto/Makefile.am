@@ -42,7 +42,6 @@ modecfg.c modecfg.h \
 mp_defs.c mp_defs.h \
 nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
-oid.c oid.h \
 packet.c packet.h \
 pem.c pem.h \
 pgp.c pgp.h \
@@ -68,8 +67,14 @@ rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h
 
+LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
+LIBFREESWANDIR=$(top_srcdir)/src/libfreeswan
+LIBCRYPTODIR=$(top_srcdir)/src/libcrypto
+
+
 INCLUDES = \
 -I${linuxdir} \
+-I$(LIBSTRONGSWANDIR)\
 -I$(top_srcdir)/src/libfreeswan \
 -I$(top_srcdir)/src/libcrypto \
 -I$(top_srcdir)/src/whack
@@ -83,28 +88,28 @@ AM_CFLAGS = \
 -DPLUTO -DKLIPS -DDEBUG -DTHREADS
 
 pluto_LDADD = \
-$(top_srcdir)/src/libfreeswan/libfreeswan.a \
-$(top_srcdir)/src/libcrypto/libcrypto.a \
+oid.o \
+$(LIBFREESWANDIR)/libfreeswan.a \
+$(LIBCRYPTODIR)/libcrypto.a \
 -lgmp -lresolv -lpthread -ldl
 
 _pluto_adns_LDADD = \
-$(top_srcdir)/src/libfreeswan/libfreeswan.a \
+$(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv -ldl
 
 dist_man_MANS = pluto.8 ipsec.secrets.5
-EXTRA_DIST = oid.pl oid.txt
-BUILT_SOURCES = oid.c oid.h
-MAINTAINERCLEANFILES = oid.c oid.h
 
-oid.c:	oid.txt oid.pl
-	$(PERL) oid.pl
-
-oid.h:	oid.txt oid.pl
-	$(PERL) oid.pl
+oid.o :	$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
+		$(COMPILE) -c -o $@ $<
 
 # This compile option activates the sending of a strongSwan VID
 if USE_VENDORID
   AM_CFLAGS += -DVENDORID
+endif
+
+# This compile option activates the sending of the XAUTH VID
+if USE_XAUTH_VID
+  AM_CFLAGS += -DXAUTH_VID
 endif
 
 # This compile option activates the support of the Cisco VPN client

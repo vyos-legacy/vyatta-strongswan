@@ -1,5 +1,5 @@
 .TH IPSEC.CONF 5 "27 Jun 2007"
-.\" RCSID $Id: ipsec.conf.5,v 1.2 2006/01/22 15:33:46 as Exp $
+.\" RCSID $Id: ipsec.conf.5 3267 2007-10-08 19:57:54Z andreas $
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
@@ -365,6 +365,11 @@ for the connection, e.g.
 (encryption-integrity-[dh-group]). If dh-group is specified, CHILD_SA setup
 and rekeying include a separate diffe hellman exchange (IKEv2 only).
 .TP
+.B force_encap
+Force UDP encapsulation for ESP packets even if no NAT situation is detected.
+This may help to hurdle restrictive firewalls. To enforce the peer to 
+encapsulate packets, NAT detection payloads are faked (IKEv2 only).
+.TP
 .B ike
 IKE/ISAKMP SA encryption/authentication algorithm to be used, e.g.
 .B aes128-sha1-modp2048
@@ -653,6 +658,16 @@ Relevant only locally, other end need not agree on it. IKEv2 uses the updown
 script to insert firewall rules only. Routing is not support and will be
 implemented directly into Charon.
 .TP
+.B mobike
+enables the IKEv2 MOBIKE protocol defined by RFC 4555. Accepted values are
+.B yes
+(the default) and
+.BR no .
+If set to
+.BR no ,
+the IKEv2 charon daemon will not actively propose MOBIKE but will still
+accept and support the protocol as a responder.
+.TP
 .B modeconfig
 defines which mode is used to assign a virtual IP.
 Accepted values are
@@ -764,6 +779,36 @@ Accepted values are
 and
 .B client
 (the default).
+
+.SS "CONN PARAMETERS: PEER-TO-PEER"
+The following parameters are relevant to Peer-to-Peer NAT-T operation
+only.
+.TP 14
+.B p2p_mediation
+whether this connection is a P2P mediation connection, ie. whether this
+connection is used to mediate other connections.  Mediation connections
+create no child SA. Acceptable values are
+.B no
+(the default) and
+.BR yes .
+.TP
+.B p2p_mediated_by
+the name of the connection to mediate this connection through.  If given,
+the connection will be mediated through the named mediation connection.
+The mediation connection must set
+.BR p2p_mediation=yes .
+.TP
+.B p2p_peerid
+ID as which the peer is known to the mediation server, ie. which the other
+end of this connection uses as its
+.B leftid
+on its connection to the mediation server.  This is the ID we request the
+mediation server to mediate us with.  If
+.B p2p_peerid
+is not given, the
+.B rightid
+of this connection will be used as peer ID.
+
 .SH "CA SECTIONS"
 This are optional sections that can be used to assign special
 parameters to a Certification Authority (CA). These parameters are not 
@@ -900,6 +945,7 @@ Accepted values are
 and
 .B no
 (the default).
+.TP
 .B nocrsend
 no certificate request payloads will be sent.
 Accepted values are

@@ -149,10 +149,18 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 	
 	nonce_payload = nonce_payload_create();
 	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
-	message->add_payload(message, (payload_t*)nonce_payload);
-	
 	ke_payload = ke_payload_create_from_diffie_hellman(this->dh);
-	message->add_payload(message, (payload_t*)ke_payload);
+	
+	if (this->old_sa)
+	{	/* payload order differs if we are rekeying */
+		message->add_payload(message, (payload_t*)nonce_payload);
+		message->add_payload(message, (payload_t*)ke_payload);
+	}
+	else
+	{
+		message->add_payload(message, (payload_t*)ke_payload);
+		message->add_payload(message, (payload_t*)nonce_payload);
+	}
 }
 
 /**
@@ -218,7 +226,8 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	status_t status;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	SIG(IKE_UP_START, "initiating IKE_SA to %H",
+	SIG(IKE_UP_START, "initiating IKE_SA '%s' to %H",
+		this->ike_sa->get_name(this->ike_sa),
 		this->config->get_other_host(this->config));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	

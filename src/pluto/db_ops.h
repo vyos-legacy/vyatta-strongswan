@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: db_ops.h,v 1.3 2004/09/17 12:37:37 as Exp $
+ * RCSID $Id: db_ops.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #ifndef _DB_OPS_H

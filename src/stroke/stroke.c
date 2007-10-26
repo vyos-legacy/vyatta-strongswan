@@ -1,5 +1,7 @@
 /* Stroke for charon is the counterpart to whack from pluto
- * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2006 Martin Willi
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -10,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: stroke.c 3271 2007-10-08 20:12:25Z andreas $
  */
 
 #include <stdlib.h>
@@ -109,6 +113,8 @@ static int add_connection(char *name,
 	msg.add_conn.auth_method = 2;
 	msg.add_conn.eap_type = 0;
 	msg.add_conn.mode = 1;
+	msg.add_conn.mobike = 1;
+	msg.add_conn.force_encap = 0;
 	
 	msg.add_conn.rekey.reauth = 0;
 	msg.add_conn.rekey.ipsec_lifetime = 0;
@@ -122,6 +128,10 @@ static int add_connection(char *name,
 	
 	msg.add_conn.dpd.delay = 0;
 	msg.add_conn.dpd.action = 1;
+	
+	msg.add_conn.p2p.mediation = 0;
+	msg.add_conn.p2p.mediated_by = NULL;
+	msg.add_conn.p2p.peerid = NULL;
 	
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
@@ -239,6 +249,7 @@ static int list(stroke_keyword_t kw, int utc)
 }
 
 static int reread_flags[] = {
+	REREAD_SECRETS,
 	REREAD_CACERTS,
 	REREAD_OCSPCERTS,
 	REREAD_AACERTS,
@@ -316,10 +327,14 @@ static void exit_usage(char *error)
 	printf("           LEVEL is -1|0|1|2|3|4\n");
 	printf("  Show connection status:\n");
 	printf("    stroke status\n");
-	printf("  Show list of locally loaded certificates and crls:\n");
-	printf("    stroke listcerts|listcacerts|listocspcerts|listcainfos|listcrls|listocsp|listall\n");
-	printf("  Reload ca certificates and crls:\n");
-	printf("    stroke rereadcacerts|rereadcrls|rereadall\n");
+	printf("  Show list of authority and attribute certificates:\n");
+	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
+	printf("  Show list of end entity certificates, ca info records  and crls:\n");
+	printf("    stroke listcerts|listcainfos|listcrls|listall\n");
+	printf("  Reload authority and attribute certificates:\n");
+	printf("    stroke rereadcacerts|rereadocspcerts|rereadaacerts|rereadacerts\n");
+	printf("  Reload secrets and crls:\n");
+	printf("    stroke rereadsecrets|rereadcrls|rereadall\n");
 	printf("  Purge ocsp cache entries:\n");
 	printf("    stroke purgeocsp\n");
 	exit_error(error);
@@ -405,13 +420,19 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_CERTS:
 		case STROKE_LIST_CACERTS:
 		case STROKE_LIST_OCSPCERTS:
+		case STROKE_LIST_AACERTS:
+		case STROKE_LIST_ACERTS:
 		case STROKE_LIST_CAINFOS:
 		case STROKE_LIST_CRLS:
 		case STROKE_LIST_OCSP:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;
+		case STROKE_REREAD_SECRETS:
 		case STROKE_REREAD_CACERTS:
+		case STROKE_REREAD_OCSPCERTS:
+		case STROKE_REREAD_AACERTS:
+		case STROKE_REREAD_ACERTS:
 		case STROKE_REREAD_CRLS:
 		case STROKE_REREAD_ALL:
 			res = reread(token->kw);

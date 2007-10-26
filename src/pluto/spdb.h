@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: spdb.h,v 1.4 2006/04/22 21:59:20 as Exp $
+ * RCSID $Id: spdb.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #ifndef _SPDB_H

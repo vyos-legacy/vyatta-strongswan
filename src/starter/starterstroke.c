@@ -1,5 +1,7 @@
 /* Stroke for charon is the counterpart to whack from pluto
- * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2006 Martin Willi
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -11,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterstroke.c $
+ * RCSID $Id: starterstroke.c 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <sys/types.h>
@@ -227,10 +229,15 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 		msg.add_conn.rekey.tries = conn->sa_keying_tries;
 		msg.add_conn.rekey.fuzz = conn->sa_rekey_fuzz;
 	}
+	msg.add_conn.mobike = conn->policy & POLICY_MOBIKE;
+	msg.add_conn.force_encap = conn->policy & POLICY_FORCE_ENCAP;
 	msg.add_conn.algorithms.ike = push_string(&msg, conn->ike);
 	msg.add_conn.algorithms.esp = push_string(&msg, conn->esp);
 	msg.add_conn.dpd.delay = conn->dpd_delay;
 	msg.add_conn.dpd.action = conn->dpd_action;
+	msg.add_conn.p2p.mediation = conn->p2p_mediation;
+	msg.add_conn.p2p.mediated_by = push_string(&msg, conn->p2p_mediated_by);
+	msg.add_conn.p2p.peerid = push_string(&msg, conn->p2p_peerid);
 
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->left);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->right);
