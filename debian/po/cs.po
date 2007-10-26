@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: strongswan\n"
 "Report-Msgid-Bugs-To: rmayr@debian.org\n"
-"POT-Creation-Date: 2007-06-03 21:36+0100\n"
+"POT-Creation-Date: 2007-07-05 01:24+0100\n"
 "PO-Revision-Date: 2007-07-07 21:01+0200\n"
 "Last-Translator: Miroslav Kure <kurem@debian.cz>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -75,8 +75,8 @@ msgid ""
 msgstr ""
 "Jestliže máte strom /usr připojen skrz NFS a nepoužíváte síťovou kartu "
 "PCMCIA, musíte spustit strongSwan po NFS, aby byly všechny potřebné soubory "
-"dostupné. V tomto případě na otázku odpovězte „po NFS“. Uvědomte si "
-"prosím, že v tomto případě nemůže být NFS svazek /usr chráněn pomocí IPSec."
+"dostupné. V tomto případě na otázku odpovězte „po NFS“. Uvědomte si prosím, "
+"že v tomto případě nemůže být NFS svazek /usr chráněn pomocí IPSec."
 
 #. Type: select
 #. Description
@@ -88,9 +88,9 @@ msgid ""
 "from a locally running DNS server with DNSSec support."
 msgstr ""
 "Jestliže používáte PCMCIA síťovou kartu pro vaše IPSec připojení, pak je "
-"jedinou možností jej spustit po PCMCIA službách. V tom případě odpovězte "
-"„po PCMCIA“. Toto je také správná odpověď, pokud chcete získat klíče z "
-"lokálního DNS serveru s podporou DNSSec."
+"jedinou možností jej spustit po PCMCIA službách. V tom případě odpovězte „po "
+"PCMCIA“. Toto je také správná odpověď, pokud chcete získat klíče z lokálního "
+"DNS serveru s podporou DNSSec."
 
 #. Type: boolean
 #. Description
@@ -127,8 +127,8 @@ msgid ""
 "IKEv1 and IKEv2. Do you want to start the \"pluto\" daemon for IKEv1 support "
 "when strongSwan is started?"
 msgstr ""
-"strongSwan podporuje protokol Internet Key Exchange ve verzích 1 a 2 "
-"(IKEv1, IKEv2). Přejete si při startu strongSwanu spustit daemona „pluto“ "
+"strongSwan podporuje protokol Internet Key Exchange ve verzích 1 a 2 (IKEv1, "
+"IKEv2). Přejete si při startu strongSwanu spustit daemona „pluto“ "
 "podporujícího IKEv1?"
 
 #. Type: boolean
@@ -145,8 +145,8 @@ msgid ""
 "IKEv1 and IKEv2. Do you want to start the \"charon\" daemon for IKEv2 "
 "support when strongSwan is started?"
 msgstr ""
-"strongSwan podporuje protokol Internet Key Exchange ve verzích 1 a 2 "
-"(IKEv1, IKEv2). Přejete si při startu strongSwanu spustit daemona „charon“ "
+"strongSwan podporuje protokol Internet Key Exchange ve verzích 1 a 2 (IKEv1, "
+"IKEv2). Přejete si při startu strongSwanu spustit daemona „charon“ "
 "podporujícího IKEv2?"
 
 #. Type: boolean
@@ -270,8 +270,12 @@ msgstr "Jméno souboru s certifikátem X509 ve formátu PEM:"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:8001
+#, fuzzy
+#| msgid ""
+#| "Please enter the full location of the file containing your X509  "
+#| "certificate in PEM format."
 msgid ""
-"Please enter the full location of the file containing your X509  certificate "
+"Please enter the full location of the file containing your X509 certificate "
 "in PEM format."
 msgstr ""
 "Zadejte prosím absolutní cestu k souboru obsahujícímu váš certifikát X509 ve "
@@ -304,8 +308,14 @@ msgstr "Délka vytvořeného RSA klíče (v bitech):"
 #. Type: string
 #. Description
 #: ../strongswan.templates.master:10001
+#, fuzzy
+#| msgid ""
+#| "Please enter the length of the created RSA key. it should not be less "
+#| "than 1024 bits because this should be considered unsecure and you will "
+#| "probably not need anything more than 2048 bits because it only slows the "
+#| "authentication process down and is not needed at the moment."
 msgid ""
-"Please enter the length of the created RSA key. it should not be less than "
+"Please enter the length of the created RSA key. It should not be less than "
 "1024 bits because this should be considered unsecure and you will probably "
 "not need anything more than 2048 bits because it only slows the "
 "authentication process down and is not needed at the moment."
@@ -343,10 +353,17 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan.templates.master:11001
+#, fuzzy
+#| msgid ""
+#| "If you do not want to create a self-signed certificate, then this "
+#| "installer will only create the RSA private key and the certificate "
+#| "request and you will have to sign the certificate request with your "
+#| "certificate authority."
 msgid ""
 "If you do not want to create a self-signed certificate, then this installer "
 "will only create the RSA private key and the certificate request and you "
-"will have to sign the certificate request with your certificate authority."
+"will have to get the certificate request signed by your certificate "
+"authority."
 msgstr ""
 "Jestliže nechcete vytvořit certifikát podepsaný sám sebou, vytvoří tento "
 "instalátor jen soukromý RSA klíč a požadavek na certifikát. Vy potom musíte "
@@ -538,9 +555,9 @@ msgstr ""
 "zabezpečených) DNS záznamech. Dokud nebude tato schopnost více rozšířena, "
 "způsobí její aktivace výrazné zpomalení každého nového odchozího spojení. Od "
 "verze 2.0 přichází strongSwan s implicitně zapnutou podporou OE čímž "
-"pravděpodobně zruší vaše probíhající spojení do Internetu (tj. vaši "
-"výchozí cestu - default route) v okamžiku, kdy spustíte pluto (strongSwan "
-"keying démon)."
+"pravděpodobně zruší vaše probíhající spojení do Internetu (tj. vaši výchozí "
+"cestu - default route) v okamžiku, kdy spustíte pluto (strongSwan keying "
+"démon)."
 
 #. Type: boolean
 #. Description
