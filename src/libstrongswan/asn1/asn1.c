@@ -11,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: asn1.c 3299 2007-10-12 19:29:00Z andreas $
  */
 
 #include <stdio.h>
@@ -33,6 +35,13 @@ const chunk_t ASN1_INTEGER_2 = chunk_from_buf(ASN1_INTEGER_2_str);
 
 /* some popular algorithmIdentifiers */
 
+static u_char ASN1_md2_id_str[] = {
+	0x30, 0x0c,
+		  0x06, 0x08,
+				0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x02,
+		  0x05,0x00,
+};
+
 static u_char ASN1_md5_id_str[] = {
 	0x30, 0x0C,
 		  0x06, 0x08,
@@ -45,6 +54,27 @@ static u_char ASN1_sha1_id_str[] = {
 		  0x06, 0x05,
 				0x2B, 0x0E,0x03, 0x02, 0x1A,
 		  0x05, 0x00
+};
+
+static u_char ASN1_sha256_id_str[] = {
+	0x30, 0x0d,
+		  0x06, 0x09,
+				0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,
+		  0x05, 0x00
+};
+
+static u_char ASN1_sha384_id_str[] = {
+	0x30, 0x0d,
+		  0x06, 0x09,
+				0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02,
+		  0x05, 0x00
+};
+
+static u_char ASN1_sha512_id_str[] = {
+	0x30, 0x0d,
+		  0x06, 0x09,
+				0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03,
+		  0x05,0x00
 };
 
 static u_char ASN1_md5WithRSA_id_str[] = {
@@ -68,8 +98,12 @@ static u_char ASN1_rsaEncryption_id_str[] = {
 		  0x05, 0x00
 };
 
-const chunk_t ASN1_md5_id = chunk_from_buf(ASN1_md5_id_str);
-const chunk_t ASN1_sha1_id = chunk_from_buf(ASN1_sha1_id_str);
+const chunk_t ASN1_md2_id    = chunk_from_buf(ASN1_md2_id_str);
+const chunk_t ASN1_md5_id    = chunk_from_buf(ASN1_md5_id_str);
+const chunk_t ASN1_sha1_id   = chunk_from_buf(ASN1_sha1_id_str);
+const chunk_t ASN1_sha256_id = chunk_from_buf(ASN1_sha256_id_str);
+const chunk_t ASN1_sha384_id = chunk_from_buf(ASN1_sha384_id_str);
+const chunk_t ASN1_sha512_id = chunk_from_buf(ASN1_sha512_id_str);
 const chunk_t ASN1_rsaEncryption_id = chunk_from_buf(ASN1_rsaEncryption_id_str);
 const chunk_t ASN1_md5WithRSA_id = chunk_from_buf(ASN1_md5WithRSA_id_str);
 const chunk_t ASN1_sha1WithRSA_id = chunk_from_buf(ASN1_sha1WithRSA_id_str);
@@ -279,6 +313,35 @@ time_t asn1totime(const chunk_t *utctime, asn1_t type)
 }
 
 /**
+ *  Convert a date into ASN.1 UTCTIME or GENERALIZEDTIME format
+ */
+chunk_t timetoasn1(const time_t *time, asn1_t type)
+{
+	int offset;
+	const char *format;
+	char buf[BUF_LEN];
+	chunk_t formatted_time;
+	struct tm *t = gmtime(time);
+	
+	if (type == ASN1_GENERALIZEDTIME)
+	{
+		format = "%04d%02d%02d%02d%02d%02dZ";
+		offset = 1900;
+	}
+	else /* ASN1_UTCTIME */
+	{
+		format = "%02d%02d%02d%02d%02d%02dZ";
+		offset = (t->tm_year < 100)? 0 : -100;
+	}
+	snprintf(buf, BUF_LEN, format, t->tm_year + offset, 
+			 t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	formatted_time.ptr = buf;
+	formatted_time.len = strlen(buf);
+	return asn1_simple_object(type, formatted_time);
+}
+
+
+/**
  * Initializes the internal context of the ASN.1 parser
  */
 void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0,
@@ -396,7 +459,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	
 	if (blob->len < 2)
 	{
-		DBG2("L%d - %s:  ASN.1 object smaller than 2 octets", 
+		DBG1("L%d - %s:  ASN.1 object smaller than 2 octets", 
 					*level, obj.name);
 		return FALSE;
 	}
@@ -405,7 +468,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	
 	if (blob1->len == ASN1_INVALID_LENGTH || blob->len < blob1->len)
 	{
-		DBG2("L%d - %s:  length of ASN.1 object invalid or too large", 
+		DBG1("L%d - %s:  length of ASN.1 object invalid or too large", 
 					*level, obj.name);
 		return FALSE;
 	}
@@ -698,38 +761,11 @@ chunk_t asn1_integer_from_mpz(const mpz_t value)
 {
 	size_t bits = mpz_sizeinbase(value, 2);  /* size in bits */
 	chunk_t n;
+
 	n.len = 1 + bits / 8;  /* size in bytes */	
 	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
-	
-	return asn1_wrap(ASN1_INTEGER, "m", n);
-}
 
-/**
- *  convert a date into ASN.1 UTCTIME or GENERALIZEDTIME format
- */
-chunk_t timetoasn1(const time_t *time, asn1_t type)
-{
-	int offset;
-	const char *format;
-	char buf[32];
-	chunk_t formatted_time;
-	struct tm *t = gmtime(time);
-	
-	if (type == ASN1_GENERALIZEDTIME)
-	{
-		format = "%04d%02d%02d%02d%02d%02dZ";
-		offset = 1900;
-	}
-	else /* ASN1_UTCTIME */
-	{
-		format = "%02d%02d%02d%02d%02d%02dZ";
-		offset = (t->tm_year < 100)? 0 : -100;
-	}
-	snprintf(buf, sizeof(buf), format, t->tm_year + offset, 
-			 t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
-	formatted_time.ptr = buf;
-	formatted_time.len = strlen(buf);
-	return asn1_simple_object(type, formatted_time);
+	return asn1_wrap(ASN1_INTEGER, "m", n);
 }
 
 /**

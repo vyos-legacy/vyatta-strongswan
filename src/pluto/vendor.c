@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: vendor.c,v 1.35 2006/04/12 16:44:28 as Exp $
+ * RCSID $Id: vendor.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <stdlib.h>
@@ -197,15 +197,20 @@ static struct vid_struct _vid_tab[] = {
 	    "\xeb\x4c\x1b\x78\x8a\xfd\x4a\x9c\xb7\x73\x0a\x68", 12},
 
 	/*
-	 * Windows Vista (and Longhorn?)
+	 * Windows Vista (and Windows Server 2008?)
 	 */
 	DEC_MD5_VID(VISTA_AUTHIP, "MS-Negotiation Discovery Capable")
 	DEC_MD5_VID(VISTA_AUTHIP2, "IKE CGA version 1")
+	DEC_MD5_VID(VISTA_AUTHIP3, "MS-MamieExists")
 
 	/*
 	 * strongSwan
 	 */
-	DEC_MD5_VID(STRONGSWAN,       "strongSwan 4.1.4")
+	DEC_MD5_VID(STRONGSWAN,       "strongSwan 4.1.8")
+	DEC_MD5_VID(STRONGSWAN_4_1_7, "strongSwan 4.1.7")
+	DEC_MD5_VID(STRONGSWAN_4_1_6, "strongSwan 4.1.6")
+	DEC_MD5_VID(STRONGSWAN_4_1_5, "strongSwan 4.1.5")
+	DEC_MD5_VID(STRONGSWAN_4_1_4, "strongSwan 4.1.4")
 	DEC_MD5_VID(STRONGSWAN_4_1_3, "strongSwan 4.1.3")
 	DEC_MD5_VID(STRONGSWAN_4_1_2, "strongSwan 4.1.2")
 	DEC_MD5_VID(STRONGSWAN_4_1_1, "strongSwan 4.1.1")
@@ -219,6 +224,8 @@ static struct vid_struct _vid_tab[] = {
 	DEC_MD5_VID(STRONGSWAN_4_0_1, "strongSwan 4.0.1")
 	DEC_MD5_VID(STRONGSWAN_4_0_0, "strongSwan 4.0.0")
 
+	DEC_MD5_VID(STRONGSWAN_2_8_8, "strongSwan 2.8.8")
+	DEC_MD5_VID(STRONGSWAN_2_8_7, "strongSwan 2.8.7")
 	DEC_MD5_VID(STRONGSWAN_2_8_6, "strongSwan 2.8.6")
 	DEC_MD5_VID(STRONGSWAN_2_8_5, "strongSwan 2.8.5")
 	DEC_MD5_VID(STRONGSWAN_2_8_4, "strongSwan 2.8.4")

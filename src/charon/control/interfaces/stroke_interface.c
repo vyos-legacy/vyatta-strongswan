@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2006-2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -38,6 +39,8 @@
 #include <stroke.h>
 #include <daemon.h>
 #include <crypto/x509.h>
+#include <crypto/ietf_attr_list.h>
+#include <crypto/ac.h>
 #include <crypto/ca.h>
 #include <crypto/crl.h>
 #include <control/interface_manager.h>
@@ -48,9 +51,6 @@
 #define IKE_PORT	500
 #define PATH_BUF	256
 #define STROKE_THREADS 3
-
-struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
-
 
 typedef struct private_stroke_interface_t private_stroke_interface_t;
 
@@ -229,14 +229,18 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 {
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
+	peer_cfg_t *mediated_by_cfg = NULL;
 	child_cfg_t *child_cfg;
 	identification_t *my_id, *other_id;
 	identification_t *my_ca = NULL;
 	identification_t *other_ca = NULL;
+	identification_t *peer_id = NULL;
 	bool my_ca_same = FALSE;
 	bool other_ca_same =FALSE;
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	host_t *my_vip = NULL, *other_vip = NULL;
+	linked_list_t *my_groups = linked_list_create();
+	linked_list_t *other_groups = linked_list_create();
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
 	char *interface;
@@ -252,7 +256,12 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
-	
+	pop_string(msg, &msg->add_conn.p2p.mediated_by);
+	pop_string(msg, &msg->add_conn.p2p.peerid);
+	DBG2(DBG_CFG, "  p2p_mediation=%s", msg->add_conn.p2p.mediation ? "yes" : "no");
+	DBG2(DBG_CFG, "  p2p_mediated_by=%s", msg->add_conn.p2p.mediated_by);
+	DBG2(DBG_CFG, "  p2p_peerid=%s", msg->add_conn.p2p.peerid);
+
 	my_host = msg->add_conn.me.address?
 			  host_create_from_string(msg->add_conn.me.address, IKE_PORT) : NULL;
 	if (my_host == NULL)
@@ -319,6 +328,49 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		goto destroy_hosts;
 	}
 	
+#ifdef P2P
+	if (msg->add_conn.p2p.mediation && msg->add_conn.p2p.mediated_by)
+	{
+		DBG1(DBG_CFG, "a mediation connection cannot be a"
+				" mediated connection at the same time, aborting");
+		goto destroy_ids;
+	}
+	
+	if (msg->add_conn.p2p.mediated_by)
+	{
+		mediated_by_cfg = charon->backends->get_peer_cfg_by_name(charon->backends, msg->add_conn.p2p.mediated_by);
+		if (!mediated_by_cfg)
+		{
+			DBG1(DBG_CFG, "mediation connection '%s' not found, aborting",
+					msg->add_conn.p2p.mediated_by);
+			goto destroy_ids;
+		}
+		
+		if (!mediated_by_cfg->is_mediation(mediated_by_cfg))
+		{
+			DBG1(DBG_CFG, "connection '%s' as referred to by '%s' is"
+					"no mediation connection, aborting", 
+					msg->add_conn.p2p.mediated_by, msg->add_conn.name);
+			goto destroy_ids;
+		}
+	}
+	
+	if (msg->add_conn.p2p.peerid)
+	{
+		peer_id = identification_create_from_string(msg->add_conn.p2p.peerid);
+		if (!peer_id)
+		{
+			DBG1(DBG_CFG, "invalid peer ID: %s\n", msg->add_conn.p2p.peerid);
+			goto destroy_ids;
+		}
+	}
+	else
+#endif /* P2P */
+	{
+		// no peer ID supplied, assume right ID
+		peer_id = other_id->clone(other_id);
+	}
+	
 	my_subnet = host_create_from_string(msg->add_conn.me.subnet ?
 					msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
 	if (my_subnet == NULL)
@@ -336,11 +388,11 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		goto destroy_ids;
 	}
 	
-	if (msg->add_conn.me.virtual_ip)
+	if (msg->add_conn.me.virtual_ip && msg->add_conn.me.sourceip)
 	{
 		my_vip = host_create_from_string(msg->add_conn.me.sourceip, 0);
 	}
-	if (msg->add_conn.other.virtual_ip)
+	if (msg->add_conn.other.virtual_ip && msg->add_conn.other.sourceip)
 	{
 		other_vip = host_create_from_string(msg->add_conn.other.sourceip, 0);
 	}
@@ -474,6 +526,11 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 	DBG2(DBG_CFG, "  my ca:   '%D'", my_ca);
 	DBG2(DBG_CFG, "  other ca:'%D'", other_ca);
 
+	if (msg->add_conn.other.groups)
+	{
+		ietfAttr_list_create_from_string(msg->add_conn.other.groups, other_groups);
+	}
+
 	/* have a look for an (almost) identical peer config to reuse */
 	iterator = charon->backends->create_iterator(charon->backends);
 	while (iterator->iterate(iterator, (void**)&peer_cfg))
@@ -484,6 +541,7 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		&&	my_host->equals(my_host, ike_cfg->get_my_host(ike_cfg))
 		&&	other_host->equals(other_host, ike_cfg->get_other_host(ike_cfg))
 		&&	other_ca->equals(other_ca, peer_cfg->get_other_ca(peer_cfg))
+		&&  ietfAttr_list_equals(other_groups, peer_cfg->get_groups(peer_cfg))
 		&&	peer_cfg->get_ike_version(peer_cfg) == (msg->add_conn.ikev2 ? 2 : 1)
 		&&	peer_cfg->get_auth_method(peer_cfg) == msg->add_conn.auth_method
 		&&	peer_cfg->get_eap_type(peer_cfg) == msg->add_conn.eap_type)
@@ -506,11 +564,15 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		other_host->destroy(other_host);
 		other_id->destroy(other_id);
 		other_ca->destroy(other_ca);
+		peer_id->destroy(peer_id);
+		DESTROY_IF(mediated_by_cfg);
+		ietfAttr_list_destroy(my_groups);
+		ietfAttr_list_destroy(other_groups);
 	}
 	else
 	{
 		ike_cfg = ike_cfg_create(msg->add_conn.other.sendcert != CERT_NEVER_SEND,
-								 my_host, other_host);
+								 msg->add_conn.force_encap, my_host, other_host);
 
 		if (msg->add_conn.algorithms.ike)
 		{
@@ -553,13 +615,15 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 		
 		
 		peer_cfg = peer_cfg_create(msg->add_conn.name, msg->add_conn.ikev2 ? 2 : 1,
-					ike_cfg, my_id, other_id, my_ca, other_ca, msg->add_conn.me.sendcert, 
+					ike_cfg, my_id, other_id, my_ca, other_ca, other_groups,
+					msg->add_conn.me.sendcert,
 					msg->add_conn.auth_method, msg->add_conn.eap_type,
 					msg->add_conn.rekey.tries, msg->add_conn.rekey.ike_lifetime,
 					msg->add_conn.rekey.ike_lifetime - msg->add_conn.rekey.margin,
 					msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
-					msg->add_conn.rekey.reauth, msg->add_conn.dpd.delay,
-					msg->add_conn.dpd.action,my_vip, other_vip);
+					msg->add_conn.rekey.reauth, msg->add_conn.mobike,
+					msg->add_conn.dpd.delay, msg->add_conn.dpd.action, my_vip, other_vip,
+					msg->add_conn.p2p.mediation, mediated_by_cfg, peer_id);
 	}
 	
 	child_cfg = child_cfg_create(
@@ -621,6 +685,8 @@ static void stroke_add_conn(stroke_msg_t *msg, FILE *out)
 destroy_ids:
 	my_id->destroy(my_id);
 	other_id->destroy(other_id);
+	DESTROY_IF(mediated_by_cfg);
+	DESTROY_IF(peer_id);
 
 destroy_hosts:
 	my_host->destroy(my_host);
@@ -633,7 +699,8 @@ destroy_hosts:
 static void stroke_del_conn(stroke_msg_t *msg, FILE *out)
 {
 	iterator_t *peer_iter, *child_iter;
-	peer_cfg_t *peer, *child;
+	peer_cfg_t *peer;
+	child_cfg_t *child;
 	
 	pop_string(msg, &(msg->del_conn.name));
 	DBG1(DBG_CFG, "received stroke: delete connection '%s'", msg->del_conn.name);
@@ -706,46 +773,6 @@ static bool stroke_log(stroke_log_info_t *info, signal_t signal, level_t level,
 }
 
 /**
- * get a peer configuration by its name, or a name of its children
- */
-static peer_cfg_t *get_peer_cfg_by_name(char *name)
-{
-	iterator_t *i1, *i2;
-	peer_cfg_t *current, *found = NULL;
-	child_cfg_t *child;
-
-	i1 = charon->backends->create_iterator(charon->backends);
-	while (i1->iterate(i1, (void**)&current))
-	{
-	        /* compare peer_cfgs name first */
-	        if (streq(current->get_name(current), name))
-	        {
-	                found = current;
-	                found->get_ref(found);
-	                break;
-	        }
-	        /* compare all child_cfg names otherwise */
-	        i2 = current->create_child_cfg_iterator(current);
-	        while (i2->iterate(i2, (void**)&child))
-	        {
-	                if (streq(child->get_name(child), name))
-	                {
-	                        found = current;
-	                        found->get_ref(found);
-	                        break;
-	                }
-	        }
-	        i2->destroy(i2);
-	        if (found)
-	        {
-	                break;
-	        }
-	}
-	i1->destroy(i1);
-	return found;
-}
-
-/**
  * initiate a connection by name
  */
 static void stroke_initiate(stroke_msg_t *msg, FILE *out)
@@ -757,7 +784,8 @@ static void stroke_initiate(stroke_msg_t *msg, FILE *out)
 	pop_string(msg, &(msg->initiate.name));
 	DBG1(DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
 	
-	peer_cfg = get_peer_cfg_by_name(msg->initiate.name);
+	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+													  msg->initiate.name);
 	if (peer_cfg == NULL)
 	{
 		fprintf(out, "no config named '%s'\n", msg->initiate.name);
@@ -779,10 +807,18 @@ static void stroke_initiate(stroke_msg_t *msg, FILE *out)
 		return;
 	}
 	
-	info.out = out;
-	info.level = msg->output_verbosity;
-	charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
-								 (interface_manager_cb_t)stroke_log, &info);
+	if (msg->output_verbosity < 0)
+	{
+		charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
+									 NULL, NULL);
+	}
+	else
+	{
+		info.out = out;
+		info.level = msg->output_verbosity;
+		charon->interfaces->initiate(charon->interfaces, peer_cfg, child_cfg,
+									 (interface_manager_cb_t)stroke_log, &info);
+	}
 }
 
 /**
@@ -797,7 +833,8 @@ static void stroke_route(stroke_msg_t *msg, FILE *out)
 	pop_string(msg, &(msg->route.name));
 	DBG1(DBG_CFG, "received stroke: route '%s'", msg->route.name);
 	
-	peer_cfg = get_peer_cfg_by_name(msg->route.name);
+	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+													  msg->route.name);
 	if (peer_cfg == NULL)
 	{
 		fprintf(out, "no config named '%s'\n", msg->route.name);
@@ -1079,10 +1116,10 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		fprintf(out, "%12s[%d]: IKE SPIs: 0x%0llx_i%s 0x%0llx_r%s, ",
+		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s, ",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
-				id->get_responder_spi(id), id->is_initiator(id) ? "" : "");
+				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
 	
 		ike_sa->get_stats(ike_sa, &next);
 		if (next)
@@ -1120,7 +1157,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 	
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		fprintf(out, ", %N SPIs: 0x%0x_i 0x%0x_o",
+		fprintf(out, ", %N SPIs: %.8x_i %.8x_o",
 				protocol_id_names, child_sa->get_protocol(child_sa),
 				htonl(child_sa->get_spi(child_sa, TRUE)),
 				htonl(child_sa->get_spi(child_sa, FALSE)));
@@ -1242,6 +1279,7 @@ static void stroke_status(stroke_msg_t *msg, FILE *out, bool all)
 			{
 				identification_t *my_ca = peer_cfg->get_my_ca(peer_cfg);
 				identification_t *other_ca = peer_cfg->get_other_ca(peer_cfg);
+				linked_list_t *groups = peer_cfg->get_groups(peer_cfg);
 
 				if (my_ca->get_type(my_ca) != ID_ANY
 				||  other_ca->get_type(other_ca) != ID_ANY)
@@ -1249,6 +1287,13 @@ static void stroke_status(stroke_msg_t *msg, FILE *out, bool all)
 					fprintf(out, "%12s:    CAs: '%D'...'%D'\n", peer_cfg->get_name(peer_cfg),
 							my_ca, other_ca);
 				}
+				if (groups->get_count(groups) > 0)
+				{
+					fprintf(out, "%12s:    groups: ", peer_cfg->get_name(peer_cfg));
+					ietfAttr_list_list(groups, out);
+					fprintf(out, "\n");
+				}
+				
 			}
 			children = peer_cfg->create_child_cfg_iterator(peer_cfg);
 			while (children->iterate(children, (void**)&child_cfg))
@@ -1372,6 +1417,23 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
 	{
 		list_auth_certificates(AUTH_AA, "AA", msg->list.utc, out);
 	}
+	if (msg->list.flags & LIST_ACERTS)
+	{
+		x509ac_t *cert;
+		
+		iterator = charon->credentials->create_acert_iterator(charon->credentials);
+		if (iterator->get_count(iterator))
+		{
+			fprintf(out, "\n");
+			fprintf(out, "List of X.509 Attribute Certificates:\n");
+			fprintf(out, "\n");
+		}
+		while (iterator->iterate(iterator, (void**)&cert))
+		{
+			cert->list(cert, out, msg->list.utc);
+		}
+		iterator->destroy(iterator);
+	}
 	if (msg->list.flags & LIST_CAINFOS)
 	{
 		ca_info_t *ca_info;
@@ -1445,6 +1507,10 @@ static void stroke_list(stroke_msg_t *msg, FILE *out)
  */
 static void stroke_reread(stroke_msg_t *msg, FILE *out)
 {
+	if (msg->reread.flags & REREAD_SECRETS)
+	{
+		charon->credentials->load_secrets(charon->credentials, TRUE);
+	}
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
 		charon->credentials->load_ca_certificates(charon->credentials);
@@ -1452,6 +1518,14 @@ static void stroke_reread(stroke_msg_t *msg, FILE *out)
 	if (msg->reread.flags & REREAD_OCSPCERTS)
 	{
 		charon->credentials->load_ocsp_certificates(charon->credentials);
+	}
+	if (msg->reread.flags & REREAD_AACERTS)
+	{
+		charon->credentials->load_aa_certificates(charon->credentials);
+	}
+	if (msg->reread.flags & REREAD_ACERTS)
+	{
+		charon->credentials->load_attr_certificates(charon->credentials);
 	}
 	if (msg->reread.flags & REREAD_CRLS)
 	{
@@ -1655,7 +1729,6 @@ static void destroy(private_stroke_interface_t *this)
 {
 	this->job->cancel(this->job);
 	free(this);
-	unlink(socket_addr.sun_path);
 }
 
 /*
@@ -1663,6 +1736,7 @@ static void destroy(private_stroke_interface_t *this)
  */
 interface_t *interface_create()
 {
+	struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
 	private_stroke_interface_t *this = malloc_thing(private_stroke_interface_t);
 	mode_t old;
 
@@ -1678,7 +1752,8 @@ interface_t *interface_create()
 		return NULL;
 	}
 	
-	old = umask(~S_IRWXU);
+	unlink(socket_addr.sun_path);
+	old = umask(~(S_IRWXU | S_IRWXG));
 	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
 	{
 		DBG1(DBG_CFG, "could not bind stroke socket: %s", strerror(errno));
@@ -1687,6 +1762,11 @@ interface_t *interface_create()
 		return NULL;
 	}
 	umask(old);
+	if (chown(socket_addr.sun_path, IPSEC_UID, IPSEC_GID) != 0)
+	{
+		DBG1(DBG_CFG, "changing stroke socket permissions failed: %s",
+			 strerror(errno));
+	}
 	
 	if (listen(this->socket, 0) < 0)
 	{

@@ -290,6 +290,13 @@ static status_t initiate(private_interface_manager_t *this,
 	}
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	
+	if (callback == NULL)
+	{
+		/* don't wait for a result if no callback is specified */
+		charon->bus->set_listen_state(charon->bus, FALSE);
+		return NEED_MORE;
+	}
+	
 	/* wait until we get a result */
 	while (TRUE)
 	{
@@ -669,6 +676,14 @@ static void load_interfaces(private_interface_manager_t *this)
 	closedir(dir);
 }
 
+/**
+ * See header
+ */
+bool interface_manager_cb_empty(void *param, signal_t signal, level_t level,
+								ike_sa_t *ike_sa, char *format, va_list args)
+{
+	return TRUE;
+}
 
 /**
  * Implementation of stroke_t.destroy.

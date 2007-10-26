@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: ipsec.in,v 1.13 2006/03/09 20:09:33 as Exp $
+# RCSID $Id: ipsec.in 3268 2007-10-08 19:59:18Z andreas $
 
 # name and version of the ipsec implementation
 IPSEC_NAME="@IPSEC_NAME@"
@@ -64,15 +64,14 @@ case "$1" in
 	echo "	rereadacerts|rereadcrls|rereadall"
 	echo "	purgeocsp"
 	echo "	scencrypt|scdecrypt <value> [--inbase <base>] [--outbase <base>] [--keyid <id>]"
-        echo "	barf"
-	echo "	openac"
+ 	echo "	openac"
 	echo "	pluto"
 	echo "	scepclient"
 	echo "	secrets"
 	echo "	starter"
 	echo "	version"
 	echo "	whack"
-	echo "	stoke"
+	echo "	stroke"
 	echo
 	echo "Some of these functions have their own manual pages, e.g. ipsec_scepclient(8)."
 	exit 0
@@ -110,8 +109,7 @@ down)
 	fi
 	exit 0
 	;;
-listalgs|listpubkeys|\listcards|\
-rereadsecrets|rereadgroups)
+listalgs|listpubkeys|\listcards|\rereadgroups)
 	op="$1"
 	shift
 	if test -e $IPSEC_PLUTO_PID
@@ -123,8 +121,8 @@ rereadsecrets|rereadgroups)
 listcerts|listcacerts|listaacerts|\
 listacerts|listgroups|listocspcerts|\
 listcainfos|listcrls|listocsp|listall|\
-rereadcacerts|rereadaacerts|rereadacerts|\
-rereadocspcerts|rereadcrls|\
+rereadsecrets|rereadcacerts|rereadaacerts|\
+rereadacerts|rereadocspcerts|rereadcrls|\
 rereadall|purgeocsp)
 	op="$1"
 	shift

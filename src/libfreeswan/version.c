@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
- * RCSID $Id: version.in.c,v 1.2 2004/03/16 12:26:32 as Exp $
+ * RCSID $Id: version.c 3265 2007-10-08 19:52:55Z andreas $
  */
 
 #ifdef __KERNEL__

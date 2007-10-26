@@ -19,16 +19,27 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: ac.c 3300 2007-10-12 21:53:18Z andreas $
  */
+
+#include <string.h>
+#include <stdio.h>
 
 #include <library.h>
 #include <debug.h>
 
 #include <asn1/asn1.h>
+#include <asn1/pem.h>
+#include <crypto/x509.h>
+#include <crypto/ietf_attr_list.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
+#include <utils/lexparser.h>
 
 #include "ac.h"
+
+#define ACERT_WARNING_INTERVAL	1	/* day */
 
 typedef struct private_x509ac_t private_x509ac_t;
 
@@ -136,92 +147,6 @@ struct private_x509ac_t {
 	 */
 	chunk_t signature;
 };
-
-/**
- * definition of ietfAttribute kinds
- */
-typedef enum {
-	IETF_ATTRIBUTE_OCTETS =	0,
-	IETF_ATTRIBUTE_OID =	1,
-	IETF_ATTRIBUTE_STRING =	2
-} ietfAttribute_t;
-
-/**
- * access structure for an ietfAttribute
- */
-typedef struct ietfAttr_t ietfAttr_t;
-
-struct ietfAttr_t {
-	/**
-	 * IETF attribute kind
-	 */
-	ietfAttribute_t kind;
-
-	/**
-	 * IETF attribute valuse
-	 */
-	chunk_t value;
-
-	/**
-	 * Destroys the ietfAttr_t object.
-	 * 
-	 * @param this			ietfAttr_t to destroy
-	 */
-	void (*destroy) (ietfAttr_t *this);
-};
-
-/**
- * Destroys an ietfAttr_t object
- */
-static void ietfAttr_destroy(ietfAttr_t *this)
-{
-	free(this->value.ptr);
-	free(this);
-}
-
-/**
- * Creates an ietfAttr_t object.
- */
-ietfAttr_t *ietfAttr_create(ietfAttribute_t kind, chunk_t value)
-{
-	ietfAttr_t *this = malloc_thing(ietfAttr_t);
-
-	/* initialize */
-	this->kind = kind;
-	this->value = chunk_clone(value);
-
-	/* function */
-	this->destroy = ietfAttr_destroy;
-	
-	return this;
-}
-
-/**
- * ASN.1 definition of ietfAttrSyntax
- */
-static const asn1Object_t ietfAttrSyntaxObjects[] =
-{
-	{ 0, "ietfAttrSyntax",		ASN1_SEQUENCE,		ASN1_NONE }, /*  0 */
-	{ 1,   "policyAuthority",	ASN1_CONTEXT_C_0,	ASN1_OPT |
-													ASN1_BODY }, /*  1 */
-	{ 1,   "end opt",			ASN1_EOC,			ASN1_END  }, /*  2 */
-	{ 1,   "values",			ASN1_SEQUENCE,		ASN1_LOOP }, /*  3 */
-	{ 2,     "octets",			ASN1_OCTET_STRING,	ASN1_OPT |
-													ASN1_BODY }, /*  4 */
-	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  5 */
-	{ 2,     "oid",				ASN1_OID,			ASN1_OPT |
-													ASN1_BODY }, /*  6 */
-	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  7 */
-	{ 2,     "string",			ASN1_UTF8STRING,	ASN1_OPT |
-													ASN1_BODY }, /*  8 */
-	{ 2,     "end choice",		ASN1_EOC,			ASN1_END  }, /*  9 */
-	{ 1,   "end loop",			ASN1_EOC,			ASN1_END  }  /* 10 */
-};
-
-#define IETF_ATTR_OCTETS	 4
-#define IETF_ATTR_OID		 6
-#define IETF_ATTR_STRING	 8
-#define IETF_ATTR_ROOF		11
 
 /**
  * ASN.1 definition of roleSyntax
@@ -357,6 +282,23 @@ static err_t is_valid(const private_x509ac_t *this, time_t *until)
 }
 
 /**
+ * Implements x509ac_t.is_newer
+ */
+static bool is_newer(const private_x509ac_t *this, const private_x509ac_t *other)
+{
+	return this->notBefore > other->notBefore;
+}
+
+/**
+ * Implements x509ac_t.equals_holder.
+ */
+static bool equals_holder(const private_x509ac_t *this, const private_x509ac_t *other)
+{
+	return this->holderIssuer->equals(this->holderIssuer, other->holderIssuer)
+		   && chunk_equals(this->holderSerial, other->holderSerial);
+}
+
+/**
  * parses a directoryName
  */
 static bool parse_directoryName(chunk_t blob, int level, bool implicit, identification_t **name)
@@ -364,7 +306,7 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
 	bool has_directoryName;
 	linked_list_t *list = linked_list_create();
 
-	parse_generalNames(blob, level, implicit, list);
+	x509_parse_generalNames(blob, level, implicit, list);
 	has_directoryName = list->get_count(list) > 0;
 
 	if (has_directoryName)
@@ -395,43 +337,6 @@ static bool parse_directoryName(chunk_t blob, int level, bool implicit, identifi
 
 	list->destroy(list);
 	return has_directoryName;
-}
-
-/**
- * parses ietfAttrSyntax
- */
-static void parse_ietfAttrSyntax(chunk_t blob, int level0, linked_list_t *list)
-{
-	asn1_ctx_t ctx;
-	chunk_t object;
-	u_int level;
-	int objectID = 0;
-
-	asn1_init(&ctx, blob, level0, FALSE, FALSE);
-
-	while (objectID < IETF_ATTR_ROOF)
-	{
-		if (!extract_object(ietfAttrSyntaxObjects, &objectID, &object, &level, &ctx))
-		{
-			return;
-		}
-
-		switch (objectID)
-		{
-			case IETF_ATTR_OCTETS:
-			case IETF_ATTR_OID:
-			case IETF_ATTR_STRING:
-				{
-					ietfAttribute_t kind = (objectID - IETF_ATTR_OCTETS) / 2;
-					ietfAttr_t *attr   = ietfAttr_create(kind, object);
-					list->insert_last(list, (void *)attr);
-				}
-				break;
-			default:
-				break;
-		}
-		objectID++;
-	}
 }
 
 /**
@@ -470,9 +375,9 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 	bool critical;
 	chunk_t object;
 	u_int level;
-	u_int type = OID_UNKNOWN;
-	u_int extn_oid = OID_UNKNOWN;
 	int objectID = 0;
+	int type = OID_UNKNOWN;
+	int extn_oid = OID_UNKNOWN;
 
 	asn1_init(&ctx, blob, 0, FALSE, FALSE);
 	while (objectID < AC_OBJ_ROOF)
@@ -549,10 +454,10 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 							DBG2("  need to parse accessIdentity");
 							break;
 						case OID_CHARGING_IDENTITY:
-							parse_ietfAttrSyntax(object, level, this->charging);
+							ietfAttr_list_create_from_chunk(object, this->charging, level);
 							break;
 						case OID_GROUP:
-							parse_ietfAttrSyntax(object, level, this->groups);
+							ietfAttr_list_create_from_chunk(object, this->groups, level);
 							break;
 						case OID_ROLE:
 							parse_roleSyntax(object, level);
@@ -577,7 +482,7 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 							DBG2("  need to parse crlDistributionPoints");
 							break;
 						case OID_AUTHORITY_KEY_ID:
-							parse_authorityKeyIdentifier(object, level,
+							x509_parse_authorityKeyIdentifier(object, level,
 									&this->authKeyID, &this->authKeySerialNumber);
 							break;
 						case OID_TARGET_INFORMATION:
@@ -603,7 +508,72 @@ static bool parse_certificate(chunk_t blob, private_x509ac_t *this)
 		objectID++;
 	}
 	this->installed = time(NULL);
-	return FALSE;
+	return TRUE;
+}
+
+/**
+ * Implementation of x509ac_t.list.
+ */
+static void list(const private_x509ac_t *this, FILE *out, bool utc)
+{
+	time_t now = time(NULL);
+
+	fprintf(out, "%#T\n", &this->installed, utc);
+
+	if (this->entityName)
+	{
+		fprintf(out, "    holder:    '%D'\n", this->entityName);
+	}
+	if (this->holderIssuer)
+	{
+		fprintf(out, "    hissuer:   '%D'\n", this->holderIssuer);
+	}
+	if (this->holderSerial.ptr)
+	{
+		fprintf(out, "    hserial:    %#B\n", &this->holderSerial);
+	}
+	
+	/* list all group attributes on a single line */
+	fprintf(out, "    groups:     ");
+	ietfAttr_list_list(this->groups, out);
+	fprintf(out, "\n");
+
+	fprintf(out, "    issuer:    '%D'\n", this->issuerName);
+	fprintf(out, "    serial:     %#B\n", &this->serialNumber);
+
+	fprintf(out, "    validity:   not before %#T, ", &this->notBefore, utc);
+	if (now < this->notBefore)
+	{
+		fprintf(out, "not valid yet (valid in %V)\n", &now, &this->notBefore);
+	}
+	else
+	{
+		fprintf(out, "ok\n");
+	}
+	
+	fprintf(out, "                not after  %#T, ", &this->notAfter, utc);
+	if (now > this->notAfter)
+	{
+		fprintf(out, "expired (%V ago)\n", &now, &this->notAfter);
+	}
+	else
+	{
+		fprintf(out, "ok");
+		if (now > this->notAfter - ACERT_WARNING_INTERVAL * 60 * 60 * 24)
+		{
+			fprintf(out, " (expires in %V)", &now, &this->notAfter);
+		}
+		fprintf(out, " \n");
+	}
+
+	if (this->authKeyID.ptr)
+	{
+		fprintf(out, "    authkey:    %#B\n", &this->authKeyID);
+	}
+	if (this->authKeySerialNumber.ptr)
+	{
+		fprintf(out, "    aserial:    %#B\n", &this->authKeySerialNumber);
+	}
 }
 
 /**
@@ -614,10 +584,8 @@ static void destroy(private_x509ac_t *this)
 	DESTROY_IF(this->holderIssuer);
 	DESTROY_IF(this->entityName);
 	DESTROY_IF(this->issuerName);
-	this->charging->destroy_offset(this->charging, 
-							offsetof(ietfAttr_t, destroy));
-	this->groups->destroy_offset(this->groups,
-						  offsetof(ietfAttr_t, destroy));
+	ietfAttr_list_destroy(this->charging);
+	ietfAttr_list_destroy(this->groups);
 	free(this->certificate.ptr);
 	free(this);
 }
@@ -638,6 +606,9 @@ x509ac_t *x509ac_create_from_chunk(chunk_t chunk)
 
 	/* public functions */
 	this->public.is_valid = (err_t (*) (const x509ac_t*,time_t*))is_valid;
+	this->public.is_newer = (bool (*) (const x509ac_t*,const x509ac_t*))is_newer;
+	this->public.equals_holder = (bool (*) (const x509ac_t*,const x509ac_t*))equals_holder;
+	this->public.list = (void (*) (const x509ac_t*,FILE*,bool))list;
 	this->public.destroy = (void (*) (x509ac_t*))destroy;
 
 	if (!parse_certificate(chunk, this))

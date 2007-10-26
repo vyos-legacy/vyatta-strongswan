@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: demux.h,v 1.4 2004/07/22 22:57:25 as Exp $
+ * RCSID $Id: demux.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include "packet.h"

@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: identification.c 3256 2007-10-07 13:42:43Z andreas $
  */
 
 #define _GNU_SOURCE
@@ -196,19 +198,6 @@ static void update_chunk(chunk_t *ch, int n)
 {
 	n = (n > -1 && n < (int)ch->len)? n : (int)ch->len-1;
 	ch->ptr += n; ch->len -= n;
-}
-
-/**
- * Prints a binary string in hexadecimal form
- */
-void hex_str(chunk_t bin, chunk_t *str)
-{
-	u_int i;
-	update_chunk(str, snprintf(str->ptr,str->len,"0x"));
-	for (i = 0; i < bin.len; i++)
-	{
-		update_chunk(str, snprintf(str->ptr,str->len,"%02X",*bin.ptr++));
-	}
 }
 
 /**
@@ -402,9 +391,9 @@ static status_t dntoa(chunk_t dn, chunk_t *str)
 
 		/* print OID */
 		oid_code = known_oid(oid);
-		if (oid_code == OID_UNKNOWN) 
-		{ /* OID not found in list */
-			hex_str(oid, str);
+		if (oid_code == OID_UNKNOWN)
+		{
+			update_chunk(str, snprintf(str->ptr,str->len,"0x#B", &oid));
 		}
 		else
 		{
@@ -467,12 +456,16 @@ static bool same_dn(chunk_t a, chunk_t b)
 		|| (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+			{
 				return FALSE;
+			}
 		}
 		else
 		{
-			if (strncmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
-				return FALSE;
+			if (!strneq(value_a.ptr, value_b.ptr, value_b.len))
+			{
+				return FALSE;	
+			}
 		}
 	}
 	/* both DNs must have same number of RDNs */
@@ -540,12 +533,16 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 		|| (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+			{
 				return FALSE;
+			}
 		}
 		else
 		{
-			if (strncmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
+			if (!strneq(value_a.ptr, value_b.ptr, value_b.len))
+			{
 				return FALSE;
+			}
 		}
 	}
 	/* both DNs must have same number of RDNs */
@@ -931,7 +928,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		case ID_FQDN:
 		{
 			proper = sanitize_chunk(this->encoded);
-			written = fprintf(stream, "@%.*s", proper.len, proper.ptr);
+			written = fprintf(stream, "%.*s", proper.len, proper.ptr);
 			chunk_free(&proper);
 			return written;
 		}
@@ -1071,8 +1068,15 @@ identification_t *identification_create_from_string(char *string)
 				
 				if (inet_pton(AF_INET, string, &address) <= 0)
 				{
-					free(this);
-					return NULL;
+					/* not IPv4, mostly FQDN */
+					this->type = ID_FQDN;
+					this->encoded.ptr = strdup(string);
+					this->encoded.len = strlen(string);
+					this->public.matches = (bool (*) 
+						(identification_t*,identification_t*,int*))matches_string;
+					this->public.equals = (bool (*)
+						(identification_t*,identification_t*))equals_strcasecmp;
+					return &(this->public);
 				}
 				this->encoded = chunk_clone(chunk);
 				this->type = ID_IPV4_ADDR;
@@ -1137,6 +1141,7 @@ identification_t *identification_create_from_string(char *string)
 identification_t *identification_create_from_encoding(id_type_t type, chunk_t encoded)
 {
 	private_identification_t *this = identification_create();
+
 	this->type = type;
 	switch (type)
 	{

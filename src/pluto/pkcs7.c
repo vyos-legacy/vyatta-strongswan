@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: pkcs7.c,v 1.13 2005/12/22 22:11:24 as Exp $
+ * RCSID $Id: pkcs7.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <stdlib.h>
@@ -25,7 +25,7 @@
 #include "constants.h"
 #include "defs.h"
 #include "asn1.h"
-#include "oid.h"
+#include <asn1/oid.h>
 #include "log.h"
 #include "x509.h"
 #include "certs.h"

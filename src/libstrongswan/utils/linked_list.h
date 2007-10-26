@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -30,6 +31,7 @@ typedef struct linked_list_t linked_list_t;
 
 #include <library.h>
 #include <utils/iterator.h>
+#include <utils/enumerator.h>
 
 /**
  * @brief Class implementing a double linked list.
@@ -55,6 +57,9 @@ struct linked_list_t {
 	 * @brief Creates a iterator for the given list.
 	 * 
 	 * @warning Created iterator_t object has to get destroyed by the caller.
+	 *
+	 * @deprecated Iterator is obsolete and will disappear, it is too
+	 * complicated to implement. Use enumerator instead.
 	 * 
 	 * @param this 		calling object
 	 * @param forward 	iterator direction (TRUE: front to end)
@@ -74,7 +79,18 @@ struct linked_list_t {
 	 */
 	iterator_t *(*create_iterator_locked) (linked_list_t *this,
 										   pthread_mutex_t *mutex);
-
+	
+	/**
+	 * @brief Create an enumerator over the list.
+	 *
+	 * The enumerator is a "lightweight" iterator. It only has two methods
+	 * and should therefore be much easier to implement.
+	 *
+	 * @param this		calling object
+	 * @return			enumerator over list items
+	 */
+	enumerator_t* (*create_enumerator)(linked_list_t *this);
+	
 	/**
 	 * @brief Inserts a new item at the beginning of the list.
 	 *
@@ -183,7 +199,33 @@ struct linked_list_t {
 	 * @param this 		calling object
 	 * @param offset	offset of the method to invoke on objects
 	 */
-	void (*invoke) (linked_list_t *this, size_t offset);
+	void (*invoke_offset) (linked_list_t *this, size_t offset);
+	
+	/**
+	 * @brief Invoke a function on all of the contained objects.
+	 * 
+	 * @param this 		calling object
+	 * @param offset	offset of the method to invoke on objects
+	 */
+	void (*invoke_function) (linked_list_t *this, void (*)(void*));
+	
+	/**
+	 * @brief Clones a list and its objects using the objects' clone method.
+	 * 
+	 * @param this		calling object
+	 * @param offset	offset ot the objects clone function
+	 * @return			cloned list
+	 */
+	linked_list_t *(*clone_offset) (linked_list_t *this, size_t offset);
+	
+	/**
+	 * @brief Clones a list and its objects using a given function.
+	 * 
+	 * @param this		calling object
+	 * @param function	function that clones an object
+	 * @return			cloned list
+	 */
+	linked_list_t *(*clone_function) (linked_list_t *this, void*(*)(void*));
 	
 	/**
 	 * @brief Destroys a linked_list object.

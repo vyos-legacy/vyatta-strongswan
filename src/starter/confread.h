@@ -1,5 +1,8 @@
 /* strongSwan IPsec config file parser
- * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
+ * Copyright (C) 2007 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2001-2002 Mathieu Lafon
+ * Arkoon Network Security
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -11,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.h,v 1.23 2006/04/17 10:32:36 as Exp $
+ * RCSID $Id: confread.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _IPSEC_CONFREAD_H_
@@ -76,6 +79,7 @@ struct starter_end {
 	bool		firewall;
 	bool		hostaccess;
 	bool		allow_any;
+	bool		dns_failed;
 	char 		*updown;
 	u_int16_t	port;
 	u_int8_t	protocol;
@@ -124,6 +128,10 @@ struct starter_conn {
 	time_t		dpd_timeout;
 	dpd_action_t	dpd_action;
 	int		dpd_count;
+	
+	bool		p2p_mediation;
+	char		*p2p_mediated_by;
+	char		*p2p_peerid;
 
 	starter_conn_t *next;
 };

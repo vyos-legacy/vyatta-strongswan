@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: cmp.c,v 1.12 2006/01/13 18:03:25 as Exp $
+ * RCSID $Id: cmp.c 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <string.h>
@@ -36,7 +36,14 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
     if ((c1 == NULL) || (c2 == NULL))
 	return FALSE;
 
-    ADDCMP(addr);
+    if (c2->dns_failed)
+    {
+	c2->addr = c1->addr;
+    }
+    else
+    {
+	ADDCMP(addr);
+    }
     ADDCMP(nexthop);
     ADDCMP(srcip);
     SUBCMP(subnet);

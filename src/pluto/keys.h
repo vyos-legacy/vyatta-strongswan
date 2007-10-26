@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keys.h,v 1.7 2006/01/26 20:10:34 as Exp $
+ * RCSID $Id: keys.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #ifndef _KEYS_H

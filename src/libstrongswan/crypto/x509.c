@@ -23,6 +23,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: x509.c 3301 2007-10-12 21:56:30Z andreas $
  */
 
 #include <gmp.h>
@@ -114,7 +116,7 @@ struct private_x509_t {
 	/**
 	 * Signature algorithm
 	 */
-	int sigAlg;
+	int signatureAlgorithm;
 	
 	/**
 	 * ID representing the certificate issuer
@@ -195,11 +197,6 @@ struct private_x509_t {
 	 * OCSPSigner extended key usage flag
 	 */
 	bool isOcspSigner;
-
-	/**
-	 * Signature algorithm (must be identical to sigAlg)
-	 */
-	int algorithm;
 
 	/**
 	 * Signature
@@ -445,16 +442,15 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
 	return isCA;
 }
 
-/*
+/**
  * extracts an otherName
  */
-static bool
-parse_otherName(chunk_t blob, int level0)
+static bool parse_otherName(chunk_t blob, int level0)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
-	int objectID = 0;
 	u_int level;
+	int objectID = 0;
 	int oid = OID_UNKNOWN;
 
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
@@ -484,7 +480,7 @@ parse_otherName(chunk_t blob, int level0)
 	return TRUE;
 }
 
-/*
+/**
  * extracts a generalName
  */
 static identification_t *parse_generalName(chunk_t blob, int level0)
@@ -544,10 +540,10 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 }
 
 
-/**
- * extracts one or several GNs and puts them into a chained list
+/*
+ * Defined in header.
  */
-void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
+void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
@@ -589,10 +585,10 @@ static chunk_t parse_keyIdentifier(chunk_t blob, int level0, bool implicit)
 	return object;
 }
 
-/**
- * extracts an authoritykeyIdentifier
+/*
+ * Defined in header.
  */
-void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID, chunk_t *authKeySerialNumber)
+void x509_parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID, chunk_t *authKeySerialNumber)
 {
 	asn1_ctx_t ctx;
 	chunk_t object;
@@ -639,8 +635,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, linked_list_t *l
 	chunk_t object;
 	u_int level;
 	int objectID = 0;
-	
-	u_int accessMethod = OID_UNKNOWN;
+	int accessMethod = OID_UNKNOWN;
 	
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < AUTH_INFO_ACCESS_ROOF)
@@ -659,15 +654,26 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, linked_list_t *l
 				switch (accessMethod)
 				{
 					case OID_OCSP:
-						if (*object.ptr == ASN1_CONTEXT_S_6)
+					case OID_CA_ISSUERS:
 						{
 							identification_t *accessLocation;
 
-							if (asn1_length(&object) == ASN1_INVALID_LENGTH)
+							accessLocation = parse_generalName(object, level+1);
+							if (accessLocation == NULL)
+							{
+								/* parsing went wrong - abort */
 								return;
-							DBG2("  '%.*s'",(int)object.len, object.ptr);
-							accessLocation = identification_create_from_encoding(ID_DER_ASN1_GN_URI, object);
-							list->insert_last(list, (void *)accessLocation);
+							}
+							DBG2("  '%D'", accessLocation);
+							if (accessMethod == OID_OCSP)
+							{
+								list->insert_last(list, (void *)accessLocation);
+							}
+							else
+							{
+								/* caIsssuer accessLocation is not used yet */
+								accessLocation->destroy(accessLocation);
+							}
 						}
 						break;
 					default:
@@ -731,7 +737,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0, linked_list_t 
 		if (objectID == CRL_DIST_POINTS_FULLNAME)
 		{
 			/* append extracted generalNames to existing chained list */
-			parse_generalNames(object, level+1, TRUE, list);
+			x509_parse_generalNames(object, level+1, TRUE, list);
 
 		}
 		objectID++;
@@ -748,8 +754,8 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 	bool critical;
 	chunk_t object;
 	u_int level;
-	u_int extn_oid = OID_UNKNOWN;
 	int objectID = 0;
+	int extn_oid = OID_UNKNOWN;
 	
 	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < X509_OBJ_ROOF)
@@ -778,7 +784,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 				this->serialNumber = object;
 				break;
 			case X509_OBJ_SIG_ALG:
-				this->sigAlg = parse_algorithmIdentifier(object, level, NULL);
+				this->signatureAlgorithm = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case X509_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
@@ -797,7 +803,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
 				if (parse_algorithmIdentifier(object, level, NULL) != OID_RSA_ENCRYPTION)
 				{
-					DBG2("  unsupported public key algorithm");
+					DBG1("  unsupported public key algorithm");
 					return FALSE;
 				}
 				break;
@@ -809,7 +815,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 				}
 				else
 				{
-					DBG2("  invalid RSA public key format");
+					DBG1("  invalid RSA public key format");
 					return FALSE;
 				}
 				break;
@@ -831,7 +837,7 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 						this->subjectKeyID = chunk_clone(parse_keyIdentifier(object, level, FALSE));
 						break;
 					case OID_SUBJECT_ALT_NAME:
-						parse_generalNames(object, level, FALSE, this->subjectAltNames);
+						x509_parse_generalNames(object, level, FALSE, this->subjectAltNames);
 						break;
 					case OID_BASIC_CONSTRAINTS:
 						this->isCA = parse_basicConstraints(object, level);
@@ -840,7 +846,8 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 						parse_crlDistributionPoints(object, level, this->crlDistributionPoints);
 						break;
 					case OID_AUTHORITY_KEY_ID:
-						parse_authorityKeyIdentifier(object, level , &this->authKeyID, &this->authKeySerialNumber);
+						x509_parse_authorityKeyIdentifier(object, level,
+							 &this->authKeyID, &this->authKeySerialNumber);
 						break;
 					case OID_AUTHORITY_INFO_ACCESS:
 						parse_authorityInfoAccess(object, level, this->ocspAccessLocations);
@@ -861,7 +868,15 @@ static bool parse_certificate(chunk_t blob, u_int level0, private_x509_t *this)
 				break;
 			}
 			case X509_OBJ_ALGORITHM:
-				this->algorithm = parse_algorithmIdentifier(object, level, NULL);
+				{
+					int alg = parse_algorithmIdentifier(object, level, NULL);
+
+					if (alg != this->signatureAlgorithm)
+					{
+						DBG1("  signature algorithms do not agree");
+						return FALSE;
+					}
+				}
 				break;
 			case X509_OBJ_SIGNATURE:
 				this->signature = object;
@@ -1119,7 +1134,14 @@ static iterator_t *create_ocspuri_iterator(const private_x509_t *this)
  */
 static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
 {
-	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertificate, this->signature) == SUCCESS;
+	hash_algorithm_t algorithm = hasher_algorithm_from_oid(this->signatureAlgorithm);
+
+	if (algorithm == HASH_UNKNOWN)
+	{
+		DBG1("  unknown signature algorithm");
+		return FALSE;
+	}
+	return signer->verify_emsa_pkcs1_signature(signer, algorithm, this->tbsCertificate, this->signature) == SUCCESS;
 }
 	
 /**
@@ -1221,6 +1243,101 @@ static void list(private_x509_t *this, FILE *out, bool utc)
 	}
 }
 
+/*
+ * Defined in header.
+ */
+chunk_t x509_build_generalNames(linked_list_t *list)
+{
+	linked_list_t *generalNames = linked_list_create();
+	iterator_t *iterator = list->create_iterator(list, TRUE);
+	identification_t *name;
+	size_t len = 0;
+
+	while (iterator->iterate(iterator, (void**)&name))
+	{
+		asn1_t asn1_type = ASN1_EOC;
+		chunk_t *generalName = malloc_thing(chunk_t);
+
+		switch (name->get_type(name))
+		{
+			case ID_RFC822_ADDR:
+				asn1_type = ASN1_CONTEXT_S_1;
+				break;
+			case ID_FQDN:
+				asn1_type = ASN1_CONTEXT_S_2;
+				break;
+			case ID_DER_ASN1_DN:
+				asn1_type = ASN1_CONTEXT_C_4;
+	    		break;
+			case ID_DER_ASN1_GN_URI:
+				asn1_type = ASN1_CONTEXT_S_6;
+				break;
+			case ID_IPV4_ADDR:
+				asn1_type = ASN1_CONTEXT_S_7;
+				break;
+			default:
+				continue;
+		}
+
+		*generalName = asn1_simple_object(asn1_type, name->get_encoding(name));
+		len += generalName->len;
+		generalNames->insert_last(generalNames, generalName);
+	}
+	iterator->destroy(iterator);
+
+	if (len > 0)
+	{
+		iterator_t *iterator = generalNames->create_iterator(generalNames, TRUE);
+		chunk_t names, *generalName;
+		u_char *pos = build_asn1_object(&names, ASN1_SEQUENCE, len);
+
+		while (iterator->iterate(iterator, (void**)&generalName))
+		{
+			memcpy(pos, generalName->ptr, generalName->len);
+			pos += generalName->len;
+			free(generalName->ptr);
+			free(generalName);
+		}
+		iterator->destroy(iterator);
+		generalNames->destroy(generalNames);
+
+		return asn1_wrap(ASN1_OCTET_STRING, "m", names);
+	}
+	else
+	{
+		return chunk_empty;
+	}
+}
+
+/*
+ * Defined in header.
+ */
+chunk_t x509_build_subjectAltNames(linked_list_t *list)
+{
+	chunk_t generalNames = x509_build_generalNames(list);
+
+	if (generalNames.len)
+	{
+		return asn1_wrap(ASN1_SEQUENCE, "cm",
+					ASN1_subjectAltName_oid,
+					asn1_wrap(ASN1_OCTET_STRING, "m", generalNames)
+				);
+	}
+	else
+	{
+		return chunk_empty;
+	}
+}
+
+/**
+ * Implementation of x509_t.build_encoding.
+ */
+static void build_encoding(private_x509_t *this, hash_algorithm_t alg,
+						   rsa_private_key_t *private_key)
+{
+
+}
+
 /**
  * Implements x509_t.destroy
  */
@@ -1240,10 +1357,10 @@ static void destroy(private_x509_t *this)
 	free(this);
 }
 
-/*
- * Described in header.
+/**
+ * Internal generic constructor
  */
-x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
+static private_x509_t *x509_create_empty(void)
 {
 	private_x509_t *this = malloc_thing(private_x509_t);
 	
@@ -1290,9 +1407,34 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->public.create_crluri_iterator = (iterator_t* (*) (const x509_t*))create_crluri_iterator;
 	this->public.create_ocspuri_iterator = (iterator_t* (*) (const x509_t*))create_ocspuri_iterator;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
-	this->public.list = (void(*)(x509_t*, FILE *out, bool utc))list;
+	this->public.list = (void (*) (x509_t*, FILE *out, bool utc))list;
+	this->public.build_encoding = (void (*) (x509_t*,hash_algorithm_t,rsa_private_key_t*))build_encoding;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
+	return this;
+}
+
+/*
+ * Described in header.
+ */
+x509_t *x509_create_(chunk_t serialNumber, identification_t *issuer, identification_t *subject)
+{
+	private_x509_t *this = x509_create_empty();
+
+	this->serialNumber = serialNumber;
+	this->issuer = issuer->clone(issuer);
+	this->subject = subject->clone(subject);
+
+	return &this->public;
+}
+
+/*
+ * Described in header.
+ */
+x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
+{
+	private_x509_t *this = x509_create_empty();
+
 	if (!parse_certificate(chunk, level, this))
 	{
 		destroy(this);
@@ -1314,8 +1456,15 @@ x509_t *x509_create_from_chunk(chunk_t chunk, u_int level)
 	this->isSelfSigned = FALSE;
 	if (this->subject->equals(this->subject, this->issuer))
 	{
+		hash_algorithm_t algorithm = hasher_algorithm_from_oid(this->signatureAlgorithm);
+
+		if (algorithm == HASH_UNKNOWN)
+		{
+			destroy(this);
+			return NULL;
+		}
 		this->isSelfSigned = this->public_key->verify_emsa_pkcs1_signature(this->public_key,
-							 this->tbsCertificate, this->signature) == SUCCESS;
+							 algorithm, this->tbsCertificate, this->signature) == SUCCESS;
 	}
 	if (this->isSelfSigned)
 	{

@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: virtual.c,v 1.4 2004/04/02 10:38:52 as Exp $
+ * RCSID $Id: virtual.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <freeswan.h>

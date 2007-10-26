@@ -5,8 +5,8 @@
  * 
  */
 
-/*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+/* Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -51,6 +51,11 @@
 #ifdef NO_CAPSET_DEFINED
 extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 #endif /* NO_CAPSET_DEFINED */
+
+#ifdef INTEGRITY_TEST
+#include <fips/fips.h>
+#include <fips_signature.h>
+#endif /* INTEGRITY_TEST */
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -169,11 +174,15 @@ static void destroy(private_daemon_t *this)
 	this->public.processor->set_threads(this->public.processor, 0);
 	/* close all IKE_SAs */
 	DESTROY_IF(this->public.ike_sa_manager);
+	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.interfaces);
+#ifdef P2P	
+	DESTROY_IF(this->public.connect_manager);
+	DESTROY_IF(this->public.mediation_manager);
+#endif /* P2P */
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.credentials);
-	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.receiver);
 	DESTROY_IF(this->public.socket);
@@ -226,10 +235,16 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	if (full)
 	{
 #		if IPSEC_GID
-			setgid(IPSEC_GID);
+		if (setgid(IPSEC_GID) != 0)
+		{
+			kill_daemon(this, "changing GID to unprivileged group failed");
+		}
 #		endif
 #		if IPSEC_UID
-			setuid(IPSEC_UID);
+		if (setuid(IPSEC_UID) != 0)
+		{
+			kill_daemon(this, "changing UID to unprivileged user failed");
+		}
 #		endif
 	}
 	else
@@ -240,12 +255,17 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 		keep |= (1<<CAP_NET_RAW);
 		/* CAP_DAC_READ_SEARCH to read ipsec.secrets */
 		keep |= (1<<CAP_DAC_READ_SEARCH);
+		/* CAP_CHOWN to change file permissions (socket permissions) */
+		keep |= (1<<CAP_CHOWN);
+		/* CAP_SETUID to call setuid()  */
+		keep |= (1<<CAP_SETUID);
+		/* CAP_SETGID to call setgid() */
+		keep |= (1<<CAP_SETGID);
 	}
 
 	hdr.version = _LINUX_CAPABILITY_VERSION;
 	hdr.pid = 0;
-	data.effective = data.permitted = keep;
-	data.inheritable = 0;
+	data.inheritable = data.effective = data.permitted = keep;
 	
 	if (capset(&hdr, &data))
 	{
@@ -254,9 +274,9 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 }
 
 /**
- * Initialize the daemon, optional with a strict crl policy
+ * Initialize the daemon
  */
-static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
+static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
 	signal_t signal;
 	
@@ -288,6 +308,19 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	}
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
+
+#ifdef INTEGRITY_TEST
+	DBG1(DBG_DMN, "integrity test of libstrongswan code");
+	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
+	{
+		DBG1(DBG_DMN, "  integrity test passed");
+	}
+	else
+	{
+		DBG1(DBG_DMN, "  integrity test failed");
+		return FALSE;
+	}
+#endif /* INTEGRITY_TEST */
 	
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.processor = processor_create();
@@ -300,7 +333,7 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.credentials->load_attr_certificates(this->public.credentials);
 	this->public.credentials->load_ocsp_certificates(this->public.credentials);
 	this->public.credentials->load_crls(this->public.credentials);
-	this->public.credentials->load_secrets(this->public.credentials);
+	this->public.credentials->load_secrets(this->public.credentials, FALSE);
 	
 	this->public.interfaces = interface_manager_create();
 	this->public.backends = backend_manager_create();
@@ -309,6 +342,12 @@ static void initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	
+#ifdef P2P
+	this->public.connect_manager = connect_manager_create();
+	this->public.mediation_manager = mediation_manager_create();
+#endif /* P2P */
+	
+	return TRUE;
 }
 
 /**
@@ -508,7 +547,13 @@ int main(int argc, char *argv[])
 	}
 	
 	/* initialize daemon */
-	initialize(private_charon, use_syslog, levels);
+	if (!initialize(private_charon, use_syslog, levels))
+	{
+		DBG1(DBG_DMN, "initialization failed - aborting charon");
+		destroy(private_charon);
+		exit(-1);
+	}
+
 	/* initialize fetcher_t class */
 	fetcher_initialize();
 	/* load pluggable EAP modules */
@@ -528,6 +573,7 @@ int main(int argc, char *argv[])
 	if (pid_file)
 	{
 		fprintf(pid_file, "%d\n", getpid());
+		fchown(fileno(pid_file), IPSEC_UID, IPSEC_GID);
 		fclose(pid_file);
 	}
 	

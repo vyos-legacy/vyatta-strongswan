@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokecharon.h $
+ * RCSID $Id: invokecharon.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _STARTER_CHARON_H_

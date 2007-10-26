@@ -18,7 +18,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: smartcard.c,v 1.41 2006/01/04 21:03:52 as Exp $
+ * RCSID $Id: smartcard.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <stdio.h>
@@ -593,11 +593,13 @@ scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 
 	/* put end entity and ca certificates into different chains */
 	if (cert->isCA)
-	    add_authcert(cert, AUTH_CA);
+	{
+	    sc->last_cert.u.x509 = add_authcert(cert, AUTH_CA);
+	}
 	else
 	{
 	    add_x509_public_key(cert, valid_until, DAL_LOCAL);
-            sc->last_cert.u.x509 = add_x509cert(cert);
+	    sc->last_cert.u.x509 = add_x509cert(cert);
 	}
 
 	share_cert(sc->last_cert);

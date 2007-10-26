@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -28,6 +29,7 @@
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <crypto/ietf_attr_list.h>
 
 ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
 	"CERT_ALWAYS_SEND",
@@ -105,6 +107,11 @@ struct private_peer_cfg_t {
 	identification_t *other_ca;
 	
 	/**
+	 * we require the other end to belong to at least one group
+	 */
+	linked_list_t *groups;
+	
+	/**
 	 * should we send a certificate
 	 */
 	cert_policy_t cert_policy;
@@ -128,6 +135,11 @@ struct private_peer_cfg_t {
 	 * user reauthentication instead of rekeying
 	 */
 	bool use_reauth;
+	
+	/**
+	 * enable support for MOBIKE
+	 */
+	bool use_mobike;
 	
 	/**
 	 * Time before an SA gets invalid
@@ -164,6 +176,24 @@ struct private_peer_cfg_t {
 	 * virtual IP to use remotly
 	 */
 	host_t *other_virtual_ip;
+
+#ifdef P2P	
+	/**
+	 * Is this a mediation connection?
+	 */
+	bool p2p_mediation;
+	
+	/**
+	 * Name of the mediation connection to mediate through
+	 */
+	peer_cfg_t *p2p_mediated_by;
+	
+	/**
+	 * ID of our peer at the mediation server (= leftid of the peer's conn with
+	 * the mediation server)
+	 */
+	identification_t *peer_id;
+#endif /* P2P */
 };
 
 /**
@@ -274,10 +304,21 @@ static identification_t *get_my_ca(private_peer_cfg_t *this)
 	return this->my_ca;
 }
 
+/**
+ * Implementation of peer_cfg_t.get_other_ca
+ */
 static identification_t *get_other_ca(private_peer_cfg_t *this)
 {
 	return this->other_ca;
-}	
+}
+
+/**
+ * Implementation of peer_cfg_t.get_groups
+ */
+static linked_list_t *get_groups(private_peer_cfg_t *this)
+{
+	return this->groups;
+}
 
 /**
  * Implementation of peer_cfg_t.get_cert_policy.
@@ -330,9 +371,17 @@ static u_int32_t get_lifetime(private_peer_cfg_t *this, bool rekey)
 /**
  * Implementation of peer_cfg_t.use_reauth.
  */
-static bool use_reauth(private_peer_cfg_t *this, bool rekey)
+static bool use_reauth(private_peer_cfg_t *this)
 {
 	return this->use_reauth;
+}
+	
+/**
+ * Implementation of peer_cfg_t.use_mobike.
+ */
+static bool use_mobike(private_peer_cfg_t *this)
+{
+	return this->use_mobike;
 }
 
 /**
@@ -383,6 +432,36 @@ static host_t* get_other_virtual_ip(private_peer_cfg_t *this, host_t *suggestion
 	return suggestion->clone(suggestion);
 }
 
+#ifdef P2P
+/**
+ * Implementation of peer_cfg_t.is_mediation.
+ */
+static bool is_mediation(private_peer_cfg_t *this)
+{
+	return this->p2p_mediation;
+}
+
+/**
+ * Implementation of peer_cfg_t.get_mediated_by.
+ */
+static peer_cfg_t* get_mediated_by(private_peer_cfg_t *this)
+{
+	if (this->p2p_mediated_by) {
+		this->p2p_mediated_by->get_ref(this->p2p_mediated_by);
+		return this->p2p_mediated_by;
+	}
+	return NULL;
+}
+
+/**
+ * Implementation of peer_cfg_t.get_peer_id.
+ */
+static identification_t* get_peer_id(private_peer_cfg_t *this)
+{
+	return this->peer_id;
+}
+#endif /* P2P */
+
 /**
  * Implements peer_cfg_t.get_ref.
  */
@@ -404,9 +483,13 @@ static void destroy(private_peer_cfg_t *this)
 		this->other_id->destroy(this->other_id);
 		DESTROY_IF(this->my_ca);
 		DESTROY_IF(this->other_ca);
-		
 		DESTROY_IF(this->my_virtual_ip);
 		DESTROY_IF(this->other_virtual_ip);
+#ifdef P2P
+		DESTROY_IF(this->p2p_mediated_by);
+		DESTROY_IF(this->peer_id);
+#endif /* P2P */
+		ietfAttr_list_destroy(this->groups);
 		free(this->name);
 		free(this);
 	}
@@ -418,12 +501,15 @@ static void destroy(private_peer_cfg_t *this)
 peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
 							identification_t *my_ca, identification_t *other_ca,
-							cert_policy_t cert_policy, auth_method_t auth_method,
-							eap_type_t eap_type, u_int32_t keyingtries,
-							u_int32_t lifetime, u_int32_t rekeytime,
-							u_int32_t jitter, bool reauth,
+							linked_list_t *groups, cert_policy_t cert_policy,
+							auth_method_t auth_method, eap_type_t eap_type,
+							u_int32_t keyingtries, u_int32_t lifetime,
+							u_int32_t rekeytime, u_int32_t jitter,
+							bool reauth, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
-							host_t *my_virtual_ip, host_t *other_virtual_ip)
+							host_t *my_virtual_ip, host_t *other_virtual_ip,
+							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,
+							identification_t *peer_id)
 {
 	private_peer_cfg_t *this = malloc_thing(private_peer_cfg_t);
 
@@ -438,18 +524,25 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->public.get_other_id = (identification_t* (*)(peer_cfg_t *))get_other_id;
 	this->public.get_my_ca = (identification_t* (*)(peer_cfg_t *))get_my_ca;
 	this->public.get_other_ca = (identification_t* (*)(peer_cfg_t *))get_other_ca;
+	this->public.get_groups = (linked_list_t* (*)(peer_cfg_t *))get_groups;
 	this->public.get_cert_policy = (cert_policy_t (*) (peer_cfg_t *))get_cert_policy;
 	this->public.get_auth_method = (auth_method_t (*) (peer_cfg_t *))get_auth_method;
 	this->public.get_eap_type = (eap_type_t (*) (peer_cfg_t *))get_eap_type;
 	this->public.get_keyingtries = (u_int32_t (*) (peer_cfg_t *))get_keyingtries;
 	this->public.get_lifetime = (u_int32_t (*) (peer_cfg_t *, bool rekey))get_lifetime;
 	this->public.use_reauth = (bool (*) (peer_cfg_t *))use_reauth;
+	this->public.use_mobike = (bool (*) (peer_cfg_t *))use_mobike;
 	this->public.get_dpd_delay = (u_int32_t (*) (peer_cfg_t *))get_dpd_delay;
 	this->public.get_dpd_action = (dpd_action_t (*) (peer_cfg_t *))get_dpd_action;
 	this->public.get_my_virtual_ip = (host_t* (*) (peer_cfg_t *))get_my_virtual_ip;
 	this->public.get_other_virtual_ip = (host_t* (*) (peer_cfg_t *, host_t *))get_other_virtual_ip;
 	this->public.get_ref = (void(*)(peer_cfg_t *))get_ref;
 	this->public.destroy = (void(*)(peer_cfg_t *))destroy;
+#ifdef P2P	
+	this->public.is_mediation = (bool (*) (peer_cfg_t *))is_mediation;
+	this->public.get_mediated_by = (peer_cfg_t* (*) (peer_cfg_t *))get_mediated_by;
+	this->public.get_peer_id = (identification_t* (*) (peer_cfg_t *))get_peer_id;
+#endif /* P2P */
 	
 	/* apply init values */
 	this->name = strdup(name);
@@ -461,6 +554,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->other_id = other_id;
 	this->my_ca = my_ca;
 	this->other_ca = other_ca;
+	this->groups = groups;
 	this->cert_policy = cert_policy;
 	this->auth_method = auth_method;
 	this->eap_type = eap_type;
@@ -469,11 +563,17 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->rekeytime = rekeytime;
 	this->jitter = jitter;
 	this->use_reauth = reauth;
+	this->use_mobike = mobike;
 	this->dpd_delay = dpd_delay;
 	this->dpd_action = dpd_action;
 	this->my_virtual_ip = my_virtual_ip;
 	this->other_virtual_ip = other_virtual_ip;
 	this->refcount = 1;
+#ifdef P2P
+	this->p2p_mediation = p2p_mediation;
+	this->p2p_mediated_by = p2p_mediated_by;
+	this->peer_id = peer_id;
+#endif /* P2P */
 
 	return &this->public;
 }

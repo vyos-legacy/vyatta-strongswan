@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterwhack.c,v 1.17 2006/04/17 10:32:36 as Exp $
+ * RCSID $Id: starterwhack.c 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <sys/types.h>
@@ -168,9 +168,9 @@ set_whack_end(whack_end_t *w, starter_end_t *end)
     w->has_port_wildcard   = end->has_port_wildcard;
     w->has_srcip           = end->has_srcip;
     w->has_natip           = end->has_natip;
+    w->allow_any           = end->allow_any && !end->dns_failed;
     w->modecfg             = end->modecfg;
     w->hostaccess          = end->hostaccess;
-    w->allow_any           = end->allow_any;
     w->sendcert            = end->sendcert;
     w->updown              = end->updown;
     w->host_port           = IKE_UDP_PORT;

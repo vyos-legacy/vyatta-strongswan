@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: demux.c,v 1.14 2006/06/22 11:58:25 as Exp $
+ * RCSID $Id: demux.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 /* Ordering Constraints on Payloads
@@ -1197,12 +1197,12 @@ read_packet(struct msg_digest *md)
 	if ((pbs_room(&md->packet_pbs)==1) && (md->packet_pbs.start[0]==0xff))
 	{
 	    /**
-	     * NAT-T Keep-alive packets should be discared by kernel ESPinUDP
-	     * layer. But boggus keep-alive packets (sent with a non-esp marker)
+	     * NAT-T Keep-alive packets should be discarded by kernel ESPinUDP
+	     * layer. But bogus keep-alive packets (sent with a non-esp marker)
 	     * can reach this point. Complain and discard them.
 	     */
 	    DBG(DBG_NATT,
-		DBG_log("NAT-T keep-alive (boggus ?) should not reach this point. "
+		DBG_log("NAT-T keep-alive (bogus ?) should not reach this point. "
 			"Ignored. Sender: %s:%u", ip_str(cur_from),
 			(unsigned) cur_from_port);
 	    )

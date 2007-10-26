@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokecharon.c $
+ * RCSID $Id: invokecharon.c 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <sys/types.h>

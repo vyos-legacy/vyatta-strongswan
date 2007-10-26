@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ipsec_sa.h,v 1.3 2004/04/28 08:07:11 as Exp $
+ * RCSID $Id: ipsec_sa.h 3265 2007-10-08 19:52:55Z andreas $
  *
  * This file derived from ipsec_xform.h on 2001/9/18 by mcr.
  *

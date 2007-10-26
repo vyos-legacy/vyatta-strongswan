@@ -39,8 +39,6 @@
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
-static struct sockaddr_un socket_addr = { AF_UNIX, "/var/run/charon.xml"};
-
 
 typedef struct private_xml_interface_t private_xml_interface_t;
 
@@ -65,27 +63,293 @@ struct private_xml_interface_t {
 	callback_job_t *job;
 };
 
+ENUM(ike_sa_state_lower_names, IKE_CREATED, IKE_DELETING,
+	"created",
+	"connecting",
+	"established",
+	"rekeying",
+	"deleting",
+);
+
 /**
- * process a getRequest message
+ * write a bool into element
  */
-static void process_get(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
+static void write_bool(xmlTextWriterPtr writer, char *element, bool val)
 {
-	if (/* <GetResponse> */
-		xmlTextWriterStartElement(writer, "GetResponse") < 0 ||
-		/*   <Status Code="200"><Message/></Status> */
-		xmlTextWriterStartElement(writer, "Status") < 0 ||
-		xmlTextWriterWriteAttribute(writer, "Code", "200") < 0  ||
-		xmlTextWriterStartElement(writer, "Message") < 0 ||
-		xmlTextWriterEndElement(writer) < 0 ||
-		xmlTextWriterEndElement(writer) < 0 ||
-		/*   <ConnectionList/> */
-		xmlTextWriterStartElement(writer, "ConnectionList") < 0 ||
-		xmlTextWriterEndElement(writer) < 0 ||
-		/* </GetResponse> */
-		xmlTextWriterEndElement(writer) < 0)
+	xmlTextWriterWriteElement(writer, element, val ? "true" : "false");
+}
+
+/**
+ * write a identification_t into element
+ */
+static void write_id(xmlTextWriterPtr writer, char *element, identification_t *id)
+{
+	xmlTextWriterStartElement(writer, element);
+	switch (id->get_type(id))
 	{
-		DBG1(DBG_CFG, "error writing XML document (GetResponse)");
+		{
+			char *type = "";
+			while (TRUE)
+			{
+				case ID_IPV4_ADDR:
+					type = "ipv4";
+					break;
+				case ID_IPV6_ADDR:
+					type = "ipv6";
+					break;
+				case ID_FQDN:
+					type = "fqdn";
+					break;
+				case ID_RFC822_ADDR:
+					type = "email";
+					break;
+				case ID_DER_ASN1_DN:
+					type = "asn1dn";
+					break;
+				case ID_DER_ASN1_GN:
+					type = "asn1gn";
+					break;
+			}
+			xmlTextWriterWriteAttribute(writer, "type", type);
+			xmlTextWriterWriteFormatString(writer, "%D", id);
+			break;
+		}
+		case ID_ANY:
+			xmlTextWriterWriteAttribute(writer, "type", "any");
+			break;
+		default:
+			/* TODO: base64 keyid */
+			xmlTextWriterWriteAttribute(writer, "type", "keyid");
+			break;
 	}
+	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * write a host_t address into an element
+ */
+static void write_address(xmlTextWriterPtr writer, char *element, host_t *host)
+{
+	xmlTextWriterStartElement(writer, element);
+	xmlTextWriterWriteAttribute(writer, "type",
+						host->get_family(host) == AF_INET ? "ipv4" : "ipv6");
+	if (host->is_anyaddr(host))
+	{	/* do not use %any for XML */
+		xmlTextWriterWriteFormatString(writer, "%s",
+						host->get_family(host) == AF_INET ? "0.0.0.0" : "::");
+	}
+	else
+	{
+		xmlTextWriterWriteFormatString(writer, "%H", host);
+	}
+	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * write a childEnd
+ */
+static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool local)
+{
+	iterator_t *iterator;
+	linked_list_t *list;
+	traffic_selector_t *ts;
+	xmlTextWriterWriteFormatElement(writer, "spi", "%lx", 
+									htonl(child->get_spi(child, local)));
+	xmlTextWriterStartElement(writer, "networks");
+	list = child->get_traffic_selectors(child, local);
+	iterator = list->create_iterator(list, TRUE);
+	while (iterator->iterate(iterator, (void**)&ts))
+	{
+		xmlTextWriterStartElement(writer, "network");
+		xmlTextWriterWriteAttribute(writer, "type",
+						ts->get_type(ts) == TS_IPV4_ADDR_RANGE ? "ipv4" : "ipv6");
+		xmlTextWriterWriteFormatString(writer, "%R", ts);
+		xmlTextWriterEndElement(writer);
+	}
+	iterator->destroy(iterator);
+	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * write a child_sa_t 
+ */
+static void write_child(xmlTextWriterPtr writer, child_sa_t *child)
+{
+	mode_t mode;
+	encryption_algorithm_t encr;
+	integrity_algorithm_t int_algo;
+	size_t encr_len, int_len;
+	u_int32_t rekey, use_in, use_out, use_fwd;
+	child_cfg_t *config;
+	
+	config = child->get_config(child);
+	child->get_stats(child, &mode, &encr, &encr_len, &int_algo, &int_len,
+					 &rekey, &use_in, &use_out, &use_fwd);
+
+	xmlTextWriterStartElement(writer, "childsa");
+	xmlTextWriterWriteFormatElement(writer, "reqid", "%d", child->get_reqid(child));
+	xmlTextWriterWriteFormatElement(writer, "childconfig", "%s", 
+									config->get_name(config));
+	xmlTextWriterStartElement(writer, "local");
+	write_childend(writer, child, TRUE);
+	xmlTextWriterEndElement(writer);
+	xmlTextWriterStartElement(writer, "remote");
+	write_childend(writer, child, FALSE);
+	xmlTextWriterEndElement(writer);
+	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * process a ikesalist query request message
+ */
+static void request_query_ikesa(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
+{
+	iterator_t *iterator;
+	ike_sa_t *ike_sa;
+
+	/* <ikesalist> */
+	xmlTextWriterStartElement(writer, "ikesalist");
+	
+	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
+	while (iterator->iterate(iterator, (void**)&ike_sa))
+	{
+		ike_sa_id_t *id;
+		host_t *local, *remote;
+		iterator_t *children;
+		child_sa_t *child_sa;
+		
+		id = ike_sa->get_id(ike_sa);
+		
+		xmlTextWriterStartElement(writer, "ikesa");
+		xmlTextWriterWriteFormatElement(writer, "id", "%d",
+							ike_sa->get_unique_id(ike_sa));
+		xmlTextWriterWriteFormatElement(writer, "status", "%N", 
+							ike_sa_state_lower_names, ike_sa->get_state(ike_sa));
+		xmlTextWriterWriteElement(writer, "role",
+							id->is_initiator(id) ? "initiator" : "responder");
+		xmlTextWriterWriteElement(writer, "peerconfig", ike_sa->get_name(ike_sa));
+		
+		/* <local> */
+		local = ike_sa->get_my_host(ike_sa);
+		xmlTextWriterStartElement(writer, "local");
+		xmlTextWriterWriteFormatElement(writer, "spi", "%.16llx",
+							id->is_initiator(id) ? id->get_initiator_spi(id)
+												 : id->get_responder_spi(id));
+		write_id(writer, "identification", ike_sa->get_my_id(ike_sa));
+		write_address(writer, "address", local);
+		xmlTextWriterWriteFormatElement(writer, "port", "%d",
+							local->get_port(local));
+		if (ike_sa->supports_extension(ike_sa, EXT_NATT))
+		{
+			write_bool(writer, "nat", ike_sa->has_condition(ike_sa, COND_NAT_HERE));
+		}
+		xmlTextWriterEndElement(writer);
+		/* </local> */
+		
+		/* <remote> */
+		remote = ike_sa->get_other_host(ike_sa);
+		xmlTextWriterStartElement(writer, "remote");
+		xmlTextWriterWriteFormatElement(writer, "spi", "%.16llx",
+							id->is_initiator(id) ? id->get_responder_spi(id)
+												 : id->get_initiator_spi(id));
+		write_id(writer, "identification", ike_sa->get_other_id(ike_sa));
+		write_address(writer, "address", remote);
+		xmlTextWriterWriteFormatElement(writer, "port", "%d",
+							remote->get_port(remote));
+		if (ike_sa->supports_extension(ike_sa, EXT_NATT))
+		{
+			write_bool(writer, "nat", ike_sa->has_condition(ike_sa, COND_NAT_THERE));
+		}
+		xmlTextWriterEndElement(writer);
+		/* </remote> */		
+		
+		/* <childsalist> */
+		xmlTextWriterStartElement(writer, "childsalist");
+		children = ike_sa->create_child_sa_iterator(ike_sa);
+		while (children->iterate(children, (void**)&child_sa))
+		{
+			write_child(writer, child_sa);
+		}
+		children->destroy(children);
+		/* </childsalist> */
+		xmlTextWriterEndElement(writer);		
+		
+		/* </ikesa> */
+		xmlTextWriterEndElement(writer);
+	}
+	iterator->destroy(iterator);
+	
+	/* </ikesalist> */
+	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * process a query request
+ */
+static void request_query(xmlTextReaderPtr reader, xmlTextWriterPtr writer)
+{
+	/* <query> */
+	xmlTextWriterStartElement(writer, "query");
+    while (xmlTextReaderRead(reader))
+    {
+		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT)
+		{
+			if (streq(xmlTextReaderConstName(reader), "ikesalist"))
+			{
+				request_query_ikesa(reader, writer);
+				break;
+			}
+		}
+	}
+	/* </query> */
+	xmlTextWriterEndElement(writer);
+}
+
+/**
+ * process a request message
+ */
+static void request(xmlTextReaderPtr reader, char *id, int fd)
+{
+	xmlTextWriterPtr writer;
+	
+	writer = xmlNewTextWriter(xmlOutputBufferCreateFd(fd, NULL));
+	if (writer == NULL)
+	{
+		DBG1(DBG_CFG, "opening SMP XML writer failed");
+		return;
+	}
+
+	xmlTextWriterStartDocument(writer, NULL, NULL, NULL);
+	/* <message xmlns="http://www.strongswan.org/smp/1.0"
+		id="id" type="response"> */
+	xmlTextWriterStartElement(writer, "message");
+	xmlTextWriterWriteAttribute(writer, "xmlns",
+								"http://www.strongswan.org/smp/1.0");
+	xmlTextWriterWriteAttribute(writer, "id", id);
+	xmlTextWriterWriteAttribute(writer, "type", "response");
+
+	while (xmlTextReaderRead(reader))
+	{
+		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT)
+		{
+			if (streq(xmlTextReaderConstName(reader), "query"))
+			{
+				request_query(reader, writer);
+				break;
+			}
+		}
+	}
+	/*   </message> and close document */
+	xmlTextWriterEndDocument(writer);
+	xmlFreeTextWriter(writer);
+}
+
+/**
+ * cleanup helper function for open file descriptors
+ */
+static void closefdp(int *fd)
+{
+	close(*fd);
 }
 
 /**
@@ -97,17 +361,20 @@ static job_requeue_t process(int *fdp)
 	char buffer[4096];
 	size_t len;
 	xmlTextReaderPtr reader;
-	xmlTextWriterPtr writer;
+	char *id = NULL, *type = NULL;
 	
+	pthread_cleanup_push((void*)closefdp, (void*)&fd);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	len = read(fd, buffer, sizeof(buffer));
 	pthread_setcancelstate(oldstate, NULL);
+	pthread_cleanup_pop(0);
 	if (len <= 0)
 	{
 		close(fd);
 		DBG2(DBG_CFG, "SMP XML connection closed");
 		return JOB_REQUEUE_NONE;
 	}
+	DBG3(DBG_CFG, "got XML request: %b", buffer, len);
 	
 	reader = xmlReaderForMemory(buffer, len, NULL, NULL, 0);
 	if (reader == NULL)
@@ -116,65 +383,32 @@ static job_requeue_t process(int *fdp)
 		return JOB_REQUEUE_FAIR;;
 	}
 	
-	writer = xmlNewTextWriter(xmlOutputBufferCreateFd(fd, NULL));
-	if (writer == NULL)
-	{
-		xmlFreeTextReader(reader);
-		DBG1(DBG_CFG, "opening SMP XML writer failed");
-		return JOB_REQUEUE_FAIR;;
-	}
-	
-	/* create the standard message parts */
-	if (xmlTextWriterStartDocument(writer, NULL, NULL, NULL) < 0 ||
-		/* <SMPMessage xmlns="http://www.strongswan.org/smp/1.0"> */
-		xmlTextWriterStartElement(writer, "SMPMessage") < 0 ||
-		xmlTextWriterWriteAttribute(writer, "xmlns",
-						"http://www.strongswan.org/smp/1.0") < 0 ||
-		/* <Body> */
-		xmlTextWriterStartElement(writer, "Body") < 0)
-	{
-		xmlFreeTextReader(reader);
-		xmlFreeTextWriter(writer);
-		DBG1(DBG_CFG, "creating SMP XML message failed");
-		return JOB_REQUEUE_FAIR;;
-	}
-	
-    while (TRUE)
+	/* read message type and id */
+    while (xmlTextReaderRead(reader))
     {
-    	switch (xmlTextReaderRead(reader))
-    	{
-    		case 1:
-    		{
-				if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT)
-				{
-					if (streq(xmlTextReaderConstName(reader), "GetRequest"))
-					{
-						process_get(reader, writer);
-						break;
-					}
-				}
-				continue;
-			}
-			case 0:
-			    /* end of XML */
-			    break;
-			default:
-			    DBG1(DBG_CFG, "parsing SMP XML message failed");
-			    break;
+		if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT &&
+			streq(xmlTextReaderConstName(reader), "message"))
+		{
+			id = xmlTextReaderGetAttribute(reader, "id");
+			type = xmlTextReaderGetAttribute(reader, "type");
+			break;
 		}
-        xmlFreeTextReader(reader);
-        break;
     }
-    /* write </Body></SMPMessage> and close document */
-    if (xmlTextWriterEndDocument(writer) < 0)
-    {
-		DBG1(DBG_CFG, "completing SMP XML message failed");
-    }
-    xmlFreeTextWriter(writer);
     
-    /* write a newline to indicate end of xml */
-    write(fd, "\n", 1);
-    return JOB_REQUEUE_FAIR;;
+    /* process message */
+    if (id && type)
+	{
+	    if (streq(type, "request"))
+	    {
+	    	request(reader, id, fd);
+	    }
+	    else
+	    {
+	    	/* response(reader, id) */
+	    }
+    }
+	xmlFreeTextReader(reader);
+	return JOB_REQUEUE_FAIR;;
 }
 
 /**
@@ -212,7 +446,7 @@ static job_requeue_t dispatch(private_xml_interface_t *this)
 static void destroy(private_xml_interface_t *this)
 {
 	this->job->cancel(this->job);
-	unlink(socket_addr.sun_path);
+	close(this->socket);
 	free(this);
 }
 
@@ -221,6 +455,7 @@ static void destroy(private_xml_interface_t *this)
  */
 interface_t *interface_create()
 {
+	struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
 	private_xml_interface_t *this = malloc_thing(private_xml_interface_t);
 	mode_t old;
 
@@ -235,8 +470,9 @@ interface_t *interface_create()
 		return NULL;
 	}
 	
-	old = umask(~S_IRWXU);
-	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
+	unlink(unix_addr.sun_path);
+	old = umask(~(S_IRWXU | S_IRWXG));
+	if (bind(this->socket, (struct sockaddr *)&unix_addr, sizeof(unix_addr)) < 0)
 	{
 		DBG1(DBG_CFG, "could not bind XML socket: %s", strerror(errno));
 		close(this->socket);
@@ -244,8 +480,12 @@ interface_t *interface_create()
 		return NULL;
 	}
 	umask(old);
+	if (chown(unix_addr.sun_path, IPSEC_UID, IPSEC_GID) != 0)
+	{
+		DBG1(DBG_CFG, "changing XML socket permissions failed: %s", strerror(errno));
+	}
 	
-	if (listen(this->socket, 0) < 0)
+	if (listen(this->socket, 5) < 0)
 	{
 		DBG1(DBG_CFG, "could not listen on XML socket: %s", strerror(errno));
 		close(this->socket);

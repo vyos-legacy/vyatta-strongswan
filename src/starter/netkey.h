@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: netkey.h,v 1.1 2005/12/30 19:03:15 as Exp $
+ * RCSID $Id: netkey.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _STARTER_NETKEY_H_

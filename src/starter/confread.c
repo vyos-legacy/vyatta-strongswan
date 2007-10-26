@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.c,v 1.37 2006/04/17 19:35:07 as Exp $
+ * RCSID $Id: confread.c 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <stddef.h>
@@ -67,7 +67,8 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.seen    = LEMPTY;
 	cfg->conn_default.startup = STARTUP_NO;
 	cfg->conn_default.state   = STATE_IGNORE;
-	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_RSASIG | POLICY_PFS ;
+	cfg->conn_default.policy  = POLICY_ENCRYPT | POLICY_TUNNEL | POLICY_RSASIG |
+								POLICY_PFS | POLICY_MOBIKE;
 
 	cfg->conn_default.ike                   = clone_str(ike_defaults, "ike_defaults");
 	cfg->conn_default.esp                   = clone_str(esp_defaults, "esp_defaults");
@@ -193,11 +194,9 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		}
 		else
 		{
-			bool fallback_to_any = FALSE;
-
+			/* check for allow_any prefix */
 			if (value[0] == '%')
 			{
-				fallback_to_any = TRUE;
 				end->allow_any = TRUE;
 				value++;
 			}
@@ -206,12 +205,10 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			if (ugh != NULL)
 			{
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);
-				if (fallback_to_any)
+				if (streq(ugh, "does not look numeric and name lookup failed"))
 				{
-					plog("# fallback to %s=%%any due to '%%' prefix");
+					end->dns_failed = TRUE;
 					anyaddr(conn->addr_family, &end->addr);
-					end->allow_any = FALSE;
-					cfg->non_fatal_err++;
 				}
 				else
 				{
@@ -337,6 +334,27 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 err:
 	plog("  bad argument value in conn '%s'", conn_name);
 	cfg->err++;
+}
+
+/*
+ * handles left|right=<FQDN> DNS resolution failure
+ */
+static void
+handle_dns_failure( const char *label, starter_end_t *end, starter_config_t *cfg)
+{
+	if (end->dns_failed)
+	{
+		if (end->allow_any)
+		{
+			plog("# fallback to %s=%%any due to '%%' prefix or %sallowany=yes",
+				label, label);
+		}
+		else
+		{
+			/* declare an error */
+			cfg->err++;
+		}
+	}
 }
 
 /*
@@ -533,6 +551,12 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 		case KW_REAUTH:
 			KW_POLICY_FLAG("no", "yes", POLICY_DONT_REAUTH)
 			break;
+		case KW_MOBIKE:
+			KW_POLICY_FLAG("yes", "no", POLICY_MOBIKE)
+			break;
+		case KW_FORCEENCAPS:
+			KW_POLICY_FLAG("yes", "no", POLICY_FORCE_ENCAP)
+			break;
 		case KW_MODECONFIG:
 			KW_POLICY_FLAG("push", "pull", POLICY_MODECFG_PUSH)
 			break;
@@ -543,6 +567,9 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			break;
 		}
 	}
+
+	handle_dns_failure("left", &conn->left, cfg);
+	handle_dns_failure("right", &conn->right, cfg);
 	handle_firewall("left", &conn->left, cfg);
 	handle_firewall("right", &conn->right, cfg);
 }

@@ -1,7 +1,7 @@
 /* Build a X.509 attribute certificate
  * Copyright (C) 2002  Ueli Galizzi, Ariane Seiler
- * Copyright (C) 2004  Andreas Steffen
- * Zuercher Hochschule Winterthur, Switzerland
+ * Copyright (C) 2004,2007  Andreas Steffen
+ * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: build.h,v 1.4 2004/11/03 14:28:52 as Exp $
+ * RCSID $Id: build.h 3270 2007-10-08 20:09:57Z andreas $
  */
 
 #ifndef _BUILD_H
@@ -21,22 +21,20 @@
 
 #include <time.h>
 
-#include "../pluto/x509.h"
-#include "../pluto/keys.h"
-#include "../pluto/ac.h"
+#include <library.h>
+#include <crypto/x509.h>
+#include <crypto/rsa/rsa_private_key.h>
+#include <utils/linked_list.h>
 
 /*
  * global variables accessible by both main() and build.c
  */
-extern x509cert_t *user;
-extern x509cert_t *signer;
-
-extern ietfAttrList_t *groups;
-extern struct RSA_private_key *signerkey;
-
+extern x509_t *usercert;
+extern x509_t *signercert;
+extern rsa_private_key_t *signerkey;
+extern linked_list_t *groups;
 extern time_t notBefore;
 extern time_t notAfter;
-
 extern chunk_t serial;
 
 /*

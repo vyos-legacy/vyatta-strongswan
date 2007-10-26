@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.h,v 1.20 2006/02/28 19:13:33 as Exp $
+ * RCSID $Id: constants.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #ifndef _CONSTANTS_H
@@ -875,6 +875,8 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_XAUTH_SERVER	LELEM(20)	/* are we an XAUTH server? */
 #define POLICY_DONT_REAUTH	LELEM(21)	/* don't reauthenticate on rekeying, IKEv2 only */
 #define POLICY_BEET		LELEM(22)	/* bound end2end tunnel, IKEv2 */
+#define POLICY_MOBIKE		LELEM(23)	/* enable MOBIKE for IKEv2  */
+#define POLICY_FORCE_ENCAP	LELEM(24)	/* force UDP encapsulation (IKEv2)  */
 
 /* Any IPsec policy?  If not, a connection description
  * is only for ISAKMP SA, not IPSEC SA.  (A pun, I admit.)

@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: asn1.h,v 1.14 2005/12/06 22:50:10 as Exp $
+ * RCSID $Id: asn1.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #ifndef _ASN1_H

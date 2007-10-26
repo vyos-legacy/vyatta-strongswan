@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: netkey.c,v 1.4 2006/02/15 18:33:57 as Exp $
+ * RCSID $Id: netkey.c 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <sys/types.h>

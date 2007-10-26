@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
- * RCSID $Id: copyright.c,v 1.6 2005/11/02 21:51:13 as Exp $
+ * RCSID $Id: copyright.c 3265 2007-10-08 19:52:55Z andreas $
  */
 #include "internal.h"
 #include "freeswan.h"
@@ -31,8 +31,9 @@ static const char *co[] = {
  "    Mario Strasser, Lukas Suter, Roger Wegmann, Simon Zwahlen,",
  "    Zuercher Hochschule Winterthur (Switzerland).",
  "",
- "    Tobias Brunner, Fabian Hartmann, Noah Heusser, Jan Hutter,",
- "    Daniel Röthlisberger, Martin Willi, Andreas Steffen,",
+ "    Tobias Brunner, Andreas Eigenmann, Fabian Hartmann, Noah Heusser,",
+ "    Jan Hutter, Daniel Roethlisberger, Joel Stillhart, Martin Willi,",
+ "    Daniel Wydler, Andreas Steffen,",
  "    Hochschule fuer Technik Rapperswil (Switzerland).",
  "",
  "This program is free software; you can redistribute it and/or modify it",

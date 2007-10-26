@@ -497,7 +497,7 @@ char *yytext;
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: parser.l,v 1.5 2006/03/28 22:32:33 as Exp $
+ * RCSID $Id: parser.l 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <string.h>

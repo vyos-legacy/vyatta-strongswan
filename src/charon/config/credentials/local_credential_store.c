@@ -66,7 +66,7 @@ struct shared_key_t {
 static void shared_key_destroy(shared_key_t *this)
 {
 	this->peers->destroy_offset(this->peers, offsetof(identification_t, destroy));
-	chunk_free(&this->secret);
+	chunk_free_randomized(&this->secret);
 	free(this);
 }
 
@@ -83,7 +83,7 @@ static shared_key_t *shared_key_create(chunk_t secret)
 	shared_key_t *this = malloc_thing(shared_key_t);
 
 	/* private data */
-	this->secret = chunk_clone(secret);
+	this->secret = secret;
 	this->peers = linked_list_create();
 
 	return (this);
@@ -158,6 +158,11 @@ struct private_local_credential_store_t {
 	linked_list_t *private_keys;
 	
 	/**
+	 * mutex controls access to the linked lists of secret keys
+	 */
+	pthread_mutex_t keys_mutex;
+
+	/**
 	 * list of X.509 certificates with public keys
 	 */
 	linked_list_t *certs;
@@ -171,6 +176,16 @@ struct private_local_credential_store_t {
 	 * list of X.509 CA information records
 	 */
 	linked_list_t *ca_infos;
+
+	/**
+	 * list of X.509 attribute certificates
+	 */
+	linked_list_t *acerts;
+
+	/**
+	 * mutex controls access to the linked list of attribute certificates
+	 */
+	pthread_mutex_t acerts_mutex;
 };
 
 
@@ -191,8 +206,9 @@ static status_t get_key(linked_list_t *keys,
 	prio_t best_prio = PRIO_UNDEFINED;
 	chunk_t found = chunk_empty;
 	shared_key_t *shared_key;
+	iterator_t *iterator;
 
-	iterator_t *iterator = keys->create_iterator(keys, TRUE);
+	iterator = keys->create_iterator(keys, TRUE);
 
 	while (iterator->iterate(iterator, (void**)&shared_key))
 	{
@@ -242,7 +258,6 @@ static status_t get_key(linked_list_t *keys,
 	}
 }
 
-
 /**
  * Implementation of local_credential_store_t.get_shared_key.
  */	
@@ -250,7 +265,12 @@ static status_t get_shared_key(private_local_credential_store_t *this,
 							   identification_t *my_id,
 							   identification_t *other_id, chunk_t *secret)
 {
-	return get_key(this->shared_keys, my_id, other_id, secret);
+	status_t status;
+
+	pthread_mutex_lock(&(this->keys_mutex));
+	status = get_key(this->shared_keys, my_id, other_id, secret);
+	pthread_mutex_unlock(&(this->keys_mutex));
+	return status;
 }
 
 /**
@@ -260,7 +280,12 @@ static status_t get_eap_key(private_local_credential_store_t *this,
 							identification_t *my_id,
 							identification_t *other_id, chunk_t *secret)
 {
-	return get_key(this->eap_keys, my_id, other_id, secret);
+	status_t status;
+
+	pthread_mutex_lock(&(this->keys_mutex));
+	status = get_key(this->eap_keys, my_id, other_id, secret);
+	pthread_mutex_unlock(&(this->keys_mutex));
+	return status;
 }
 
 /**
@@ -325,36 +350,16 @@ static ca_info_t* get_issuer(private_local_credential_store_t *this, x509_t *cer
 }
 
 /**
- * Implementation of local_credential_store_t.get_rsa_private_key.
- */
-static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *this,
-											  rsa_public_key_t *pubkey)
-{
-	rsa_private_key_t *found = NULL, *current;
-
-	iterator_t *iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
-
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		if (current->belongs_to(current, pubkey))
-		{
-			found = current->clone(current);
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	return found;
-}
-
-/**
  * Implementation of local_credential_store_t.has_rsa_private_key.
  */
 static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_public_key_t *pubkey)
 {
 	bool found = FALSE;
 	rsa_private_key_t *current;
+	iterator_t *iterator;
 
-	iterator_t *iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
+	pthread_mutex_lock(&(this->keys_mutex));
+	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
 
 	while (iterator->iterate(iterator, (void**)&current))
 	{
@@ -365,6 +370,7 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 		}
 	}
 	iterator->destroy(iterator);
+	pthread_mutex_unlock(&(this->keys_mutex));
 	return found;
 }
 
@@ -725,10 +731,51 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 }
 
 /**
+ * Implementation of local_credential_store_t.rsa_signature.
+ */
+static status_t rsa_signature(private_local_credential_store_t *this,
+							  rsa_public_key_t *pubkey,
+							  hash_algorithm_t hash_algorithm,
+							  chunk_t data, chunk_t *signature)
+{
+	rsa_private_key_t *current, *key = NULL;
+	iterator_t *iterator;
+	status_t status;
+	chunk_t keyid = pubkey->get_keyid(pubkey);
+
+	DBG2(DBG_IKE, "looking for RSA private key with keyid %#B...", &keyid);
+	pthread_mutex_lock(&(this->keys_mutex));
+
+	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		if (current->belongs_to(current, pubkey))
+		{
+			key = current;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	if (key)
+	{
+		DBG2(DBG_IKE, "  matching RSA private key found");
+		status = key->build_emsa_pkcs1_signature(key, hash_algorithm, data, signature);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "no RSA private key found with keyid %#B", &keyid);
+		status = NOT_FOUND;
+	}
+	pthread_mutex_unlock(&(this->keys_mutex));
+	return status;
+}
+
+/**
  * Implementation of local_credential_store_t.verify_signature.
  */
 static status_t verify_signature(private_local_credential_store_t *this,
-								 chunk_t hash, chunk_t sig,
+								 chunk_t hash, chunk_t signature,
 								 identification_t *id, ca_info_t **issuer_p)
 {
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
@@ -785,7 +832,7 @@ static status_t verify_signature(private_local_credential_store_t *this,
 				}
 				*issuer_p = issuer;
 			}
-			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, hash, sig);
+			sig_status = public_key->verify_emsa_pkcs1_signature(public_key, HASH_UNKNOWN, hash, signature);
 			if (sig_status == SUCCESS)
 			{
 				DBG2(DBG_CFG, "candidate peer certificate has a matching RSA public key");
@@ -938,6 +985,14 @@ static iterator_t* create_cainfo_iterator(private_local_credential_store_t *this
 }
 
 /**
+ * Implements local_credential_store_t.create_acert_iterator
+ */
+static iterator_t* create_acert_iterator(private_local_credential_store_t *this)
+{
+	return this->acerts->create_iterator_locked(this->acerts, &this->acerts_mutex);
+}
+
+/**
  * Implements local_credential_store_t.load_auth_certificates
  */
 static void load_auth_certificates(private_local_credential_store_t *this,
@@ -1053,7 +1108,39 @@ static void load_aa_certificates(private_local_credential_store_t *this)
  */
 static void add_attr_certificate(private_local_credential_store_t *this, x509ac_t *cert)
 {
-  /* TODO add a new attribute certificate to the linked list */
+	iterator_t *iterator;
+	x509ac_t *current_cert;
+	bool found = FALSE;
+
+	pthread_mutex_lock(&(this->acerts_mutex));
+	iterator = this->acerts->create_iterator(this->acerts, TRUE);
+
+	while (iterator->iterate(iterator, (void **)&current_cert))
+	{
+		if (cert->equals_holder(cert, current_cert))
+		{
+			if (cert->is_newer(cert, current_cert))
+			{
+				iterator->replace(iterator, NULL, (void *)cert);
+				current_cert->destroy(current_cert);
+				DBG1(DBG_CFG, "  this attr cert is newer - existing attr cert replaced");
+			}
+			else
+			{
+				cert->destroy(cert);
+				DBG1(DBG_CFG, "  this attr cert is not newer - existing attr cert retained");
+			}
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	if (!found)
+	{
+		this->acerts->insert_last(this->acerts, (void *)cert);
+	}
+	pthread_mutex_unlock(&(this->acerts_mutex));
 }
 
 /**
@@ -1230,21 +1317,26 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 	}
 
 	if (quotes)
-	{	/* treat as an ASCII string */
-		if (raw_secret.len > secret->len)
-			return "secret larger than buffer";
-		memcpy(secret->ptr, raw_secret.ptr, raw_secret.len);
-		secret->len = raw_secret.len;
+	{	
+		/* treat as an ASCII string */
+		*secret = chunk_clone(raw_secret);
 	}
 	else
-	{	/* convert from HEX or Base64 to binary */
+	{
 		size_t len;
-		err_t ugh = ttodata(raw_secret.ptr, raw_secret.len, 0, secret->ptr, secret->len, &len);
+		err_t ugh;
+
+		/* secret converted to binary form doesn't use more space than the raw_secret */
+		*secret = chunk_alloc(raw_secret.len);
+
+		/* convert from HEX or Base64 to binary */
+		ugh = ttodata(raw_secret.ptr, raw_secret.len, 0, secret->ptr, secret->len, &len);
 
 	    if (ugh != NULL)
+		{
+			chunk_free_randomized(secret);
 			return ugh;
-		if (len > secret->len)
-			return "secret larger than buffer";
+		}
 		secret->len = len;
 	}
 	return NULL;
@@ -1253,17 +1345,18 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 /**
  * Implements local_credential_store_t.load_secrets
  */
-static void load_secrets(private_local_credential_store_t *this)
+static void load_secrets(private_local_credential_store_t *this, bool reload)
 {
 	FILE *fd = fopen(SECRETS_FILE, "r");
 
 	if (fd)
 	{
-		int bytes;
+		size_t bytes;
 		int line_nr = 0;
     	chunk_t chunk, src, line;
 
-		DBG1(DBG_CFG, "loading secrets from \"%s\"", SECRETS_FILE);
+		DBG1(DBG_CFG, "%sloading secrets from \"%s\"",
+			reload? "re":"", SECRETS_FILE);
 
 		fseek(fd, 0, SEEK_END);
 		chunk.len = ftell(fd);
@@ -1271,8 +1364,24 @@ static void load_secrets(private_local_credential_store_t *this)
 		chunk.ptr = malloc(chunk.len);
 		bytes = fread(chunk.ptr, 1, chunk.len, fd);
 		fclose(fd);
-
 		src = chunk;
+
+		pthread_mutex_lock(&(this->keys_mutex));
+		if (reload)
+		{
+			DBG1(DBG_CFG, "  forgetting old secrets");
+			this->private_keys->destroy_offset(this->private_keys,
+					 offsetof(rsa_private_key_t, destroy));
+			this->private_keys = linked_list_create();
+
+			this->shared_keys->destroy_function(this->shared_keys,
+					 (void*)shared_key_destroy);
+			this->shared_keys = linked_list_create();
+
+			this->eap_keys->destroy_function(this->eap_keys,
+					 (void*)shared_key_destroy);
+			this->eap_keys = linked_list_create();
+		}
 
 		while (fetchline(&src, &line))
 		{
@@ -1302,9 +1411,7 @@ static void load_secrets(private_local_credential_store_t *this)
 			{
 				char path[PATH_BUF];
 				chunk_t filename;
-
-				char buf[BUF_LEN];
-				chunk_t secret = { buf, BUF_LEN };
+				chunk_t secret = chunk_empty;
 				chunk_t *passphrase = NULL;
 
 				rsa_private_key_t *key;
@@ -1350,14 +1457,13 @@ static void load_secrets(private_local_credential_store_t *this)
 				{
 					this->private_keys->insert_last(this->private_keys, (void*)key);
 				}
+				chunk_free_randomized(&secret);
 			}
 			else if ( match("PSK", &token) ||
 					((match("EAP", &token) || match("XAUTH", &token)) && (is_eap = TRUE)))
 			{
 				shared_key_t *shared_key;
-
-				char buf[BUF_LEN];
-				chunk_t secret = { buf, BUF_LEN };
+				chunk_t secret = chunk_empty;
 
 				err_t ugh = extract_secret(&secret, &line);
 				if (ugh != NULL)
@@ -1373,16 +1479,13 @@ static void load_secrets(private_local_credential_store_t *this)
 				DBG4(DBG_CFG, "  secret:", secret);
 
 				shared_key = shared_key_create(secret);
-				if (shared_key)
+				if (is_eap)
 				{
-					if (is_eap)
-					{
-						this->eap_keys->insert_last(this->eap_keys, (void*)shared_key);
-					}
-					else
-					{
-						this->shared_keys->insert_last(this->shared_keys, (void*)shared_key);
-					}
+					this->eap_keys->insert_last(this->eap_keys, (void*)shared_key);
+				}
+				else
+				{
+					this->shared_keys->insert_last(this->shared_keys, (void*)shared_key);
 				}
 				while (ids.len > 0)
 				{
@@ -1430,7 +1533,8 @@ static void load_secrets(private_local_credential_store_t *this)
 			}
 		}
 error:
-		free(chunk.ptr);
+		chunk_free_randomized(&chunk);
+		pthread_mutex_unlock(&(this->keys_mutex));
 	}
 	else
 	{
@@ -1447,9 +1551,17 @@ static void destroy(private_local_credential_store_t *this)
 	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
 	this->auth_certs->destroy_offset(this->auth_certs, offsetof(x509_t, destroy));
 	this->ca_infos->destroy_offset(this->ca_infos, offsetof(ca_info_t, destroy));
+
+	pthread_mutex_lock(&(this->acerts_mutex));
+	this->acerts->destroy_offset(this->acerts, offsetof(x509ac_t, destroy));
+	pthread_mutex_unlock(&(this->acerts_mutex));
+
+	pthread_mutex_lock(&(this->keys_mutex));
 	this->private_keys->destroy_offset(this->private_keys, offsetof(rsa_private_key_t, destroy));
 	this->shared_keys->destroy_function(this->shared_keys, (void*)shared_key_destroy);
 	this->eap_keys->destroy_function(this->eap_keys, (void*)shared_key_destroy);
+	pthread_mutex_unlock(&(this->keys_mutex));
+
 	free(this);
 }
 
@@ -1459,17 +1571,18 @@ static void destroy(private_local_credential_store_t *this)
 local_credential_store_t * local_credential_store_create(void)
 {
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
-	
+
+	/* public functions */
 	this->public.credential_store.get_shared_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_shared_key;
 	this->public.credential_store.get_eap_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_eap_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
-	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t* (*) (credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
 	this->public.credential_store.get_auth_certificate = (x509_t* (*) (credential_store_t*,u_int,identification_t*))get_auth_certificate;
 	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
 	this->public.credential_store.get_issuer = (ca_info_t* (*) (credential_store_t*,x509_t*))get_issuer;
 	this->public.credential_store.is_trusted = (bool (*) (credential_store_t*,const char*,x509_t*))is_trusted;
+	this->public.credential_store.rsa_signature = (status_t (*) (credential_store_t*,rsa_public_key_t*,hash_algorithm_t,chunk_t,chunk_t*))rsa_signature;
 	this->public.credential_store.verify_signature = (status_t (*) (credential_store_t*,chunk_t,chunk_t,identification_t*,ca_info_t**))verify_signature;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
@@ -1479,14 +1592,19 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.create_cert_iterator = (iterator_t* (*) (credential_store_t*))create_cert_iterator;
 	this->public.credential_store.create_auth_cert_iterator = (iterator_t* (*) (credential_store_t*))create_auth_cert_iterator;
 	this->public.credential_store.create_cainfo_iterator = (iterator_t* (*) (credential_store_t*))create_cainfo_iterator;
+	this->public.credential_store.create_acert_iterator = (iterator_t* (*) (credential_store_t*))create_acert_iterator;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
 	this->public.credential_store.load_aa_certificates = (void (*) (credential_store_t*))load_aa_certificates;
 	this->public.credential_store.load_attr_certificates = (void (*) (credential_store_t*))load_attr_certificates;
 	this->public.credential_store.load_ocsp_certificates = (void (*) (credential_store_t*))load_ocsp_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
-	this->public.credential_store.load_secrets = (void (*) (credential_store_t*))load_secrets;
+	this->public.credential_store.load_secrets = (void (*) (credential_store_t*,bool))load_secrets;
 	this->public.credential_store.destroy = (void (*) (credential_store_t*))destroy;
-	
+
+	/* initialize the mutexes */
+	pthread_mutex_init(&(this->keys_mutex), NULL);
+	pthread_mutex_init(&(this->acerts_mutex), NULL);
+
 	/* private variables */
 	this->shared_keys = linked_list_create();
 	this->eap_keys = linked_list_create();
@@ -1494,6 +1612,7 @@ local_credential_store_t * local_credential_store_create(void)
 	this->certs = linked_list_create();
 	this->auth_certs = linked_list_create();
 	this->ca_infos = linked_list_create();
+	this->acerts = linked_list_create();
 
 	return (&this->public);
 }

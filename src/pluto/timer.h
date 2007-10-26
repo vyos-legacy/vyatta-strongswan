@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: timer.h,v 1.2 2004/07/29 18:33:45 as Exp $
+ * RCSID $Id: timer.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 extern time_t now(void);	/* careful version of time(2) */

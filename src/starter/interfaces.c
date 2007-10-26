@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: interfaces.c,v 1.15 2006/02/05 10:51:55 as Exp $
+ * RCSID $Id: interfaces.c 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <sys/socket.h>

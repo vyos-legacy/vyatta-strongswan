@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -30,6 +31,7 @@ typedef struct peer_cfg_t peer_cfg_t;
 
 #include <library.h>
 #include <utils/identification.h>
+#include <utils/linked_list.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 #include <config/ike_cfg.h>
@@ -194,13 +196,21 @@ struct peer_cfg_t {
 	identification_t* (*get_my_ca)(peer_cfg_t *this);
 
 	/**
-	 * @brief Get peers CA.
+	 * @brief Get peer CA.
 	 * 
 	 * @param this			calling object
 	 * @return				other ca
 	 */
 	identification_t* (*get_other_ca)(peer_cfg_t *this);
 	
+	/**
+	 * @brief Get list of group attributes.
+	 * 
+	 * @param this			calling object
+	 * @return				linked list of group attributes
+	 */
+	linked_list_t* (*get_groups)(peer_cfg_t *this);
+
 	/**
 	 * @brief Should be sent a certificate for this connection?
 	 *
@@ -257,6 +267,14 @@ struct peer_cfg_t {
 	bool (*use_reauth) (peer_cfg_t *this);
 	
 	/**
+	 * @brief Use MOBIKE (RFC4555) if peer supports it?
+	 * 
+	 * @param this		calling object
+	 * @return			TRUE to enable MOBIKE support
+	 */
+	bool (*use_mobike) (peer_cfg_t *this);
+	
+	/**
 	 * @brief Get the DPD check interval.
 	 * 
 	 * @param this		calling object
@@ -297,6 +315,37 @@ struct peer_cfg_t {
 	 * @return				clone of an IP to use
 	 */
 	host_t* (*get_other_virtual_ip) (peer_cfg_t *this, host_t *suggestion);
+
+#ifdef P2P	
+	/**
+	 * @brief Is this a mediation connection?
+	 * 
+	 * @param this			peer_cfg
+	 * @return				TRUE, if this is a mediation connection
+	 */
+	bool (*is_mediation) (peer_cfg_t *this);
+	
+	/**
+	 * @brief Get peer_cfg of the connection this one is mediated through.
+	 * 
+	 * @param this			peer_cfg
+	 * @return				reference to peer_cfg of the mediation connection
+	 */
+	peer_cfg_t* (*get_mediated_by) (peer_cfg_t *this);
+	
+	/**
+	 * @brief Get the id of the other peer at the mediation server.
+	 * 
+	 * This is the leftid of the peer's connection with the mediation server.
+	 * 
+	 * If it is not configured, it is assumed to be the same as the right id
+	 * of this connection. 
+	 * 
+	 * @param this			peer_cfg
+	 * @return				the id of the other peer
+	 */
+	identification_t* (*get_peer_id) (peer_cfg_t *this);
+#endif /* P2P */
 	
 	/**
 	 * @brief Get a new reference.
@@ -339,6 +388,7 @@ struct peer_cfg_t {
  * @param other_id 			identification_t for the remote guy
  * @param my_ca				CA to use for us
  * @param other_ca			CA to use for other
+ * @param groups			list of group memberships
  * @param cert_policy		should we send a certificate payload?
  * @param auth_method		auth method to use to authenticate us
  * @param eap_type			EAP type to use for peer authentication
@@ -346,11 +396,15 @@ struct peer_cfg_t {
  * @param lifetime			lifetime before deleting an SA
  * @param rekeytime			lifetime before rekeying an SA
  * @param jitter			range of random to substract from rekeytime
- * @param use_reauth		sould be done reauthentication instead of rekeying?
+ * @param reauth			sould be done reauthentication instead of rekeying?
+ * @param mobike			use MOBIKE (RFC4555) if peer supports it
  * @param dpd_delay			after how many seconds of inactivity to check DPD
  * @param dpd_action		what to do with CHILD_SAs when detected a dead peer
  * @param my_virtual_ip		virtual IP for local host, or NULL
  * @param other_virtual_ip	virtual IP for remote host, or NULL
+ * @param p2p_mediation		TRUE if this is a mediation connection
+ * @param p2p_mediated_by	name of the mediation connection to mediate through
+ * @param peer_id			ID that identifies our peer at the mediation server
  * @return 					peer_cfg_t object
  * 
  * @ingroup config
@@ -358,11 +412,14 @@ struct peer_cfg_t {
 peer_cfg_t *peer_cfg_create(char *name, u_int ikev_version, ike_cfg_t *ike_cfg,
 							identification_t *my_id, identification_t *other_id,
 							identification_t *my_ca, identification_t *other_ca,
-							cert_policy_t cert_policy, auth_method_t auth_method,
-							eap_type_t eap_type, u_int32_t keyingtries,
-							u_int32_t lifetime, u_int32_t rekeytime,
-							u_int32_t jitter, bool use_reauth,
+							linked_list_t *groups, cert_policy_t cert_policy,
+							auth_method_t auth_method, eap_type_t eap_type,
+							u_int32_t keyingtries, u_int32_t lifetime,
+							u_int32_t rekeytime, u_int32_t jitter,
+							bool reauth, bool mobike,
 							u_int32_t dpd_delay, dpd_action_t dpd_action,
-							host_t *my_virtual_ip, host_t *other_virtual_ip);
+							host_t *my_virtual_ip, host_t *other_virtual_ip,
+							bool p2p_mediation, peer_cfg_t *p2p_mediated_by,
+							identification_t *peer_id);
 
 #endif /* PEER_CFG_H_ */

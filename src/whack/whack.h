@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: whack.h,v 1.16 2006/04/17 10:39:14 as Exp $
+ * RCSID $Id: whack.h 3264 2007-10-08 19:49:56Z andreas $
  */
 
 #ifndef _WHACK_H

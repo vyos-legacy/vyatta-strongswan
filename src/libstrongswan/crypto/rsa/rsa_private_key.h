@@ -19,6 +19,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * RCSID $Id: rsa_private_key.h 3296 2007-10-12 15:23:29Z andreas $
  */
 
 #ifndef RSA_PRIVATE_KEY_H_
@@ -42,11 +44,22 @@ typedef struct rsa_private_key_t rsa_private_key_t;
  * 
  * @see rsa_public_key_t
  *
- * @todo Implement get_key(), save_key(), get_public_key()
- *
  * @ingroup rsa
  */
 struct rsa_private_key_t {
+
+	/**
+	 * @brief Decrypt a data block based on EME-PKCS1 encoding.
+	 * 
+	 * 
+	 * @param this				calling object
+	 * @param data				encrypted input data
+	 * @param out				decrypted output data
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED if padding is not correct
+	 */
+	status_t (*pkcs1_decrypt) (rsa_private_key_t *this, chunk_t in, chunk_t *out);
 
 	/**
 	 * @brief Build a signature over a chunk using EMSA-PKCS1 encoding.
@@ -67,45 +80,17 @@ struct rsa_private_key_t {
 	status_t (*build_emsa_pkcs1_signature) (rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature);
 	
 	/**
-	 * @brief Gets the key.
-	 * 
-	 * UNIMPLEMENTED!
-	 * 
+	 * @brief Writes an RSA private key to a file in PKCS#1 format.
+	 *
 	 * @param this				calling object
-	 * @param key				key (in a propriarity format)
-	 * @return					
-	 * 							- SUCCESS
-	 * 							- INVALID_STATE, if key not set
+	 * @param filename			file to which the key should be written.
+	 * @param force				if TRUE overwrite existing file
+	 * @return					TRUE if successful - FALSE otherwise
 	 */
-	status_t (*get_key) (rsa_private_key_t *this, chunk_t *key);
+	bool (*pkcs1_write) (rsa_private_key_t *this, const char *filename, bool force);
 	
 	/**
-	 * @brief Saves a key to a file.
-	 * 
-	 * Not implemented!
-	 * 
-	 * @param this				calling object
-	 * @param file				file to which the key should be written.
-	 * @return					NOT_SUPPORTED
-	 */
-	status_t (*save_key) (rsa_private_key_t *this, char *file);
-	
-	/**
-	 * @brief Generate a new key.
-	 * 
-	 * Generates a new private_key with specified key size
-	 * 
-	 * @param this				calling object
-	 * @param key_size			size of the key in bits
-	 * @return					
-	 * 							- SUCCESS
-	 * 							- INVALID_ARG if key_size invalid
-	 */
-	status_t (*generate_key) (rsa_private_key_t *this, size_t key_size);
-	
-	/**
-	 * @brief Create a rsa_public_key_t with the public
-	 * parts of the key.
+	 * @brief Create a rsa_public_key_t with the public part of the key.
 	 * 
 	 * @param this				calling object
 	 * @return					public_key
@@ -123,14 +108,6 @@ struct rsa_private_key_t {
 	 * @return					TRUE, if keys belong together
 	 */
 	bool (*belongs_to) (rsa_private_key_t *this, rsa_public_key_t *public);
-	
-	/**
-	 * @brief Clone the private key.
-	 * 
-	 * @param this				private key to clone
-	 * @return					clone of this
-	 */
-	rsa_private_key_t *(*clone) (rsa_private_key_t *this);
 	
 	/**
 	 * @brief Destroys the private key.

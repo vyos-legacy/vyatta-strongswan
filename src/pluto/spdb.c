@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: spdb.c,v 1.9 2006/04/22 21:59:20 as Exp $
+ * RCSID $Id: spdb.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <stdio.h>
@@ -975,8 +975,8 @@ parse_isakmp_sa_body(u_int32_t ipsecdoisit
 		    lset_t iap = st->st_policy & POLICY_ID_AUTH_MASK;
 
 		    /* is the initiator the XAUTH client? */
-		    bool xauth_init = initiator && (st->st_policy & POLICY_XAUTH_SERVER) == LEMPTY
-				  || !initiator && (st->st_policy & POLICY_XAUTH_SERVER) != LEMPTY;
+		    bool xauth_init = ( initiator && (st->st_policy & POLICY_XAUTH_SERVER) == LEMPTY)
+				   || (!initiator && (st->st_policy & POLICY_XAUTH_SERVER) != LEMPTY);
 
 		    switch (val)
 		    {
