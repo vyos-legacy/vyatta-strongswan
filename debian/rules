@@ -5,9 +5,6 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-# This is the debhelper compatability version to use.
-export DH_COMPAT=4
-
 export DH_OPTIONS
 
 ifeq (,$(wildcard /usr/bin/po2debconf))
@@ -148,6 +145,11 @@ binary-common:
 
 	dh_makeshlibs
 	dh_installdeb
+	# this also flags ipsec.conf and ipsec.secrets as conffiles, which is wrong...
+	cp $(CURDIR)/debian/strongswan/DEBIAN/conffiles $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp
+	sed '/ipsec.conf/d,/ipsec.secrets/d' $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp \
+		> $(CURDIR)/debian/strongswan/DEBIAN/conffiles
+	rm $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums

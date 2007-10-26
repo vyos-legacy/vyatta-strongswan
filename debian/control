@@ -8,7 +8,7 @@ Build-Depends: debhelper (>= 4.1.16), libgmp3-dev, libssl-dev (>= 0.9.8-1), libc
 Package: strongswan
 Architecture: any
 Pre-Depends: debconf | debconf-2.0
-Depends: ${shlibs:Depends}, bsdmainutils, debianutils (>=1.7), ipsec-tools, openssl, host, iproute
+Depends: ${shlibs:Depends}, ${misc:Depends}, bsdmainutils, debianutils (>=1.7), ipsec-tools, openssl, host, iproute
 Suggests: curl
 Provides: ike-server
 Conflicts: freeswan (<< 2.04-12), openswan

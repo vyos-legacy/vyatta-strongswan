@@ -1,8 +1,27 @@
-strongswan (4.1.8-1) UNRELEASED; urgency=low
+strongswan (4.1.8-1) unstable; urgency=low
 
-  * (NOT RELEASED YET) New upstream release
+  The "I'm back from my long semi-vacation, and strongswan is now bug-free 
+  again" release.
+  * New upstream release.
+    Closes: #442880: strongswan: postinst failure (missing /etc/init.d/ipsec)
+    Closes: #431874: strongswan - FTBFS: cannot create regular file 
+                     `/etc/ipsec.conf': Permission denied
+  * Explicitly use debhalper compatbility version 5m now using debian/compat
+    instead of DH_COMPAT.
+  * Since there's no configurability in dh_installdeb's mania to flag 
+    everything below /etc as a conffile, now hack DEBIAN/conffiles directly
+    to remove ipsec.conf and ipsec.secrets.
+    Closes: #442929: strongswan: Maintainer script modifies conffiles
+  * Add/update debconf translations.
+    Closes: #432189: strongswan: [INTL:de] updated German debconf translation
+    Closes: #432212: [l10n] Updated Czech translation of strongswan debconf 
+                     messages
+    Closes: #432642: strongswan: [INTL:fr] French debconf templates 
+                     translation update
+    Closes: #444710: strongswan: [INTL:pt] Updated Portuguese translation for 
+                     debconf messages
 
- -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Fri, 26 Oct 2007 16:16:51 +0200
+ -- Rene Mayrhofer <rmayr@debian.org>  Fri, 26 Oct 2007 16:16:51 +0200
 
 strongswan (4.1.4-1) unstable; urgency=low
 
