@@ -23,19 +23,19 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../strongswan.templates.master:1001
+#: ../strongswan.templates:1001
 msgid "earliest, \"after NFS\", \"after PCMCIA\""
 msgstr "\"co nejdříve\", \"po NFS\", \"po PCMCIA\""
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:1002
+#: ../strongswan.templates:1002
 msgid "When to start strongSwan:"
 msgstr "Kdy spustit strongSwan:"
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:1002
+#: ../strongswan.templates:1002
 msgid ""
 "There are three possibilities when strongSwan can start: before or after the "
 "NFS services and after the PCMCIA services. The correct answer depends on "
@@ -47,7 +47,7 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:1002
+#: ../strongswan.templates:1002
 msgid ""
 "If you do not have your /usr tree mounted via NFS (either you only mount "
 "other, less vital trees via NFS or don't use NFS mounted trees at all) and "
@@ -65,7 +65,7 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:1002
+#: ../strongswan.templates:1002
 msgid ""
 "If you have your /usr tree mounted via NFS and don't use a PCMCIA network "
 "card, then you will need to start strongSwan after NFS so that all necessary "
@@ -80,7 +80,7 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:1002
+#: ../strongswan.templates:1002
 msgid ""
 "If you use a PCMCIA network card for your IPSec connections, then you only "
 "have to choose to start it after the PCMCIA services. Answer \"after PCMCIA"
@@ -94,13 +94,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:2001
+#: ../strongswan.templates:2001
 msgid "Do you wish to restart strongSwan?"
 msgstr "Přejete si restartovat strongSwan?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:2001
+#: ../strongswan.templates:2001
 msgid ""
 "Restarting strongSwan is a good idea, since if there is a security fix, it "
 "will not be fixed until the daemon restarts. Most people expect the daemon "
@@ -115,13 +115,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:3001
+#: ../strongswan.templates:3001
 msgid "Do you wish to support IKEv1?"
 msgstr "Přejete si podporu IKEv1?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:3001
+#: ../strongswan.templates:3001
 msgid ""
 "strongSwan supports both versions of the Internet Key Exchange protocol, "
 "IKEv1 and IKEv2. Do you want to start the \"pluto\" daemon for IKEv1 support "
@@ -133,13 +133,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:4001
+#: ../strongswan.templates:4001
 msgid "Do you wish to support IKEv2?"
 msgstr "Přejete si podporu IKEv2?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:4001
+#: ../strongswan.templates:4001
 msgid ""
 "strongSwan supports both versions of the Internet Key Exchange protocol, "
 "IKEv1 and IKEv2. Do you want to start the \"charon\" daemon for IKEv2 "
@@ -151,13 +151,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:5001
+#: ../strongswan.templates:5001
 msgid "Do you want to create a RSA public/private keypair for this host?"
 msgstr "Přejete si vytvořit veřejný/soukromý pár RSA klíčů pro tento počítač?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:5001
+#: ../strongswan.templates:5001
 msgid ""
 "This installer can automatically create a RSA public/private keypair for "
 "this host. This keypair can be used to authenticate IPSec connections to "
@@ -176,7 +176,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:5001
+#: ../strongswan.templates:5001
 msgid ""
 "If you do not want to create a new public/private keypair, you can choose to "
 "use an existing one."
@@ -186,19 +186,19 @@ msgstr ""
 
 #. Type: select
 #. Choices
-#: ../strongswan.templates.master:6001
+#: ../strongswan.templates:6001
 msgid "x509, plain"
 msgstr "x509, prostý"
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:6002
+#: ../strongswan.templates:6002
 msgid "The type of RSA keypair to create:"
 msgstr "Typ páru RSA klíčů, který se vytvoří:"
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:6002
+#: ../strongswan.templates:6002
 msgid ""
 "It is possible to create a plain RSA public/private keypair for use with "
 "strongSwan or to create a X509 certificate file which contains the RSA "
@@ -210,7 +210,7 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:6002
+#: ../strongswan.templates:6002
 msgid ""
 "If you only want to build up IPSec connections to hosts also running "
 "strongSwan, it might be a bit easier using plain RSA keypairs. But if you "
@@ -228,7 +228,7 @@ msgstr ""
 
 #. Type: select
 #. Description
-#: ../strongswan.templates.master:6002
+#: ../strongswan.templates:6002
 msgid ""
 "Therefore a X509 certificate is recommended since it is more flexible and "
 "this installer should be able to hide the complex creation of the X509 "
@@ -240,14 +240,14 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:7001
+#: ../strongswan.templates:7001
 msgid "Do you have an existing X509 certificate file for strongSwan?"
 msgstr ""
 "Vlastníte existující certifikát X509, který chcete použít pro strongSwan?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:7001
+#: ../strongswan.templates:7001
 msgid ""
 "This installer can automatically extract the needed information from an "
 "existing X509 certificate with a matching RSA private key. Both parts can be "
@@ -263,13 +263,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:8001
+#: ../strongswan.templates:8001
 msgid "File name of your X509 certificate in PEM format:"
 msgstr "Jméno souboru s certifikátem X509 ve formátu PEM:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:8001
+#: ../strongswan.templates:8001
 #, fuzzy
 #| msgid ""
 #| "Please enter the full location of the file containing your X509  "
@@ -283,13 +283,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:9001
+#: ../strongswan.templates:9001
 msgid "File name of your X509 private key in PEM format:"
 msgstr "Jméno souboru se soukromým klíčem X509 ve formátu PEM:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:9001
+#: ../strongswan.templates:9001
 msgid ""
 "Please enter the full location of the file containing the private RSA key "
 "matching your X509 certificate in PEM format. This can be the same file that "
@@ -301,13 +301,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:10001
+#: ../strongswan.templates:10001
 msgid "The length of the created RSA key (in bits):"
 msgstr "Délka vytvořeného RSA klíče (v bitech):"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:10001
+#: ../strongswan.templates:10001
 #, fuzzy
 #| msgid ""
 #| "Please enter the length of the created RSA key. it should not be less "
@@ -326,13 +326,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:11001
+#: ../strongswan.templates:11001
 msgid "Do you want to create a self-signed X509 certificate?"
 msgstr "Chcete vytvořit certifikát X509 podepsaný sám sebou?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:11001
+#: ../strongswan.templates:11001
 msgid ""
 "This installer can only create self-signed X509 certificates automatically, "
 "because otherwise a certificate authority is needed to sign the certificate "
@@ -352,7 +352,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:11001
+#: ../strongswan.templates:11001
 #, fuzzy
 #| msgid ""
 #| "If you do not want to create a self-signed certificate, then this "
@@ -371,13 +371,13 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:12001
+#: ../strongswan.templates:12001
 msgid "Country code for the X509 certificate request:"
 msgstr "Kód země pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:12001
+#: ../strongswan.templates:12001
 msgid ""
 "Please enter the 2 letter country code for your country. This code will be "
 "placed in the certificate request."
@@ -387,7 +387,7 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:12001
+#: ../strongswan.templates:12001
 msgid ""
 "You really need to enter a valid country code here, because openssl will "
 "refuse to generate certificates without one. An empty field is allowed for "
@@ -399,19 +399,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:12001
+#: ../strongswan.templates:12001
 msgid "Example: AT"
 msgstr "Příklad: CZ"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:13001
+#: ../strongswan.templates:13001
 msgid "State or province name for the X509 certificate request:"
 msgstr "Jméno státu nebo oblasti pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:13001
+#: ../strongswan.templates:13001
 msgid ""
 "Please enter the full name of the state or province you live in. This name "
 "will be placed in the certificate request."
@@ -421,19 +421,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:13001
+#: ../strongswan.templates:13001
 msgid "Example: Upper Austria"
 msgstr "Příklad: Morava"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:14001
+#: ../strongswan.templates:14001
 msgid "Locality name for the X509 certificate request:"
 msgstr "Jméno lokality pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:14001
+#: ../strongswan.templates:14001
 msgid ""
 "Please enter the locality (e.g. city) where you live. This name will be "
 "placed in the certificate request."
@@ -443,19 +443,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:14001
+#: ../strongswan.templates:14001
 msgid "Example: Vienna"
 msgstr "Příklad: Olomouc"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:15001
+#: ../strongswan.templates:15001
 msgid "Organization name for the X509 certificate request:"
 msgstr "Název organizace pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:15001
+#: ../strongswan.templates:15001
 msgid ""
 "Please enter the organization (e.g. company) that the X509 certificate "
 "should be created for. This name will be placed in the certificate request."
@@ -465,19 +465,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:15001
+#: ../strongswan.templates:15001
 msgid "Example: Debian"
 msgstr "Příklad: Debian"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:16001
+#: ../strongswan.templates:16001
 msgid "Organizational unit for the X509 certificate request:"
 msgstr "Název organizační jednotky pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:16001
+#: ../strongswan.templates:16001
 msgid ""
 "Please enter the organizational unit (e.g. section) that the X509 "
 "certificate should be created for. This name will be placed in the "
@@ -488,19 +488,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:16001
+#: ../strongswan.templates:16001
 msgid "Example: security group"
 msgstr "Příklad: bezpečnostní oddělení"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:17001
+#: ../strongswan.templates:17001
 msgid "Common name for the X509 certificate request:"
 msgstr "Obvyklé jméno pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:17001
+#: ../strongswan.templates:17001
 msgid ""
 "Please enter the common name (e.g. the host name of this machine) for which "
 "the X509 certificate should be created for. This name will be placed in the "
@@ -511,19 +511,19 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:17001
+#: ../strongswan.templates:17001
 msgid "Example: gateway.debian.org"
 msgstr "Příklad: gateway.debian.org"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:18001
+#: ../strongswan.templates:18001
 msgid "Email address for the X509 certificate request:"
 msgstr "Emailová adresa pro požadavek na certifikát X509:"
 
 #. Type: string
 #. Description
-#: ../strongswan.templates.master:18001
+#: ../strongswan.templates:18001
 msgid ""
 "Please enter the email address of the person or organization who is "
 "responsible for the X509 certificate, This address will be placed in the "
@@ -534,13 +534,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:19001
+#: ../strongswan.templates:19001
 msgid "Do you wish to enable opportunistic encryption in strongSwan?"
 msgstr "Chcete ve strongSwanu povolit oportunistické šifrování?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:19001
+#: ../strongswan.templates:19001
 msgid ""
 "strongSwan comes with support for opportunistic encryption (OE), which "
 "stores IPSec authentication information (i.e. RSA public keys) in "
@@ -561,7 +561,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan.templates.master:19001
+#: ../strongswan.templates:19001
 msgid ""
 "Please choose whether you want to enable support for OE. If unsure, do not "
 "enable it."
