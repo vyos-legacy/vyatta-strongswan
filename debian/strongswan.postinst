@@ -119,7 +119,7 @@ enable_daemon_start() {
         cp $CONF_FILE.tmp $CONF_FILE
 	rm $CONF_FILE.tmp
         echo "done"
-    else [ ! -e $CONF_FILE ]; then
+    elif [ ! -e $CONF_FILE ]; then
 	echo -e "\t${daemon}start=yes" > $CONF_FILE
     else
         echo "ERROR: unknown or nonexistant ${daemon}start= directive, please fix manually!"
@@ -139,7 +139,7 @@ disable_daemon_start() {
         cp $CONF_FILE.tmp $CONF_FILE
 	rm $CONF_FILE.tmp
         echo "done"
-    else [ ! -e $CONF_FILE ]; then
+    elif [ ! -e $CONF_FILE ]; then
 	echo -e "\t${daemon}start=yes" > $CONF_FILE
     else
         echo "ERROR: unknown or nonexistant ${daemon}start= directive, please fix manually!"
