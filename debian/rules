@@ -61,10 +61,9 @@ clean: unpatch
 	dh_clean
 
 install-strongswan: DH_OPTIONS=-a
-install-strongswan: build
+install-strongswan: build-stamp
 	dh_testdir
 	dh_testroot
-	dh_clean -k
 	dh_installdirs
 
 	# Add here commands to install the package into debian/tmp.
@@ -74,7 +73,7 @@ install-strongswan: build
 	echo >> $(CURDIR)/debian/strongswan/etc/ipsec.conf
 	echo "include /var/lib/strongswan/ipsec.conf.inc" >> $(CURDIR)/debian/strongswan/etc/ipsec.secrets
 	# and to enable both IKEv1 and IKEv2 by default
-	sed "s/^\w+#\w*plutostart=(yes|no)\w*$/\tplutostart=yes/;s/^\w+#\w*charonstart=(yes|no)\w*$/\tcharonstart=yes/" < $(CURDIR)/debian/strongswan/etc/ipsec.conf > $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp
+	sed -r 's/^[ \t]+# *plutostart=(yes|no) */\tplutostart=yes/;s/^[ \t]+# *charonstart=(yes|no) */\tcharonstart=yes/' < $(CURDIR)/debian/strongswan/etc/ipsec.conf > $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp
 	mv $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp $(CURDIR)/debian/strongswan/etc/ipsec.conf
 
 	# this is handled by update-rc.d
@@ -93,7 +92,7 @@ install-strongswan: build
 		    rm $$f.old; \
 		fi; \
 	  done )
-	  
+
 	# the logcheck ignore files
 	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.paranoid $(CURDIR)/debian/strongswan/etc/logcheck/ignore.d.paranoid/strongswan
 	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.server $(CURDIR)/debian/strongswan/etc/logcheck/ignore.d.server/strongswan
@@ -124,7 +123,6 @@ binary-common:
 	dh_strip
 	dh_compress
 	dh_fixperms -X etc/ipsec.conf -X etc/ipsec.secrets -X etc/ipsec.d
-
 	dh_makeshlibs
 	dh_installdeb
 	dh_shlibdeps
@@ -134,15 +132,15 @@ binary-common:
 
 # Build architecture-independent files here.
 binary-indep: 
-	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+	$(MAKE) -f debian/rules binary-common DH_OPTIONS=-i
 
 # Build architecture-dependent files here.
 binary-arch: install-strongswan
-	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
+	$(MAKE) -f debian/rules binary-common DH_OPTIONS=-a
 
 # Any other binary targets build just one binary package at a time.
-binary-%: build install
+binary-%: build-stamp install-strongswan
 	make -f debian/rules binary-common DH_OPTIONS=-p$*
-             
+
 binary: binary-indep binary-arch
 .PHONY: clean binary-indep binary-arch

@@ -12,7 +12,10 @@ strongswan (4.1.8-2) unstable; urgency=low
     patching, as currently there are no Debian-specific patches (fortunately).
     Really closes: #442880: strongswan: postinst failure (missing 
                             /etc/init.d/ipsec)
-  * More cleanup: drop debconf translations hack for woody compatibility.
+  * More cleanup: drop debconf translations hack for woody compatibility,
+    depend on build-stamp instead of build in the install-strongswan target,
+    and remove the now unnecessary dh_clean -k call in install-strongswan so
+    that configure isn't run twice during building the package.
   * Update French debconf translation.
     Closes: #448327: strongswan: [INTL:fr] French debconf templates 
                      translation update
