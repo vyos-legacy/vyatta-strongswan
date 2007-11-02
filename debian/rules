@@ -71,7 +71,7 @@ install-strongswan: build-stamp
 	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan/etc/ipsec.secrets
 	# also "patch" ipsec.conf to include the debconf-managed file
 	echo >> $(CURDIR)/debian/strongswan/etc/ipsec.conf
-	echo "include /var/lib/strongswan/ipsec.conf.inc" >> $(CURDIR)/debian/strongswan/etc/ipsec.secrets
+	echo "include /var/lib/strongswan/ipsec.conf.inc" >> $(CURDIR)/debian/strongswan/etc/ipsec.conf
 	# and to enable both IKEv1 and IKEv2 by default
 	sed -r 's/^[ \t]+# *plutostart=(yes|no) */\tplutostart=yes/;s/^[ \t]+# *charonstart=(yes|no) */\tcharonstart=yes/' < $(CURDIR)/debian/strongswan/etc/ipsec.conf > $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp
 	mv $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp $(CURDIR)/debian/strongswan/etc/ipsec.conf
@@ -117,7 +117,7 @@ install-strongswan: build-stamp
 binary-common:
 	dh_testdir
 	dh_testroot
-	dh_installinit
+	dh_installinit --name=ipsec
 	dh_installdebconf
 	dh_installchangelogs ChangeLog
 	dh_link

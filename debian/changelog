@@ -1,6 +1,8 @@
 strongswan (4.1.8-2) unstable; urgency=medium
 
-  * Ship our own init script, since upstream no longer doesn't.
+  * Ship our own init script, since upstream no longer doesn't. This is still
+    installed as /etc/init.d/ipsec (and not /etc/init.d/strongswan) to be 
+    backwards compatible.
     Really closes: #442880: strongswan: postinst failure (missing 
                             /etc/init.d/ipsec)
   * Actually, need to be smarter with ipsec.conf and ipsec.secrets. Not

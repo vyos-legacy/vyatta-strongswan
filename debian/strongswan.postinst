@@ -41,7 +41,7 @@ EOF
 }
 
 insert_private_key_filename() {
-	if ! grep -q ": RSA $1" $SECRETS_FILE; then
+	if [ ! -e $SECRETS_FILE ] || ! grep -q ": RSA $1" $SECRETS_FILE; then
             echo ": RSA $1" >> $SECRETS_FILE
         fi
 }
@@ -53,7 +53,7 @@ IPSEC_SECRETS_PATTERN_4='# do not change the indenting of that "}"'
 
 # remove old, misguided attempts at a default ipsec.secrets files
 repair_legacy_secrets() {
-    if grep -A 2 "$IPSEC_SECRETS_PATTERN_1" $SECRETS_FILE |
+    if [ -e $SECRETS_FILE ] && grep -A 2 "$IPSEC_SECRETS_PATTERN_1" $SECRETS_FILE |
        tail --lines=2 |
        grep -A 1 "$IPSEC_SECRETS_PATTERN_2" |
        tail --lines=1 |
@@ -107,18 +107,20 @@ enable_daemon_start() {
     protocol=$2
 
     echo -n "Enabling ${protocol} support by pluto ... "
-    if egrep -q "^\w+${daemon}start=yes\w*$" $CONF_FILE; then
+    if [ -e $CONF_FILE ] && egrep -q "^\w+${daemon}start=yes\w*$" $CONF_FILE; then
         echo "already enabled"
-    elif egrep -q "^\w+${daemon}start=no\w*$" $CONF_FILE; then
+    elif [ -e $CONF_FILE ] && egrep -q "^\w+${daemon}start=no\w*$" $CONF_FILE; then
       	sed "s/${daemon}start=no/${daemon}start=yes/" < $CONF_FILE > $CONF_FILE.tmp
         cp $CONF_FILE.tmp $CONF_FILE
 	rm $CONF_FILE.tmp
         echo "done"
-    elif egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" $CONF_FILE; then
+    elif [ -e $CONF_FILE ] && egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" $CONF_FILE; then
       	sed "s/^\w+#\w*${daemon}start=(yes|no)\w*$/\t${daemon}start=yes/" < $CONF_FILE > $CONF_FILE.tmp
         cp $CONF_FILE.tmp $CONF_FILE
 	rm $CONF_FILE.tmp
         echo "done"
+    else [ ! -e $CONF_FILE ]; then
+	echo -e "\t${daemon}start=yes" > $CONF_FILE
     else
         echo "ERROR: unknown or nonexistant ${daemon}start= directive, please fix manually!"
     fi
@@ -129,14 +131,16 @@ disable_daemon_start() {
     protocol=$2
 
     echo -n "Disabling ${protocol} support by pluto ... "
-    if egrep -q "^\w+${daemon}start=no\w*$" $CONF_FILE ||
-       egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" $CONF_FILE; then
+    if [ -e $CONF_FILE ] && ( egrep -q "^\w+${daemon}start=no\w*$" $CONF_FILE ||
+       egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" $CONF_FILE ); then
         echo "already disabled"
-    elif egrep -q "^\w+${daemon}start=yes\w*$" $CONF_FILE; then
+    elif [ -e $CONF_FILE ] && egrep -q "^\w+${daemon}start=yes\w*$" $CONF_FILE; then
       	sed "s/${daemon}start=yes/${daemon}start=no/" < $CONF_FILE > $CONF_FILE.tmp
         cp $CONF_FILE.tmp $CONF_FILE
 	rm $CONF_FILE.tmp
         echo "done"
+    else [ ! -e $CONF_FILE ]; then
+	echo -e "\t${daemon}start=yes" > $CONF_FILE
     else
         echo "ERROR: unknown or nonexistant ${daemon}start= directive, please fix manually!"
     fi
@@ -153,11 +157,11 @@ case "$1" in
 	    db_get strongswan/rsa_key_type
 	    if [ "$RET" = "plain" ]; then
 	        # a RSA keypair should be created - check if there is one already
-		if egrep -q ": RSA[:space:]*" /etc/ipsec.secrets; then
+		if [ -e /etc/ipsec.secrets ] && egrep -q ": RSA[:space:]*" /etc/ipsec.secrets; then
                     echo "Warning: there is already a RSA key in /etc/ipsec.secrets."
                     echo "Creating an additional one."
                 fi
-		if egrep -q ": RSA[:space:]*" $SECRETS_FILE; then
+		if [ -e $SECRETS_FILE ] && egrep -q ": RSA[:space:]*" $SECRETS_FILE; then
                     echo "Warning: there is already a RSA key in $SECRETS_FILE."
                     echo "Creating an additional one."
                 fi
@@ -253,33 +257,37 @@ case "$1" in
         db_get strongswan/enable-oe
         if [ "$RET" != "true" ]; then
             echo -n "Disabling opportunistic encryption (OE) in config file ... "
-            if egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" $CONF_FILE; then
+            if [ -e $CONF_FILE ] && egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" $CONF_FILE; then
                 # also update to new-style config
                 sed 's/.*include \/etc\/ipsec.d\/examples\/no_oe.conf/#include \/etc\/ipsec.d\/examples\/oe.conf/' < $CONF_FILE > $CONF_FILE.tmp
                 mv $CONF_FILE.tmp $CONF_FILE
                 echo -n "converted old config line to new format"
             fi
-            if egrep -q "^include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
+            if [ -e $CONF_FILE ] && egrep -q "^include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
             	sed 's/include \/etc\/ipsec.d\/examples\/oe.conf/#include \/etc\/ipsec.d\/examples\/oe.conf/' < $CONF_FILE > $CONF_FILE.tmp
                 mv $CONF_FILE.tmp $CONF_FILE
                 echo "done"
+            elif [ ! -e $CONF_FILE ]; then
+                echo "#include /etc/ipsec.d/examples/oe.conf" > $CONF_FILE
             else
                 echo "already disabled"
             fi
 	else
             echo -n "Enabling opportunistic encryption (OE) in config file ... "
-            if egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" $CONF_FILE; then
+            if [ -e $CONF_FILE ] && egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" $CONF_FILE; then
                 # also update to new-style config
             	sed 's/.*include \/etc\/ipsec.d\/examples\/no_oe.conf/include \/etc\/ipsec.d\/examples\/oe.conf/' < $CONF_FILE > $CONF_FILE.tmp
                 mv $CONF_FILE.tmp $CONF_FILE
                 echo -n "converted old config line to new format"
             fi
-            if egrep -q "^include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
+            if [ -e $CONF_FILE ] && egrep -q "^include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
                 echo "already enabled"
-            elif egrep -q "^#.*include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
+            elif [ -e $CONF_FILE ] && egrep -q "^#.*include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
             	sed 's/#.*include \/etc\/ipsec.d\/examples\/oe.conf/include \/etc\/ipsec.d\/examples\/oe.conf/' < $CONF_FILE > $CONF_FILE.tmp
                 mv $CONF_FILE.tmp $CONF_FILE
                 echo "done"
+            elif [ ! -e $CONF_FILE ]; then
+                echo "include /etc/ipsec.d/examples/oe.conf" > $CONF_FILE
             else
                 cat <<EOF >> $CONF_FILE
 #Enable Opportunistic Encryption
