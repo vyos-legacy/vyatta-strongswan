@@ -29,8 +29,11 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
+CONF_FILE=/var/lib/strongswan/ipsec.conf.inc
+SECRETS_FILE=/var/lib/strongswan/ipsec.secrets.inc
+
 insert_private_key() {
-       	cat <<EOF >> /etc/ipsec.secrets
+       	cat <<EOF >> $SECRETS_FILE
 : RSA	{
 $1
 	}
@@ -38,8 +41,8 @@ EOF
 }
 
 insert_private_key_filename() {
-	if ! grep -q ": RSA $1" /etc/ipsec.secrets; then
-            echo ": RSA $1" >> /etc/ipsec.secrets
+	if ! grep -q ": RSA $1" $SECRETS_FILE; then
+            echo ": RSA $1" >> $SECRETS_FILE
         fi
 }
 
@@ -50,7 +53,7 @@ IPSEC_SECRETS_PATTERN_4='# do not change the indenting of that "}"'
 
 # remove old, misguided attempts at a default ipsec.secrets files
 repair_legacy_secrets() {
-    if grep -A 2 "$IPSEC_SECRETS_PATTERN_1" /etc/ipsec.secrets |
+    if grep -A 2 "$IPSEC_SECRETS_PATTERN_1" $SECRETS_FILE |
        tail --lines=2 |
        grep -A 1 "$IPSEC_SECRETS_PATTERN_2" |
        tail --lines=1 |
@@ -59,16 +62,16 @@ repair_legacy_secrets() {
         umask 077 ; (
             # this is ugly, and someone maybe can formulate this in sed, but
             # this was the quickest way for me
-            line=`grep -n "$IPSEC_SECRETS_PATTERN_2" /etc/ipsec.secrets | cut -d':' -f1`
+            line=`grep -n "$IPSEC_SECRETS_PATTERN_2" $SECRETS_FILE | cut -d':' -f1`
             until=`expr $line - 1`
-            head -n $until /etc/ipsec.secrets
-            sum=`wc -l /etc/ipsec.secrets | cut -d ' ' -f1`
+            head -n $until $SECRETS_FILE
+            sum=`wc -l $SECRETS_FILE | cut -d ' ' -f1`
             from=`expr $sum - $line -1`
-            tail -n $from /etc/ipsec.secrets
-        ) > /etc/ipsec.secrets.tmp
-        mv /etc/ipsec.secrets.tmp /etc/ipsec.secrets
-        grep -v "$IPSEC_SECRETS_PATTERN_4" /etc/ipsec.secrets > /etc/ipsec.secrets.tmp
-        mv /etc/ipsec.secrets.tmp /etc/ipsec.secrets
+            tail -n $from $SECRETS_FILE
+        ) > $SECRETS_FILE.tmp
+        mv $SECRETS_FILE.tmp $SECRETS_FILE
+        grep -v "$IPSEC_SECRETS_PATTERN_4" $SECRETS_FILE > $SECRETS_FILE.tmp
+        mv $SECRETS_FILE.tmp $SECRETS_FILE
     fi
 }
 
@@ -104,17 +107,17 @@ enable_daemon_start() {
     protocol=$2
 
     echo -n "Enabling ${protocol} support by pluto ... "
-    if egrep -q "^\w+${daemon}start=yes\w*$" /etc/ipsec.conf; then
+    if egrep -q "^\w+${daemon}start=yes\w*$" $CONF_FILE; then
         echo "already enabled"
-    elif egrep -q "^\w+${daemon}start=no\w*$" /etc/ipsec.conf; then
-      	sed "s/${daemon}start=no/${daemon}start=yes/" < /etc/ipsec.conf > /etc/ipsec.conf.tmp
-        cp /etc/ipsec.conf.tmp /etc/ipsec.conf
-	rm /etc/ipsec.conf.tmp
+    elif egrep -q "^\w+${daemon}start=no\w*$" $CONF_FILE; then
+      	sed "s/${daemon}start=no/${daemon}start=yes/" < $CONF_FILE > $CONF_FILE.tmp
+        cp $CONF_FILE.tmp $CONF_FILE
+	rm $CONF_FILE.tmp
         echo "done"
-    elif egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" /etc/ipsec.conf; then
-      	sed "s/^\w+#\w*${daemon}start=(yes|no)\w*$/\t${daemon}start=yes/" < /etc/ipsec.conf > /etc/ipsec.conf.tmp
-        cp /etc/ipsec.conf.tmp /etc/ipsec.conf
-	rm /etc/ipsec.conf.tmp
+    elif egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" $CONF_FILE; then
+      	sed "s/^\w+#\w*${daemon}start=(yes|no)\w*$/\t${daemon}start=yes/" < $CONF_FILE > $CONF_FILE.tmp
+        cp $CONF_FILE.tmp $CONF_FILE
+	rm $CONF_FILE.tmp
         echo "done"
     else
         echo "ERROR: unknown or nonexistant ${daemon}start= directive, please fix manually!"
@@ -126,13 +129,13 @@ disable_daemon_start() {
     protocol=$2
 
     echo -n "Disabling ${protocol} support by pluto ... "
-    if egrep -q "^\w+${daemon}start=no\w*$" /etc/ipsec.conf ||
-       egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" /etc/ipsec.conf; then
+    if egrep -q "^\w+${daemon}start=no\w*$" $CONF_FILE ||
+       egrep -q "^\w+#\w*${daemon}start=(yes|no)\w*$" $CONF_FILE; then
         echo "already disabled"
-    elif egrep -q "^\w+${daemon}start=yes\w*$" /etc/ipsec.conf; then
-      	sed "s/${daemon}start=yes/${daemon}start=no/" < /etc/ipsec.conf > /etc/ipsec.conf.tmp
-        cp /etc/ipsec.conf.tmp /etc/ipsec.conf
-	rm /etc/ipsec.conf.tmp
+    elif egrep -q "^\w+${daemon}start=yes\w*$" $CONF_FILE; then
+      	sed "s/${daemon}start=yes/${daemon}start=no/" < $CONF_FILE > $CONF_FILE.tmp
+        cp $CONF_FILE.tmp $CONF_FILE
+	rm $CONF_FILE.tmp
         echo "done"
     else
         echo "ERROR: unknown or nonexistant ${daemon}start= directive, please fix manually!"
@@ -152,6 +155,10 @@ case "$1" in
 	        # a RSA keypair should be created - check if there is one already
 		if egrep -q ": RSA[:space:]*" /etc/ipsec.secrets; then
                     echo "Warning: there is already a RSA key in /etc/ipsec.secrets."
+                    echo "Creating an additional one."
+                fi
+		if egrep -q ": RSA[:space:]*" $SECRETS_FILE; then
+                    echo "Warning: there is already a RSA key in $SECRETS_FILE."
                     echo "Creating an additional one."
                 fi
                 # create a plain strongswan keypair
@@ -246,35 +253,35 @@ case "$1" in
         db_get strongswan/enable-oe
         if [ "$RET" != "true" ]; then
             echo -n "Disabling opportunistic encryption (OE) in config file ... "
-            if egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" /etc/ipsec.conf; then
+            if egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" $CONF_FILE; then
                 # also update to new-style config
-                sed 's/.*include \/etc\/ipsec.d\/examples\/no_oe.conf/#include \/etc\/ipsec.d\/examples\/oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
-                mv /etc/ipsec.conf.tmp /etc/ipsec.conf
+                sed 's/.*include \/etc\/ipsec.d\/examples\/no_oe.conf/#include \/etc\/ipsec.d\/examples\/oe.conf/' < $CONF_FILE > $CONF_FILE.tmp
+                mv $CONF_FILE.tmp $CONF_FILE
                 echo -n "converted old config line to new format"
             fi
-            if egrep -q "^include /etc/ipsec.d/examples/oe.conf$" /etc/ipsec.conf; then
-            	sed 's/include \/etc\/ipsec.d\/examples\/oe.conf/#include \/etc\/ipsec.d\/examples\/oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
-                mv /etc/ipsec.conf.tmp /etc/ipsec.conf
+            if egrep -q "^include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
+            	sed 's/include \/etc\/ipsec.d\/examples\/oe.conf/#include \/etc\/ipsec.d\/examples\/oe.conf/' < $CONF_FILE > $CONF_FILE.tmp
+                mv $CONF_FILE.tmp $CONF_FILE
                 echo "done"
             else
                 echo "already disabled"
             fi
 	else
             echo -n "Enabling opportunistic encryption (OE) in config file ... "
-            if egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" /etc/ipsec.conf; then
+            if egrep -q "include /etc/ipsec.d/examples/no_oe.conf$" $CONF_FILE; then
                 # also update to new-style config
-            	sed 's/.*include \/etc\/ipsec.d\/examples\/no_oe.conf/include \/etc\/ipsec.d\/examples\/oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
-                mv /etc/ipsec.conf.tmp /etc/ipsec.conf
+            	sed 's/.*include \/etc\/ipsec.d\/examples\/no_oe.conf/include \/etc\/ipsec.d\/examples\/oe.conf/' < $CONF_FILE > $CONF_FILE.tmp
+                mv $CONF_FILE.tmp $CONF_FILE
                 echo -n "converted old config line to new format"
             fi
-            if egrep -q "^include /etc/ipsec.d/examples/oe.conf$" /etc/ipsec.conf; then
+            if egrep -q "^include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
                 echo "already enabled"
-            elif egrep -q "^#.*include /etc/ipsec.d/examples/oe.conf$" /etc/ipsec.conf; then
-            	sed 's/#.*include \/etc\/ipsec.d\/examples\/oe.conf/include \/etc\/ipsec.d\/examples\/oe.conf/' < /etc/ipsec.conf > /etc/ipsec.conf.tmp
-                mv /etc/ipsec.conf.tmp /etc/ipsec.conf
+            elif egrep -q "^#.*include /etc/ipsec.d/examples/oe.conf$" $CONF_FILE; then
+            	sed 's/#.*include \/etc\/ipsec.d\/examples\/oe.conf/include \/etc\/ipsec.d\/examples\/oe.conf/' < $CONF_FILE > $CONF_FILE.tmp
+                mv $CONF_FILE.tmp $CONF_FILE
                 echo "done"
             else
-                cat <<EOF >> /etc/ipsec.conf
+                cat <<EOF >> $CONF_FILE
 #Enable Opportunistic Encryption
 include /etc/ipsec.d/examples/oe.conf
 EOF
@@ -282,18 +289,19 @@ EOF
             fi
         fi
 
-        db_get strongswan/ikev1
-        if [ "$RET" != "true" ]; then
-            enable_daemon_start "pluto" "IKEv1"
-	else
-            disable_daemon_start "pluto" "IKEv1"
-        fi
-        db_get strongswan/ikev2
-        if [ "$RET" != "true" ]; then
-            enable_daemon_start "charon" "IKEv2"
-	else
-            disable_daemon_start "charon" "IKEv2"
-        fi
+	# disabled for now, until we can solve the don't-edit-conffiles issue
+        #db_get strongswan/ikev1
+        #if [ "$RET" != "true" ]; then
+        #    enable_daemon_start "pluto" "IKEv1"
+	#else
+        #    disable_daemon_start "pluto" "IKEv1"
+        #fi
+        #db_get strongswan/ikev2
+        #if [ "$RET" != "true" ]; then
+        #    enable_daemon_start "charon" "IKEv2"
+	#else
+        #    disable_daemon_start "charon" "IKEv2"
+        #fi
 
 	if [ -z "$2" ]; then
 	    # no old configured version - start strongswan now

@@ -14,3 +14,4 @@
 /usr/sbin
 /usr/share/lintian/overrides
 /var/lock/subsys
+/var/lib/strongswan

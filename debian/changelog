@@ -1,3 +1,24 @@
+strongswan (4.1.8-2) unstable; urgency=low
+
+  * Actually, need to be smarter with ipsec.conf and ipsec.secrets. Not
+    marking them as conffiles isn't the right thing either. Instead, now
+    use the includes feature to pull in config snippets that are
+    modified by debconf. It's not perfect, though, as the IKEv1/IKEv2
+    protocols can't be enabled/disabled with includes. Therefore don't
+    support this option in debconf for the time being, but default to
+    enabled for both IKE versions. The files edited with debconf are kept
+    under /var/lib/strongswan.
+  * Cleanup debian/rules: no longer need to remove leftover files from 
+    patching, as currently there are no Debian-specific patches (fortunately).
+    Really closes: #442880: strongswan: postinst failure (missing 
+                            /etc/init.d/ipsec)
+  * More cleanup: drop debconf translations hack for woody compatibility.
+  * Update French debconf translation.
+    Closes: #448327: strongswan: [INTL:fr] French debconf templates 
+                     translation update
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Fri, 02 Nov 2007 21:55:29 +0100
+
 strongswan (4.1.8-1) unstable; urgency=low
 
   The "I'm back from my long semi-vacation, and strongswan is now bug-free 

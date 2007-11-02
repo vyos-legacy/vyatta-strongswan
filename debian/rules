@@ -7,14 +7,6 @@
 
 export DH_OPTIONS
 
-ifeq (,$(wildcard /usr/bin/po2debconf))
-	PO2DEBCONF := no
-	MINDEBCONFVER := 0.5
-else
-	PO2DEBCONF := yes
-	MINDEBCONFVER := 1.2.0
-endif
-
 configure: configure-stamp
 configure-stamp: patch
 	dh_testdir
@@ -68,18 +60,6 @@ clean: unpatch
 
 	dh_clean
 
-ifeq ($(PO2DEBCONF),yes)       
-	# Hack for woody compatibility. This makes sure that the       
-	# debian/templates file shipped in the source package doesn't 
-	# specify encodings, which woody's debconf can't handle. If building
-	# on a system with po-debconf installed (conveniently debhelper (>=
-	# 4.1.16) depends on it), the binary-arch target will generate a
-	# better version for sarge.       
-	echo 1 > debian/po/output
-	po2debconf debian/strongswan.templates.master > debian/strongswan.templates
-	rm -f debian/po/output
-endif
-
 install-strongswan: DH_OPTIONS=-a
 install-strongswan: build
 	dh_testdir
@@ -90,14 +70,16 @@ install-strongswan: build
 	# Add here commands to install the package into debian/tmp.
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/strongswan
 	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan/etc/ipsec.secrets
-
-	# TODO: check if we still need this
-	rm -f $(CURDIR)/debian/strongswan/etc/init.d/ipsec?*
-	rm -f $(CURDIR)/debian/strongswan/usr/lib/ipsec/_plutorun?*
+	# also "patch" ipsec.conf to include the debconf-managed file
+	echo >> $(CURDIR)/debian/strongswan/etc/ipsec.conf
+	echo "include /var/lib/strongswan/ipsec.conf.inc" >> $(CURDIR)/debian/strongswan/etc/ipsec.secrets
+	# and to enable both IKEv1 and IKEv2 by default
+	sed "s/^\w+#\w*plutostart=(yes|no)\w*$/\tplutostart=yes/;s/^\w+#\w*charonstart=(yes|no)\w*$/\tcharonstart=yes/" < $(CURDIR)/debian/strongswan/etc/ipsec.conf > $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp
+	mv $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp $(CURDIR)/debian/strongswan/etc/ipsec.conf
 
 	# this is handled by update-rc.d
 	rm -rf $(CURDIR)/debian/strongswan/etc/rc?.d
-        
+
 	dh_installdocs -pstrongswan -n
 	# change the paths in the installed doc files (but only in regular 
 	# files, not in links to the outside of the build tree !)
@@ -145,13 +127,6 @@ binary-common:
 
 	dh_makeshlibs
 	dh_installdeb
-	# this also flags ipsec.conf and ipsec.secrets as conffiles, which is wrong...
-	sh -c "[ -e $(CURDIR)/debian/strongswan/DEBIAN/conffiles ] && ( \
-	cp $(CURDIR)/debian/strongswan/DEBIAN/conffiles \
-		$(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp; \
-	sed '/ipsec.conf/d;/ipsec.secrets/d' $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp \
-		> $(CURDIR)/debian/strongswan/DEBIAN/conffiles; \
-	rm $(CURDIR)/debian/strongswan/DEBIAN/conffiles.tmp ) || true"
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
