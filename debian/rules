@@ -123,7 +123,7 @@ binary-common:
 	dh_link
 	dh_strip
 	dh_compress
-	dh_fixperms -X etc/ipsec.conf -X etc/ipsec.secrets -X etc/ipsec.d
+	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
 	dh_makeshlibs
 	dh_installdeb
 	dh_shlibdeps
