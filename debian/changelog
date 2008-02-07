@@ -1,6 +1,14 @@
+strongswan (4.1.8-3) unstable; urgency=low
+
+  * Force use of hardening-wrapper when building the package by setting
+    a Build-Dep to it and setting export DEB_BUILD_HARDENING=1 in
+    debian/rules.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 07 Feb 2008 14:14:48 +0100
+
 strongswan (4.1.8-2) unstable; urgency=medium
 
-  * Ship our own init script, since upstream no longer doesn't. This is still
+  * Ship our own init script, since upstream no longer does. This is still
     installed as /etc/init.d/ipsec (and not /etc/init.d/strongswan) to be 
     backwards compatible.
     Really closes: #442880: strongswan: postinst failure (missing 

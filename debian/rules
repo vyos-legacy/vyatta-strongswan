@@ -7,6 +7,9 @@
 
 export DH_OPTIONS
 
+# this is a security-critical package, set all the options we can
+export DEB_BUILD_HARDENING=1
+
 configure: configure-stamp
 configure-stamp: patch
 	dh_testdir
