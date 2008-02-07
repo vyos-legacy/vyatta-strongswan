@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: connections.c 3252 2007-10-06 21:24:50Z andreas $
+ * RCSID $Id: connections.c 3361 2007-11-21 23:42:27Z andreas $
  */
 
 #include <string.h>
@@ -955,6 +955,7 @@ gen_reqid(void)
     } while (reqid != start);
 
     exit_log("unable to allocate reqid");
+    return 0; /* never reached ... */
 }
 
 void

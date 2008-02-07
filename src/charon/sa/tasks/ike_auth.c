@@ -297,6 +297,7 @@ static status_t collect_other_init_data(private_ike_auth_t *this, message_t *mes
 	return NEED_MORE; 
 }
 
+
 /**
  * Implementation of task_t.build to create AUTH payload from EAP data
  */
@@ -520,6 +521,7 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			break;
 		case NOT_FOUND:
 			/* use EAP if no AUTH payload found */
+			this->ike_sa->set_condition(this->ike_sa, COND_EAP_AUTHENTICATED, TRUE);
 			this->eap_auth = eap_authenticator_create(this->ike_sa);
 			break;
 		default:
@@ -546,6 +548,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 {
 	peer_cfg_t *config;
 	eap_type_t eap_type;
+	u_int32_t eap_vendor;
 	eap_payload_t *eap_payload;
 	status_t status;
 
@@ -590,10 +593,11 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
 		return FAILED;
 	}
-		
+	
 	/* initiate EAP authenitcation */
-	eap_type = config->get_eap_type(config);
-	status = this->eap_auth->initiate(this->eap_auth, eap_type, &eap_payload);
+	eap_type = config->get_eap_type(config, &eap_vendor);
+	status = this->eap_auth->initiate(this->eap_auth, eap_type,
+									  eap_vendor, &eap_payload);
 	message->add_payload(message, (payload_t*)eap_payload);
 	if (status != NEED_MORE)
 	{
@@ -644,6 +648,12 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				case ADDITIONAL_IP4_ADDRESS:
 				case ADDITIONAL_IP6_ADDRESS:
 					/* handled in ike_mobike task */
+					break;
+				case AUTH_LIFETIME:
+					/* handled in ike_auth_lifetime task */
+					break;
+				case P2P_ENDPOINT:
+					/* handled in ike_p2p task */
 					break;
 				default:
 				{

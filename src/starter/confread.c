@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.c 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: confread.c 3405 2007-12-19 00:49:32Z andreas $
  */
 
 #include <stddef.h>
@@ -173,7 +173,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 				goto err;
 			}
 		}
-		else if (streq(value, "%any"))
+		else if (streq(value, "%any") || streq(value, "%any4"))
 		{
 			anyaddr(conn->addr_family, &end->addr);
 		}
@@ -509,25 +509,46 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			}
 			break;
 		case KW_EAP:
-			/* TODO: a gperf function for all EAP types */
+		{
+			char *sep;
+		
+			/* check for vendor-type format */
+			sep = strchr(kw->value, '-');
+			if (sep)
+			{
+				*(sep++) = '\0';
+				conn->eap_type = atoi(kw->value);
+				conn->eap_vendor = atoi(sep);
+				if (conn->eap_type == 0 || conn->eap_vendor == 0)
+				{
+					plog("# invalid EAP type: %s=%s", kw->entry->name, kw->value);
+					cfg->err++;
+				}
+				break;
+			}
 			if (streq(kw->value, "aka"))
 			{
-				conn->eap = 23;
+				conn->eap_type = 23;
 			}
 			else if (streq(kw->value, "sim"))
 			{
-				conn->eap = 18;
+				conn->eap_type = 18;
+			}
+			else if (streq(kw->value, "md5"))
+			{
+				conn->eap_type = 4;
 			}
 			else
 			{
-				conn->eap = atoi(kw->value);
-				if (conn->eap == 0)
+				conn->eap_type = atoi(kw->value);
+				if (conn->eap_type == 0)
 				{
 					plog("# unknown EAP type: %s=%s", kw->entry->name, kw->value);
 					cfg->err++;
 				}
 			}
 			break;
+		}
 		case KW_KEYINGTRIES:
 			if (streq(kw->value, "%forever"))
 			{

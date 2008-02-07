@@ -34,20 +34,29 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 ipsec_PROGRAMS = charon$(EXEEXT)
-@USE_P2P_TRUE@am__append_1 = encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
+
+# Use RAW socket if pluto gets built
+@USE_PLUTO_TRUE@am__append_1 = network/socket-raw.c
+@USE_PLUTO_FALSE@am__append_2 = network/socket.c
+@USE_P2P_TRUE@am__append_3 = encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
 @USE_P2P_TRUE@    processing/jobs/initiate_mediation_job.c processing/jobs/initiate_mediation_job.h \
 @USE_P2P_TRUE@    processing/jobs/mediation_job.c processing/jobs/mediation_job.h \
 @USE_P2P_TRUE@    sa/connect_manager.c sa/connect_manager.h \
 @USE_P2P_TRUE@    sa/mediation_manager.c sa/mediation_manager.h \
 @USE_P2P_TRUE@    sa/tasks/ike_p2p.c sa/tasks/ike_p2p.h
 
-@USE_LIBCURL_TRUE@am__append_2 = -lcurl
-@BUILD_EAP_SIM_TRUE@am__append_3 = libeapsim.la
-@USE_LIBSQLITE_TRUE@am__append_4 = libsqlite.la
-@USE_LIBDBUS_TRUE@am__append_5 = libdbus.la
-@USE_LIBDBUS_TRUE@am__append_6 = ${dbus_CFLAGS}
-@USE_LIBXML_TRUE@am__append_7 = libxml.la
-@USE_LIBXML_TRUE@am__append_8 = ${xml_CFLAGS}
+@USE_LIBCURL_TRUE@am__append_4 = -lcurl
+@USE_EAP_IDENTITY_TRUE@am__append_5 = libcharon-eapidentity.la
+@USE_EAP_SIM_TRUE@am__append_6 = libcharon-eapsim.la
+@USE_EAP_MD5_TRUE@am__append_7 = libcharon-eapmd5.la
+@USE_EAP_AKA_TRUE@am__append_8 = libcharon-eapaka.la
+@USE_STROKE_TRUE@am__append_9 = libcharon-local.la
+@USE_LIBSQLITE_TRUE@am__append_10 = libcharon-sqlite.la
+@USE_STROKE_TRUE@am__append_11 = libcharon-stroke.la
+@USE_LIBDBUS_TRUE@am__append_12 = libcharon-dbus.la
+@USE_LIBDBUS_TRUE@am__append_13 = ${dbus_CFLAGS}
+@USE_LIBXML_TRUE@am__append_14 = libcharon-xml.la
+@USE_LIBXML_TRUE@am__append_15 = ${xml_CFLAGS}
 subdir = src/charon
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -70,60 +79,102 @@ interfaceLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(backend_LTLIBRARIES) $(eap_LTLIBRARIES) \
 	$(interface_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-@USE_LIBDBUS_TRUE@libdbus_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am__libdbus_la_SOURCES_DIST = control/interfaces/dbus_interface.h \
+@USE_LIBDBUS_TRUE@libcharon_dbus_la_DEPENDENCIES =  \
+@USE_LIBDBUS_TRUE@	$(am__DEPENDENCIES_1)
+am__libcharon_dbus_la_SOURCES_DIST =  \
+	control/interfaces/dbus_interface.h \
 	control/interfaces/dbus_interface.c
-@USE_LIBDBUS_TRUE@am_libdbus_la_OBJECTS = dbus_interface.lo
-libdbus_la_OBJECTS = $(am_libdbus_la_OBJECTS)
-libdbus_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+@USE_LIBDBUS_TRUE@am_libcharon_dbus_la_OBJECTS = dbus_interface.lo
+libcharon_dbus_la_OBJECTS = $(am_libcharon_dbus_la_OBJECTS)
+libcharon_dbus_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libdbus_la_LDFLAGS) $(LDFLAGS) -o $@
-@USE_LIBDBUS_TRUE@am_libdbus_la_rpath = -rpath $(interfacedir)
-libeapidentity_la_LIBADD =
-am_libeapidentity_la_OBJECTS = eap_identity.lo
-libeapidentity_la_OBJECTS = $(am_libeapidentity_la_OBJECTS)
-libeapidentity_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(libcharon_dbus_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_LIBDBUS_TRUE@am_libcharon_dbus_la_rpath = -rpath $(interfacedir)
+libcharon_eapaka_la_LIBADD =
+am__libcharon_eapaka_la_SOURCES_DIST =  \
+	sa/authenticators/eap/eap_aka.h \
+	sa/authenticators/eap/eap_aka.c
+@USE_EAP_AKA_TRUE@am_libcharon_eapaka_la_OBJECTS = eap_aka.lo
+libcharon_eapaka_la_OBJECTS = $(am_libcharon_eapaka_la_OBJECTS)
+libcharon_eapaka_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libeapidentity_la_LDFLAGS) $(LDFLAGS) -o $@
-libeapsim_la_LIBADD =
-am__libeapsim_la_SOURCES_DIST = sa/authenticators/eap/eap_sim.h \
+	$(libcharon_eapaka_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_EAP_AKA_TRUE@am_libcharon_eapaka_la_rpath = -rpath $(eapdir)
+libcharon_eapidentity_la_LIBADD =
+am__libcharon_eapidentity_la_SOURCES_DIST =  \
+	sa/authenticators/eap/eap_identity.h \
+	sa/authenticators/eap/eap_identity.c
+@USE_EAP_IDENTITY_TRUE@am_libcharon_eapidentity_la_OBJECTS =  \
+@USE_EAP_IDENTITY_TRUE@	eap_identity.lo
+libcharon_eapidentity_la_OBJECTS =  \
+	$(am_libcharon_eapidentity_la_OBJECTS)
+libcharon_eapidentity_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libcharon_eapidentity_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_EAP_IDENTITY_TRUE@am_libcharon_eapidentity_la_rpath = -rpath \
+@USE_EAP_IDENTITY_TRUE@	$(eapdir)
+libcharon_eapmd5_la_LIBADD =
+am__libcharon_eapmd5_la_SOURCES_DIST =  \
+	sa/authenticators/eap/eap_md5.h \
+	sa/authenticators/eap/eap_md5.c
+@USE_EAP_MD5_TRUE@am_libcharon_eapmd5_la_OBJECTS = eap_md5.lo
+libcharon_eapmd5_la_OBJECTS = $(am_libcharon_eapmd5_la_OBJECTS)
+libcharon_eapmd5_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libcharon_eapmd5_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_EAP_MD5_TRUE@am_libcharon_eapmd5_la_rpath = -rpath $(eapdir)
+libcharon_eapsim_la_LIBADD =
+am__libcharon_eapsim_la_SOURCES_DIST =  \
+	sa/authenticators/eap/eap_sim.h \
 	sa/authenticators/eap/eap_sim.c
-@BUILD_EAP_SIM_TRUE@am_libeapsim_la_OBJECTS = eap_sim.lo
-libeapsim_la_OBJECTS = $(am_libeapsim_la_OBJECTS)
-libeapsim_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+@USE_EAP_SIM_TRUE@am_libcharon_eapsim_la_OBJECTS = eap_sim.lo
+libcharon_eapsim_la_OBJECTS = $(am_libcharon_eapsim_la_OBJECTS)
+libcharon_eapsim_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libeapsim_la_LDFLAGS) $(LDFLAGS) -o $@
-@BUILD_EAP_SIM_TRUE@am_libeapsim_la_rpath = -rpath $(eapdir)
-liblocal_la_LIBADD =
-am_liblocal_la_OBJECTS = local_backend.lo
-liblocal_la_OBJECTS = $(am_liblocal_la_OBJECTS)
-liblocal_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(libcharon_eapsim_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_EAP_SIM_TRUE@am_libcharon_eapsim_la_rpath = -rpath $(eapdir)
+libcharon_local_la_LIBADD =
+am__libcharon_local_la_SOURCES_DIST = config/backends/local_backend.h \
+	config/backends/local_backend.c
+@USE_STROKE_TRUE@am_libcharon_local_la_OBJECTS = local_backend.lo
+libcharon_local_la_OBJECTS = $(am_libcharon_local_la_OBJECTS)
+libcharon_local_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(liblocal_la_LDFLAGS) $(LDFLAGS) -o $@
-libsqlite_la_DEPENDENCIES =
-am__libsqlite_la_SOURCES_DIST = config/backends/sqlite_backend.h \
+	$(libcharon_local_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_STROKE_TRUE@am_libcharon_local_la_rpath = -rpath $(backenddir)
+libcharon_sqlite_la_DEPENDENCIES =
+am__libcharon_sqlite_la_SOURCES_DIST =  \
+	config/backends/sqlite_backend.h \
 	config/backends/sqlite_backend.c
-@USE_LIBSQLITE_TRUE@am_libsqlite_la_OBJECTS = sqlite_backend.lo
-libsqlite_la_OBJECTS = $(am_libsqlite_la_OBJECTS)
-libsqlite_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+@USE_LIBSQLITE_TRUE@am_libcharon_sqlite_la_OBJECTS =  \
+@USE_LIBSQLITE_TRUE@	sqlite_backend.lo
+libcharon_sqlite_la_OBJECTS = $(am_libcharon_sqlite_la_OBJECTS)
+libcharon_sqlite_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libsqlite_la_LDFLAGS) $(LDFLAGS) -o $@
-@USE_LIBSQLITE_TRUE@am_libsqlite_la_rpath = -rpath $(backenddir)
-libstroke_la_LIBADD =
-am_libstroke_la_OBJECTS = stroke_interface.lo
-libstroke_la_OBJECTS = $(am_libstroke_la_OBJECTS)
-libstroke_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(libcharon_sqlite_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_LIBSQLITE_TRUE@am_libcharon_sqlite_la_rpath = -rpath \
+@USE_LIBSQLITE_TRUE@	$(backenddir)
+libcharon_stroke_la_LIBADD =
+am__libcharon_stroke_la_SOURCES_DIST =  \
+	control/interfaces/stroke_interface.h \
+	control/interfaces/stroke_interface.c
+@USE_STROKE_TRUE@am_libcharon_stroke_la_OBJECTS = stroke_interface.lo
+libcharon_stroke_la_OBJECTS = $(am_libcharon_stroke_la_OBJECTS)
+libcharon_stroke_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libstroke_la_LDFLAGS) $(LDFLAGS) -o $@
-@USE_LIBXML_TRUE@libxml_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am__libxml_la_SOURCES_DIST = control/interfaces/xml_interface.h \
+	$(libcharon_stroke_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_STROKE_TRUE@am_libcharon_stroke_la_rpath = -rpath $(interfacedir)
+@USE_LIBXML_TRUE@libcharon_xml_la_DEPENDENCIES =  \
+@USE_LIBXML_TRUE@	$(am__DEPENDENCIES_1)
+am__libcharon_xml_la_SOURCES_DIST =  \
+	control/interfaces/xml_interface.h \
 	control/interfaces/xml_interface.c
-@USE_LIBXML_TRUE@am_libxml_la_OBJECTS = xml_interface.lo
-libxml_la_OBJECTS = $(am_libxml_la_OBJECTS)
-libxml_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+@USE_LIBXML_TRUE@am_libcharon_xml_la_OBJECTS = xml_interface.lo
+libcharon_xml_la_OBJECTS = $(am_libcharon_xml_la_OBJECTS)
+libcharon_xml_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libxml_la_LDFLAGS) $(LDFLAGS) -o $@
-@USE_LIBXML_TRUE@am_libxml_la_rpath = -rpath $(interfacedir)
+	$(libcharon_xml_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_LIBXML_TRUE@am_libcharon_xml_la_rpath = -rpath $(interfacedir)
 ipsecPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(ipsec_PROGRAMS)
 am__charon_SOURCES_DIST = bus/bus.c bus/bus.h \
@@ -181,7 +232,7 @@ am__charon_SOURCES_DIST = bus/bus.c bus/bus.h \
 	kernel/kernel_interface.c kernel/kernel_interface.h \
 	network/packet.c network/packet.h network/receiver.c \
 	network/receiver.h network/sender.c network/sender.h \
-	network/socket.c network/socket.h processing/jobs/job.h \
+	network/socket.h processing/jobs/job.h \
 	processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 	processing/jobs/callback_job.c processing/jobs/callback_job.h \
 	processing/jobs/delete_child_sa_job.c \
@@ -225,7 +276,9 @@ am__charon_SOURCES_DIST = bus/bus.c bus/bus.h \
 	sa/tasks/ike_natd.h sa/tasks/ike_mobike.c \
 	sa/tasks/ike_mobike.h sa/tasks/ike_rekey.c \
 	sa/tasks/ike_rekey.h sa/tasks/ike_reauth.c \
-	sa/tasks/ike_reauth.h sa/tasks/task.c sa/tasks/task.h \
+	sa/tasks/ike_reauth.h sa/tasks/ike_auth_lifetime.c \
+	sa/tasks/ike_auth_lifetime.h sa/tasks/task.c sa/tasks/task.h \
+	network/socket-raw.c network/socket.c \
 	encoding/payloads/endpoint_notify.c \
 	encoding/payloads/endpoint_notify.h \
 	processing/jobs/initiate_mediation_job.c \
@@ -234,7 +287,9 @@ am__charon_SOURCES_DIST = bus/bus.c bus/bus.h \
 	processing/jobs/mediation_job.h sa/connect_manager.c \
 	sa/connect_manager.h sa/mediation_manager.c \
 	sa/mediation_manager.h sa/tasks/ike_p2p.c sa/tasks/ike_p2p.h
-@USE_P2P_TRUE@am__objects_1 = endpoint_notify.$(OBJEXT) \
+@USE_PLUTO_TRUE@am__objects_1 = socket-raw.$(OBJEXT)
+@USE_PLUTO_FALSE@am__objects_2 = socket.$(OBJEXT)
+@USE_P2P_TRUE@am__objects_3 = endpoint_notify.$(OBJEXT) \
 @USE_P2P_TRUE@	initiate_mediation_job.$(OBJEXT) \
 @USE_P2P_TRUE@	mediation_job.$(OBJEXT) \
 @USE_P2P_TRUE@	connect_manager.$(OBJEXT) \
@@ -258,7 +313,7 @@ am_charon_OBJECTS = bus.$(OBJEXT) file_logger.$(OBJEXT) \
 	ts_payload.$(OBJEXT) unknown_payload.$(OBJEXT) \
 	vendor_id_payload.$(OBJEXT) kernel_interface.$(OBJEXT) \
 	packet.$(OBJEXT) receiver.$(OBJEXT) sender.$(OBJEXT) \
-	socket.$(OBJEXT) acquire_job.$(OBJEXT) callback_job.$(OBJEXT) \
+	acquire_job.$(OBJEXT) callback_job.$(OBJEXT) \
 	delete_child_sa_job.$(OBJEXT) delete_ike_sa_job.$(OBJEXT) \
 	process_message_job.$(OBJEXT) rekey_child_sa_job.$(OBJEXT) \
 	rekey_ike_sa_job.$(OBJEXT) retransmit_job.$(OBJEXT) \
@@ -273,7 +328,9 @@ am_charon_OBJECTS = bus.$(OBJEXT) file_logger.$(OBJEXT) \
 	ike_auth.$(OBJEXT) ike_cert.$(OBJEXT) ike_config.$(OBJEXT) \
 	ike_delete.$(OBJEXT) ike_dpd.$(OBJEXT) ike_init.$(OBJEXT) \
 	ike_natd.$(OBJEXT) ike_mobike.$(OBJEXT) ike_rekey.$(OBJEXT) \
-	ike_reauth.$(OBJEXT) task.$(OBJEXT) $(am__objects_1)
+	ike_reauth.$(OBJEXT) ike_auth_lifetime.$(OBJEXT) \
+	task.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
+	$(am__objects_3)
 charon_OBJECTS = $(am_charon_OBJECTS)
 charon_DEPENDENCIES =  \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
@@ -290,14 +347,21 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libdbus_la_SOURCES) $(libeapidentity_la_SOURCES) \
-	$(libeapsim_la_SOURCES) $(liblocal_la_SOURCES) \
-	$(libsqlite_la_SOURCES) $(libstroke_la_SOURCES) \
-	$(libxml_la_SOURCES) $(charon_SOURCES)
-DIST_SOURCES = $(am__libdbus_la_SOURCES_DIST) \
-	$(libeapidentity_la_SOURCES) $(am__libeapsim_la_SOURCES_DIST) \
-	$(liblocal_la_SOURCES) $(am__libsqlite_la_SOURCES_DIST) \
-	$(libstroke_la_SOURCES) $(am__libxml_la_SOURCES_DIST) \
+SOURCES = $(libcharon_dbus_la_SOURCES) $(libcharon_eapaka_la_SOURCES) \
+	$(libcharon_eapidentity_la_SOURCES) \
+	$(libcharon_eapmd5_la_SOURCES) $(libcharon_eapsim_la_SOURCES) \
+	$(libcharon_local_la_SOURCES) $(libcharon_sqlite_la_SOURCES) \
+	$(libcharon_stroke_la_SOURCES) $(libcharon_xml_la_SOURCES) \
+	$(charon_SOURCES)
+DIST_SOURCES = $(am__libcharon_dbus_la_SOURCES_DIST) \
+	$(am__libcharon_eapaka_la_SOURCES_DIST) \
+	$(am__libcharon_eapidentity_la_SOURCES_DIST) \
+	$(am__libcharon_eapmd5_la_SOURCES_DIST) \
+	$(am__libcharon_eapsim_la_SOURCES_DIST) \
+	$(am__libcharon_local_la_SOURCES_DIST) \
+	$(am__libcharon_sqlite_la_SOURCES_DIST) \
+	$(am__libcharon_stroke_la_SOURCES_DIST) \
+	$(am__libcharon_xml_la_SOURCES_DIST) \
 	$(am__charon_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
@@ -486,7 +550,7 @@ charon_SOURCES = bus/bus.c bus/bus.h bus/listeners/file_logger.c \
 	kernel/kernel_interface.c kernel/kernel_interface.h \
 	network/packet.c network/packet.h network/receiver.c \
 	network/receiver.h network/sender.c network/sender.h \
-	network/socket.c network/socket.h processing/jobs/job.h \
+	network/socket.h processing/jobs/job.h \
 	processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 	processing/jobs/callback_job.c processing/jobs/callback_job.h \
 	processing/jobs/delete_child_sa_job.c \
@@ -530,45 +594,52 @@ charon_SOURCES = bus/bus.c bus/bus.h bus/listeners/file_logger.c \
 	sa/tasks/ike_natd.h sa/tasks/ike_mobike.c \
 	sa/tasks/ike_mobike.h sa/tasks/ike_rekey.c \
 	sa/tasks/ike_rekey.h sa/tasks/ike_reauth.c \
-	sa/tasks/ike_reauth.h sa/tasks/task.c sa/tasks/task.h \
-	$(am__append_1)
+	sa/tasks/ike_reauth.h sa/tasks/ike_auth_lifetime.c \
+	sa/tasks/ike_auth_lifetime.h sa/tasks/task.c sa/tasks/task.h \
+	$(am__append_1) $(am__append_2) $(am__append_3)
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke \
-	$(am__append_6) $(am__append_8)
+	$(am__append_13) $(am__append_15)
 AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
 	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\"
 
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
-	-lgmp -lpthread -lm -ldl $(am__append_2)
+	-lgmp -lpthread -lm -ldl $(am__append_4)
 
-# build EAP plugins, EAP-Identity is always built
-#################################################
-eap_LTLIBRARIES = libeapidentity.la $(am__append_3)
-libeapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
-libeapidentity_la_LDFLAGS = -module
-@BUILD_EAP_SIM_TRUE@libeapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
-@BUILD_EAP_SIM_TRUE@libeapsim_la_LDFLAGS = -module
+# build EAP plugins
+###################
+eap_LTLIBRARIES = $(am__append_5) $(am__append_6) $(am__append_7) \
+	$(am__append_8)
+@USE_EAP_IDENTITY_TRUE@libcharon_eapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
+@USE_EAP_IDENTITY_TRUE@libcharon_eapidentity_la_LDFLAGS = -module
+@USE_EAP_SIM_TRUE@libcharon_eapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
+@USE_EAP_SIM_TRUE@libcharon_eapsim_la_LDFLAGS = -module
+@USE_EAP_MD5_TRUE@libcharon_eapmd5_la_SOURCES = sa/authenticators/eap/eap_md5.h sa/authenticators/eap/eap_md5.c
+@USE_EAP_MD5_TRUE@libcharon_eapmd5_la_LDFLAGS = -module
+@USE_EAP_AKA_TRUE@libcharon_eapaka_la_SOURCES = sa/authenticators/eap/eap_aka.h sa/authenticators/eap/eap_aka.c
+@USE_EAP_AKA_TRUE@libcharon_eapaka_la_LDFLAGS = -module
 
-# build backends, local backend is always built
-###############################################
-backend_LTLIBRARIES = liblocal.la $(am__append_4)
-liblocal_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
-liblocal_la_LDFLAGS = -module
-@USE_LIBSQLITE_TRUE@libsqlite_la_SOURCES = config/backends/sqlite_backend.h config/backends/sqlite_backend.c
-@USE_LIBSQLITE_TRUE@libsqlite_la_LIBADD = -lsqlite3
-@USE_LIBSQLITE_TRUE@libsqlite_la_LDFLAGS = -module
+# build backends
+################
+backend_LTLIBRARIES = $(am__append_9) $(am__append_10)
+@USE_STROKE_TRUE@libcharon_local_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
+@USE_STROKE_TRUE@libcharon_local_la_LDFLAGS = -module
+@USE_LIBSQLITE_TRUE@libcharon_sqlite_la_SOURCES = config/backends/sqlite_backend.h config/backends/sqlite_backend.c
+@USE_LIBSQLITE_TRUE@libcharon_sqlite_la_LIBADD = -lsqlite3
+@USE_LIBSQLITE_TRUE@libcharon_sqlite_la_LDFLAGS = -module
 
-# build control interfaces, stroke interface is always built
-############################################################
-interface_LTLIBRARIES = libstroke.la $(am__append_5) $(am__append_7)
-libstroke_la_SOURCES = control/interfaces/stroke_interface.h control/interfaces/stroke_interface.c
-libstroke_la_LDFLAGS = -module
-@USE_LIBDBUS_TRUE@libdbus_la_SOURCES = control/interfaces/dbus_interface.h control/interfaces/dbus_interface.c
-@USE_LIBDBUS_TRUE@libdbus_la_LDFLAGS = -module
-@USE_LIBDBUS_TRUE@libdbus_la_LIBADD = ${dbus_LIBS}
-@USE_LIBXML_TRUE@libxml_la_SOURCES = control/interfaces/xml_interface.h control/interfaces/xml_interface.c
-@USE_LIBXML_TRUE@libxml_la_LDFLAGS = -module
-@USE_LIBXML_TRUE@libxml_la_LIBADD = ${xml_LIBS}
+# build control interfaces
+##########################
+interface_LTLIBRARIES = $(am__append_11) $(am__append_12) \
+	$(am__append_14)
+@USE_STROKE_TRUE@libcharon_stroke_la_SOURCES = control/interfaces/stroke_interface.h control/interfaces/stroke_interface.c
+@USE_STROKE_TRUE@libcharon_stroke_la_LDFLAGS = -module
+@USE_LIBDBUS_TRUE@libcharon_dbus_la_SOURCES = control/interfaces/dbus_interface.h control/interfaces/dbus_interface.c
+@USE_LIBDBUS_TRUE@libcharon_dbus_la_LDFLAGS = -module
+@USE_LIBDBUS_TRUE@libcharon_dbus_la_LIBADD = ${dbus_LIBS}
+@USE_LIBXML_TRUE@libcharon_xml_la_SOURCES = control/interfaces/xml_interface.h control/interfaces/xml_interface.c
+@USE_LIBXML_TRUE@libcharon_xml_la_LDFLAGS = -module
+@USE_LIBXML_TRUE@libcharon_xml_la_LIBADD = ${xml_LIBS}
 all: all-am
 
 .SUFFIXES:
@@ -683,20 +754,24 @@ clean-interfaceLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libdbus.la: $(libdbus_la_OBJECTS) $(libdbus_la_DEPENDENCIES) 
-	$(libdbus_la_LINK) $(am_libdbus_la_rpath) $(libdbus_la_OBJECTS) $(libdbus_la_LIBADD) $(LIBS)
-libeapidentity.la: $(libeapidentity_la_OBJECTS) $(libeapidentity_la_DEPENDENCIES) 
-	$(libeapidentity_la_LINK) -rpath $(eapdir) $(libeapidentity_la_OBJECTS) $(libeapidentity_la_LIBADD) $(LIBS)
-libeapsim.la: $(libeapsim_la_OBJECTS) $(libeapsim_la_DEPENDENCIES) 
-	$(libeapsim_la_LINK) $(am_libeapsim_la_rpath) $(libeapsim_la_OBJECTS) $(libeapsim_la_LIBADD) $(LIBS)
-liblocal.la: $(liblocal_la_OBJECTS) $(liblocal_la_DEPENDENCIES) 
-	$(liblocal_la_LINK) -rpath $(backenddir) $(liblocal_la_OBJECTS) $(liblocal_la_LIBADD) $(LIBS)
-libsqlite.la: $(libsqlite_la_OBJECTS) $(libsqlite_la_DEPENDENCIES) 
-	$(libsqlite_la_LINK) $(am_libsqlite_la_rpath) $(libsqlite_la_OBJECTS) $(libsqlite_la_LIBADD) $(LIBS)
-libstroke.la: $(libstroke_la_OBJECTS) $(libstroke_la_DEPENDENCIES) 
-	$(libstroke_la_LINK) -rpath $(interfacedir) $(libstroke_la_OBJECTS) $(libstroke_la_LIBADD) $(LIBS)
-libxml.la: $(libxml_la_OBJECTS) $(libxml_la_DEPENDENCIES) 
-	$(libxml_la_LINK) $(am_libxml_la_rpath) $(libxml_la_OBJECTS) $(libxml_la_LIBADD) $(LIBS)
+libcharon-dbus.la: $(libcharon_dbus_la_OBJECTS) $(libcharon_dbus_la_DEPENDENCIES) 
+	$(libcharon_dbus_la_LINK) $(am_libcharon_dbus_la_rpath) $(libcharon_dbus_la_OBJECTS) $(libcharon_dbus_la_LIBADD) $(LIBS)
+libcharon-eapaka.la: $(libcharon_eapaka_la_OBJECTS) $(libcharon_eapaka_la_DEPENDENCIES) 
+	$(libcharon_eapaka_la_LINK) $(am_libcharon_eapaka_la_rpath) $(libcharon_eapaka_la_OBJECTS) $(libcharon_eapaka_la_LIBADD) $(LIBS)
+libcharon-eapidentity.la: $(libcharon_eapidentity_la_OBJECTS) $(libcharon_eapidentity_la_DEPENDENCIES) 
+	$(libcharon_eapidentity_la_LINK) $(am_libcharon_eapidentity_la_rpath) $(libcharon_eapidentity_la_OBJECTS) $(libcharon_eapidentity_la_LIBADD) $(LIBS)
+libcharon-eapmd5.la: $(libcharon_eapmd5_la_OBJECTS) $(libcharon_eapmd5_la_DEPENDENCIES) 
+	$(libcharon_eapmd5_la_LINK) $(am_libcharon_eapmd5_la_rpath) $(libcharon_eapmd5_la_OBJECTS) $(libcharon_eapmd5_la_LIBADD) $(LIBS)
+libcharon-eapsim.la: $(libcharon_eapsim_la_OBJECTS) $(libcharon_eapsim_la_DEPENDENCIES) 
+	$(libcharon_eapsim_la_LINK) $(am_libcharon_eapsim_la_rpath) $(libcharon_eapsim_la_OBJECTS) $(libcharon_eapsim_la_LIBADD) $(LIBS)
+libcharon-local.la: $(libcharon_local_la_OBJECTS) $(libcharon_local_la_DEPENDENCIES) 
+	$(libcharon_local_la_LINK) $(am_libcharon_local_la_rpath) $(libcharon_local_la_OBJECTS) $(libcharon_local_la_LIBADD) $(LIBS)
+libcharon-sqlite.la: $(libcharon_sqlite_la_OBJECTS) $(libcharon_sqlite_la_DEPENDENCIES) 
+	$(libcharon_sqlite_la_LINK) $(am_libcharon_sqlite_la_rpath) $(libcharon_sqlite_la_OBJECTS) $(libcharon_sqlite_la_LIBADD) $(LIBS)
+libcharon-stroke.la: $(libcharon_stroke_la_OBJECTS) $(libcharon_stroke_la_DEPENDENCIES) 
+	$(libcharon_stroke_la_LINK) $(am_libcharon_stroke_la_rpath) $(libcharon_stroke_la_OBJECTS) $(libcharon_stroke_la_LIBADD) $(LIBS)
+libcharon-xml.la: $(libcharon_xml_la_OBJECTS) $(libcharon_xml_la_DEPENDENCIES) 
+	$(libcharon_xml_la_LINK) $(am_libcharon_xml_la_rpath) $(libcharon_xml_la_OBJECTS) $(libcharon_xml_la_LIBADD) $(LIBS)
 install-ipsecPROGRAMS: $(ipsec_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(ipsecdir)" || $(MKDIR_P) "$(DESTDIR)$(ipsecdir)"
@@ -756,8 +831,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/delete_child_sa_job.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/delete_ike_sa_job.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/delete_payload.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_aka.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_authenticator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_identity.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_md5.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_method.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_payload.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_sim.Plo@am__quote@
@@ -768,6 +845,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/generator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/id_payload.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_auth.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_auth_lifetime.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_cert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_cfg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_config.Po@am__quote@
@@ -814,6 +892,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/send_dpd_job.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/send_keepalive_job.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sender.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket-raw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sqlite_backend.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stroke_interface.Plo@am__quote@
@@ -857,12 +936,26 @@ dbus_interface.lo: control/interfaces/dbus_interface.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o dbus_interface.lo `test -f 'control/interfaces/dbus_interface.c' || echo '$(srcdir)/'`control/interfaces/dbus_interface.c
 
+eap_aka.lo: sa/authenticators/eap/eap_aka.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT eap_aka.lo -MD -MP -MF $(DEPDIR)/eap_aka.Tpo -c -o eap_aka.lo `test -f 'sa/authenticators/eap/eap_aka.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_aka.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/eap_aka.Tpo $(DEPDIR)/eap_aka.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/authenticators/eap/eap_aka.c' object='eap_aka.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o eap_aka.lo `test -f 'sa/authenticators/eap/eap_aka.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_aka.c
+
 eap_identity.lo: sa/authenticators/eap/eap_identity.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT eap_identity.lo -MD -MP -MF $(DEPDIR)/eap_identity.Tpo -c -o eap_identity.lo `test -f 'sa/authenticators/eap/eap_identity.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_identity.c
 @am__fastdepCC_TRUE@	mv -f $(DEPDIR)/eap_identity.Tpo $(DEPDIR)/eap_identity.Plo
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/authenticators/eap/eap_identity.c' object='eap_identity.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o eap_identity.lo `test -f 'sa/authenticators/eap/eap_identity.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_identity.c
+
+eap_md5.lo: sa/authenticators/eap/eap_md5.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT eap_md5.lo -MD -MP -MF $(DEPDIR)/eap_md5.Tpo -c -o eap_md5.lo `test -f 'sa/authenticators/eap/eap_md5.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_md5.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/eap_md5.Tpo $(DEPDIR)/eap_md5.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/authenticators/eap/eap_md5.c' object='eap_md5.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o eap_md5.lo `test -f 'sa/authenticators/eap/eap_md5.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_md5.c
 
 eap_sim.lo: sa/authenticators/eap/eap_sim.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT eap_sim.lo -MD -MP -MF $(DEPDIR)/eap_sim.Tpo -c -o eap_sim.lo `test -f 'sa/authenticators/eap/eap_sim.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_sim.c
@@ -1473,20 +1566,6 @@ sender.obj: network/sender.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o sender.obj `if test -f 'network/sender.c'; then $(CYGPATH_W) 'network/sender.c'; else $(CYGPATH_W) '$(srcdir)/network/sender.c'; fi`
 
-socket.o: network/socket.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT socket.o -MD -MP -MF $(DEPDIR)/socket.Tpo -c -o socket.o `test -f 'network/socket.c' || echo '$(srcdir)/'`network/socket.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/socket.Tpo $(DEPDIR)/socket.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='network/socket.c' object='socket.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o socket.o `test -f 'network/socket.c' || echo '$(srcdir)/'`network/socket.c
-
-socket.obj: network/socket.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT socket.obj -MD -MP -MF $(DEPDIR)/socket.Tpo -c -o socket.obj `if test -f 'network/socket.c'; then $(CYGPATH_W) 'network/socket.c'; else $(CYGPATH_W) '$(srcdir)/network/socket.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/socket.Tpo $(DEPDIR)/socket.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='network/socket.c' object='socket.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o socket.obj `if test -f 'network/socket.c'; then $(CYGPATH_W) 'network/socket.c'; else $(CYGPATH_W) '$(srcdir)/network/socket.c'; fi`
-
 acquire_job.o: processing/jobs/acquire_job.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT acquire_job.o -MD -MP -MF $(DEPDIR)/acquire_job.Tpo -c -o acquire_job.o `test -f 'processing/jobs/acquire_job.c' || echo '$(srcdir)/'`processing/jobs/acquire_job.c
 @am__fastdepCC_TRUE@	mv -f $(DEPDIR)/acquire_job.Tpo $(DEPDIR)/acquire_job.Po
@@ -1991,6 +2070,20 @@ ike_reauth.obj: sa/tasks/ike_reauth.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ike_reauth.obj `if test -f 'sa/tasks/ike_reauth.c'; then $(CYGPATH_W) 'sa/tasks/ike_reauth.c'; else $(CYGPATH_W) '$(srcdir)/sa/tasks/ike_reauth.c'; fi`
 
+ike_auth_lifetime.o: sa/tasks/ike_auth_lifetime.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ike_auth_lifetime.o -MD -MP -MF $(DEPDIR)/ike_auth_lifetime.Tpo -c -o ike_auth_lifetime.o `test -f 'sa/tasks/ike_auth_lifetime.c' || echo '$(srcdir)/'`sa/tasks/ike_auth_lifetime.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/ike_auth_lifetime.Tpo $(DEPDIR)/ike_auth_lifetime.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/tasks/ike_auth_lifetime.c' object='ike_auth_lifetime.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ike_auth_lifetime.o `test -f 'sa/tasks/ike_auth_lifetime.c' || echo '$(srcdir)/'`sa/tasks/ike_auth_lifetime.c
+
+ike_auth_lifetime.obj: sa/tasks/ike_auth_lifetime.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ike_auth_lifetime.obj -MD -MP -MF $(DEPDIR)/ike_auth_lifetime.Tpo -c -o ike_auth_lifetime.obj `if test -f 'sa/tasks/ike_auth_lifetime.c'; then $(CYGPATH_W) 'sa/tasks/ike_auth_lifetime.c'; else $(CYGPATH_W) '$(srcdir)/sa/tasks/ike_auth_lifetime.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/ike_auth_lifetime.Tpo $(DEPDIR)/ike_auth_lifetime.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/tasks/ike_auth_lifetime.c' object='ike_auth_lifetime.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ike_auth_lifetime.obj `if test -f 'sa/tasks/ike_auth_lifetime.c'; then $(CYGPATH_W) 'sa/tasks/ike_auth_lifetime.c'; else $(CYGPATH_W) '$(srcdir)/sa/tasks/ike_auth_lifetime.c'; fi`
+
 task.o: sa/tasks/task.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT task.o -MD -MP -MF $(DEPDIR)/task.Tpo -c -o task.o `test -f 'sa/tasks/task.c' || echo '$(srcdir)/'`sa/tasks/task.c
 @am__fastdepCC_TRUE@	mv -f $(DEPDIR)/task.Tpo $(DEPDIR)/task.Po
@@ -2004,6 +2097,34 @@ task.obj: sa/tasks/task.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/tasks/task.c' object='task.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o task.obj `if test -f 'sa/tasks/task.c'; then $(CYGPATH_W) 'sa/tasks/task.c'; else $(CYGPATH_W) '$(srcdir)/sa/tasks/task.c'; fi`
+
+socket-raw.o: network/socket-raw.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT socket-raw.o -MD -MP -MF $(DEPDIR)/socket-raw.Tpo -c -o socket-raw.o `test -f 'network/socket-raw.c' || echo '$(srcdir)/'`network/socket-raw.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/socket-raw.Tpo $(DEPDIR)/socket-raw.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='network/socket-raw.c' object='socket-raw.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o socket-raw.o `test -f 'network/socket-raw.c' || echo '$(srcdir)/'`network/socket-raw.c
+
+socket-raw.obj: network/socket-raw.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT socket-raw.obj -MD -MP -MF $(DEPDIR)/socket-raw.Tpo -c -o socket-raw.obj `if test -f 'network/socket-raw.c'; then $(CYGPATH_W) 'network/socket-raw.c'; else $(CYGPATH_W) '$(srcdir)/network/socket-raw.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/socket-raw.Tpo $(DEPDIR)/socket-raw.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='network/socket-raw.c' object='socket-raw.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o socket-raw.obj `if test -f 'network/socket-raw.c'; then $(CYGPATH_W) 'network/socket-raw.c'; else $(CYGPATH_W) '$(srcdir)/network/socket-raw.c'; fi`
+
+socket.o: network/socket.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT socket.o -MD -MP -MF $(DEPDIR)/socket.Tpo -c -o socket.o `test -f 'network/socket.c' || echo '$(srcdir)/'`network/socket.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/socket.Tpo $(DEPDIR)/socket.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='network/socket.c' object='socket.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o socket.o `test -f 'network/socket.c' || echo '$(srcdir)/'`network/socket.c
+
+socket.obj: network/socket.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT socket.obj -MD -MP -MF $(DEPDIR)/socket.Tpo -c -o socket.obj `if test -f 'network/socket.c'; then $(CYGPATH_W) 'network/socket.c'; else $(CYGPATH_W) '$(srcdir)/network/socket.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/socket.Tpo $(DEPDIR)/socket.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='network/socket.c' object='socket.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o socket.obj `if test -f 'network/socket.c'; then $(CYGPATH_W) 'network/socket.c'; else $(CYGPATH_W) '$(srcdir)/network/socket.c'; fi`
 
 endpoint_notify.o: encoding/payloads/endpoint_notify.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT endpoint_notify.o -MD -MP -MF $(DEPDIR)/endpoint_notify.Tpo -c -o endpoint_notify.o `test -f 'encoding/payloads/endpoint_notify.c' || echo '$(srcdir)/'`encoding/payloads/endpoint_notify.c

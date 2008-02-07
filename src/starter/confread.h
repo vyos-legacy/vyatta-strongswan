@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.h 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: confread.h 3394 2007-12-13 17:31:21Z martin $
  */
 
 #ifndef _IPSEC_CONFREAD_H_
@@ -106,7 +106,8 @@ struct starter_conn {
 	starter_state_t	state;
 
 	keyexchange_t	keyexchange;
-	int			eap;
+	u_int32_t	eap_type;
+	u_int32_t	eap_vendor;
 	lset_t 		policy;
 	time_t 		sa_ike_life_seconds;
 	time_t		sa_ipsec_life_seconds;

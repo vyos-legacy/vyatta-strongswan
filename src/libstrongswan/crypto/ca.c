@@ -279,11 +279,11 @@ static void list_certinfos(private_ca_info_t *this, FILE *out, bool utc)
 		fprintf(out, "%#T, until %#T, ", &thisUpdate, utc, &nextUpdate, utc);
 		if (now > nextUpdate)
 		{
-			fprintf(out, "expired (%V ago)\n", &now, &nextUpdate);
+			fprintf(out, "expired (%#V ago)\n", &now, &nextUpdate);
 		}
 		else
 		{
-			fprintf(out, "ok (expires in %V)\n", &now, &nextUpdate);
+			fprintf(out, "ok (expires in %#V)\n", &now, &nextUpdate);
 		}
 		fprintf(out, "    serial:     %#B, %N\n", &serial,
 				cert_status_names, certinfo->get_status(certinfo));
@@ -654,7 +654,7 @@ static cert_status_t verify_by_ocsp(private_ca_info_t* this,
 
 				if (comparison > 0)
 				{
-					iterator->insert_after(iterator, (void *)cached_certinfo);
+					this->certinfos->insert_last(this->certinfos, (void *)cached_certinfo);
 				}
 				else
 				{

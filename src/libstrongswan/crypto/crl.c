@@ -19,7 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: crl.c 3300 2007-10-12 21:53:18Z andreas $
+ * RCSID $Id: crl.c 3355 2007-11-20 12:06:40Z martin $
  */
 
 #include <sys/stat.h>
@@ -463,11 +463,11 @@ static void list(private_crl_t *this, FILE* out, bool utc)
 	}
 	else if (now > this->nextUpdate)
 	{
-		fprintf(out, "expired (%V ago)\n", &now, &this->nextUpdate);
+		fprintf(out, "expired (%#V ago)\n", &now, &this->nextUpdate);
 	}
 	else if (now > this->nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
 	{
-		fprintf(out, "ok (expires in %V)\n", &now, &this->nextUpdate);
+		fprintf(out, "ok (expires in %#V)\n", &now, &this->nextUpdate);
 	}
 	else
 	{

@@ -45,7 +45,7 @@ kernel/kernel_interface.c kernel/kernel_interface.h \
 network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
-network/socket.c network/socket.h \
+network/socket.h \
 processing/jobs/job.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 processing/jobs/callback_job.c processing/jobs/callback_job.h \
@@ -83,7 +83,15 @@ sa/tasks/ike_natd.c sa/tasks/ike_natd.h \
 sa/tasks/ike_mobike.c sa/tasks/ike_mobike.h \
 sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
+sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/task.c sa/tasks/task.h
+
+# Use RAW socket if pluto gets built
+if USE_PLUTO
+  charon_SOURCES += network/socket-raw.c
+else
+  charon_SOURCES += network/socket.c
+endif
 
 if USE_P2P
   charon_SOURCES += encoding/payloads/endpoint_notify.c encoding/payloads/endpoint_notify.h \
@@ -104,56 +112,74 @@ if USE_LIBCURL
 endif
 
 
-# build EAP plugins, EAP-Identity is always built
-#################################################
+# build EAP plugins
+###################
 eap_LTLIBRARIES =
 
-eap_LTLIBRARIES += libeapidentity.la
-libeapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
-libeapidentity_la_LDFLAGS = -module
-
-if BUILD_EAP_SIM
-  eap_LTLIBRARIES += libeapsim.la
-  libeapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
-  libeapsim_la_LDFLAGS = -module
+if USE_EAP_IDENTITY
+  eap_LTLIBRARIES += libcharon-eapidentity.la
+  libcharon_eapidentity_la_SOURCES = sa/authenticators/eap/eap_identity.h sa/authenticators/eap/eap_identity.c
+  libcharon_eapidentity_la_LDFLAGS = -module
 endif
 
-# build backends, local backend is always built
-###############################################
+if USE_EAP_SIM
+  eap_LTLIBRARIES += libcharon-eapsim.la
+  libcharon_eapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
+  libcharon_eapsim_la_LDFLAGS = -module
+endif
+
+if USE_EAP_MD5
+  eap_LTLIBRARIES += libcharon-eapmd5.la
+  libcharon_eapmd5_la_SOURCES = sa/authenticators/eap/eap_md5.h sa/authenticators/eap/eap_md5.c
+  libcharon_eapmd5_la_LDFLAGS = -module
+endif
+
+if USE_EAP_AKA
+  eap_LTLIBRARIES += libcharon-eapaka.la
+  libcharon_eapaka_la_SOURCES = sa/authenticators/eap/eap_aka.h sa/authenticators/eap/eap_aka.c
+  libcharon_eapaka_la_LDFLAGS = -module
+endif
+
+# build backends
+################
 backend_LTLIBRARIES =
 
-backend_LTLIBRARIES += liblocal.la
-liblocal_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
-liblocal_la_LDFLAGS = -module
-
-if USE_LIBSQLITE
-  backend_LTLIBRARIES += libsqlite.la
-  libsqlite_la_SOURCES = config/backends/sqlite_backend.h config/backends/sqlite_backend.c
-  libsqlite_la_LIBADD = -lsqlite3
-  libsqlite_la_LDFLAGS = -module
+if USE_STROKE
+  backend_LTLIBRARIES += libcharon-local.la
+  libcharon_local_la_SOURCES = config/backends/local_backend.h config/backends/local_backend.c
+  libcharon_local_la_LDFLAGS = -module
 endif
 
-# build control interfaces, stroke interface is always built
-############################################################
+if USE_LIBSQLITE
+  backend_LTLIBRARIES += libcharon-sqlite.la
+  libcharon_sqlite_la_SOURCES = config/backends/sqlite_backend.h config/backends/sqlite_backend.c
+  libcharon_sqlite_la_LIBADD = -lsqlite3
+  libcharon_sqlite_la_LDFLAGS = -module
+endif
+
+# build control interfaces
+##########################
 interface_LTLIBRARIES =
 
-interface_LTLIBRARIES += libstroke.la
-libstroke_la_SOURCES = control/interfaces/stroke_interface.h control/interfaces/stroke_interface.c
-libstroke_la_LDFLAGS = -module
+if USE_STROKE
+  interface_LTLIBRARIES += libcharon-stroke.la
+  libcharon_stroke_la_SOURCES = control/interfaces/stroke_interface.h control/interfaces/stroke_interface.c
+  libcharon_stroke_la_LDFLAGS = -module
+endif
 
 if USE_LIBDBUS
-  interface_LTLIBRARIES += libdbus.la
-  libdbus_la_SOURCES = control/interfaces/dbus_interface.h control/interfaces/dbus_interface.c
-  libdbus_la_LDFLAGS = -module
-  libdbus_la_LIBADD = ${dbus_LIBS}
+  interface_LTLIBRARIES += libcharon-dbus.la
+  libcharon_dbus_la_SOURCES = control/interfaces/dbus_interface.h control/interfaces/dbus_interface.c
+  libcharon_dbus_la_LDFLAGS = -module
+  libcharon_dbus_la_LIBADD = ${dbus_LIBS}
   INCLUDES += ${dbus_CFLAGS}
 endif
 
 if USE_LIBXML
-  interface_LTLIBRARIES += libxml.la
-  libxml_la_SOURCES = control/interfaces/xml_interface.h control/interfaces/xml_interface.c
-  libxml_la_LDFLAGS = -module
-  libxml_la_LIBADD = ${xml_LIBS}
+  interface_LTLIBRARIES += libcharon-xml.la
+  libcharon_xml_la_SOURCES = control/interfaces/xml_interface.h control/interfaces/xml_interface.c
+  libcharon_xml_la_LDFLAGS = -module
+  libcharon_xml_la_LIBADD = ${xml_LIBS}
   INCLUDES += ${xml_CFLAGS}
 endif
 
