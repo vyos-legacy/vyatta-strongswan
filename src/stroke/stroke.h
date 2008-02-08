@@ -19,7 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: stroke.h 3271 2007-10-08 20:12:25Z andreas $
+ * RCSID $Id: stroke.h 3394 2007-12-13 17:31:21Z martin $
  */
 
 #ifndef STROKE_H_
@@ -182,7 +182,8 @@ struct stroke_msg_t {
 			char *name;
 			int ikev2;
 			int auth_method;
-			int eap_type;
+			u_int32_t eap_type;
+			u_int32_t eap_vendor;
 			int mode;
 			int mobike;
 			int force_encap;

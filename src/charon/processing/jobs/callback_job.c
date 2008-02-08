@@ -121,12 +121,7 @@ static void cancel(private_callback_job_t *this)
 {
 	pthread_t thread;
 	
-	/* wait until thread has started */
 	pthread_mutex_lock(&this->mutex);
-	while (this->thread == 0)
-	{
-		pthread_cond_wait(&this->condvar, &this->mutex);
-	}
 	thread = this->thread;
 	
 	/* terminate its children */
@@ -134,8 +129,11 @@ static void cancel(private_callback_job_t *this)
 	pthread_mutex_unlock(&this->mutex);
 	
 	/* terminate thread */
-	pthread_cancel(thread);
-	pthread_join(thread, NULL);
+	if (thread)
+	{
+		pthread_cancel(thread);
+		pthread_join(thread, NULL);
+	}
 }
 
 /**
@@ -159,6 +157,7 @@ static void execute(private_callback_job_t *this)
 				continue;
 			case JOB_REQUEUE_FAIR:
 			{
+				this->thread = 0;
 				charon->processor->queue_job(charon->processor,
 											 &this->public.job_interface);
 				break;
@@ -166,6 +165,7 @@ static void execute(private_callback_job_t *this)
 			case JOB_REQUEUE_NONE:
 			default:
 			{
+				this->thread = 0;
 				cleanup = TRUE;
 				break;
 			}

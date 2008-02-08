@@ -16,7 +16,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: _updown.in 3268 2007-10-08 19:59:18Z andreas $
+# RCSID $Id: _updown.in 3389 2007-12-12 22:12:10Z andreas $
 
 # CAUTION:  Installing a new version of strongSwan will install a new
 # copy of this script, wiping out any custom changes you make.  If
@@ -117,6 +117,10 @@
 #              is  the  UDP/TCP  port  to  which  the IPsec SA  is
 #              restricted on the peer side.
 #
+
+# define a minimum PATH environment in case it is not set
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@"
+export PATH
 
 # uncomment to log VPN connections
 VPN_LOGGING=1
@@ -372,11 +376,11 @@ up-host:iptables)
 	# This is used only by the default updown script, not by your custom
 	# ones, so do not mess with it; see CAUTION comment up at top.
 	iptables -I INPUT 1 -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
-	    -s $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $S_PEER_PORT \
+	    -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
 	    -d $PLUTO_ME $D_MY_PORT $IPSEC_POLICY_IN -j ACCEPT
 	iptables -I OUTPUT 1 -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
 	    -s $PLUTO_ME $S_MY_PORT $IPSEC_POLICY_OUT \
-	    -d $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $D_PEER_PORT -j ACCEPT
+	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT -j ACCEPT
 	#
 	# log IPsec host connection setup
 	if [ $VPN_LOGGING ]
@@ -396,11 +400,11 @@ down-host:iptables)
 	# This is used only by the default updown script, not by your custom
 	# ones, so do not mess with it; see CAUTION comment up at top.
 	iptables -D INPUT -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
-	    -s $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $S_PEER_PORT \
+	    -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
 	    -d $PLUTO_ME $D_MY_PORT $IPSEC_POLICY_IN -j ACCEPT
 	iptables -D OUTPUT -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
 	    -s $PLUTO_ME $S_MY_PORT $IPSEC_POLICY_OUT \
-	    -d $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $D_PEER_PORT -j ACCEPT
+	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT -j ACCEPT
 	#
 	# log IPsec host connection teardown
 	if [ $VPN_LOGGING ]
@@ -422,13 +426,11 @@ up-client:iptables)
 	if [ "$PLUTO_PEER_CLIENT" != "$PLUTO_MY_SOURCEIP/32" ]
 	then
 	  iptables -I FORWARD 1 -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
-	      -s $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $S_MY_PORT \
-	      -d $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $D_PEER_PORT \
-	         $IPSEC_POLICY_OUT -j ACCEPT
+	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
 	  iptables -I FORWARD 1 -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
-	      -s $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $S_PEER_PORT \
-	      -d $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $D_MY_PORT \
-	         $IPSEC_POLICY_IN -j ACCEPT
+	      -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	      -d $PLUTO_MY_CLIENT $D_MY_PORT $IPSEC_POLICY_IN -j ACCEPT
 	fi
 	#
 	# a virtual IP requires an INPUT and OUTPUT rule on the host
@@ -436,13 +438,11 @@ up-client:iptables)
 	if [ -n "$PLUTO_MY_SOURCEIP" -o -n "$PLUTO_HOST_ACCESS" ]
 	then
 	  iptables -I INPUT 1 -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
-	      -s $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $S_PEER_PORT \
-	      -d $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $D_MY_PORT \
-	         $IPSEC_POLICY_IN -j ACCEPT
+	      -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	      -d $PLUTO_MY_CLIENT $D_MY_PORT $IPSEC_POLICY_IN -j ACCEPT
 	  iptables -I OUTPUT 1 -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
-	      -s $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $S_MY_PORT \
-	      -d $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $D_PEER_PORT \
-	         $IPSEC_POLICY_OUT -j ACCEPT
+	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
 	fi
 	#
 	# log IPsec client connection setup
@@ -465,12 +465,12 @@ down-client:iptables)
 	if [ "$PLUTO_PEER_CLIENT" != "$PLUTO_MY_SOURCEIP/32" ]
 	then
 	  iptables -D FORWARD -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
-	      -s $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $S_MY_PORT \
-	      -d $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $D_PEER_PORT \
+	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT \
 	         $IPSEC_POLICY_OUT -j ACCEPT
 	  iptables -D FORWARD -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
-	      -s $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $S_PEER_PORT \
-	      -d $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $D_MY_PORT \
+	      -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	      -d $PLUTO_MY_CLIENT $D_MY_PORT \
 	         $IPSEC_POLICY_IN -j ACCEPT
 	fi
 	#
@@ -479,12 +479,12 @@ down-client:iptables)
 	if [ -n "$PLUTO_MY_SOURCEIP" -o -n "$PLUTO_HOST_ACCESS" ]
 	then
 	  iptables -D INPUT -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
-	      -s $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $S_PEER_PORT \
-	      -d $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $D_MY_PORT \
+	      -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	      -d $PLUTO_MY_CLIENT $D_MY_PORT \
 	         $IPSEC_POLICY_IN -j ACCEPT
 	  iptables -D OUTPUT -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
-	      -s $PLUTO_MY_CLIENT_NET/$PLUTO_MY_CLIENT_MASK $S_MY_PORT \
-	      -d $PLUTO_PEER_CLIENT_NET/$PLUTO_PEER_CLIENT_MASK $D_PEER_PORT \
+	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT \
 	         $IPSEC_POLICY_OUT -j ACCEPT
 	fi
 	#
@@ -514,11 +514,11 @@ unroute-host-v6:*|unroute-client-v6:*)
 	# connection to me or my client subnet being unrouted
 	#downroute_v6
 	;;
-up-host-v6:*)
+up-host-v6:)
 	# connection to me coming up
 	# If you are doing a custom version, firewall commands go here.
 	;;
-down-host-v6:*)
+down-host-v6:)
 	# connection to me going down
 	# If you are doing a custom version, firewall commands go here.
 	;;
@@ -529,6 +529,136 @@ up-client-v6:)
 down-client-v6:)
 	# connection to my client subnet going down
 	# If you are doing a custom version, firewall commands go here.
+	;;
+up-host-v6:iptables)
+	# connection to me, with (left/right)firewall=yes, coming up
+	# This is used only by the default updown script, not by your custom
+	# ones, so do not mess with it; see CAUTION comment up at top.
+	ip6tables -I INPUT 1 -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
+	    -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	    -d $PLUTO_ME $D_MY_PORT $IPSEC_POLICY_IN -j ACCEPT
+	ip6tables -I OUTPUT 1 -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
+	    -s $PLUTO_ME $S_MY_PORT $IPSEC_POLICY_OUT \
+	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT -j ACCEPT
+	#
+	# log IPsec host connection setup
+	if [ $VPN_LOGGING ]
+	then
+	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/128" ]
+	  then
+	    logger -t $TAG -p $FAC_PRIO \
+	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME"
+	  else
+	    logger -t $TAG -p $FAC_PRIO \
+	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	  fi
+	fi	
+	;;
+down-host-v6:iptables)
+	# connection to me, with (left/right)firewall=yes, going down
+	# This is used only by the default updown script, not by your custom
+	# ones, so do not mess with it; see CAUTION comment up at top.
+	ip6tables -D INPUT -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
+	    -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	    -d $PLUTO_ME $D_MY_PORT $IPSEC_POLICY_IN -j ACCEPT
+	ip6tables -D OUTPUT -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
+	    -s $PLUTO_ME $S_MY_PORT $IPSEC_POLICY_OUT \
+	    -d $PLUTO_PEER_CLIENT $D_PEER_PORT -j ACCEPT
+	#
+	# log IPsec host connection teardown
+	if [ $VPN_LOGGING ]
+	then
+	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/128" ]
+	  then
+	    logger -t $TAG -p $FAC_PRIO -- \
+	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME"
+	  else
+	    logger -t $TAG -p $FAC_PRIO -- \
+	    "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME"
+	  fi
+	fi
+	;;
+up-client-v6:iptables)
+	# connection to client subnet, with (left/right)firewall=yes, coming up
+	# This is used only by the default updown script, not by your custom
+	# ones, so do not mess with it; see CAUTION comment up at top.
+	if [ "$PLUTO_PEER_CLIENT" != "$PLUTO_MY_SOURCEIP/128" ]
+	then
+	  ip6tables -I FORWARD 1 -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
+	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
+	  ip6tables -I FORWARD 1 -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
+	      -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	      -d $PLUTO_MY_CLIENT $D_MY_PORT $IPSEC_POLICY_IN -j ACCEPT
+	fi
+	#
+	# a virtual IP requires an INPUT and OUTPUT rule on the host
+	# or sometimes host access via the internal IP is needed
+	if [ -n "$PLUTO_MY_SOURCEIP" -o -n "$PLUTO_HOST_ACCESS" ]
+	then
+	  ip6tables -I INPUT 1 -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
+	      -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	      -d $PLUTO_MY_CLIENT $D_MY_PORT $IPSEC_POLICY_IN -j ACCEPT
+	  ip6tables -I OUTPUT 1 -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
+	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT $IPSEC_POLICY_OUT -j ACCEPT
+	fi
+	#
+	# log IPsec client connection setup
+	if [ $VPN_LOGGING ]
+	then
+	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/128" ]
+	  then
+	    logger -t $TAG -p $FAC_PRIO \
+	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	  else
+	    logger -t $TAG -p $FAC_PRIO \
+	      "+ `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	  fi
+	fi
+	;;
+down-client-v6:iptables)
+	# connection to client subnet, with (left/right)firewall=yes, going down
+	# This is used only by the default updown script, not by your custom
+	# ones, so do not mess with it; see CAUTION comment up at top.
+	if [ "$PLUTO_PEER_CLIENT" != "$PLUTO_MY_SOURCEIP/128" ]
+	then
+	  ip6tables -D FORWARD -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
+	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT \
+	         $IPSEC_POLICY_OUT -j ACCEPT
+	  ip6tables -D FORWARD -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
+	      -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	      -d $PLUTO_MY_CLIENT $D_MY_PORT \
+	         $IPSEC_POLICY_IN -j ACCEPT
+	fi
+	#
+	# a virtual IP requires an INPUT and OUTPUT rule on the host
+	# or sometimes host access via the internal IP is needed
+	if [ -n "$PLUTO_MY_SOURCEIP" -o -n "$PLUTO_HOST_ACCESS" ]
+	then
+	  ip6tables -D INPUT -i $PLUTO_INTERFACE -p $PLUTO_MY_PROTOCOL \
+	      -s $PLUTO_PEER_CLIENT $S_PEER_PORT \
+	      -d $PLUTO_MY_CLIENT $D_MY_PORT \
+	         $IPSEC_POLICY_IN -j ACCEPT
+	  ip6tables -D OUTPUT -o $PLUTO_INTERFACE -p $PLUTO_PEER_PROTOCOL \
+	      -s $PLUTO_MY_CLIENT $S_MY_PORT \
+	      -d $PLUTO_PEER_CLIENT $D_PEER_PORT \
+	         $IPSEC_POLICY_OUT -j ACCEPT
+	fi
+	#
+	# log IPsec client connection teardown
+	if [ $VPN_LOGGING ]
+	then
+	  if [ "$PLUTO_PEER_CLIENT" == "$PLUTO_PEER/128" ]
+	  then
+	    logger -t $TAG -p $FAC_PRIO -- \
+	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	  else
+	    logger -t $TAG -p $FAC_PRIO -- \
+	      "- `echo -e $PLUTO_PEER_ID` $PLUTO_PEER_CLIENT == $PLUTO_PEER -- $PLUTO_ME == $PLUTO_MY_CLIENT"
+	  fi
+	fi
 	;;
 *)	echo "$0: unknown verb \`$PLUTO_VERB' or parameter \`$1'" >&2
 	exit 1

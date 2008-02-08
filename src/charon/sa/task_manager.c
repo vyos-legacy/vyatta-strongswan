@@ -30,6 +30,7 @@
 #include <sa/tasks/ike_natd.h>
 #include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
+#include <sa/tasks/ike_auth_lifetime.h>
 #include <sa/tasks/ike_cert.h>
 #include <sa/tasks/ike_rekey.h>
 #include <sa/tasks/ike_delete.h>
@@ -338,6 +339,7 @@ static status_t build_request(private_task_manager_t *this)
 					activate_task(this, IKE_AUTHENTICATE);
 					activate_task(this, IKE_CONFIG);
 					activate_task(this, CHILD_CREATE);
+					activate_task(this, IKE_AUTH_LIFETIME);
 					activate_task(this, IKE_MOBIKE);
 				}
 				break;
@@ -690,19 +692,21 @@ static status_t process_request(private_task_manager_t *this,
 #ifdef P2P			
 			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-#endif /* P2P */			
+#endif /* P2P */
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)child_create_create(this->ike_sa, NULL);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
+			task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			break;
 		}
 		case CREATE_CHILD_SA:
-		{//FIXME: we should prevent this on mediation connections
+		{	/* FIXME: we should prevent this on mediation connections */
 			bool notify_found = FALSE, ts_found = FALSE;
 			iterator = message->get_payload_iterator(message);
 			while (iterator->iterate(iterator, (void**)&payload))
@@ -772,8 +776,12 @@ static status_t process_request(private_task_manager_t *this,
 							case UNACCEPTABLE_ADDRESSES:
 							case UNEXPECTED_NAT_DETECTED:
 							case COOKIE2:
-								task = (task_t*)ike_mobike_create(this->ike_sa,
-																  FALSE);
+								task = (task_t*)ike_mobike_create(
+														this->ike_sa, FALSE);
+								break;
+							case AUTH_LIFETIME:
+								task = (task_t*)ike_auth_lifetime_create(
+														this->ike_sa, FALSE);
 								break;
 							default:
 								break;

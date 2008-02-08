@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokecharon.c 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: invokecharon.c 3344 2007-11-15 18:34:05Z martin $
  */
 
 #include <sys/types.h>
@@ -78,9 +78,14 @@ starter_stop_charon (void)
 			kill(pid, SIGINT);
 	    else if (i < 10)
 			kill(pid, SIGTERM);
+	    else if (i == 10)
+	    {
+			kill(pid, SIGKILL);
+			plog("starter_stop_charon(): charon does not respond, sending KILL");
+	    }
 	    else
 			kill(pid, SIGKILL);
-	    usleep(20000);
+	    usleep(200000);
 	}
 	if (_charon_pid == 0)
 	    return 0;

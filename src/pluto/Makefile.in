@@ -804,7 +804,7 @@ install-data-am: install-ipsecPROGRAMS install-man
 
 install-dvi: install-dvi-am
 
-install-exec-am: install-exec-local
+install-exec-am:
 
 install-html: install-html-am
 
@@ -847,8 +847,8 @@ uninstall-man: uninstall-man5 uninstall-man8
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-exec-local \
-	install-html install-html-am install-info install-info-am \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am \
 	install-ipsecPROGRAMS install-man install-man5 install-man8 \
 	install-pdf install-pdf-am install-ps install-ps-am \
 	install-strip installcheck installcheck-am installdirs \
@@ -861,18 +861,6 @@ uninstall-man: uninstall-man5 uninstall-man8
 
 oid.o :	$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
 		$(COMPILE) -c -o $@ $<
-
-install-exec-local :
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/cacerts
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/ocspcerts
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/certs
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/acerts
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/aacerts
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/crls
-	mkdir -p -m 755 $(DESTDIR)$(confdir)/ipsec.d/reqs
-	mkdir -p -m 700 $(DESTDIR)$(confdir)/ipsec.d/private
-	chown -R $(ipsecuid):$(ipsecgid) $(DESTDIR)$(confdir)/ipsec.d
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

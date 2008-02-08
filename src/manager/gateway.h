@@ -49,6 +49,31 @@ struct gateway_t {
 	enumerator_t* (*query_ikesalist)(gateway_t *this);
 	
 	/**
+	 * @brief Query the list of peer configs and its subconfigs.
+	 *
+	 * @return			enumerator over peerconfig XML elements
+	 */
+	enumerator_t* (*query_configlist)(gateway_t *this);
+	
+	/**
+	 * @brief Terminate an IKE or a CHILD SA.
+	 *
+	 * @param ike		TRUE for IKE-, FALSE for a CHILD-SA
+	 * @param id		ID of the SA to terminate
+	 * @return			enumerator over control response XML children
+	 */
+	enumerator_t* (*terminate)(gateway_t *this, bool ike, u_int32_t id);
+	
+	/**
+	 * @brief Initiate an IKE or a CHILD SA.
+	 *
+	 * @param ike		TRUE for IKE-, FALSE for CHILD-SA
+	 * @param name		name of the peer/child config
+	 * @return			enumerator over control response XML children
+	 */
+	enumerator_t* (*initiate)(gateway_t *this, bool ike, char *name);
+	
+	/**
      * @brief Destroy a gateway instance.
      */
     void (*destroy)(gateway_t *this);

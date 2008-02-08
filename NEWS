@@ -1,7 +1,48 @@
+strongswan-4.1.10
+-----------------
+
+- Fixed error in the ordering of the certinfo_t records in the ocsp cache that
+  caused multiple entries of the same serial number to be created. 
+
+- Implementation of a simple EAP-MD5 module which provides CHAP
+  authentication. This may be interesting in conjunction with certificate
+  based server authentication, as weak passwords can't be brute forced
+  (in contradiction to traditional IKEv2 PSK).
+
+- A complete software based implementation of EAP-AKA, using algorithms
+  specified in 3GPP2 (S.S0055). This implementation does not use an USIM,
+  but reads the secrets from ipsec.secrets. Make sure to read eap_aka.h
+  before using it.
+
+- Support for vendor specific EAP methods using Expanded EAP types. The
+  interface to EAP modules has been slightly changed, so make sure to 
+  check the changes if you're already rolling your own modules.
+
+strongswan-4.1.9
+----------------
+
+- The default _updown script now dynamically inserts and removes ip6tables
+  firewall rules if leftfirewall=yes is set in IPv6 connections. New IPv6
+  net-net and roadwarrior (PSK/RSA) scenarios for both IKEv1 and IKEV2 were
+  added.
+
+- Implemented RFC4478 repeated authentication to force EAP/Virtual-IP clients
+  to reestablish an IKE_SA within a given timeframe.
+
+- strongSwan Manager supports configuration listing, initiation and termination
+  of IKE and CHILD_SAs.
+
+- Fixes and improvements to multithreading code.
+
+- IKEv2 plugins have been renamed to libcharon-* to avoid naming conflicts.
+  Make sure to remove the old plugins in $libexecdir/ipsec, otherwise they get 
+  loaded twice.
+
+
 strongswan-4.1.8
 ----------------
 
-- Removed recursive pthread mutexes since uClib doesn't support them.
+- Removed recursive pthread mutexes since uClibc doesn't support them.
 
 
 strongswan-4.1.7

@@ -1,3 +1,13 @@
+strongswan (4.1.10-1) unstable; urgency=low
+
+  * New upstream release.
+    Closes: #455711: New upstream version 4.1.9
+  * Updated Japanese debconf translation.
+    Closes: #463321: strongswan: [INTL:ja] Update po-debconf template 
+                     translation (ja.po)
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 07 Feb 2008 15:15:14 +0100
+
 strongswan (4.1.8-3) unstable; urgency=low
 
   * Force use of hardening-wrapper when building the package by setting

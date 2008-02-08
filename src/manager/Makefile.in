@@ -52,9 +52,11 @@ am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(ipsecdir)" \
 	"$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(ipsec_templatesdir)" \
 	"$(DESTDIR)$(ipsec_templates_authdir)" \
+	"$(DESTDIR)$(ipsec_templates_configdir)" \
+	"$(DESTDIR)$(ipsec_templates_controldir)" \
 	"$(DESTDIR)$(ipsec_templates_gatewaydir)" \
-	"$(DESTDIR)$(ipsec_templates_staticdir)" \
-	"$(DESTDIR)$(ipsec_templates_statusdir)"
+	"$(DESTDIR)$(ipsec_templates_ikesadir)" \
+	"$(DESTDIR)$(ipsec_templates_staticdir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
@@ -67,7 +69,8 @@ ipsecPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(ipsec_PROGRAMS)
 am_manager_fcgi_OBJECTS = main.$(OBJEXT) manager.$(OBJEXT) \
 	gateway.$(OBJEXT) database.$(OBJEXT) auth_controller.$(OBJEXT) \
-	status_controller.$(OBJEXT) gateway_controller.$(OBJEXT)
+	ikesa_controller.$(OBJEXT) control_controller.$(OBJEXT) \
+	config_controller.$(OBJEXT) gateway_controller.$(OBJEXT)
 manager_fcgi_OBJECTS = $(am_manager_fcgi_OBJECTS)
 manager_fcgi_DEPENDENCIES = $(top_builddir)/src/manager/libappserv.la
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -87,12 +90,16 @@ DIST_SOURCES = $(libappserv_la_SOURCES) $(manager_fcgi_SOURCES)
 ipsecDATA_INSTALL = $(INSTALL_DATA)
 ipsec_templatesDATA_INSTALL = $(INSTALL_DATA)
 ipsec_templates_authDATA_INSTALL = $(INSTALL_DATA)
+ipsec_templates_configDATA_INSTALL = $(INSTALL_DATA)
+ipsec_templates_controlDATA_INSTALL = $(INSTALL_DATA)
 ipsec_templates_gatewayDATA_INSTALL = $(INSTALL_DATA)
+ipsec_templates_ikesaDATA_INSTALL = $(INSTALL_DATA)
 ipsec_templates_staticDATA_INSTALL = $(INSTALL_DATA)
-ipsec_templates_statusDATA_INSTALL = $(INSTALL_DATA)
 DATA = $(ipsec_DATA) $(ipsec_templates_DATA) \
-	$(ipsec_templates_auth_DATA) $(ipsec_templates_gateway_DATA) \
-	$(ipsec_templates_static_DATA) $(ipsec_templates_status_DATA)
+	$(ipsec_templates_auth_DATA) $(ipsec_templates_config_DATA) \
+	$(ipsec_templates_control_DATA) \
+	$(ipsec_templates_gateway_DATA) $(ipsec_templates_ikesa_DATA) \
+	$(ipsec_templates_static_DATA)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -229,7 +236,9 @@ xml_LIBS = @xml_LIBS@
 manager_fcgi_SOURCES = \
 main.c manager.c manager.h gateway.h gateway.c database.h database.c \
 controller/auth_controller.c controller/auth_controller.h \
-controller/status_controller.c controller/status_controller.h \
+controller/ikesa_controller.c controller/ikesa_controller.h \
+controller/control_controller.c controller/control_controller.h \
+controller/config_controller.c controller/config_controller.h \
 controller/gateway_controller.c controller/gateway_controller.h
 
 manager_fcgi_LDADD = $(top_builddir)/src/manager/libappserv.la -lsqlite3
@@ -251,22 +260,31 @@ ipsec_templates_authdir = ${ipsec_templatesdir}/auth
 ipsec_templates_auth_DATA = templates/auth/login.cs
 ipsec_templates_gatewaydir = ${ipsec_templatesdir}/gateway
 ipsec_templates_gateway_DATA = templates/gateway/list.cs
-ipsec_templates_statusdir = ${ipsec_templatesdir}/status
-ipsec_templates_status_DATA = templates/status/ikesalist.cs
+ipsec_templates_ikesadir = ${ipsec_templatesdir}/ikesa
+ipsec_templates_ikesa_DATA = templates/ikesa/list.cs
+ipsec_templates_controldir = ${ipsec_templatesdir}/control
+ipsec_templates_control_DATA = templates/control/result.cs
+ipsec_templates_configdir = ${ipsec_templatesdir}/config
+ipsec_templates_config_DATA = templates/config/list.cs
 ipsec_templates_staticdir = ${ipsec_templatesdir}/static
 ipsec_templates_static_DATA = templates/static/style.css templates/static/script.js templates/static/jquery.js \
 templates/static/pipe.png templates/static/pipe-good.png templates/static/pipe-bad.png \
 templates/static/pipe-thin.png templates/static/pipe-thin-left.png templates/static/pipe-thin-right.png \
+templates/static/pipe-thin-green.png templates/static/pipe-thin-left-green.png templates/static/pipe-thin-right-green.png \
 templates/static/gateway-left.png templates/static/client-left.png templates/static/strongswan.png \
-templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png
+templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png \
+templates/static/close.png templates/static/initiate.png
 
 EXTRA_DIST = manager.db templates/header.cs templates/footer.cs templates/error.cs \
-templates/auth/login.cs templates/gateway/list.cs templates/status/ikesalist.cs \
+templates/auth/login.cs templates/gateway/list.cs templates/ikesa/list.cs \
+templates/config/list.cs templates/control/result.cs \
 templates/static/style.css templates/static/script.js templates/static/jquery.js \
 templates/static/pipe.png templates/static/pipe-good.png templates/static/pipe-bad.png \
 templates/static/pipe-thin.png templates/static/pipe-thin-left.png templates/static/pipe-thin-right.png \
+templates/static/pipe-thin-green.png templates/static/pipe-thin-left-green.png templates/static/pipe-thin-right-green.png \
 templates/static/gateway-left.png templates/static/client-left.png templates/static/strongswan.png \
-templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png
+templates/static/router.png templates/static/gateway-right.png templates/static/client-right.png \
+templates/static/close.png templates/static/initiate.png
 
 all: all-am
 
@@ -369,15 +387,17 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/auth_controller.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/config_controller.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/control_controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/database.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dispatcher.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gateway.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gateway_controller.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ikesa_controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/manager.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/request.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/status_controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xml.Plo@am__quote@
 
 .c.o:
@@ -443,19 +463,47 @@ auth_controller.obj: controller/auth_controller.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o auth_controller.obj `if test -f 'controller/auth_controller.c'; then $(CYGPATH_W) 'controller/auth_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/auth_controller.c'; fi`
 
-status_controller.o: controller/status_controller.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT status_controller.o -MD -MP -MF $(DEPDIR)/status_controller.Tpo -c -o status_controller.o `test -f 'controller/status_controller.c' || echo '$(srcdir)/'`controller/status_controller.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/status_controller.Tpo $(DEPDIR)/status_controller.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='controller/status_controller.c' object='status_controller.o' libtool=no @AMDEPBACKSLASH@
+ikesa_controller.o: controller/ikesa_controller.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ikesa_controller.o -MD -MP -MF $(DEPDIR)/ikesa_controller.Tpo -c -o ikesa_controller.o `test -f 'controller/ikesa_controller.c' || echo '$(srcdir)/'`controller/ikesa_controller.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/ikesa_controller.Tpo $(DEPDIR)/ikesa_controller.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='controller/ikesa_controller.c' object='ikesa_controller.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o status_controller.o `test -f 'controller/status_controller.c' || echo '$(srcdir)/'`controller/status_controller.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ikesa_controller.o `test -f 'controller/ikesa_controller.c' || echo '$(srcdir)/'`controller/ikesa_controller.c
 
-status_controller.obj: controller/status_controller.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT status_controller.obj -MD -MP -MF $(DEPDIR)/status_controller.Tpo -c -o status_controller.obj `if test -f 'controller/status_controller.c'; then $(CYGPATH_W) 'controller/status_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/status_controller.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/status_controller.Tpo $(DEPDIR)/status_controller.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='controller/status_controller.c' object='status_controller.obj' libtool=no @AMDEPBACKSLASH@
+ikesa_controller.obj: controller/ikesa_controller.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ikesa_controller.obj -MD -MP -MF $(DEPDIR)/ikesa_controller.Tpo -c -o ikesa_controller.obj `if test -f 'controller/ikesa_controller.c'; then $(CYGPATH_W) 'controller/ikesa_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/ikesa_controller.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/ikesa_controller.Tpo $(DEPDIR)/ikesa_controller.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='controller/ikesa_controller.c' object='ikesa_controller.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o status_controller.obj `if test -f 'controller/status_controller.c'; then $(CYGPATH_W) 'controller/status_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/status_controller.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ikesa_controller.obj `if test -f 'controller/ikesa_controller.c'; then $(CYGPATH_W) 'controller/ikesa_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/ikesa_controller.c'; fi`
+
+control_controller.o: controller/control_controller.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT control_controller.o -MD -MP -MF $(DEPDIR)/control_controller.Tpo -c -o control_controller.o `test -f 'controller/control_controller.c' || echo '$(srcdir)/'`controller/control_controller.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/control_controller.Tpo $(DEPDIR)/control_controller.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='controller/control_controller.c' object='control_controller.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o control_controller.o `test -f 'controller/control_controller.c' || echo '$(srcdir)/'`controller/control_controller.c
+
+control_controller.obj: controller/control_controller.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT control_controller.obj -MD -MP -MF $(DEPDIR)/control_controller.Tpo -c -o control_controller.obj `if test -f 'controller/control_controller.c'; then $(CYGPATH_W) 'controller/control_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/control_controller.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/control_controller.Tpo $(DEPDIR)/control_controller.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='controller/control_controller.c' object='control_controller.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o control_controller.obj `if test -f 'controller/control_controller.c'; then $(CYGPATH_W) 'controller/control_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/control_controller.c'; fi`
+
+config_controller.o: controller/config_controller.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT config_controller.o -MD -MP -MF $(DEPDIR)/config_controller.Tpo -c -o config_controller.o `test -f 'controller/config_controller.c' || echo '$(srcdir)/'`controller/config_controller.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/config_controller.Tpo $(DEPDIR)/config_controller.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='controller/config_controller.c' object='config_controller.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o config_controller.o `test -f 'controller/config_controller.c' || echo '$(srcdir)/'`controller/config_controller.c
+
+config_controller.obj: controller/config_controller.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT config_controller.obj -MD -MP -MF $(DEPDIR)/config_controller.Tpo -c -o config_controller.obj `if test -f 'controller/config_controller.c'; then $(CYGPATH_W) 'controller/config_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/config_controller.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/config_controller.Tpo $(DEPDIR)/config_controller.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='controller/config_controller.c' object='config_controller.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o config_controller.obj `if test -f 'controller/config_controller.c'; then $(CYGPATH_W) 'controller/config_controller.c'; else $(CYGPATH_W) '$(srcdir)/controller/config_controller.c'; fi`
 
 gateway_controller.o: controller/gateway_controller.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT gateway_controller.o -MD -MP -MF $(DEPDIR)/gateway_controller.Tpo -c -o gateway_controller.o `test -f 'controller/gateway_controller.c' || echo '$(srcdir)/'`controller/gateway_controller.c
@@ -527,6 +575,40 @@ uninstall-ipsec_templates_authDATA:
 	  echo " rm -f '$(DESTDIR)$(ipsec_templates_authdir)/$$f'"; \
 	  rm -f "$(DESTDIR)$(ipsec_templates_authdir)/$$f"; \
 	done
+install-ipsec_templates_configDATA: $(ipsec_templates_config_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(ipsec_templates_configdir)" || $(MKDIR_P) "$(DESTDIR)$(ipsec_templates_configdir)"
+	@list='$(ipsec_templates_config_DATA)'; for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  f=$(am__strip_dir) \
+	  echo " $(ipsec_templates_configDATA_INSTALL) '$$d$$p' '$(DESTDIR)$(ipsec_templates_configdir)/$$f'"; \
+	  $(ipsec_templates_configDATA_INSTALL) "$$d$$p" "$(DESTDIR)$(ipsec_templates_configdir)/$$f"; \
+	done
+
+uninstall-ipsec_templates_configDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(ipsec_templates_config_DATA)'; for p in $$list; do \
+	  f=$(am__strip_dir) \
+	  echo " rm -f '$(DESTDIR)$(ipsec_templates_configdir)/$$f'"; \
+	  rm -f "$(DESTDIR)$(ipsec_templates_configdir)/$$f"; \
+	done
+install-ipsec_templates_controlDATA: $(ipsec_templates_control_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(ipsec_templates_controldir)" || $(MKDIR_P) "$(DESTDIR)$(ipsec_templates_controldir)"
+	@list='$(ipsec_templates_control_DATA)'; for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  f=$(am__strip_dir) \
+	  echo " $(ipsec_templates_controlDATA_INSTALL) '$$d$$p' '$(DESTDIR)$(ipsec_templates_controldir)/$$f'"; \
+	  $(ipsec_templates_controlDATA_INSTALL) "$$d$$p" "$(DESTDIR)$(ipsec_templates_controldir)/$$f"; \
+	done
+
+uninstall-ipsec_templates_controlDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(ipsec_templates_control_DATA)'; for p in $$list; do \
+	  f=$(am__strip_dir) \
+	  echo " rm -f '$(DESTDIR)$(ipsec_templates_controldir)/$$f'"; \
+	  rm -f "$(DESTDIR)$(ipsec_templates_controldir)/$$f"; \
+	done
 install-ipsec_templates_gatewayDATA: $(ipsec_templates_gateway_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(ipsec_templates_gatewaydir)" || $(MKDIR_P) "$(DESTDIR)$(ipsec_templates_gatewaydir)"
@@ -544,6 +626,23 @@ uninstall-ipsec_templates_gatewayDATA:
 	  echo " rm -f '$(DESTDIR)$(ipsec_templates_gatewaydir)/$$f'"; \
 	  rm -f "$(DESTDIR)$(ipsec_templates_gatewaydir)/$$f"; \
 	done
+install-ipsec_templates_ikesaDATA: $(ipsec_templates_ikesa_DATA)
+	@$(NORMAL_INSTALL)
+	test -z "$(ipsec_templates_ikesadir)" || $(MKDIR_P) "$(DESTDIR)$(ipsec_templates_ikesadir)"
+	@list='$(ipsec_templates_ikesa_DATA)'; for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  f=$(am__strip_dir) \
+	  echo " $(ipsec_templates_ikesaDATA_INSTALL) '$$d$$p' '$(DESTDIR)$(ipsec_templates_ikesadir)/$$f'"; \
+	  $(ipsec_templates_ikesaDATA_INSTALL) "$$d$$p" "$(DESTDIR)$(ipsec_templates_ikesadir)/$$f"; \
+	done
+
+uninstall-ipsec_templates_ikesaDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(ipsec_templates_ikesa_DATA)'; for p in $$list; do \
+	  f=$(am__strip_dir) \
+	  echo " rm -f '$(DESTDIR)$(ipsec_templates_ikesadir)/$$f'"; \
+	  rm -f "$(DESTDIR)$(ipsec_templates_ikesadir)/$$f"; \
+	done
 install-ipsec_templates_staticDATA: $(ipsec_templates_static_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(ipsec_templates_staticdir)" || $(MKDIR_P) "$(DESTDIR)$(ipsec_templates_staticdir)"
@@ -560,23 +659,6 @@ uninstall-ipsec_templates_staticDATA:
 	  f=$(am__strip_dir) \
 	  echo " rm -f '$(DESTDIR)$(ipsec_templates_staticdir)/$$f'"; \
 	  rm -f "$(DESTDIR)$(ipsec_templates_staticdir)/$$f"; \
-	done
-install-ipsec_templates_statusDATA: $(ipsec_templates_status_DATA)
-	@$(NORMAL_INSTALL)
-	test -z "$(ipsec_templates_statusdir)" || $(MKDIR_P) "$(DESTDIR)$(ipsec_templates_statusdir)"
-	@list='$(ipsec_templates_status_DATA)'; for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  f=$(am__strip_dir) \
-	  echo " $(ipsec_templates_statusDATA_INSTALL) '$$d$$p' '$(DESTDIR)$(ipsec_templates_statusdir)/$$f'"; \
-	  $(ipsec_templates_statusDATA_INSTALL) "$$d$$p" "$(DESTDIR)$(ipsec_templates_statusdir)/$$f"; \
-	done
-
-uninstall-ipsec_templates_statusDATA:
-	@$(NORMAL_UNINSTALL)
-	@list='$(ipsec_templates_status_DATA)'; for p in $$list; do \
-	  f=$(am__strip_dir) \
-	  echo " rm -f '$(DESTDIR)$(ipsec_templates_statusdir)/$$f'"; \
-	  rm -f "$(DESTDIR)$(ipsec_templates_statusdir)/$$f"; \
 	done
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
@@ -657,7 +739,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(ipsec_templatesdir)" "$(DESTDIR)$(ipsec_templates_authdir)" "$(DESTDIR)$(ipsec_templates_gatewaydir)" "$(DESTDIR)$(ipsec_templates_staticdir)" "$(DESTDIR)$(ipsec_templates_statusdir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(ipsec_templatesdir)" "$(DESTDIR)$(ipsec_templates_authdir)" "$(DESTDIR)$(ipsec_templates_configdir)" "$(DESTDIR)$(ipsec_templates_controldir)" "$(DESTDIR)$(ipsec_templates_gatewaydir)" "$(DESTDIR)$(ipsec_templates_ikesadir)" "$(DESTDIR)$(ipsec_templates_staticdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -707,9 +789,11 @@ info-am:
 
 install-data-am: install-ipsecDATA install-ipsecPROGRAMS \
 	install-ipsec_templatesDATA install-ipsec_templates_authDATA \
+	install-ipsec_templates_configDATA \
+	install-ipsec_templates_controlDATA \
 	install-ipsec_templates_gatewayDATA \
-	install-ipsec_templates_staticDATA \
-	install-ipsec_templates_statusDATA
+	install-ipsec_templates_ikesaDATA \
+	install-ipsec_templates_staticDATA
 
 install-dvi: install-dvi-am
 
@@ -748,9 +832,11 @@ ps-am:
 uninstall-am: uninstall-ipsecDATA uninstall-ipsecPROGRAMS \
 	uninstall-ipsec_templatesDATA \
 	uninstall-ipsec_templates_authDATA \
+	uninstall-ipsec_templates_configDATA \
+	uninstall-ipsec_templates_controlDATA \
 	uninstall-ipsec_templates_gatewayDATA \
-	uninstall-ipsec_templates_staticDATA \
-	uninstall-ipsec_templates_statusDATA uninstall-libLTLIBRARIES
+	uninstall-ipsec_templates_ikesaDATA \
+	uninstall-ipsec_templates_staticDATA uninstall-libLTLIBRARIES
 
 .MAKE: install-am install-strip
 
@@ -763,9 +849,11 @@ uninstall-am: uninstall-ipsecDATA uninstall-ipsecPROGRAMS \
 	install-exec-am install-html install-html-am install-info \
 	install-info-am install-ipsecDATA install-ipsecPROGRAMS \
 	install-ipsec_templatesDATA install-ipsec_templates_authDATA \
+	install-ipsec_templates_configDATA \
+	install-ipsec_templates_controlDATA \
 	install-ipsec_templates_gatewayDATA \
-	install-ipsec_templates_staticDATA \
-	install-ipsec_templates_statusDATA install-libLTLIBRARIES \
+	install-ipsec_templates_ikesaDATA \
+	install-ipsec_templates_staticDATA install-libLTLIBRARIES \
 	install-man install-pdf install-pdf-am install-ps \
 	install-ps-am install-strip installcheck installcheck-am \
 	installdirs maintainer-clean maintainer-clean-generic \
@@ -774,9 +862,11 @@ uninstall-am: uninstall-ipsecDATA uninstall-ipsecPROGRAMS \
 	uninstall-am uninstall-ipsecDATA uninstall-ipsecPROGRAMS \
 	uninstall-ipsec_templatesDATA \
 	uninstall-ipsec_templates_authDATA \
+	uninstall-ipsec_templates_configDATA \
+	uninstall-ipsec_templates_controlDATA \
 	uninstall-ipsec_templates_gatewayDATA \
-	uninstall-ipsec_templates_staticDATA \
-	uninstall-ipsec_templates_statusDATA uninstall-libLTLIBRARIES
+	uninstall-ipsec_templates_ikesaDATA \
+	uninstall-ipsec_templates_staticDATA uninstall-libLTLIBRARIES
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

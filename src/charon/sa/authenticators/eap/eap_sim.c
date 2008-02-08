@@ -264,6 +264,7 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 			}
 			case AT_IDENTITY:
 			{
+				u_int16_t act_len = data.len;
 				/* align up to four byte */
 				if (data.len % 4)
 				{
@@ -275,7 +276,7 @@ static eap_payload_t *build_payload(private_eap_sim_t *this, u_int8_t identifier
 				*pos.ptr = data.len/4 + 1;
 				pos = chunk_skip(pos, 1);
 				/* actual length in bytes */
-				*(u_int16_t*)pos.ptr = htons(data.len);
+				*(u_int16_t*)pos.ptr = htons(act_len);
 				pos = chunk_skip(pos, sizeof(u_int16_t));
 				memcpy(pos.ptr, data.ptr, data.len);
 				pos = chunk_skip(pos, data.len);
@@ -697,8 +698,9 @@ static status_t initiate(private_eap_sim_t *this, eap_payload_t **out)
 /**
  * Implementation of eap_method_t.get_type.
  */
-static eap_type_t get_type(private_eap_sim_t *this)
+static eap_type_t get_type(private_eap_sim_t *this, u_int32_t *vendor)
 {
+	*vendor = 0;
 	return EAP_SIM;
 }
 
@@ -785,7 +787,7 @@ eap_sim_t *eap_create(eap_role_t role,
 	/* public functions */
 	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate;
 	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process;
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*))get_type;
+	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
 	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
 	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
 	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
