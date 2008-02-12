@@ -1,17 +1,17 @@
-#
+# 
 #    Translators, if you are not familiar with the PO format, gettext
 #    documentation is worth reading, especially sections dedicated to
 #    this format, e.g. by running:
 #         info -n '(gettext)PO Files'
 #         info -n '(gettext)Header Entry'
-#
+# 
 #    Some information specific to po-debconf are available at
 #            /usr/share/doc/po-debconf/README-trans
 #         or http://www.debian.org/intl/l10n/po-debconf/README-trans
-#
+# 
 #    Developers do not need to manually edit POT or PO files.
-#
-#
+# 
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: strongswan 4.1.8-2\n"
@@ -130,9 +130,9 @@ msgid ""
 "IKEv1 and IKEv2. Do you want to start the \"pluto\" daemon for IKEv1 support "
 "when strongSwan is started?"
 msgstr ""
-"strongSwan は IKEv1 と IKEv2 の両方のインターネット鍵交換プロトコルをサポートして"
-"います。strongSwan が起動する際、IKEv1 サポートのため \"pluto\" デーモンを起動"
-"しますか?"
+"strongSwan は IKEv1 と IKEv2 の両方のインターネット鍵交換プロトコルをサポート"
+"しています。strongSwan が起動する際、IKEv1 サポートのため \"pluto\" デーモン"
+"を起動しますか?"
 
 #. Type: boolean
 #. Description
@@ -148,9 +148,9 @@ msgid ""
 "IKEv1 and IKEv2. Do you want to start the \"charon\" daemon for IKEv2 "
 "support when strongSwan is started?"
 msgstr ""
-"strongSwan は IKEv1 と IKEv2 の両方のインターネット鍵交換プロトコルをサポートして"
-"います。strongSwan が起動する際、IKEv2 サポートのため \"pluto\" デーモンを起動"
-"しますか?"
+"strongSwan は IKEv1 と IKEv2 の両方のインターネット鍵交換プロトコルをサポート"
+"しています。strongSwan が起動する際、IKEv2 サポートのため \"pluto\" デーモン"
+"を起動しますか?"
 
 #. Type: boolean
 #. Description
@@ -348,8 +348,8 @@ msgid ""
 "authority."
 msgstr ""
 "自己署名証明書を生成したくないという場合は、このインストーラでは RSA 秘密鍵と"
-"証明書要求のみを生成します。そのため、認証局に証明書要求へ署名をしてもらう必要"
-"があります。"
+"証明書要求のみを生成します。そのため、認証局に証明書要求へ署名をしてもらう必"
+"要があります。"
 
 #. Type: string
 #. Description
@@ -548,4 +548,3 @@ msgid ""
 msgstr ""
 "OE のサポートを有効にするかどうかを選んでください。よくわからない場合は、有効"
 "にはしないでください。"
-
