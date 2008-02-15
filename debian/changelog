@@ -1,3 +1,10 @@
+strongswan (4.1.10-2) unstable; urgency=low
+
+  * Enable new configure options: dbus, xml, nonblocking, thread, peer-
+    to-peer NAT-traversal and the manager interface support.
+
+ -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Fri, 15 Feb 2008 10:25:49 +0100
+
 strongswan (4.1.10-1) unstable; urgency=low
 
   * New upstream release.

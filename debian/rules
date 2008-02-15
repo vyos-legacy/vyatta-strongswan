@@ -17,8 +17,10 @@ configure-stamp: patch
 	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
 		--enable-http --enable-ldap \
-		--enable-smartcard --enable-cisco-quirks
-	#	--enable-dbus --enable-xml \
+		--enable-nonblocking --enable-thread \
+		--enable-smartcard --enable-cisco-quirks \
+		--enable-dbus --enable-xml \
+		--enable-p2p --enable-manager
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!
 	# And for --enable-eap-sim we would need the library, which we don't
