@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: pkcs1.c 3252 2007-10-06 21:24:50Z andreas $
+ * RCSID $Id: pkcs1.c 3427 2008-01-27 20:17:15Z andreas $
  */
 
 #include <stddef.h>
@@ -442,11 +442,13 @@ RSA_encrypt(const RSA_public_key_t *key, chunk_t in)
     *pos++ = 0x02;
 
     /* pad with pseudo random bytes unequal to zero */
-    get_rnd_bytes(pos, padding);
     for (i = 0; i < padding; i++)
     {
+	get_rnd_bytes(pos, padding);
 	while (!*pos)
- 	  get_rnd_bytes(pos, 1);
+	{
+	    get_rnd_bytes(pos, 1);
+	}
 	pos++;
     }
 

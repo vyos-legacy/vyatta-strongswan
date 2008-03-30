@@ -1,3 +1,18 @@
+strongswan-4.1.11
+-----------------
+
+- IKE rekeying in NAT situations did not inherit the NAT conditions
+  to the rekeyed IKE_SA so that the UDP encapsulation was lost with
+  the next CHILD_SA rekeying.
+
+- Wrong type definition of the next_payload variable in id_payload.c
+  caused an INVALID_SYNTAX error on PowerPC platforms. 
+
+- Implemented IKEv2 EAP-SIM server and client test modules that use
+  triplets stored in a file. For details on the configuration see
+  the scenario 'ikev2/rw-eap-sim-rsa'.
+
+
 strongswan-4.1.10
 -----------------
 
@@ -17,6 +32,7 @@ strongswan-4.1.10
 - Support for vendor specific EAP methods using Expanded EAP types. The
   interface to EAP modules has been slightly changed, so make sure to 
   check the changes if you're already rolling your own modules.
+
 
 strongswan-4.1.9
 ----------------

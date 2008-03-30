@@ -1,3 +1,9 @@
+strongswan (4.1.11-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 30 Mar 2008 10:35:16 +0200
+
 strongswan (4.1.10-2) unstable; urgency=low
 
   * Enable new configure options: dbus, xml, nonblocking, thread, peer-

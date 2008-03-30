@@ -75,17 +75,18 @@ am__libstrongswan_la_SOURCES_DIST = credential_store.h library.c \
 	crypto/hashers/md5_hasher.c crypto/hashers/md5_hasher.h \
 	crypto/hmac.c crypto/hmac.h crypto/ietf_attr_list.c \
 	crypto/ietf_attr_list.h crypto/ocsp.c crypto/ocsp.h \
-	crypto/pkcs7.c crypto/pkcs7.h crypto/prfs/fips_prf.c \
-	crypto/prfs/fips_prf.h crypto/prfs/hmac_prf.c \
-	crypto/prfs/hmac_prf.h crypto/prfs/prf.c crypto/prfs/prf.h \
-	crypto/prf_plus.h crypto/prf_plus.c \
-	crypto/rsa/rsa_private_key.c crypto/rsa/rsa_private_key.h \
-	crypto/rsa/rsa_public_key.h crypto/rsa/rsa_public_key.c \
-	crypto/signers/hmac_signer.c crypto/signers/hmac_signer.h \
-	crypto/signers/signer.c crypto/signers/signer.h crypto/x509.c \
-	crypto/x509.h utils/fetcher.c utils/fetcher.h utils/host.c \
-	utils/host.h utils/identification.c utils/identification.h \
-	utils/iterator.h utils/leak_detective.c utils/leak_detective.h \
+	crypto/pkcs7.c crypto/pkcs7.h crypto/pkcs9.c crypto/pkcs9.h \
+	crypto/prfs/fips_prf.c crypto/prfs/fips_prf.h \
+	crypto/prfs/hmac_prf.c crypto/prfs/hmac_prf.h \
+	crypto/prfs/prf.c crypto/prfs/prf.h crypto/prf_plus.h \
+	crypto/prf_plus.c crypto/rsa/rsa_private_key.c \
+	crypto/rsa/rsa_private_key.h crypto/rsa/rsa_public_key.h \
+	crypto/rsa/rsa_public_key.c crypto/signers/hmac_signer.c \
+	crypto/signers/hmac_signer.h crypto/signers/signer.c \
+	crypto/signers/signer.h crypto/x509.c crypto/x509.h \
+	utils/fetcher.c utils/fetcher.h utils/host.c utils/host.h \
+	utils/identification.c utils/identification.h utils/iterator.h \
+	utils/leak_detective.c utils/leak_detective.h \
 	utils/lexparser.c utils/lexparser.h utils/linked_list.c \
 	utils/linked_list.h utils/enumerator.c utils/enumerator.h \
 	utils/optionsfrom.c utils/optionsfrom.h utils/randomizer.c \
@@ -100,14 +101,14 @@ am__libstrongswan_la_SOURCES_DIST = credential_store.h library.c \
 @USE_INTEGRITY_TEST_FALSE@	hasher.lo sha1_hasher.lo \
 @USE_INTEGRITY_TEST_FALSE@	sha2_hasher.lo md5_hasher.lo hmac.lo \
 @USE_INTEGRITY_TEST_FALSE@	ietf_attr_list.lo ocsp.lo pkcs7.lo \
-@USE_INTEGRITY_TEST_FALSE@	fips_prf.lo hmac_prf.lo prf.lo \
-@USE_INTEGRITY_TEST_FALSE@	prf_plus.lo rsa_private_key.lo \
-@USE_INTEGRITY_TEST_FALSE@	rsa_public_key.lo hmac_signer.lo \
-@USE_INTEGRITY_TEST_FALSE@	signer.lo x509.lo fetcher.lo host.lo \
-@USE_INTEGRITY_TEST_FALSE@	identification.lo leak_detective.lo \
-@USE_INTEGRITY_TEST_FALSE@	lexparser.lo linked_list.lo \
-@USE_INTEGRITY_TEST_FALSE@	enumerator.lo optionsfrom.lo \
-@USE_INTEGRITY_TEST_FALSE@	randomizer.lo
+@USE_INTEGRITY_TEST_FALSE@	pkcs9.lo fips_prf.lo hmac_prf.lo \
+@USE_INTEGRITY_TEST_FALSE@	prf.lo prf_plus.lo \
+@USE_INTEGRITY_TEST_FALSE@	rsa_private_key.lo rsa_public_key.lo \
+@USE_INTEGRITY_TEST_FALSE@	hmac_signer.lo signer.lo x509.lo \
+@USE_INTEGRITY_TEST_FALSE@	fetcher.lo host.lo identification.lo \
+@USE_INTEGRITY_TEST_FALSE@	leak_detective.lo lexparser.lo \
+@USE_INTEGRITY_TEST_FALSE@	linked_list.lo enumerator.lo \
+@USE_INTEGRITY_TEST_FALSE@	optionsfrom.lo randomizer.lo
 @USE_INTEGRITY_TEST_TRUE@am_libstrongswan_la_OBJECTS =  \
 @USE_INTEGRITY_TEST_TRUE@	fips_canister_start.lo fips.lo \
 @USE_INTEGRITY_TEST_TRUE@	library.lo chunk.lo debug.lo enum.lo \
@@ -118,8 +119,8 @@ am__libstrongswan_la_SOURCES_DIST = credential_store.h library.c \
 @USE_INTEGRITY_TEST_TRUE@	hasher.lo sha1_hasher.lo \
 @USE_INTEGRITY_TEST_TRUE@	sha2_hasher.lo md5_hasher.lo hmac.lo \
 @USE_INTEGRITY_TEST_TRUE@	ietf_attr_list.lo ocsp.lo pkcs7.lo \
-@USE_INTEGRITY_TEST_TRUE@	fips_prf.lo hmac_prf.lo prf.lo \
-@USE_INTEGRITY_TEST_TRUE@	prf_plus.lo rsa_private_key.lo \
+@USE_INTEGRITY_TEST_TRUE@	pkcs9.lo fips_prf.lo hmac_prf.lo \
+@USE_INTEGRITY_TEST_TRUE@	prf.lo prf_plus.lo rsa_private_key.lo \
 @USE_INTEGRITY_TEST_TRUE@	rsa_public_key.lo hmac_signer.lo \
 @USE_INTEGRITY_TEST_TRUE@	signer.lo x509.lo fetcher.lo host.lo \
 @USE_INTEGRITY_TEST_TRUE@	identification.lo leak_detective.lo \
@@ -269,11 +270,13 @@ mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
+plugindir = @plugindir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
+simreader = @simreader@
 srcdir = @srcdir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
@@ -314,6 +317,7 @@ lib_LTLIBRARIES = libstrongswan.la
 @USE_INTEGRITY_TEST_FALSE@	crypto/ietf_attr_list.h \
 @USE_INTEGRITY_TEST_FALSE@	crypto/ocsp.c crypto/ocsp.h \
 @USE_INTEGRITY_TEST_FALSE@	crypto/pkcs7.c crypto/pkcs7.h \
+@USE_INTEGRITY_TEST_FALSE@	crypto/pkcs9.c crypto/pkcs9.h \
 @USE_INTEGRITY_TEST_FALSE@	crypto/prfs/fips_prf.c \
 @USE_INTEGRITY_TEST_FALSE@	crypto/prfs/fips_prf.h \
 @USE_INTEGRITY_TEST_FALSE@	crypto/prfs/hmac_prf.c \
@@ -378,7 +382,8 @@ lib_LTLIBRARIES = libstrongswan.la
 @USE_INTEGRITY_TEST_TRUE@	crypto/ietf_attr_list.c \
 @USE_INTEGRITY_TEST_TRUE@	crypto/ietf_attr_list.h crypto/ocsp.c \
 @USE_INTEGRITY_TEST_TRUE@	crypto/ocsp.h crypto/pkcs7.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/pkcs7.h crypto/prfs/fips_prf.c \
+@USE_INTEGRITY_TEST_TRUE@	crypto/pkcs7.h crypto/pkcs9.c \
+@USE_INTEGRITY_TEST_TRUE@	crypto/pkcs9.h crypto/prfs/fips_prf.c \
 @USE_INTEGRITY_TEST_TRUE@	crypto/prfs/fips_prf.h \
 @USE_INTEGRITY_TEST_TRUE@	crypto/prfs/hmac_prf.c \
 @USE_INTEGRITY_TEST_TRUE@	crypto/prfs/hmac_prf.h \
@@ -533,6 +538,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/optionsfrom.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pem.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pkcs7.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pkcs9.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/prf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/prf_plus.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/printf_hook.Plo@am__quote@
@@ -705,6 +711,13 @@ pkcs7.lo: crypto/pkcs7.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='crypto/pkcs7.c' object='pkcs7.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pkcs7.lo `test -f 'crypto/pkcs7.c' || echo '$(srcdir)/'`crypto/pkcs7.c
+
+pkcs9.lo: crypto/pkcs9.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pkcs9.lo -MD -MP -MF $(DEPDIR)/pkcs9.Tpo -c -o pkcs9.lo `test -f 'crypto/pkcs9.c' || echo '$(srcdir)/'`crypto/pkcs9.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/pkcs9.Tpo $(DEPDIR)/pkcs9.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='crypto/pkcs9.c' object='pkcs9.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pkcs9.lo `test -f 'crypto/pkcs9.c' || echo '$(srcdir)/'`crypto/pkcs9.c
 
 fips_prf.lo: crypto/prfs/fips_prf.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fips_prf.lo -MD -MP -MF $(DEPDIR)/fips_prf.Tpo -c -o fips_prf.lo `test -f 'crypto/prfs/fips_prf.c' || echo '$(srcdir)/'`crypto/prfs/fips_prf.c

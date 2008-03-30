@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: build-umlrootfs 3404 2007-12-19 00:47:56Z andreas $
+# RCSID $Id: build-umlrootfs 3471 2008-02-14 21:25:38Z andreas $
 
 DIR=`dirname $0`
 
@@ -145,6 +145,11 @@ if [ "$USE_EAP_AKA" = "yes" ]
 then
     echo -n " --enable-eap-aka" >> $INSTALLSHELL
 fi
+
+if [ "$USE_EAP_SIM" = "yes" ]
+then
+    echo -n " --enable-eap-sim" >> $INSTALLSHELL
+    fi
 
 if [ "$USE_P2P" = "yes" ]
 then

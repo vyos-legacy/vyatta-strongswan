@@ -20,7 +20,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: openac.c 3305 2007-10-17 02:55:17Z andreas $
+ * RCSID $Id: openac.c 3442 2008-02-04 14:46:43Z andreas $
  */
 
 #include <stdio.h>
@@ -234,6 +234,8 @@ int main(int argc, char **argv)
 	time_t validity = 0;
 	int status = 1;
 	
+	options_t *options = options_create();
+
 	/* enable openac debugging hook */
 	dbg = openac_dbg;
 
@@ -300,7 +302,7 @@ int main(int argc, char **argv)
 					{
 		    			snprintf(path, BUF_LEN, "%s/%s", OPENAC_PATH, optarg);
 					}
-					if (!optionsfrom(path, &argc, &argv, optind))
+					if (!options->from(options, path, &argc, &argv, optind))
 					{
 						status = 1;
 						goto end;
@@ -509,5 +511,6 @@ end:
 	free(serial.ptr);
 	closelog();
 	dbg = dbg_default;
+	options->destroy(options);
 	exit(status);
 }

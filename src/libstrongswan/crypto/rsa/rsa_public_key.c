@@ -6,8 +6,10 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2007-2008 Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,7 +22,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: rsa_public_key.c 3303 2007-10-12 22:49:39Z andreas $
+ * RCSID $Id: rsa_public_key.c 3428 2008-01-27 20:58:52Z andreas $
  */
  
 #include <gmp.h>
@@ -32,6 +34,7 @@
 #include "rsa_public_key.h"
 
 #include <debug.h>
+#include <utils/randomizer.h>
 #include <crypto/hashers/hasher.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
@@ -110,8 +113,6 @@ struct private_rsa_public_key_t {
 	chunk_t (*rsavp1) (const private_rsa_public_key_t *this, chunk_t data);
 };
 
-private_rsa_public_key_t *rsa_public_key_create_empty(void);
-
 /**
  * Implementation of private_rsa_public_key_t.rsaep and private_rsa_public_key_t.rsavp1
  */
@@ -134,6 +135,55 @@ static chunk_t rsaep(const private_rsa_public_key_t *this, chunk_t data)
 	mpz_clear(m);	
 	
 	return encrypted;
+}
+
+/**
+ * Implementation of rsa_public_key_t.eme_pkcs1_encrypt.
+ */
+static status_t pkcs1_encrypt(private_rsa_public_key_t *this,
+							  chunk_t in, chunk_t *out)
+{
+	chunk_t em;
+	u_char *pos;
+	int padding = this->k - in.len - 3;
+
+	if (padding < 8)
+	{
+		DBG1("rsa padding of %d bytes is too small", padding);
+		return FAILED;
+	}
+	em.len = this->k;
+	em.ptr = pos = malloc(em.len);
+	
+	/* add padding according to PKCS#1 7.2.1 1.+2. */
+	*pos++ = 0x00;
+    *pos++ = 0x02;
+
+    /* pad with pseudo random bytes unequal to zero */
+	{
+		randomizer_t *randomizer = randomizer_create();
+
+	    /* pad with pseudo random bytes unequal to zero */
+		while (padding--)
+		{
+			randomizer->get_pseudo_random_bytes(randomizer, 1, pos);
+			while (!*pos)
+			{
+				randomizer->get_pseudo_random_bytes(randomizer, 1, pos);
+			}
+			pos++;
+		}
+		randomizer->destroy(randomizer);
+	}
+
+	/* append the padding terminator */
+	*pos++ = 0x00;
+
+	/* now add the data */
+	memcpy(pos, in.ptr, in.len);
+	*out = this->rsaep(this, em);
+	free(em.ptr);
+	return SUCCESS;
 }
 
 /**
@@ -297,19 +347,30 @@ static size_t get_keysize(const private_rsa_public_key_t *this)
  */
 chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e)
 {
-	chunk_t rawKey = asn1_wrap(ASN1_SEQUENCE, "mm",
+	chunk_t publicKey = asn1_wrap(ASN1_SEQUENCE, "mm",
 								 asn1_integer_from_mpz(n),
 								 asn1_integer_from_mpz(e));
-	chunk_t publicKey;
 
-	u_char *pos = build_asn1_object(&publicKey, ASN1_BIT_STRING, 1 + rawKey.len);
+	return asn1_wrap(ASN1_SEQUENCE, "cm",
+				asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+				asn1_bitstring("m", publicKey));
+}
 
-	*pos++ = 0x00;
-	memcpy(pos, rawKey.ptr, rawKey.len);
-	free(rawKey.ptr);
+/**
+ * Form the RSA keyid as a SHA-1 hash of a publicKeyInfo object
+ * Also used in rsa_private_key.c.
+ */
+chunk_t rsa_public_key_id_create(mpz_t n, mpz_t e)
+{
+	chunk_t keyid;
+	chunk_t publicKeyInfo = rsa_public_key_info_to_asn1(n, e);
+	hasher_t *hasher = hasher_create(HASH_SHA1);
 
-	return asn1_wrap(ASN1_SEQUENCE, "cm", ASN1_rsaEncryption_id,
-										  publicKey);
+	hasher->allocate_hash(hasher, publicKeyInfo, &keyid);
+	hasher->destroy(hasher);
+	free(publicKeyInfo.ptr);
+
+	return keyid;
 }
 
 /**
@@ -327,6 +388,9 @@ static chunk_t get_keyid(const private_rsa_public_key_t *this)
 {
 	return this->keyid;
 }
+
+/* forward declaration used by rsa_public_key_t.clone */
+private_rsa_public_key_t *rsa_public_key_create_empty(void);
 
 /**
  * Implementation of rsa_public_key_t.clone.
@@ -362,6 +426,7 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 	private_rsa_public_key_t *this = malloc_thing(private_rsa_public_key_t);
 	
 	/* public functions */
+	this->public.pkcs1_encrypt = (status_t (*) (rsa_public_key_t*,chunk_t,chunk_t*))pkcs1_encrypt;
 	this->public.verify_emsa_pkcs1_signature = (status_t (*) (const rsa_public_key_t*,hash_algorithm_t,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
 	this->public.get_modulus = (mpz_t *(*) (const rsa_public_key_t*))get_modulus;
 	this->public.get_keysize = (size_t (*) (const rsa_public_key_t*))get_keysize;
@@ -377,6 +442,20 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 	return this;
 }
 
+/*
+ * See header
+ */
+rsa_public_key_t *rsa_public_key_create(mpz_t n, mpz_t e)
+{
+	private_rsa_public_key_t *this = rsa_public_key_create_empty();
+
+	mpz_init_set(this->n, n);
+	mpz_init_set(this->e, e);
+
+	this->k = (mpz_sizeinbase(n, 2) + 7) / BITS_PER_BYTE;
+	this->keyid = rsa_public_key_id_create(n, e);
+	return &this->public;
+}
 /*
  * See header
  */
@@ -412,19 +491,9 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
 		}
 		objectID++;
 	}
-	
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
-	
-	/* form the keyid as a SHA-1 hash of a publicKeyInfo object */
-	{
-		chunk_t publicKeyInfo = rsa_public_key_info_to_asn1(this->n, this->e);
-		hasher_t *hasher = hasher_create(HASH_SHA1);
 
-		hasher->allocate_hash(hasher, publicKeyInfo, &this->keyid);
-		hasher->destroy(hasher);
-		free(publicKeyInfo.ptr);
-	}
-
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
+	this->keyid = rsa_public_key_id_create(this->n, this->e);
 	return &this->public;
 }
 

@@ -6,8 +6,10 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2007-2008 Andreas Steffen
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,7 +22,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: rsa_private_key.h 3296 2007-10-12 15:23:29Z andreas $
+ * RCSID $Id: rsa_private_key.h 3423 2008-01-22 10:32:37Z andreas $
  */
 
 #ifndef RSA_PRIVATE_KEY_H_

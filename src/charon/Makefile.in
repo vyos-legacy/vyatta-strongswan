@@ -72,12 +72,14 @@ am__vpath_adj = case $$p in \
   esac;
 am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
 am__installdirs = "$(DESTDIR)$(backenddir)" "$(DESTDIR)$(eapdir)" \
-	"$(DESTDIR)$(interfacedir)" "$(DESTDIR)$(ipsecdir)"
+	"$(DESTDIR)$(interfacedir)" "$(DESTDIR)$(plugindir)" \
+	"$(DESTDIR)$(ipsecdir)"
 backendLTLIBRARIES_INSTALL = $(INSTALL)
 eapLTLIBRARIES_INSTALL = $(INSTALL)
 interfaceLTLIBRARIES_INSTALL = $(INSTALL)
+pluginLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(backend_LTLIBRARIES) $(eap_LTLIBRARIES) \
-	$(interface_LTLIBRARIES)
+	$(interface_LTLIBRARIES) $(plugin_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 @USE_LIBDBUS_TRUE@libcharon_dbus_la_DEPENDENCIES =  \
 @USE_LIBDBUS_TRUE@	$(am__DEPENDENCIES_1)
@@ -123,6 +125,18 @@ libcharon_eapmd5_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libcharon_eapmd5_la_LDFLAGS) $(LDFLAGS) -o $@
 @USE_EAP_MD5_TRUE@am_libcharon_eapmd5_la_rpath = -rpath $(eapdir)
+libcharon_eapsim_file_la_LIBADD =
+am__libcharon_eapsim_file_la_SOURCES_DIST =  \
+	sa/authenticators/eap/sim/eap_sim_file.c
+@USE_EAP_SIM_TRUE@am_libcharon_eapsim_file_la_OBJECTS =  \
+@USE_EAP_SIM_TRUE@	eap_sim_file.lo
+libcharon_eapsim_file_la_OBJECTS =  \
+	$(am_libcharon_eapsim_file_la_OBJECTS)
+libcharon_eapsim_file_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libcharon_eapsim_file_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_EAP_SIM_TRUE@am_libcharon_eapsim_file_la_rpath = -rpath \
+@USE_EAP_SIM_TRUE@	$(plugindir)
 libcharon_eapsim_la_LIBADD =
 am__libcharon_eapsim_la_SOURCES_DIST =  \
 	sa/authenticators/eap/eap_sim.h \
@@ -349,14 +363,16 @@ LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libcharon_dbus_la_SOURCES) $(libcharon_eapaka_la_SOURCES) \
 	$(libcharon_eapidentity_la_SOURCES) \
-	$(libcharon_eapmd5_la_SOURCES) $(libcharon_eapsim_la_SOURCES) \
-	$(libcharon_local_la_SOURCES) $(libcharon_sqlite_la_SOURCES) \
-	$(libcharon_stroke_la_SOURCES) $(libcharon_xml_la_SOURCES) \
-	$(charon_SOURCES)
+	$(libcharon_eapmd5_la_SOURCES) \
+	$(libcharon_eapsim_file_la_SOURCES) \
+	$(libcharon_eapsim_la_SOURCES) $(libcharon_local_la_SOURCES) \
+	$(libcharon_sqlite_la_SOURCES) $(libcharon_stroke_la_SOURCES) \
+	$(libcharon_xml_la_SOURCES) $(charon_SOURCES)
 DIST_SOURCES = $(am__libcharon_dbus_la_SOURCES_DIST) \
 	$(am__libcharon_eapaka_la_SOURCES_DIST) \
 	$(am__libcharon_eapidentity_la_SOURCES_DIST) \
 	$(am__libcharon_eapmd5_la_SOURCES_DIST) \
+	$(am__libcharon_eapsim_file_la_SOURCES_DIST) \
 	$(am__libcharon_eapsim_la_SOURCES_DIST) \
 	$(am__libcharon_local_la_SOURCES_DIST) \
 	$(am__libcharon_sqlite_la_SOURCES_DIST) \
@@ -484,11 +500,13 @@ mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
+plugindir = @plugindir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
+simreader = @simreader@
 srcdir = @srcdir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
@@ -601,7 +619,8 @@ INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke \
 	$(am__append_13) $(am__append_15)
 AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
-	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\"
+	-DIPSEC_EAPDIR=\"${eapdir}\" -DIPSEC_BACKENDDIR=\"${backenddir}\" -DIPSEC_INTERFACEDIR=\"${interfacedir}\" \
+	-DSIM_READER_LIB=\"${simreader}\"
 
 charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
 	-lgmp -lpthread -lm -ldl $(am__append_4)
@@ -614,6 +633,9 @@ eap_LTLIBRARIES = $(am__append_5) $(am__append_6) $(am__append_7) \
 @USE_EAP_IDENTITY_TRUE@libcharon_eapidentity_la_LDFLAGS = -module
 @USE_EAP_SIM_TRUE@libcharon_eapsim_la_SOURCES = sa/authenticators/eap/eap_sim.h sa/authenticators/eap/eap_sim.c
 @USE_EAP_SIM_TRUE@libcharon_eapsim_la_LDFLAGS = -module
+@USE_EAP_SIM_TRUE@plugin_LTLIBRARIES = libcharon-eapsim-file.la
+@USE_EAP_SIM_TRUE@libcharon_eapsim_file_la_SOURCES = sa/authenticators/eap/sim/eap_sim_file.c
+@USE_EAP_SIM_TRUE@libcharon_eapsim_file_la_LDFLAGS = -module
 @USE_EAP_MD5_TRUE@libcharon_eapmd5_la_SOURCES = sa/authenticators/eap/eap_md5.h sa/authenticators/eap/eap_md5.c
 @USE_EAP_MD5_TRUE@libcharon_eapmd5_la_LDFLAGS = -module
 @USE_EAP_AKA_TRUE@libcharon_eapaka_la_SOURCES = sa/authenticators/eap/eap_aka.h sa/authenticators/eap/eap_aka.c
@@ -754,6 +776,33 @@ clean-interfaceLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
+install-pluginLTLIBRARIES: $(plugin_LTLIBRARIES)
+	@$(NORMAL_INSTALL)
+	test -z "$(plugindir)" || $(MKDIR_P) "$(DESTDIR)$(plugindir)"
+	@list='$(plugin_LTLIBRARIES)'; for p in $$list; do \
+	  if test -f $$p; then \
+	    f=$(am__strip_dir) \
+	    echo " $(LIBTOOL) --mode=install $(pluginLTLIBRARIES_INSTALL) $(INSTALL_STRIP_FLAG) '$$p' '$(DESTDIR)$(plugindir)/$$f'"; \
+	    $(LIBTOOL) --mode=install $(pluginLTLIBRARIES_INSTALL) $(INSTALL_STRIP_FLAG) "$$p" "$(DESTDIR)$(plugindir)/$$f"; \
+	  else :; fi; \
+	done
+
+uninstall-pluginLTLIBRARIES:
+	@$(NORMAL_UNINSTALL)
+	@list='$(plugin_LTLIBRARIES)'; for p in $$list; do \
+	  p=$(am__strip_dir) \
+	  echo " $(LIBTOOL) --mode=uninstall rm -f '$(DESTDIR)$(plugindir)/$$p'"; \
+	  $(LIBTOOL) --mode=uninstall rm -f "$(DESTDIR)$(plugindir)/$$p"; \
+	done
+
+clean-pluginLTLIBRARIES:
+	-test -z "$(plugin_LTLIBRARIES)" || rm -f $(plugin_LTLIBRARIES)
+	@list='$(plugin_LTLIBRARIES)'; for p in $$list; do \
+	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
+	  test "$$dir" != "$$p" || dir=.; \
+	  echo "rm -f \"$${dir}/so_locations\""; \
+	  rm -f "$${dir}/so_locations"; \
+	done
 libcharon-dbus.la: $(libcharon_dbus_la_OBJECTS) $(libcharon_dbus_la_DEPENDENCIES) 
 	$(libcharon_dbus_la_LINK) $(am_libcharon_dbus_la_rpath) $(libcharon_dbus_la_OBJECTS) $(libcharon_dbus_la_LIBADD) $(LIBS)
 libcharon-eapaka.la: $(libcharon_eapaka_la_OBJECTS) $(libcharon_eapaka_la_DEPENDENCIES) 
@@ -762,6 +811,8 @@ libcharon-eapidentity.la: $(libcharon_eapidentity_la_OBJECTS) $(libcharon_eapide
 	$(libcharon_eapidentity_la_LINK) $(am_libcharon_eapidentity_la_rpath) $(libcharon_eapidentity_la_OBJECTS) $(libcharon_eapidentity_la_LIBADD) $(LIBS)
 libcharon-eapmd5.la: $(libcharon_eapmd5_la_OBJECTS) $(libcharon_eapmd5_la_DEPENDENCIES) 
 	$(libcharon_eapmd5_la_LINK) $(am_libcharon_eapmd5_la_rpath) $(libcharon_eapmd5_la_OBJECTS) $(libcharon_eapmd5_la_LIBADD) $(LIBS)
+libcharon-eapsim-file.la: $(libcharon_eapsim_file_la_OBJECTS) $(libcharon_eapsim_file_la_DEPENDENCIES) 
+	$(libcharon_eapsim_file_la_LINK) $(am_libcharon_eapsim_file_la_rpath) $(libcharon_eapsim_file_la_OBJECTS) $(libcharon_eapsim_file_la_LIBADD) $(LIBS)
 libcharon-eapsim.la: $(libcharon_eapsim_la_OBJECTS) $(libcharon_eapsim_la_DEPENDENCIES) 
 	$(libcharon_eapsim_la_LINK) $(am_libcharon_eapsim_la_rpath) $(libcharon_eapsim_la_OBJECTS) $(libcharon_eapsim_la_LIBADD) $(LIBS)
 libcharon-local.la: $(libcharon_local_la_OBJECTS) $(libcharon_local_la_DEPENDENCIES) 
@@ -838,6 +889,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_method.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_payload.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_sim.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_sim_file.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/encodings.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/encryption_payload.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/endpoint_notify.Po@am__quote@
@@ -956,6 +1008,13 @@ eap_md5.lo: sa/authenticators/eap/eap_md5.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/authenticators/eap/eap_md5.c' object='eap_md5.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o eap_md5.lo `test -f 'sa/authenticators/eap/eap_md5.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_md5.c
+
+eap_sim_file.lo: sa/authenticators/eap/sim/eap_sim_file.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT eap_sim_file.lo -MD -MP -MF $(DEPDIR)/eap_sim_file.Tpo -c -o eap_sim_file.lo `test -f 'sa/authenticators/eap/sim/eap_sim_file.c' || echo '$(srcdir)/'`sa/authenticators/eap/sim/eap_sim_file.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/eap_sim_file.Tpo $(DEPDIR)/eap_sim_file.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/authenticators/eap/sim/eap_sim_file.c' object='eap_sim_file.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o eap_sim_file.lo `test -f 'sa/authenticators/eap/sim/eap_sim_file.c' || echo '$(srcdir)/'`sa/authenticators/eap/sim/eap_sim_file.c
 
 eap_sim.lo: sa/authenticators/eap/eap_sim.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT eap_sim.lo -MD -MP -MF $(DEPDIR)/eap_sim.Tpo -c -o eap_sim.lo `test -f 'sa/authenticators/eap/eap_sim.c' || echo '$(srcdir)/'`sa/authenticators/eap/eap_sim.c
@@ -2294,7 +2353,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES) $(PROGRAMS)
 installdirs:
-	for dir in "$(DESTDIR)$(backenddir)" "$(DESTDIR)$(eapdir)" "$(DESTDIR)$(interfacedir)" "$(DESTDIR)$(ipsecdir)"; do \
+	for dir in "$(DESTDIR)$(backenddir)" "$(DESTDIR)$(eapdir)" "$(DESTDIR)$(interfacedir)" "$(DESTDIR)$(plugindir)" "$(DESTDIR)$(ipsecdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -2325,7 +2384,7 @@ clean: clean-am
 
 clean-am: clean-backendLTLIBRARIES clean-eapLTLIBRARIES clean-generic \
 	clean-interfaceLTLIBRARIES clean-ipsecPROGRAMS clean-libtool \
-	mostlyclean-am
+	clean-pluginLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -2344,7 +2403,8 @@ info: info-am
 info-am:
 
 install-data-am: install-backendLTLIBRARIES install-eapLTLIBRARIES \
-	install-interfaceLTLIBRARIES install-ipsecPROGRAMS
+	install-interfaceLTLIBRARIES install-ipsecPROGRAMS \
+	install-pluginLTLIBRARIES
 
 install-dvi: install-dvi-am
 
@@ -2381,28 +2441,30 @@ ps: ps-am
 ps-am:
 
 uninstall-am: uninstall-backendLTLIBRARIES uninstall-eapLTLIBRARIES \
-	uninstall-interfaceLTLIBRARIES uninstall-ipsecPROGRAMS
+	uninstall-interfaceLTLIBRARIES uninstall-ipsecPROGRAMS \
+	uninstall-pluginLTLIBRARIES
 
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean \
 	clean-backendLTLIBRARIES clean-eapLTLIBRARIES clean-generic \
 	clean-interfaceLTLIBRARIES clean-ipsecPROGRAMS clean-libtool \
-	ctags distclean distclean-compile distclean-generic \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am \
+	clean-pluginLTLIBRARIES ctags distclean distclean-compile \
+	distclean-generic distclean-libtool distclean-tags distdir dvi \
+	dvi-am html html-am info info-am install install-am \
 	install-backendLTLIBRARIES install-data install-data-am \
 	install-dvi install-dvi-am install-eapLTLIBRARIES install-exec \
 	install-exec-am install-html install-html-am install-info \
 	install-info-am install-interfaceLTLIBRARIES \
 	install-ipsecPROGRAMS install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am uninstall-backendLTLIBRARIES \
-	uninstall-eapLTLIBRARIES uninstall-interfaceLTLIBRARIES \
-	uninstall-ipsecPROGRAMS
+	install-pluginLTLIBRARIES install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags uninstall uninstall-am \
+	uninstall-backendLTLIBRARIES uninstall-eapLTLIBRARIES \
+	uninstall-interfaceLTLIBRARIES uninstall-ipsecPROGRAMS \
+	uninstall-pluginLTLIBRARIES
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
