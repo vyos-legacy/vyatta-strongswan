@@ -5,7 +5,8 @@ strongswan (4.1.11-1) unstable; urgency=low
     on network-manager-dev.
   * The web interface has been improved and now requires libfcgi-dev and
     clearsilver-dev to compile, so build-depend on them. Also build-depend
-    on libxml2-dev and libdbus-1-dev.
+    on libxml2-dev, libdbus-1-dev, and libtool (which were all build-deps
+    before but were not listed explicitly so far - fix that).
   * Add patch to rename internal AES_cbc_encrypt function and thus avoid
     conflict with the openssl function.
     Closes: #470721: pluto segfaults when using pkcs11 library linked with 
