@@ -6,8 +6,9 @@
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2005-2006 Martin Willi
+ *
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,7 +21,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: hasher.h 3307 2007-10-17 02:56:24Z andreas $
+ * RCSID $Id: hasher.h 3423 2008-01-22 10:32:37Z andreas $
  */
 
 #ifndef HASHER_H_
@@ -171,11 +172,23 @@ hasher_t *hasher_create(hash_algorithm_t hash_algorithm);
 hash_algorithm_t hasher_algorithm_from_oid(int oid);
 
 /**
- * @brief Conversion of hash signature algorithm ASN.1 OID.
+ * @brief Conversion of hash algorithm into ASN.1 OID.
  * 
  * @param alg				hash algorithm
  * @return
- * 							- ASN.1 OID if known hash algorithm
+ * 							- ASN.1 hash OID if known hash algorithm
+ * 							- OID_UNKNOW
+ * 
+ * @ingroup hashers
+ */
+int hasher_algorithm_to_oid(hash_algorithm_t alg);
+
+/**
+ * @brief Conversion of hash signature algorithm into ASN.1 OID.
+ * 
+ * @param alg				hash algorithm
+ * @return
+ * 							- ASN.1 signature OID if known hash algorithm
  * 							- OID_UNKNOW
  * 
  * @ingroup hashers

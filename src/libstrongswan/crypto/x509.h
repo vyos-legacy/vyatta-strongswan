@@ -9,8 +9,8 @@
  * Copyright (C) 2000 Andreas Hess, Patric Lichtsteiner, Roger Wegmann
  * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
  * Copyright (C) 2002 Mario Strasser
- * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
- * Copyright (C) 2006 Martin Willi, Andreas Steffen
+ * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2000-2008 Andreas Steffen
  *
  * Hochschule fuer Technik Rapperswil
  *
@@ -24,7 +24,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: x509.h 3301 2007-10-12 21:56:30Z andreas $
+ * RCSID $Id: x509.h 3421 2008-01-22 01:09:19Z andreas $
  */
 
 #ifndef X509_H_
@@ -327,6 +327,7 @@ struct x509_t {
  * @param notBefore		start date of validity
  * @param notAfter		end date of validity
  * @param subject		subject distinguished name
+ * @param public_key	public key
  *
  * @return				created x509_t certificate, or NULL if invalid.
  *
@@ -334,7 +335,8 @@ struct x509_t {
  */
 x509_t *x509_create(chunk_t serialNumber, identification_t *issuer,
 					time_t notBefore, time_t notAfter,
-					identification_t *subject);
+					identification_t *subject,
+					rsa_public_key_t *public_key);
 
 /**
  * @brief Read a X.509 certificate from a DER encoded blob.

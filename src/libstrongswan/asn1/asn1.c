@@ -1,6 +1,15 @@
-/* Simple ASN.1 parser
- * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
- * Copyright (C) 2006 Martin Will, Hochschule fuer Technik Rapperswil
+/**
+ * @file asn1.c
+ *
+ * @brief Simple ASN.1 parser
+ *
+ */
+
+/*
+ * Copyright (C) 2006 Martin Will
+ * Copyright (C) 2000-2008 Andreas Steffen
+ *
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -12,7 +21,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: asn1.c 3299 2007-10-12 19:29:00Z andreas $
+ * RCSID $Id: asn1.c 3451 2008-02-05 19:27:05Z andreas $
  */
 
 #include <stdio.h>
@@ -77,6 +86,13 @@ static u_char ASN1_sha512_id_str[] = {
 		  0x05,0x00
 };
 
+static u_char ASN1_md2WithRSA_id_str[] = {
+	0x30, 0x0D,
+		  0x06, 0x09,
+				0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x02,
+		  0x05, 0x00
+};
+
 static u_char ASN1_md5WithRSA_id_str[] = {
 	0x30, 0x0D,
 		  0x06, 0x09,
@@ -91,6 +107,27 @@ static u_char ASN1_sha1WithRSA_id_str[] = {
 		  0x05, 0x00
 };
 
+static u_char ASN1_sha256WithRSA_id_str[] = {
+	0x30, 0x0D,
+		  0x06, 0x09,
+				0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B,
+		  0x05, 0x00
+};
+
+static u_char ASN1_sha384WithRSA_id_str[] = {
+	0x30, 0x0D,
+		  0x06, 0x09,
+				0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0C,
+		  0x05, 0x00
+};
+
+static u_char ASN1_sha512WithRSA_id_str[] = {
+	0x30, 0x0D,
+		  0x06, 0x09,
+				0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0D,
+		  0x05, 0x00
+};
+
 static u_char ASN1_rsaEncryption_id_str[] = {
 	0x30, 0x0D,
 		  0x06, 0x09,
@@ -98,15 +135,19 @@ static u_char ASN1_rsaEncryption_id_str[] = {
 		  0x05, 0x00
 };
 
-const chunk_t ASN1_md2_id    = chunk_from_buf(ASN1_md2_id_str);
-const chunk_t ASN1_md5_id    = chunk_from_buf(ASN1_md5_id_str);
-const chunk_t ASN1_sha1_id   = chunk_from_buf(ASN1_sha1_id_str);
-const chunk_t ASN1_sha256_id = chunk_from_buf(ASN1_sha256_id_str);
-const chunk_t ASN1_sha384_id = chunk_from_buf(ASN1_sha384_id_str);
-const chunk_t ASN1_sha512_id = chunk_from_buf(ASN1_sha512_id_str);
-const chunk_t ASN1_rsaEncryption_id = chunk_from_buf(ASN1_rsaEncryption_id_str);
-const chunk_t ASN1_md5WithRSA_id = chunk_from_buf(ASN1_md5WithRSA_id_str);
-const chunk_t ASN1_sha1WithRSA_id = chunk_from_buf(ASN1_sha1WithRSA_id_str);
+static const chunk_t ASN1_md2_id    = chunk_from_buf(ASN1_md2_id_str);
+static const chunk_t ASN1_md5_id    = chunk_from_buf(ASN1_md5_id_str);
+static const chunk_t ASN1_sha1_id   = chunk_from_buf(ASN1_sha1_id_str);
+static const chunk_t ASN1_sha256_id = chunk_from_buf(ASN1_sha256_id_str);
+static const chunk_t ASN1_sha384_id = chunk_from_buf(ASN1_sha384_id_str);
+static const chunk_t ASN1_sha512_id = chunk_from_buf(ASN1_sha512_id_str);
+static const chunk_t ASN1_rsaEncryption_id = chunk_from_buf(ASN1_rsaEncryption_id_str);
+static const chunk_t ASN1_md2WithRSA_id = chunk_from_buf(ASN1_md2WithRSA_id_str);
+static const chunk_t ASN1_md5WithRSA_id = chunk_from_buf(ASN1_md5WithRSA_id_str);
+static const chunk_t ASN1_sha1WithRSA_id = chunk_from_buf(ASN1_sha1WithRSA_id_str);
+static const chunk_t ASN1_sha256WithRSA_id = chunk_from_buf(ASN1_sha256WithRSA_id_str);
+static const chunk_t ASN1_sha384WithRSA_id = chunk_from_buf(ASN1_sha384WithRSA_id_str);
+static const chunk_t ASN1_sha512WithRSA_id = chunk_from_buf(ASN1_sha512WithRSA_id_str);
 
 /* ASN.1 definiton of an algorithmIdentifier */
 static const asn1Object_t algorithmIdentifierObjects[] = {
@@ -128,14 +169,30 @@ chunk_t asn1_algorithmIdentifier(int oid)
 	{
 		case OID_RSA_ENCRYPTION:
 			return ASN1_rsaEncryption_id;
+		case OID_MD2_WITH_RSA:
+			return ASN1_md2WithRSA_id;
 		case OID_MD5_WITH_RSA:
 			return ASN1_md5WithRSA_id;
 		case OID_SHA1_WITH_RSA:
 			return ASN1_sha1WithRSA_id;
+		case OID_SHA256_WITH_RSA:
+			return ASN1_sha256WithRSA_id;
+		case OID_SHA384_WITH_RSA:
+			return ASN1_sha384WithRSA_id;
+		case OID_SHA512_WITH_RSA:
+			return ASN1_sha512WithRSA_id;
+		case OID_MD2:
+			return ASN1_md2_id;
 		case OID_MD5:
 			return ASN1_md5_id;
 		case OID_SHA1:
 			return ASN1_sha1_id;
+		case OID_SHA256:
+			return ASN1_sha256_id;
+		case OID_SHA384:
+			return ASN1_sha384_id;
+		case OID_SHA512:
+			return ASN1_sha512_id;
 		default:
 			return chunk_empty;
 	}
@@ -620,13 +677,23 @@ bool is_asn1(chunk_t blob)
 		DBG2("  file content is not binary ASN.1");
 		return FALSE;
 	}
+
 	len = asn1_length(&blob);
-	if (len != blob.len)
+
+	/* exact match */
+	if (len == blob.len)
 	{
-		DBG2("  file size does not match ASN.1 coded length");
-		return FALSE;
+		return TRUE;
 	}
-	return TRUE;
+
+	/* some websites append a surplus newline character to the blob */
+	if (len + 1 == blob.len && *(blob.ptr + len) == '\n')
+	{
+		return TRUE;
+	}
+
+	DBG2("  file size does not match ASN.1 coded length");
+	return FALSE;
 }
 
 /**
@@ -706,6 +773,23 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 }
 
 /**
+ * Build an ASN.1 BITSTRING object
+ */
+chunk_t asn1_bitstring(const char *mode, chunk_t content)
+{
+	chunk_t object;
+	u_char *pos = build_asn1_object(&object, ASN1_BIT_STRING, 1 + content.len);
+
+	*pos++ = 0x00;
+	memcpy(pos, content.ptr, content.len);
+	if (*mode == 'm')
+	{
+		free(content.ptr);
+	}
+	return object;
+}
+
+/**
  * Build an ASN.1 object from a variable number of individual chunks.
  * Depending on the mode, chunks either are moved ('m') or copied ('c').
  */
@@ -736,17 +820,12 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
 	{
 		chunk_t ch = va_arg(chunks, chunk_t);
 		
-		switch (*mode++)
+		memcpy(pos, ch.ptr, ch.len);
+		pos += ch.len;
+
+		if (*mode++ == 'm')
 		{
-			case 'm':
-				memcpy(pos, ch.ptr, ch.len); 
-				pos += ch.len;
-				free(ch.ptr);
-				break;
-			case 'c':
-			default:
-				memcpy(pos, ch.ptr, ch.len); 
-				pos += ch.len;
+			free(ch.ptr);
 		}
 	}
 	va_end(chunks);

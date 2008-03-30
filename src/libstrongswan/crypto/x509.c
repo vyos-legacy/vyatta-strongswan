@@ -9,8 +9,8 @@
  * Copyright (C) 2000 Andreas Hess, Patric Lichtsteiner, Roger Wegmann
  * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
  * Copyright (C) 2002 Mario Strasser
- * Copyright (C) 2000-2004 Andreas Steffen, Zuercher Hochschule Winterthur
- * Copyright (C) 2006 Martin Willi, Andreas Steffen
+ * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2000-2008 Andreas Steffen
  *
  * Hochschule fuer Technik Rapperswil
  *
@@ -24,7 +24,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: x509.c 3355 2007-11-20 12:06:40Z martin $
+ * RCSID $Id: x509.c 3423 2008-01-22 10:32:37Z andreas $
  */
 
 #include <gmp.h>
@@ -514,7 +514,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 				id_type = ID_DER_ASN1_DN;
 	    		break;
 			case GN_OBJ_IP_ADDRESS:
-				id_type = ID_IPV4_ADDR;
+				id_type = (object.len == 4)? ID_IPV4_ADDR : ID_IPV6_ADDR;
 				break;
 			case GN_OBJ_OTHER_NAME:
 				if (!parse_otherName(object, level + 1))
@@ -1243,6 +1243,22 @@ static void list(private_x509_t *this, FILE *out, bool utc)
 	}
 }
 
+/**
+ * Implements x509_t.add_subjectAltNames.
+ */
+static void add_subjectAltNames(private_x509_t *this, linked_list_t *subjectAltNames)
+{
+	iterator_t *iterator = subjectAltNames->create_iterator(subjectAltNames, TRUE);
+	identification_t *name = NULL;
+
+	while (iterator->iterate(iterator, (void**)&name))
+	{
+		name = name->clone(name);
+		this->subjectAltNames->insert_last(this->subjectAltNames, (void*)name);
+	}
+	iterator->destroy(iterator);
+}
+
 /*
  * Defined in header.
  */
@@ -1251,12 +1267,13 @@ chunk_t x509_build_generalNames(linked_list_t *list)
 	linked_list_t *generalNames = linked_list_create();
 	iterator_t *iterator = list->create_iterator(list, TRUE);
 	identification_t *name;
+	chunk_t names = chunk_empty;
 	size_t len = 0;
 
 	while (iterator->iterate(iterator, (void**)&name))
 	{
 		asn1_t asn1_type = ASN1_EOC;
-		chunk_t *generalName = malloc_thing(chunk_t);
+		chunk_t *generalName;
 
 		switch (name->get_type(name))
 		{
@@ -1273,22 +1290,24 @@ chunk_t x509_build_generalNames(linked_list_t *list)
 				asn1_type = ASN1_CONTEXT_S_6;
 				break;
 			case ID_IPV4_ADDR:
+			case ID_IPV6_ADDR:
 				asn1_type = ASN1_CONTEXT_S_7;
 				break;
 			default:
 				continue;
 		}
 
+		generalName = malloc_thing(chunk_t);
 		*generalName = asn1_simple_object(asn1_type, name->get_encoding(name));
 		len += generalName->len;
-		generalNames->insert_last(generalNames, generalName);
+		generalNames->insert_last(generalNames, (void*)generalName);
 	}
 	iterator->destroy(iterator);
 
 	if (len > 0)
 	{
 		iterator_t *iterator = generalNames->create_iterator(generalNames, TRUE);
-		chunk_t names, *generalName;
+		chunk_t *generalName;
 		u_char *pos = build_asn1_object(&names, ASN1_SEQUENCE, len);
 
 		while (iterator->iterate(iterator, (void**)&generalName))
@@ -1299,14 +1318,9 @@ chunk_t x509_build_generalNames(linked_list_t *list)
 			free(generalName);
 		}
 		iterator->destroy(iterator);
-		generalNames->destroy(generalNames);
-
-		return asn1_wrap(ASN1_OCTET_STRING, "m", names);
 	}
-	else
-	{
-		return chunk_empty;
-	}
+	generalNames->destroy(generalNames);
+	return names;
 }
 
 /*
@@ -1330,11 +1344,54 @@ chunk_t x509_build_subjectAltNames(linked_list_t *list)
 }
 
 /**
+ * Build a to-be-signed X.509 certificate body
+ */
+static chunk_t x509_build_tbs(private_x509_t *this)
+{
+    /* version is always X.509v3 */
+    chunk_t version = asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2);
+
+    chunk_t extensions = chunk_empty;
+
+    if (this->subjectAltNames->get_count(this->subjectAltNames))
+    {
+		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
+			asn1_wrap(ASN1_SEQUENCE, "m",
+			x509_build_subjectAltNames(this->subjectAltNames)));
+    }
+
+    return asn1_wrap(ASN1_SEQUENCE, "mmccmcmm",
+			version,
+			asn1_simple_object(ASN1_INTEGER, this->serialNumber),
+			asn1_algorithmIdentifier(this->signatureAlgorithm),
+			this->issuer->get_encoding(this->issuer),
+			asn1_wrap(ASN1_SEQUENCE, "mm",
+				timetoasn1(&this->notBefore, ASN1_UTCTIME),
+				timetoasn1(&this->notAfter,  ASN1_UTCTIME)
+			),
+			this->subject->get_encoding(this->subject),
+			this->public_key->get_publicKeyInfo(this->public_key),
+			extensions
+	   );
+}
+
+/**
  * Implementation of x509_t.build_encoding.
  */
 static void build_encoding(private_x509_t *this, hash_algorithm_t alg,
 						   rsa_private_key_t *private_key)
 {
+	chunk_t signature;
+
+	this->signatureAlgorithm = hasher_signature_algorithm_to_oid(alg);
+	this->tbsCertificate = x509_build_tbs(this);
+	private_key->build_emsa_pkcs1_signature(private_key, alg,
+						this->tbsCertificate, &signature);
+	this->signature = asn1_bitstring("m", signature);
+	this->certificate = asn1_wrap(ASN1_SEQUENCE, "mcm",
+				this->tbsCertificate,
+				asn1_algorithmIdentifier(this->signatureAlgorithm),
+				this->signature);
 
 }
 
@@ -1408,6 +1465,7 @@ static private_x509_t *x509_create_empty(void)
 	this->public.create_ocspuri_iterator = (iterator_t* (*) (const x509_t*))create_ocspuri_iterator;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
 	this->public.list = (void (*) (x509_t*, FILE *out, bool utc))list;
+	this->public.add_subjectAltNames = (void (*) (x509_t*,linked_list_t*))add_subjectAltNames;
 	this->public.build_encoding = (void (*) (x509_t*,hash_algorithm_t,rsa_private_key_t*))build_encoding;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	
@@ -1417,13 +1475,19 @@ static private_x509_t *x509_create_empty(void)
 /*
  * Described in header.
  */
-x509_t *x509_create_(chunk_t serialNumber, identification_t *issuer, identification_t *subject)
+x509_t *x509_create(chunk_t serialNumber, identification_t *issuer,
+					time_t notBefore, time_t notAfter,
+					identification_t *subject,
+					rsa_public_key_t *public_key)
 {
 	private_x509_t *this = x509_create_empty();
 
 	this->serialNumber = serialNumber;
 	this->issuer = issuer->clone(issuer);
+	this->notBefore = notBefore;
+	this->notAfter = notAfter;
 	this->subject = subject->clone(subject);
+	this->public_key = public_key->clone(public_key);
 
 	return &this->public;
 }

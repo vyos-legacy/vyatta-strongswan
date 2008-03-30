@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: asn1.c 3252 2007-10-06 21:24:50Z andreas $
+ * RCSID $Id: asn1.c 3451 2008-02-05 19:27:05Z andreas $
  */
 
 #include <stdlib.h>
@@ -758,13 +758,23 @@ is_asn1(chunk_t blob)
 	)
 	return FALSE;
     }
+
     len = asn1_length(&blob);
-    if (len != blob.len)
+ 
+    /* exact match */
+    if (len == blob.len)
     {
-	DBG(DBG_PARSING,
-	    DBG_log("  file size does not match ASN.1 coded length");
-	)
-	return FALSE;
+	return TRUE;
     }
-    return TRUE;
+
+    /* some websites append a surplus newline character to the blob */
+    if (len + 1 == blob.len && *(blob.ptr + len) == '\n')
+    {
+	return TRUE;
+    }
+
+    DBG(DBG_PARSING,
+	DBG_log("  file size does not match ASN.1 coded length");
+    )
+    return FALSE;
 }
