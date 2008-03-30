@@ -3,6 +3,10 @@ strongswan (4.1.11-1) unstable; urgency=low
   * New upstream release.
   * DBUS support now interacts with network-manager, so need to build-depend
     on network-manager-dev.
+  * Add patch to rename internal AES_cbc_encrypt function and thus avoid
+    conflict with the openssl function.
+    Closes: #470721: pluto segfaults when using pkcs11 library linked with 
+                     OpenSSL
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 30 Mar 2008 10:35:16 +0200
 
