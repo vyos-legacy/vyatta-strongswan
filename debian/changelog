@@ -1,6 +1,8 @@
 strongswan (4.1.11-1) unstable; urgency=low
 
-  * New upstream release
+  * New upstream release.
+  * DBUS support now interacts with network-manager, so need to build-depend
+    on network-manager-dev.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 30 Mar 2008 10:35:16 +0200
 
