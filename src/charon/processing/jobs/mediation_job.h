@@ -1,9 +1,3 @@
-/**
- * @file mediation_job.h
- * 
- * @brief Interface of mediation_job_t.
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
@@ -17,6 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: mediation_job.h 3666 2008-03-26 18:40:19Z tobias $
+ */
+
+/**
+ * @defgroup mediation_job mediation_job
+ * @{ @ingroup jobs
  */
 
 #ifndef MEDIATION_JOB_H_
@@ -30,14 +31,9 @@ typedef struct mediation_job_t mediation_job_t;
 #include <utils/linked_list.h>
 
 /**
- * @brief Class representing a MEDIATION Job.
+ * Class representing a MEDIATION Job.
  * 
  * This job handles the mediation on the mediation server.
- * 
- * @b Constructors:
- * - mediation_job_create()
- * 
- * @ingroup jobs
  */
 struct mediation_job_t {
 	/**
@@ -47,27 +43,25 @@ struct mediation_job_t {
 };
 
 /**
- * @brief Creates a job of type MEDIATION.
+ * Creates a job of type MEDIATION.
  * 
  * Parameters get cloned.
  * 
  * @param peer_id		ID of the requested peer
  * @param requester		ID of the requesting peer
- * @param session_id	content of P2P_SESSIONID (could be NULL)
- * @param session_key	content of P2P_SESSIONKEY
+ * @param connect_id	content of ME_CONNECTID (could be NULL)
+ * @param connect_key	content of ME_CONNECTKEY
  * @param endpoints		list of submitted endpoints
  * @param response		TRUE if this is a response
  * @return				job object
- * 
- * @ingroup jobs
  */
 mediation_job_t *mediation_job_create(identification_t *peer_id,
-		identification_t *requester, chunk_t session_id, chunk_t session_key,
+		identification_t *requester, chunk_t connect_id, chunk_t connect_key,
 		linked_list_t *endpoints, bool response);
 
 
 /**
- * @brief Creates a special job of type MEDIATION that is used to send a callback
+ * Creates a special job of type MEDIATION that is used to send a callback
  * notification to a peer.
  * 
  * Parameters get cloned.
@@ -75,10 +69,8 @@ mediation_job_t *mediation_job_create(identification_t *peer_id,
  * @param requester		ID of the waiting peer
  * @param peer_id		ID of the requested peer
  * @return				job object
- * 
- * @ingroup jobs
  */
 mediation_job_t *mediation_callback_job_create(identification_t *requester,
 		identification_t *peer_id);
 
-#endif /*MEDIATION_JOB_H_*/
+#endif /*MEDIATION_JOB_H_ @} */

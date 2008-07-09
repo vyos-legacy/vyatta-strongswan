@@ -1,11 +1,5 @@
-/**
- * @file proposal.c
- * 
- * @brief Implementation of proposal_t.
- * 
- */
-
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -18,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: proposal.c 4062 2008-06-12 11:42:19Z martin $
  */
 
 #include <string.h>
@@ -51,11 +47,12 @@ ENUM_NEXT(transform_type_names, ENCRYPTION_ALGORITHM, EXTENDED_SEQUENCE_NUMBERS,
 ENUM_END(transform_type_names, EXTENDED_SEQUENCE_NUMBERS);
 
 ENUM(extended_sequence_numbers_names, NO_EXT_SEQ_NUMBERS, EXT_SEQ_NUMBERS,
-	"NO_EXT_SEQ_NUMBERS",
-	"EXT_SEQ_NUMBERS",
+	"NO_EXT_SEQ",
+	"EXT_SEQ",
 );
 
 typedef struct private_proposal_t private_proposal_t;
+typedef struct algorithm_t algorithm_t;
 
 /**
  * Private data of an proposal_t object
@@ -104,9 +101,24 @@ struct private_proposal_t {
 };
 
 /**
+ * Struct used to store different kinds of algorithms. 
+ */
+struct algorithm_t {
+	/**
+	 * Value from an encryption_algorithm_t/integrity_algorithm_t/...
+	 */
+	u_int16_t algorithm;
+	
+	/**
+	 * the associated key size in bits, or zero if not needed
+	 */
+	u_int16_t key_size;
+};
+
+/**
  * Add algorithm/keysize to a algorithm list
  */
-static void add_algo(linked_list_t *list, u_int16_t algo, size_t key_size)
+static void add_algo(linked_list_t *list, u_int16_t algo, u_int16_t key_size)
 {
 	algorithm_t *algo_key;
 	
@@ -119,7 +131,8 @@ static void add_algo(linked_list_t *list, u_int16_t algo, size_t key_size)
 /**
  * Implements proposal_t.add_algorithm
  */
-static void add_algorithm(private_proposal_t *this, transform_type_t type, u_int16_t algo, size_t key_size)
+static void add_algorithm(private_proposal_t *this, transform_type_t type,
+						  u_int16_t algo, u_int16_t key_size)
 {
 	switch (type)
 	{
@@ -144,41 +157,68 @@ static void add_algorithm(private_proposal_t *this, transform_type_t type, u_int
 }
 
 /**
- * Implements proposal_t.create_algorithm_iterator.
+ * filter function for peer configs
  */
-static iterator_t *create_algorithm_iterator(private_proposal_t *this, transform_type_t type)
+static bool alg_filter(void *null, algorithm_t **in, u_int16_t *alg,
+					   void **unused, u_int16_t *key_size)
 {
+	algorithm_t *algo = *in;
+	*alg = algo->algorithm;
+	if (key_size)
+	{
+		*key_size = algo->key_size;
+	}
+	return TRUE;
+}
+
+/**
+ * Implements proposal_t.create_enumerator.
+ */
+static enumerator_t *create_enumerator(private_proposal_t *this,
+									   transform_type_t type)
+{
+	linked_list_t *list;
+
 	switch (type)
 	{
 		case ENCRYPTION_ALGORITHM:
-			return this->encryption_algos->create_iterator(this->encryption_algos, TRUE);
-		case INTEGRITY_ALGORITHM:
-			return this->integrity_algos->create_iterator(this->integrity_algos, TRUE);
-		case PSEUDO_RANDOM_FUNCTION:
-			return this->prf_algos->create_iterator(this->prf_algos, TRUE);
-		case DIFFIE_HELLMAN_GROUP:
-			return this->dh_groups->create_iterator(this->dh_groups, TRUE);
-		case EXTENDED_SEQUENCE_NUMBERS:
-			return this->esns->create_iterator(this->esns, TRUE);
-		default:
+			list = this->encryption_algos;
 			break;
+		case INTEGRITY_ALGORITHM:
+			list = this->integrity_algos;
+			break;
+		case PSEUDO_RANDOM_FUNCTION:
+			list = this->prf_algos;
+			break;
+		case DIFFIE_HELLMAN_GROUP:
+			list = this->dh_groups;
+			break;
+		case EXTENDED_SEQUENCE_NUMBERS:
+			list = this->esns;
+			break;
+		default:
+			return NULL;
 	}
-	return NULL;
+	return enumerator_create_filter(list->create_enumerator(list),
+									(void*)alg_filter, NULL, NULL);
 }
 
 /**
  * Implements proposal_t.get_algorithm.
  */
-static bool get_algorithm(private_proposal_t *this, transform_type_t type, algorithm_t** algo)
+static bool get_algorithm(private_proposal_t *this, transform_type_t type,
+						  u_int16_t *alg, u_int16_t *key_size)
 {
-	iterator_t *iterator = create_algorithm_iterator(this, type);
-	if (iterator->iterate(iterator, (void**)algo))
+	enumerator_t *enumerator;
+	bool found = FALSE;
+	
+	enumerator = create_enumerator(this, type);
+	if (enumerator->enumerate(enumerator, alg, key_size))
 	{
-		iterator->destroy(iterator);
-		return TRUE;
+		found = TRUE;
 	}
-	iterator->destroy(iterator);
-	return FALSE;
+	enumerator->destroy(enumerator);
+	return found;
 }
 
 /**
@@ -186,14 +226,15 @@ static bool get_algorithm(private_proposal_t *this, transform_type_t type, algor
  */
 static bool has_dh_group(private_proposal_t *this, diffie_hellman_group_t group)
 {
-	algorithm_t *current;
-	iterator_t *iterator;
 	bool result = FALSE;
 	
-	iterator = this->dh_groups->create_iterator(this->dh_groups, TRUE);
-	if (iterator->get_count(iterator))
+	if (this->dh_groups->get_count(this->dh_groups))
 	{
-		while (iterator->iterate(iterator, (void**)&current))
+		algorithm_t *current;
+		enumerator_t *enumerator;
+		
+		enumerator = this->dh_groups->create_enumerator(this->dh_groups);
+		while (enumerator->enumerate(enumerator, (void**)&current))
 		{
 			if (current->algorithm == group)
 			{
@@ -201,22 +242,54 @@ static bool has_dh_group(private_proposal_t *this, diffie_hellman_group_t group)
 				break;
 			}
 		}
+		enumerator->destroy(enumerator);
 	}
 	else if (group == MODP_NONE)
 	{
 		result = TRUE;
 	}
-	iterator->destroy(iterator);
 	return result;
+}
+
+/**
+ * Implementation of proposal_t.strip_dh.
+ */
+static void strip_dh(private_proposal_t *this)
+{
+	algorithm_t *alg;
+	
+	while (this->dh_groups->remove_last(this->dh_groups, (void**)&alg) == SUCCESS)
+	{
+		free(alg);
+	}
+}
+
+/**
+ * Returns true if the given alg is an authenticated encryption algorithm
+ */
+static bool is_authenticated_encryption(u_int16_t alg)
+{
+	switch(alg)
+	{
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_CCM_ICV12:
+		case ENCR_AES_CCM_ICV16:
+		case ENCR_AES_GCM_ICV8:
+		case ENCR_AES_GCM_ICV12:
+		case ENCR_AES_GCM_ICV16:
+			return TRUE;
+	}
+	return FALSE;
 }
 
 /**
  * Find a matching alg/keysize in two linked lists
  */
-static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, u_int16_t *alg, size_t *key_size)
+static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add,
+						u_int16_t *alg, size_t *key_size)
 {
-	iterator_t *first_iter, *second_iter;
-	algorithm_t *first_alg, *second_alg;
+	enumerator_t *e1, *e2;
+	algorithm_t *alg1, *alg2;
 	
 	/* if in both are zero algorithms specified, we HAVE a match */
 	if (first->get_count(first) == 0 && second->get_count(second) == 0)
@@ -225,30 +298,31 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, 
 		return TRUE;
 	}
 	
-	first_iter = first->create_iterator(first, TRUE);
-	second_iter = second->create_iterator(second, TRUE);
+	e1 = first->create_enumerator(first);
+	e2 = second->create_enumerator(second);
 	/* compare algs, order of algs in "first" is preferred */
-	while (first_iter->iterate(first_iter, (void**)&first_alg))
+	while (e1->enumerate(e1, &alg1))
 	{
-		second_iter->reset(second_iter);
-		while (second_iter->iterate(second_iter, (void**)&second_alg))
+		e2->destroy(e2);
+		e2 = second->create_enumerator(second);
+		while (e2->enumerate(e2, &alg2))
 		{
-			if (first_alg->algorithm == second_alg->algorithm &&
-				first_alg->key_size == second_alg->key_size)
+			if (alg1->algorithm == alg2->algorithm &&
+				alg1->key_size == alg2->key_size)
 			{
 				/* ok, we have an algorithm */
-				*alg = first_alg->algorithm;
-				*key_size = first_alg->key_size;
+				*alg = alg1->algorithm;
+				*key_size = alg1->key_size;
 				*add = TRUE;
-				first_iter->destroy(first_iter);
-				second_iter->destroy(second_iter);
+				e1->destroy(e1);
+				e2->destroy(e2);
 				return TRUE;
 			}
 		}
 	}
 	/* no match in all comparisons */
-	first_iter->destroy(first_iter);
-	second_iter->destroy(second_iter);
+	e1->destroy(e1);
+	e2->destroy(e2);
 	return FALSE;
 }
 
@@ -274,45 +348,57 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	selected = proposal_create(this->protocol);
 	
 	/* select encryption algorithm */
-	if (select_algo(this->encryption_algos, other->encryption_algos, &add, &algo, &key_size))
+	if (select_algo(this->encryption_algos, other->encryption_algos,
+					&add, &algo, &key_size))
 	{
 		if (add)
 		{
-			selected->add_algorithm(selected, ENCRYPTION_ALGORITHM, algo, key_size);
+			selected->add_algorithm(selected, ENCRYPTION_ALGORITHM,
+									algo, key_size);
 		}
 	}
 	else
 	{
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable ENCRYPTION_ALGORITHM found, skipping");
+		DBG2(DBG_CFG, "  no acceptable %N found",
+			 transform_type_names, ENCRYPTION_ALGORITHM);
 		return NULL;
 	}
 	/* select integrity algorithm */
-	if (select_algo(this->integrity_algos, other->integrity_algos, &add, &algo, &key_size))
+	if (!is_authenticated_encryption(algo))
 	{
-		if (add)
+		if (select_algo(this->integrity_algos, other->integrity_algos,	
+						&add, &algo, &key_size))
 		{
-			selected->add_algorithm(selected, INTEGRITY_ALGORITHM, algo, key_size);
+			if (add)
+			{
+				selected->add_algorithm(selected, INTEGRITY_ALGORITHM,
+										algo, key_size);
+			}
 		}
-	}
-	else
-	{
-		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable INTEGRITY_ALGORITHM found, skipping");
-		return NULL;
+		else
+		{
+			selected->destroy(selected);
+			DBG2(DBG_CFG, "  no acceptable %N found",
+				 transform_type_names, INTEGRITY_ALGORITHM);
+			return NULL;
+		}
 	}
 	/* select prf algorithm */
-	if (select_algo(this->prf_algos, other->prf_algos, &add, &algo, &key_size))
+	if (select_algo(this->prf_algos, other->prf_algos,
+					&add, &algo, &key_size))
 	{
 		if (add)
 		{
-			selected->add_algorithm(selected, PSEUDO_RANDOM_FUNCTION, algo, key_size);
+			selected->add_algorithm(selected, PSEUDO_RANDOM_FUNCTION,
+									algo, key_size);
 		}
 	}
 	else
 	{
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable PSEUDO_RANDOM_FUNCTION found, skipping");
+		DBG2(DBG_CFG, "  no acceptable %N found",
+			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
 		return NULL;
 	}
 	/* select a DH-group */
@@ -326,7 +412,8 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable DIFFIE_HELLMAN_GROUP found, skipping");
+		DBG2(DBG_CFG, "  no acceptable %N found",
+			 transform_type_names, DIFFIE_HELLMAN_GROUP);
 		return NULL;
 	}
 	/* select if we use ESNs */
@@ -340,7 +427,8 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	else
 	{
 		selected->destroy(selected);
-		DBG2(DBG_CFG, "  no acceptable EXTENDED_SEQUENCE_NUMBERS found, skipping");
+		DBG2(DBG_CFG, "  no acceptable %N found",
+			 transform_type_names, EXTENDED_SEQUENCE_NUMBERS);
 		return NULL;
 	}
 	DBG2(DBG_CFG, "  proposal matches");
@@ -382,14 +470,67 @@ static u_int64_t get_spi(private_proposal_t *this)
 static void clone_algo_list(linked_list_t *list, linked_list_t *clone_list)
 {
 	algorithm_t *algo, *clone_algo;
-	iterator_t *iterator = list->create_iterator(list, TRUE);
-	while (iterator->iterate(iterator, (void**)&algo))
+	enumerator_t *enumerator;
+	
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &algo))
 	{
 		clone_algo = malloc_thing(algorithm_t);
 		memcpy(clone_algo, algo, sizeof(algorithm_t));
 		clone_list->insert_last(clone_list, (void*)clone_algo);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * check if an algorithm list equals
+ */
+static bool algo_list_equals(linked_list_t *l1, linked_list_t *l2)
+{
+	enumerator_t *e1, *e2;
+	algorithm_t *alg1, *alg2;
+	bool equals = TRUE;
+	
+	if (l1->get_count(l1) != l2->get_count(l2))
+	{
+		return FALSE;
+	}
+	
+	e1 = l1->create_enumerator(l1);
+	e2 = l2->create_enumerator(l2);
+	while (e1->enumerate(e1, &alg1) && e2->enumerate(e2, &alg2))
+	{
+		if (alg1->algorithm != alg2->algorithm ||
+			alg1->key_size != alg2->key_size)
+		{
+			equals = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+	return equals;
+}
+
+/**
+ * Implementation of proposal_t.equals.
+ */
+static bool equals(private_proposal_t *this, private_proposal_t *other)
+{
+	if (this == other)
+	{
+		return TRUE;
+	}
+	if (this->public.equals != other->public.equals)
+	{
+		return FALSE;
+	}
+	return (
+		algo_list_equals(this->encryption_algos, other->encryption_algos) &&
+		algo_list_equals(this->integrity_algos, other->integrity_algos) &&
+		algo_list_equals(this->prf_algos, other->prf_algos) &&
+		algo_list_equals(this->dh_groups, other->dh_groups) &&
+		algo_list_equals(this->esns, other->esns));
 }
 
 /**
@@ -408,6 +549,38 @@ static proposal_t *clone_(private_proposal_t *this)
 	clone->spi = this->spi;
 	
 	return &clone->public;
+}
+
+/**
+ * Checks the proposal read from a string.
+ */
+static void check_proposal(private_proposal_t *this)
+{
+	enumerator_t *e;
+	algorithm_t *alg;
+	bool all_aead = TRUE;
+	
+	e = this->encryption_algos->create_enumerator(this->encryption_algos);
+	while (e->enumerate(e, &alg))
+	{
+		if (!is_authenticated_encryption(alg->algorithm))
+		{
+			all_aead = FALSE;
+			break;
+		}
+	}
+	e->destroy(e);
+	
+	if (all_aead)
+	{
+		/* if all encryption algorithms in the proposal are authenticated encryption
+		 * algorithms we MUST NOT propose any integrity algorithms */
+		while (this->integrity_algos->remove_last(this->integrity_algos,
+												  (void**)&alg) == SUCCESS)
+		{
+			free(alg);
+		}
+	}
 }
 
 /**
@@ -431,6 +604,70 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 	else if (strncmp(alg.ptr, "aes256", alg.len) == 0)
 	{
 		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 256);
+	}
+	else if (strstr(alg.ptr, "ccm"))
+	{
+		u_int16_t key_size, icv_size;
+
+		if (sscanf(alg.ptr, "aes%huccm%hu", &key_size, &icv_size) == 2)
+		{
+			if (key_size == 128 || key_size == 192 || key_size == 256)
+			{
+				switch (icv_size)
+				{
+					case   8: /* octets */
+					case  64: /* bits */
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_CCM_ICV8, key_size);
+						break;
+					case  12: /* octets */
+					case  96: /* bits */
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_CCM_ICV12, key_size);
+						break;
+					case  16: /* octets */
+					case 128: /* bits */
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_CCM_ICV16, key_size);
+						break;
+					default:
+						/* invalid ICV size */
+						break;
+				}
+			}
+		}
+	}
+	else if (strstr(alg.ptr, "gcm"))
+	{
+		u_int16_t key_size, icv_size;
+
+		if (sscanf(alg.ptr, "aes%hugcm%hu", &key_size, &icv_size) == 2)
+		{
+			if (key_size == 128 || key_size == 192 || key_size == 256)
+			{
+				switch (icv_size)
+				{
+					case   8: /* octets */
+					case  64: /* bits */
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_GCM_ICV8, key_size);
+						break;
+					case  12: /* octets */
+					case  96: /* bits */
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_GCM_ICV12, key_size);
+						break;
+					case  16: /* octets */
+					case 128: /* bits */
+						add_algorithm(this, ENCRYPTION_ALGORITHM,
+									  ENCR_AES_GCM_ICV16, key_size);
+						break;
+					default:
+						/* invalid ICV size */
+						break;
+				}
+			}
+		}
 	}
 	else if (strncmp(alg.ptr, "3des", alg.len) == 0)
 	{
@@ -499,7 +736,7 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_AES_XCBC_96, 0);
 		if (this->protocol == PROTO_IKE)
 		{
-			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, AUTH_AES_XCBC_96, 0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC, 0);
 		}
 	}
 	else if (strncmp(alg.ptr, "modp768", alg.len) == 0)
@@ -526,11 +763,134 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 	{
 		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
 	}
+	else if (strncmp(alg.ptr, "ecp192", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_192_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "ecp224", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_224_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "ecp256", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_256_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "ecp384", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_384_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "ecp521", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, ECP_521_BIT, 0);
+	}
 	else
 	{
 		return FAILED;
 	}
 	return SUCCESS;
+}
+
+/**
+ * print all algorithms of a kind to stream
+ */
+static int print_alg(private_proposal_t *this, FILE *stream, u_int kind,
+					 void *names, bool *first)
+{
+	enumerator_t *enumerator;
+	size_t written = 0;
+	u_int16_t alg, size;
+	
+	enumerator = create_enumerator(this, kind);
+	while (enumerator->enumerate(enumerator, &alg, &size))
+	{
+		if (*first)
+		{
+			written += fprintf(stream, "%N", names, alg);
+			*first = FALSE;
+		}
+		else
+		{
+			written += fprintf(stream, "/%N", names, alg);
+		}
+		if (size)
+		{
+			written += fprintf(stream, "-%d", size);
+		}
+	}
+	enumerator->destroy(enumerator);
+	return written;
+}
+
+/**
+ * output handler in printf()
+ */
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
+{
+	private_proposal_t *this = *((private_proposal_t**)(args[0]));
+	linked_list_t *list = *((linked_list_t**)(args[0]));
+	enumerator_t *enumerator;
+	size_t written = 0;
+	bool first = TRUE;
+	
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	
+	if (info->alt)
+	{
+		enumerator = list->create_enumerator(list);
+		while (enumerator->enumerate(enumerator, &this))
+		{	/* call recursivly */
+			if (first)
+			{
+				written += fprintf(stream, "%P", this);
+				first = FALSE;
+			}
+			else
+			{
+				written += fprintf(stream, ", %P", this);
+			}
+		}
+		enumerator->destroy(enumerator);
+		return written;
+	}
+	
+	written = fprintf(stream, "%N:", protocol_id_names, this->protocol);
+	written += print_alg(this, stream, ENCRYPTION_ALGORITHM,
+						 encryption_algorithm_names, &first);
+	written += print_alg(this, stream, INTEGRITY_ALGORITHM,
+						 integrity_algorithm_names, &first);
+	written += print_alg(this, stream, PSEUDO_RANDOM_FUNCTION,
+						 pseudo_random_function_names, &first);
+	written += print_alg(this, stream, DIFFIE_HELLMAN_GROUP,
+						 diffie_hellman_group_names, &first);
+	written += print_alg(this, stream, EXTENDED_SEQUENCE_NUMBERS,
+						 extended_sequence_numbers_names, &first);
+	return written;
+}
+
+/**
+ * arginfo handler for printf() proposal
+ */
+static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * return printf hook functions for a proposal
+ */
+printf_hook_functions_t proposal_get_printf_hooks()
+{
+	printf_hook_functions_t hooks = {print, arginfo};
+	
+	return hooks;
 }
 
 /**
@@ -553,14 +913,16 @@ proposal_t *proposal_create(protocol_id_t protocol)
 {
 	private_proposal_t *this = malloc_thing(private_proposal_t);
 	
-	this->public.add_algorithm = (void (*)(proposal_t*,transform_type_t,u_int16_t,size_t))add_algorithm;
-	this->public.create_algorithm_iterator = (iterator_t* (*)(proposal_t*,transform_type_t))create_algorithm_iterator;
-	this->public.get_algorithm = (bool (*)(proposal_t*,transform_type_t,algorithm_t**))get_algorithm;
+	this->public.add_algorithm = (void (*)(proposal_t*,transform_type_t,u_int16_t,u_int16_t))add_algorithm;
+	this->public.create_enumerator = (enumerator_t* (*)(proposal_t*,transform_type_t))create_enumerator;
+	this->public.get_algorithm = (bool (*)(proposal_t*,transform_type_t,u_int16_t*,u_int16_t*))get_algorithm;
 	this->public.has_dh_group = (bool (*)(proposal_t*,diffie_hellman_group_t))has_dh_group;
+	this->public.strip_dh = (void(*)(proposal_t*))strip_dh;
 	this->public.select = (proposal_t* (*)(proposal_t*,proposal_t*))select_proposal;
 	this->public.get_protocol = (protocol_id_t(*)(proposal_t*))get_protocol;
 	this->public.set_spi = (void(*)(proposal_t*,u_int64_t))set_spi;
 	this->public.get_spi = (u_int64_t(*)(proposal_t*))get_spi;
+	this->public.equals = (bool(*)(proposal_t*, proposal_t *other))equals;
 	this->public.clone = (proposal_t*(*)(proposal_t*))clone_;
 	this->public.destroy = (void(*)(proposal_t*))destroy;
 	
@@ -590,17 +952,19 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         192);
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,         256);
 			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,              0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128,	0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_AES_XCBC_96,       0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_256_128, 0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96,      0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,       0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192,	0);
-			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256,	0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_384_192, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA2_512_256, 0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC,        0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_256,      0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1,          0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,           0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_384,      0);
 			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA2_512,      0);
-			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_2048_BIT, 		    0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_2048_BIT,          0);
 			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1536_BIT,          0);
 			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1024_BIT,          0);
 			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_4096_BIT,          0);
@@ -661,6 +1025,8 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 		destroy(this);
 		return NULL;
 	}
+	
+	check_proposal(this);
 	
 	if (protocol == PROTO_AH || protocol == PROTO_ESP)
 	{

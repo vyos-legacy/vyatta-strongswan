@@ -1,11 +1,5 @@
-/**
- * @file leak_detective.c
- * 
- * @brief Allocation hooks to find memory leaks.
- */
-
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,8 +11,15 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: leak_detective.c 4044 2008-06-06 15:05:54Z martin $
  */
 
+#ifdef HAVE_DLADDR
+# define _GNU_SOURCE
+# include <dlfcn.h>
+#endif /* HAVE_DLADDR */
+	
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -33,6 +34,7 @@
 #include <pthread.h>
 #include <netdb.h>
 #include <printf.h>
+#include <locale.h>
 #ifdef HAVE_BACKTRACE
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
@@ -42,12 +44,28 @@
 #include <library.h>
 #include <debug.h>
 
-#ifdef LEAK_DETECTIVE
+typedef struct private_leak_detective_t private_leak_detective_t;
+
+/**
+ * private data of leak_detective
+ */
+struct private_leak_detective_t {
+
+	/**
+	 * public functions
+	 */
+	leak_detective_t public;
+};
 
 /**
  * Magic value which helps to detect memory corruption. Yummy!
  */
 #define MEMORY_HEADER_MAGIC 0x7ac0be11
+
+/**
+ * Magic written to tail of allocation
+ */
+#define MEMORY_TAIL_MAGIC 0xcafebabe
 
 /**
  * Pattern which is filled in memory before freeing it
@@ -66,25 +84,26 @@ static void *malloc_hook(size_t, const void *);
 static void *realloc_hook(void *, size_t, const void *);
 static void free_hook(void*, const void *);
 
+void *(*old_malloc_hook)(size_t, const void *);
+void *(*old_realloc_hook)(void *, size_t, const void *);
+void (*old_free_hook)(void*, const void *);
+
 static u_int count_malloc = 0;
 static u_int count_free = 0;
 static u_int count_realloc = 0;
 
 typedef struct memory_header_t memory_header_t;
+typedef struct memory_tail_t memory_tail_t;
 
 /**
  * Header which is prepended to each allocated memory block
  */
 struct memory_header_t {
-	/**
-	 * Magci byte which must(!) hold MEMORY_HEADER_MAGIC
-	 */
-	u_int32_t magic;
 	
 	/**
 	 * Number of bytes following after the header
 	 */
-	size_t bytes;
+	u_int bytes;
 	
 	/**
 	 * Stack frames at the time of allocation
@@ -105,7 +124,25 @@ struct memory_header_t {
 	 * Pointer to next entry in linked list
 	 */
 	memory_header_t *next;
-};
+	
+	/**
+	 * magic bytes to detect bad free or heap underflow, MEMORY_HEADER_MAGIC
+	 */
+	u_int32_t magic;
+	
+}__attribute__((__packed__));
+
+/**
+ * tail appended to each allocated memory block
+ */
+struct memory_tail_t {
+
+	/**
+	 * Magic bytes to detect heap overflow, MEMORY_TAIL_MAGIC
+	 */
+	u_int32_t magic;
+	
+}__attribute__((__packed__));
 
 /**
  * first mem header is just a dummy to chain 
@@ -120,20 +157,9 @@ static memory_header_t first_header = {
 };
 
 /**
- * standard hooks, used to temparily remove hooking
- */
-static void *old_malloc_hook, *old_realloc_hook, *old_free_hook;
-
-/**
  * are the hooks currently installed? 
  */
 static bool installed = FALSE;
-
-/**
- * Mutex to exclusivly uninstall hooks, access heap list
- */
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 /**
  * log stack frames queried by backtrace()
@@ -143,80 +169,140 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static void log_stack_frames(void **stack_frames, int stack_frame_count)
 {
 #ifdef HAVE_BACKTRACE
-	char **strings;
 	size_t i;
+	char **strings;
+	
+	strings = backtrace_symbols(stack_frames, stack_frame_count);
 
-	strings = backtrace_symbols (stack_frames, stack_frame_count);
-
-	DBG1("  dumping %d stack frame addresses", stack_frame_count);
-
+	fprintf(stderr, " dumping %d stack frame addresses:\n", stack_frame_count);
 	for (i = 0; i < stack_frame_count; i++)
 	{
-		DBG1("    %s", strings[i]);
+#ifdef HAVE_DLADDR
+		Dl_info info;
+		
+		if (dladdr(stack_frames[i], &info))
+		{
+			char cmd[1024];
+			FILE *output;
+			char c;
+			void *ptr = stack_frames[i];
+			
+			if (strstr(info.dli_fname, ".so"))
+			{
+				ptr = (void*)(stack_frames[i] - info.dli_fbase);
+			}
+			snprintf(cmd, sizeof(cmd), "addr2line -e %s %p", info.dli_fname, ptr);
+			if (info.dli_sname)
+			{
+				fprintf(stderr, "  \e[33m%s\e[0m @ %p (\e[31m%s\e[0m+0x%x) [%p]\n",
+						info.dli_fname, info.dli_fbase, info.dli_sname,
+						stack_frames[i] - info.dli_saddr, stack_frames[i]);
+			}
+			else
+			{
+				fprintf(stderr, "  \e[33m%s\e[0m @ %p [%p]\n", info.dli_fname,
+						info.dli_fbase, stack_frames[i]);
+			}
+			fprintf(stderr, "    -> \e[32m");
+			output = popen(cmd, "r");
+			if (output)
+			{
+				while (TRUE)
+				{
+					c = getc(output);
+					if (c == '\n' || c == EOF)
+					{
+						break;
+					}
+					fputc(c, stderr);
+				}
+			}
+			else
+			{
+#endif /* HAVE_DLADDR */
+				fprintf(stderr, "    %s\n", strings[i]);
+#ifdef HAVE_DLADDR
+			}
+			fprintf(stderr, "\n\e[0m");
+		}
+#endif /* HAVE_DLADDR */
 	}
 	free (strings);
 #endif /* HAVE_BACKTRACE */
 }
 
 /**
- * Whitelist, which contains address ranges in stack frames ignored when leaking.
- * 
- * This is necessary, as some function use allocation hacks (static buffers)
- * and so on, which we want to suppress on leak reports.
+ * Leak report white list
  *
- * The range_size is calculated using the readelf utility, e.g.:
- * readelf -s /lib/glibc.so.6
- * The values are for glibc-2.4 and may or may not be correct on other systems.
+ * List of functions using static allocation buffers or should be suppressed
+ * otherwise on leak report. 
  */
-typedef struct whitelist_t whitelist_t;
-
-struct whitelist_t {
-	void* range_start;
-	size_t range_size;
-};
-
-#ifdef LIBCURL
-/* dummy declaration for whitelisting */
-void *Curl_getaddrinfo(void);
-#endif /* LIBCURL */
-
-whitelist_t whitelist[] = {
-	{pthread_create,			2542},
-	{pthread_setspecific,		 217},
-	{mktime,					  60},
-	{tzset,						 123},
-	{inet_ntoa,					 249},
-	{strerror,					 180},
-	{getprotobynumber,			 291},
-	{getservbyport,				 311},
-	{register_printf_function,	 159},
-	{syslog,					  44},
-	{vsyslog,					  41},
-	{dlopen,					 109},
-#	ifdef LIBCURL
-	/* from /usr/lib/libcurl.so.3 */
-	{Curl_getaddrinfo,			 480},
-#	endif /* LIBCURL */
+char *whitelist[] = {
+	/* pthread stuff */
+	"pthread_create",
+	"pthread_setspecific",
+	/* glibc functions */
+	"mktime",
+	"__gmtime_r",
+	"tzset",
+	"inet_ntoa",
+	"strerror",
+	"getprotobynumber",
+	"getservbyport",
+	"getservbyname",
+	"gethostbyname_r",
+	"gethostbyname2_r",
+	"getpwnam_r",
+	"getgrnam_r",
+	"register_printf_function",
+	"syslog",
+	"vsyslog",
+	"getaddrinfo",
+	"setlocale",
+	/* ignore dlopen, as we do not dlclose to get proper leak reports */
+	"dlopen",
+	"dlerror",
+	/* mysql functions */
+	"mysql_init_character_set",
+	"init_client_errs",
+	"my_thread_init",
+	/* fastcgi library */
+	"FCGX_Init",
+	/* libxml */
+	"xmlInitCharEncodingHandlers",
+	"xmlInitParser",
+	"xmlInitParserCtxt",
+	/* ClearSilver */
+	"nerr_init",
+	/* OpenSSL */
+	"RSA_new_method",
+	"DH_new_method",
 };
 
 /**
- * Check if this stack frame is whitelisted.
+ * check if a stack frame contains functions listed above
  */
 static bool is_whitelisted(void **stack_frames, int stack_frame_count)
 {
 	int i, j;
 	
+#ifdef HAVE_DLADDR
 	for (i=0; i< stack_frame_count; i++)
 	{
-		for (j=0; j<sizeof(whitelist)/sizeof(whitelist_t); j++)
-		{
-			if (stack_frames[i] >= whitelist[j].range_start &&
-				stack_frames[i] <= (whitelist[j].range_start + whitelist[j].range_size))
+		Dl_info info;
+		
+		if (dladdr(stack_frames[i], &info) && info.dli_sname)
+		{	
+			for (j = 0; j < sizeof(whitelist)/sizeof(char*); j++)
 			{
-				return TRUE;
+				if (streq(info.dli_sname, whitelist[j]))
+				{
+					return TRUE;
+				}
 			}
 		}
 	}
+#endif /* HAVE_DLADDR */
 	return FALSE;
 }
 
@@ -226,14 +312,19 @@ static bool is_whitelisted(void **stack_frames, int stack_frame_count)
 void report_leaks()
 {
 	memory_header_t *hdr;
-	int leaks = 0;
+	int leaks = 0, whitelisted = 0;
 	
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
-		if (!is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
+		if (is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
 		{
-			DBG1("Leak (%d bytes at %p):", hdr->bytes, hdr + 1);
-			log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
+			whitelisted++;
+		}
+		else
+		{
+			fprintf(stderr, "Leak (%d bytes at %p):\n", hdr->bytes, hdr + 1);
+			/* skip the first frame, contains leak detective logic */
+			log_stack_frames(hdr->stack_frames + 1, hdr->stack_frame_count - 1);
 			leaks++;
 		}
 	}
@@ -241,15 +332,16 @@ void report_leaks()
 	switch (leaks)
 	{
 		case 0:
-			DBG1("No leaks detected");
+			fprintf(stderr, "No leaks detected");
 			break;
 		case 1:
-			DBG1("One leak detected");
+			fprintf(stderr, "One leak detected");
 			break;
 		default:
-			DBG1("%d leaks detected", leaks);
+			fprintf(stderr, "%d leaks detected", leaks);
 			break;
 	}
+	fprintf(stderr, ", %d suppressed by whitelist\n", whitelisted);
 }
 
 /**
@@ -289,17 +381,28 @@ static void uninstall_hooks()
 void *malloc_hook(size_t bytes, const void *caller)
 {
 	memory_header_t *hdr;
+	memory_tail_t *tail;
+	pthread_t thread_id = pthread_self();
+    int oldpolicy;
+    struct sched_param oldparams, params;
+    
+    pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+    
+    params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
 	
-	pthread_mutex_lock(&mutex);
 	count_malloc++;
 	uninstall_hooks();
-	hdr = malloc(bytes + sizeof(memory_header_t));
+	hdr = malloc(sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
+	tail = ((void*)hdr) + bytes + sizeof(memory_header_t);
 	/* set to something which causes crashes */
-	memset(hdr, MEMORY_ALLOC_PATTERN, bytes + sizeof(memory_header_t));
+	memset(hdr, MEMORY_ALLOC_PATTERN,
+		   sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
 	
 	hdr->magic = MEMORY_HEADER_MAGIC;
 	hdr->bytes = bytes;
 	hdr->stack_frame_count = backtrace(hdr->stack_frames, STACK_FRAMES_COUNT);
+	tail->magic = MEMORY_TAIL_MAGIC;
 	install_hooks();
 	
 	/* insert at the beginning of the list */
@@ -310,7 +413,9 @@ void *malloc_hook(size_t bytes, const void *caller)
 	}
 	hdr->previous = &first_header;
 	first_header.next = hdr;
-	pthread_mutex_unlock(&mutex);
+	
+	pthread_setschedparam(thread_id, oldpolicy, &oldparams);
+	
 	return hdr + 1;
 }
 
@@ -321,41 +426,53 @@ void free_hook(void *ptr, const void *caller)
 {
 	void *stack_frames[STACK_FRAMES_COUNT];
 	int stack_frame_count;
-	memory_header_t *hdr = ptr - sizeof(memory_header_t);
-	
+	memory_header_t *hdr;
+	memory_tail_t *tail;
+	pthread_t thread_id = pthread_self();
+    int oldpolicy;
+    struct sched_param oldparams, params;
+    
 	/* allow freeing of NULL */
 	if (ptr == NULL)
 	{
 		return;
 	}
+	hdr = ptr - sizeof(memory_header_t);
+	tail = ptr + hdr->bytes;
 	
-	pthread_mutex_lock(&mutex);
+	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+	
+    params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
+	
 	count_free++;
 	uninstall_hooks();
-	if (hdr->magic != MEMORY_HEADER_MAGIC)
+	if (hdr->magic != MEMORY_HEADER_MAGIC ||
+		tail->magic != MEMORY_TAIL_MAGIC)
 	{
-		DBG1("freeing of invalid memory (%p, MAGIC 0x%x != 0x%x):",
-			 ptr, hdr->magic, MEMORY_HEADER_MAGIC);
+		fprintf(stderr, "freeing invalid memory (%p): "
+				"header magic 0x%x, tail magic 0x%x:\n",
+				ptr, hdr->magic, tail->magic);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		return;
 	}
-	
-	/* remove item from list */
-	if (hdr->next)
+	else
 	{
-		hdr->next->previous = hdr->previous;
+		/* remove item from list */
+		if (hdr->next)
+		{
+			hdr->next->previous = hdr->previous;
+		}
+		hdr->previous->next = hdr->next;
+	
+		/* clear MAGIC, set mem to something remarkable */
+		memset(hdr, MEMORY_FREE_PATTERN, hdr->bytes + sizeof(memory_header_t));
+	
+		free(hdr);
 	}
-	hdr->previous->next = hdr->next;
 	
-	/* clear MAGIC, set mem to something remarkable */
-	memset(hdr, MEMORY_FREE_PATTERN, hdr->bytes + sizeof(memory_header_t));
-	
-	free(hdr);
 	install_hooks();
-	pthread_mutex_unlock(&mutex);
+	pthread_setschedparam(thread_id, oldpolicy, &oldparams);
 }
 
 /**
@@ -366,7 +483,11 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	memory_header_t *hdr;
 	void *stack_frames[STACK_FRAMES_COUNT];
 	int stack_frame_count;
-	
+	memory_tail_t *tail;
+	pthread_t thread_id = pthread_self();
+    int oldpolicy;
+    struct sched_param oldparams, params;
+    
 	/* allow reallocation of NULL */
 	if (old == NULL)
 	{
@@ -374,27 +495,34 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	}
 	
 	hdr = old - sizeof(memory_header_t);
+	tail = old + hdr->bytes;
 	
-	pthread_mutex_lock(&mutex);
+	pthread_getschedparam(thread_id, &oldpolicy, &oldparams);
+	
+	params.__sched_priority = sched_get_priority_max(SCHED_FIFO);
+	pthread_setschedparam(thread_id, SCHED_FIFO, &params);
+	
 	count_realloc++;
 	uninstall_hooks();
-	if (hdr->magic != MEMORY_HEADER_MAGIC)
+	if (hdr->magic != MEMORY_HEADER_MAGIC ||
+		tail->magic != MEMORY_TAIL_MAGIC)
 	{
-		DBG1("reallocation of invalid memory (%p):", old);
+		fprintf(stderr, "reallocating invalid memory (%p): "
+				"header magic 0x%x, tail magic 0x%x:\n",
+				old, hdr->magic, tail->magic);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		raise(SIGKILL);
-		return NULL;
 	}
-	
-	hdr = realloc(hdr, bytes + sizeof(memory_header_t));
-	
+	/* clear tail magic, allocate, set tail magic */
+	memset(&tail->magic, MEMORY_ALLOC_PATTERN, sizeof(tail->magic));
+	hdr = realloc(hdr, sizeof(memory_header_t) + bytes + sizeof(memory_tail_t));
+	tail = ((void*)hdr) + bytes + sizeof(memory_header_t);
+	tail->magic = MEMORY_TAIL_MAGIC;
+
 	/* update statistics */
 	hdr->bytes = bytes;
 	hdr->stack_frame_count = backtrace(hdr->stack_frames, STACK_FRAMES_COUNT);
-	
+
 	/* update header of linked list neighbours */
 	if (hdr->next)
 	{
@@ -402,70 +530,36 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	}
 	hdr->previous->next = hdr;
 	install_hooks();
-	pthread_mutex_unlock(&mutex);
+	pthread_setschedparam(thread_id, oldpolicy, &oldparams);
 	return hdr + 1;
 }
 
 /**
- * Setup leak detective
+ * Implementation of leak_detective_t.destroy
  */
-void __attribute__ ((constructor)) leak_detective_init()
+static void destroy(private_leak_detective_t *this)
 {
-	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
-	{
-		install_hooks();
-	}
-}
-
-/**
- * Clean up leak detective
- */
-void __attribute__ ((destructor)) leak_detective_cleanup()
-{
-	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
+	if (installed)
 	{
 		uninstall_hooks();
 		report_leaks();
 	}
+	free(this);
 }
 
-/**
- * Log memory allocation statistics
+/*
+ * see header file
  */
-void leak_detective_status(FILE *stream)
+leak_detective_t *leak_detective_create()
 {
-	u_int blocks = 0;
-	size_t bytes = 0;
-	memory_header_t *hdr = &first_header;
+	private_leak_detective_t *this = malloc_thing(private_leak_detective_t);
 	
-	if (getenv("LEAK_DETECTIVE_DISABLE"))
+	this->public.destroy = (void(*)(leak_detective_t*))destroy;
+	
+	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
-		return;
+		install_hooks();
 	}
-	
-	pthread_mutex_lock(&mutex);
-	while ((hdr = hdr->next))
-	{
-		blocks++;
-		bytes += hdr->bytes;
-	}
-	pthread_mutex_unlock(&mutex);
-	
-	fprintf(stream, "allocation statistics:\n");
-	fprintf(stream, "  call stats: malloc: %d, free: %d, realloc: %d\n",
-			count_malloc, count_free, count_realloc);
-	fprintf(stream, "  allocated %d blocks, total size %d bytes (avg. %d bytes)\n",
-			blocks, bytes, bytes/blocks);
+	return &this->public;
 }
 
-#else /* !LEAK_DETECTION */
-
-/**
- * Dummy when !using LEAK_DETECTIVE
- */
-void leak_detective_status(FILE *stream)
-{
-
-}
-
-#endif /* LEAK_DETECTION */

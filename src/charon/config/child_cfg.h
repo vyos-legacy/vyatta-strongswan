@@ -1,11 +1,5 @@
-/**
- * @file child_cfg.h
- * 
- * @brief Interface of child_cfg_t.
- *  
- */
-
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -19,12 +13,21 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: child_cfg.h 3920 2008-05-08 16:19:11Z tobias $
+ */
+
+/**
+ * @defgroup child_cfg child_cfg
+ * @{ @ingroup config
  */
 
 #ifndef CHILD_CFG_H_
 #define CHILD_CFG_H_
 
 typedef enum mode_t mode_t;
+typedef enum action_t action_t;
+typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
@@ -32,11 +35,9 @@ typedef struct child_cfg_t child_cfg_t;
 #include <config/traffic_selector.h>
 
 /**
- * @brief Mode of an CHILD_SA.
+ * Mode of an CHILD_SA.
  *
  * These are equal to those defined in XFRM, so don't change.
- *
- * @ingroup config
  */
 enum mode_t {
 	/** transport mode, no inner address */
@@ -53,7 +54,40 @@ enum mode_t {
 extern enum_name_t *mode_names;
 
 /**
- * @brief A child_cfg_t defines the config template for a CHILD_SA.
+ * Action to take when DPD detected/connection gets closed by peer.
+ */
+enum action_t {
+	/** No action */
+	ACTION_NONE,
+	/** Route config to reestablish on demand */
+	ACTION_ROUTE,
+	/** Restart config immediately */
+	ACTION_RESTART,
+};
+
+/**
+ * enum names for action_t.
+ */
+extern enum_name_t *action_names;
+
+/**
+ * IPComp transform IDs, as in RFC 4306
+ */
+enum ipcomp_transform_t {
+	IPCOMP_NONE = 241,
+	IPCOMP_OUI = 1,
+	IPCOMP_DEFLATE = 2,
+	IPCOMP_LZS = 3,
+	IPCOMP_LZJH = 4,
+};
+
+/**
+ * enum strings for ipcomp_transform_t.
+ */
+extern enum_name_t *ipcomp_transform_names;
+
+/**
+ * A child_cfg_t defines the config template for a CHILD_SA.
  *
  * After creation, proposals and traffic selectors may be added to the config.
  * A child_cfg object is referenced multiple times, and is not thread save.
@@ -62,51 +96,42 @@ extern enum_name_t *mode_names;
  * A reference counter handles the number of references hold to this config.
  *
  * @see peer_cfg_t to get an overview over the configurations.
- * 
- * @b Constructors:
- *   - child_cfg_create()
- *
- * @ingroup config
  */
 struct child_cfg_t {
 	
 	/**
-	 * @brief Get the name of the child_cfg.
+	 * Get the name of the child_cfg.
 	 * 
-	 * @param this			calling object
 	 * @return				child_cfg's name
 	 */
 	char *(*get_name) (child_cfg_t *this);
 	
 	/**
-	 * @brief Add a proposal to the list. 
+	 * Add a proposal to the list. 
 	 * 
 	 * The proposals are stored by priority, first added
 	 * is the most prefered.
 	 * After add, proposal is owned by child_cfg.
 	 * 
-	 * @param this			calling object
 	 * @param proposal		proposal to add
 	 */
 	void (*add_proposal) (child_cfg_t *this, proposal_t *proposal);
 	
 	/**
-	 * @brief Get the list of proposals for the CHILD_SA.
+	 * Get the list of proposals for the CHILD_SA.
 	 *
 	 * Resulting list and all of its proposals must be freed after use.
 	 * 
-	 * @param this			calling object
 	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @return				list of proposals
 	 */
 	linked_list_t* (*get_proposals)(child_cfg_t *this, bool strip_dh);
 	
 	/**
-	 * @brief Select a proposal from a supplied list.
+	 * Select a proposal from a supplied list.
 	 *
 	 * Returned propsal is newly created and must be destroyed after usage.
 	 * 
-	 * @param this			calling object
 	 * @param proposals		list from from wich proposals are selected
 	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @return				selected proposal, or NULL if nothing matches
@@ -115,12 +140,11 @@ struct child_cfg_t {
 								   bool strip_dh);
 	
 	/**
-	 * @brief Add a traffic selector to the config.
+	 * Add a traffic selector to the config.
 	 * 
 	 * Use the "local" parameter to add it for the local or the remote side.
 	 * After add, traffic selector is owned by child_cfg.
 	 * 
-	 * @param this			calling object
 	 * @param local			TRUE for local side, FALSE for remote
 	 * @param ts			traffic_selector to add
 	 */
@@ -128,7 +152,7 @@ struct child_cfg_t {
 								 traffic_selector_t *ts);
 	
 	/**
-	 * @brief Get a list of traffic selectors to use for the CHILD_SA.
+	 * Get a list of traffic selectors to use for the CHILD_SA.
 	 * 
 	 * The config contains two set of traffic selectors, one for the local
 	 * side, one for the remote side.
@@ -139,7 +163,6 @@ struct child_cfg_t {
 	 * the "host" parameter to narrow such traffic selectors to that address.
 	 * Resulted list and its traffic selectors must be destroyed after use.
 	 * 
-	 * @param this			calling object
 	 * @param local			TRUE for TS on local side, FALSE for remote
 	 * @param supplied		list with TS to select from, or NULL
 	 * @param host			address to use for narrowing "dynamic" TS', or NULL
@@ -150,23 +173,21 @@ struct child_cfg_t {
 											host_t *host);
 
 	/**
-	 * @brief Get the updown script to run for the CHILD_SA.
+	 * Get the updown script to run for the CHILD_SA.
 	 * 
-	 * @param this			calling object
 	 * @return				path to updown script
 	 */
 	char* (*get_updown)(child_cfg_t *this);
 	
 	/**
-	 * @brief Should we allow access to the local host (gateway)?
+	 * Should we allow access to the local host (gateway)?
 	 * 
-	 * @param this			calling object
 	 * @return				value of hostaccess flag
 	 */
 	bool (*get_hostaccess) (child_cfg_t *this);
 
 	/**
-	 * @brief Get the lifetime of a CHILD_SA.
+	 * Get the lifetime of a CHILD_SA.
 	 *
 	 * If "rekey" is set to TRUE, a lifetime is returned before the first
 	 * rekeying should be started. If it is FALSE, the actual lifetime is
@@ -174,57 +195,68 @@ struct child_cfg_t {
 	 * The rekey time automatically contains a jitter to avoid simlutaneous
 	 * rekeying.
 	 * 
-	 * @param this			child_cfg 
 	 * @param rekey			TRUE to get rekey time
 	 * @return				lifetime in seconds
 	 */
 	u_int32_t (*get_lifetime) (child_cfg_t *this, bool rekey);
 	
 	/**
-	 * @brief Get the mode to use for the CHILD_SA.
+	 * Get the mode to use for the CHILD_SA.
 	 *
 	 * The mode is either tunnel, transport or BEET. The peer must agree
 	 * on the method, fallback is tunnel mode.
 	 * 
-	 * @param this			child_cfg
-	 * @return				lifetime in seconds
+	 * @return				ipsec mode
 	 */
 	mode_t (*get_mode) (child_cfg_t *this);
 	
 	/**
-	 * @brief Get the DH group to use for CHILD_SA setup.
+	 * Action to take on DPD.
+	 *
+	 * @return				DPD action
+	 */	
+	action_t (*get_dpd_action) (child_cfg_t *this);
+	
+	/**
+	 * Action to take if CHILD_SA gets closed.
+	 *
+	 * @return				close action
+	 */	
+	action_t (*get_close_action) (child_cfg_t *this);
+	
+	/**
+	 * Get the DH group to use for CHILD_SA setup.
 	 * 
-	 * @param this		calling object
-	 * @return			dh group to use
+	 * @return				dh group to use
 	 */
 	diffie_hellman_group_t (*get_dh_group)(child_cfg_t *this);
 	
 	/**
-	 * @brief Get a new reference.
-	 *
-	 * Get a new reference to this child_cfg by increasing
-	 * it's internal reference counter.
-	 * Do not call get_ref or any other function until you
-	 * already have a reference. Otherwise the object may get
-	 * destroyed while calling get_ref(),
+	 * Check whether IPComp should be used, if the other peer supports it.
 	 * 
-	 * @param this				calling object
+	 * @return				TRUE, if IPComp should be used
+	 * 						FALSE, otherwise
 	 */
-	void (*get_ref) (child_cfg_t *this);
+	bool (*use_ipcomp)(child_cfg_t *this);
 	
 	/**
-	 * @brief Destroys the child_cfg object.
+	 * Increase the reference count.
+	 *
+	 * @return				reference to this
+	 */
+	child_cfg_t* (*get_ref) (child_cfg_t *this);
+	
+	/**
+	 * Destroys the child_cfg object.
 	 *
 	 * Decrements the internal reference counter and
 	 * destroys the child_cfg when it reaches zero.
-	 * 
-	 * @param this				calling object
 	 */
 	void (*destroy) (child_cfg_t *this);
 };
 
 /**
- * @brief Create a configuration template for CHILD_SA setup.
+ * Create a configuration template for CHILD_SA setup.
  * 
  * The "name" string gets cloned.
  * Lifetimes are in seconds. To prevent to peers to start rekeying at the
@@ -240,12 +272,15 @@ struct child_cfg_t {
  * @param updown			updown script to execute on up/down event
  * @param hostaccess		TRUE to allow access to the local host
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
+ * @param dpd_action		DPD action
+ * @param close_action		close action
+ * @param ipcomp			use IPComp, if peer supports it
  * @return 					child_cfg_t object
- * 
- * @ingroup config
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
-							  char *updown, bool hostaccess, mode_t mode);
+							  char *updown, bool hostaccess, mode_t mode,
+							  action_t dpd_action, action_t close_action,
+							  bool ipcomp);
 
-#endif /* CHILD_CFG_H_ */
+#endif /* CHILD_CFG_H_ @} */

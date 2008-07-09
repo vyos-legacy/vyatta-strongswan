@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
- * RCSID $Id: ttoaddr.c 3265 2007-10-08 19:52:55Z andreas $
+ * RCSID $Id: ttoaddr.c 3684 2008-03-28 11:46:30Z martin $
  */
 #include "internal.h"
 #include "freeswan.h"
@@ -320,7 +320,7 @@ size_t srclen;			/* known to be >0 */
 ip_address *dst;
 {
 	const char *stop = src + srclen;	/* just past end */
-	unsigned piece;
+	unsigned piece = 0;
 	int gapat;		/* where was empty piece seen */
 	err_t oops;
 #	define	NPIECES	8

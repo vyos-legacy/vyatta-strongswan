@@ -1,10 +1,3 @@
-/**
- * @file task_manager.c
- *
- * @brief Implementation of task_manager_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: task_manager.c 3666 2008-03-26 18:40:19Z tobias $
  */
 
 #include "task_manager.h"
@@ -31,7 +26,8 @@
 #include <sa/tasks/ike_mobike.h>
 #include <sa/tasks/ike_auth.h>
 #include <sa/tasks/ike_auth_lifetime.h>
-#include <sa/tasks/ike_cert.h>
+#include <sa/tasks/ike_cert_pre.h>
+#include <sa/tasks/ike_cert_post.h>
 #include <sa/tasks/ike_rekey.h>
 #include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_config.h>
@@ -42,8 +38,8 @@
 #include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/retransmit_job.h>
 
-#ifdef P2P
-#include <sa/tasks/ike_p2p.h>
+#ifdef ME
+#include <sa/tasks/ike_me.h>
 #endif
 
 typedef struct exchange_t exchange_t;
@@ -328,15 +324,16 @@ static status_t build_request(private_task_manager_t *this)
 					this->initiating.mid = 0;
 					exchange = IKE_SA_INIT;
 					activate_task(this, IKE_NATD);
-					activate_task(this, IKE_CERT);
-#ifdef P2P
+					activate_task(this, IKE_CERT_PRE);
+#ifdef ME
 					/* this task has to be activated before the IKE_AUTHENTICATE
 					 * task, because that task pregenerates the packet after
 					 * which no payloads can be added to the message anymore.
 					 */
-					activate_task(this, IKE_P2P);
-#endif /* P2P */
+					activate_task(this, IKE_ME);
+#endif /* ME */
 					activate_task(this, IKE_AUTHENTICATE);
+					activate_task(this, IKE_CERT_POST);
 					activate_task(this, IKE_CONFIG);
 					activate_task(this, CHILD_CREATE);
 					activate_task(this, IKE_AUTH_LIFETIME);
@@ -384,13 +381,13 @@ static status_t build_request(private_task_manager_t *this)
 					exchange = INFORMATIONAL;
 					break;
 				}
-#ifdef P2P
-				if (activate_task(this, IKE_P2P))
+#ifdef ME
+				if (activate_task(this, IKE_ME))
 				{
-					exchange = P2P_CONNECT;
+					exchange = ME_CONNECT;
 					break;
 				}
-#endif /* P2P */
+#endif /* ME */
 			case IKE_REKEYING:
 				if (activate_task(this, IKE_DELETE))
 				{
@@ -687,13 +684,15 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_natd_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-			task = (task_t*)ike_cert_create(this->ike_sa, FALSE);
+			task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-#ifdef P2P			
-			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
+#ifdef ME			
+			task = (task_t*)ike_me_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
-#endif /* P2P */
+#endif /* ME */
 			task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
+			this->passive_tasks->insert_last(this->passive_tasks, task);
+			task = (task_t*)ike_cert_post_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
@@ -818,13 +817,13 @@ static status_t process_request(private_task_manager_t *this,
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 			break;
 		}
-#ifdef P2P
-		case P2P_CONNECT:
+#ifdef ME
+		case ME_CONNECT:
 		{
-			task = (task_t*)ike_p2p_create(this->ike_sa, FALSE);
+			task = (task_t*)ike_me_create(this->ike_sa, FALSE);
 			this->passive_tasks->insert_last(this->passive_tasks, task);
 		}
-#endif /* P2P */
+#endif /* ME */
 		default:
 			break;
 	}

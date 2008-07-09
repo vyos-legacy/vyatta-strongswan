@@ -1,10 +1,3 @@
-/**
- * @file ike_natd.c
- *
- * @brief Implementation of the ike_natd task.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Martin Willi
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_natd.c 3806 2008-04-15 05:56:35Z martin $
  */
 
 #include "ike_natd.h"
@@ -118,17 +113,17 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
  */
 static chunk_t generate_natd_hash_faked(private_ike_natd_t *this)
 {
-	randomizer_t *randomizer;
+	rng_t *rng;
 	chunk_t chunk;
 	
-	randomizer = randomizer_create();
-	if (randomizer->allocate_pseudo_random_bytes(randomizer, HASH_SIZE_SHA1,
-												 &chunk) != SUCCESS)
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
 		DBG1(DBG_IKE, "unable to get random bytes for NATD fake");
-		chunk = chunk_empty;
+		return chunk_empty;
 	}
-	randomizer->destroy(randomizer);
+	rng->allocate_bytes(rng, HASH_SIZE_SHA1, &chunk);
+	rng->destroy(rng);
 	return chunk;
 }
 
@@ -259,7 +254,7 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 	{
 		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 
-#ifdef P2P		
+#ifdef ME
 		/* if we are on a mediated connection we have already switched to
 		 * port 4500 and the correct destination port is already configured,
 		 * therefore we must not switch again */
@@ -267,14 +262,14 @@ static status_t process_i(private_ike_natd_t *this, message_t *message)
 		{
 			return SUCCESS;
 		}
-#endif /* P2P */
+#endif /* ME */
 		
 		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
-#ifdef P2P
+#ifdef ME
 			/* if we are on a mediation connection we swith to port 4500 even
 			 * if no NAT is detected. */
 			peer_cfg->is_mediation(peer_cfg) ||
-#endif /* P2P */
+#endif /* ME */
 			/* if peer supports NAT-T, we switch to port 4500 even
 			 * if no NAT is detected. MOBIKE requires this. */
 			(peer_cfg->use_mobike(peer_cfg) &&
@@ -307,6 +302,12 @@ static status_t build_i(private_ike_natd_t *this, message_t *message)
 	notify_payload_t *notify;
 	iterator_t *iterator;
 	host_t *host;
+	
+	if (this->hasher == NULL)
+	{
+		DBG1(DBG_IKE, "unable to build NATD payloads, SHA1 not supported");
+		return NEED_MORE;
+	}
 	
 	/* destination is always set */
 	host = message->get_destination(message);
@@ -368,6 +369,12 @@ static status_t build_r(private_ike_natd_t *this, message_t *message)
 
 	if (this->src_seen && this->dst_seen)
 	{
+		if (this->hasher == NULL)
+		{
+			DBG1(DBG_IKE, "unable to build NATD payloads, SHA1 not supported");
+			return SUCCESS;
+		}
+	
 		/* initiator seems to support NAT detection, add response */
 		me = message->get_source(message);
 		notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, me);
@@ -415,7 +422,7 @@ static void migrate(private_ike_natd_t *this, ike_sa_t *ike_sa)
  */
 static void destroy(private_ike_natd_t *this)
 {
-	this->hasher->destroy(this->hasher);
+	DESTROY_IF(this->hasher);
 	free(this);
 }
 
@@ -443,7 +450,7 @@ ike_natd_t *ike_natd_create(ike_sa_t *ike_sa, bool initiator)
 	
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
-	this->hasher = hasher_create(HASH_SHA1);
+	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	this->src_seen = FALSE;
 	this->dst_seen = FALSE;
 	this->src_matched = FALSE;

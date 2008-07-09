@@ -1,6 +1,5 @@
 %{
 /* strongSwan keywords
- * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -14,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: keywords.txt 3928 2008-05-11 07:59:00Z andreas $
  */
 
 #include <string.h>
@@ -36,6 +35,7 @@ plutodebug,        KW_PLUTODEBUG
 charondebug,       KW_CHARONDEBUG
 prepluto,          KW_PREPLUTO
 postpluto,         KW_POSTPLUTO
+plutostderrlog,    KW_PLUTOSTDERRLOG
 fragicmp,          KW_FRAGICMP
 packetdefault,     KW_PACKETDEFAULT
 hidetos,           KW_HIDETOS
@@ -47,9 +47,9 @@ strictcrlpolicy,   KW_STRICTCRLPOLICY
 nocrsend,          KW_NOCRSEND
 nat_traversal,     KW_NAT_TRAVERSAL
 keep_alive,        KW_KEEP_ALIVE
+force_keepalive,   KW_FORCE_KEEPALIVE
 virtual_private,   KW_VIRTUAL_PRIVATE
 eap,               KW_EAP
-eapdir,            KW_EAPDIR
 mobike,	           KW_MOBIKE
 forceencaps,       KW_FORCEENCAPS
 pkcs11module,      KW_PKCS11MODULE
@@ -77,9 +77,9 @@ dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
 modeconfig,        KW_MODECONFIG
 xauth,             KW_XAUTH
-p2p_mediation,     KW_P2P_MEDIATION
-p2p_mediated_by,   KW_P2P_MEDIATED_BY
-p2p_peerid,        KW_P2P_PEERID
+mediation,         KW_MEDIATION
+mediated_by,       KW_MEDIATED_BY
+me_peerid,         KW_ME_PEERID
 cacert,            KW_CACERT
 ldaphost,          KW_LDAPHOST
 ldapbase,          KW_LDAPBASE
@@ -89,6 +89,7 @@ crluri2,           KW_CRLURI2
 ocspuri,           KW_OCSPURI
 ocspuri1,          KW_OCSPURI
 ocspuri2,          KW_OCSPURI2
+certuribase,       KW_CERTURIBASE
 left,              KW_LEFT
 leftnexthop,       KW_LEFTNEXTHOP
 leftsubnet,        KW_LEFTSUBNET

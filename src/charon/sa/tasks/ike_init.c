@@ -1,11 +1,5 @@
-/**
- * @file ike_init.c
- *
- * @brief Implementation of the ike_init task.
- *
- */
-
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -19,6 +13,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_init.c 4086 2008-06-22 11:24:33Z andreas $
  */
 
 #include "ike_init.h"
@@ -195,7 +191,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 				if (!this->initiator)
 				{
-					this->dh = diffie_hellman_create(this->dh_group);
+					this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 				}
 				if (this->dh)
 				{
@@ -222,13 +218,12 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
  */
 static status_t build_i(private_ike_init_t *this, message_t *message)
 {
-	randomizer_t *randomizer;
-	status_t status;
+	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	SIG(IKE_UP_START, "initiating IKE_SA '%s' to %H",
 		this->ike_sa->get_name(this->ike_sa),
-		this->config->get_other_host(this->config));
+		this->ike_sa->get_other_host(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	
 	if (this->retry++ >= MAX_RETRIES)
@@ -241,7 +236,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	if (!this->dh)
 	{
 		this->dh_group = this->config->get_dh_group(this->config);
-		this->dh = diffie_hellman_create(this->dh_group);
+		this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 		if (this->dh == NULL)
 		{
 			SIG(IKE_UP_FAILED, "configured DH group %N not supported",
@@ -253,15 +248,14 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
 	{
-		randomizer = randomizer_create();
-		status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE,
-														  &this->my_nonce);
-		randomizer->destroy(randomizer);
-		if (status != SUCCESS)
+		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+		if (!rng)
 		{
-			SIG(IKE_UP_FAILED, "error generating random nonce value");
+			SIG(IKE_UP_FAILED, "error generating nonce");
 			return FAILED;
 		}
+		rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
+		rng->destroy(rng);
 	}
 	
 	if (this->cookie.ptr)
@@ -270,30 +264,90 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	}
 	
 	build_payloads(this, message);
-	
+
+#ifdef ME
+	{
+		chunk_t connect_id = this->ike_sa->get_connect_id(this->ike_sa);
+		if (connect_id.ptr)
+		{
+			message->add_notify(message, FALSE, ME_CONNECTID, connect_id);
+		}
+	}
+#endif /* ME */
 	
 	return NEED_MORE;
 }
 
 /**
- * Implementation of task_t.process for initiator
+ * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_init_t *this, message_t *message)
 {	
-	randomizer_t *randomizer;
+	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	SIG(IKE_UP_FAILED, "%H is initiating an IKE_SA",
+	SIG(IKE_UP_START, "%H is initiating an IKE_SA",
 		message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
-	randomizer = randomizer_create();
-	if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE,
-												 &this->my_nonce) != SUCCESS)
+	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+	if (!rng)
 	{
-		DBG1(DBG_IKE, "error generating random nonce value");
+		DBG1(DBG_IKE, "error generating nonce");
+		return FAILED;
 	}
-	randomizer->destroy(randomizer);
+	rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
+	rng->destroy(rng);
+	
+#ifdef ME
+	{
+		chunk_t connect_id = chunk_empty;
+		iterator_t *iterator;
+		payload_t *payload;
+	
+		/* check for a ME_CONNECTID notify */
+		iterator = message->get_payload_iterator(message);
+		while (iterator->iterate(iterator, (void**)&payload))
+		{
+			if (payload->get_type(payload) == NOTIFY)
+			{
+				notify_payload_t *notify = (notify_payload_t*)payload;
+				notify_type_t type = notify->get_notify_type(notify);
+			
+				switch (type)
+				{
+					case ME_CONNECTID:
+					{
+						chunk_free(&connect_id);
+						connect_id = chunk_clone(notify->get_notification_data(notify));
+						DBG2(DBG_IKE, "received ME_CONNECTID %#B", &connect_id);
+						break;
+					}
+					default:
+					{
+						if (type < 16383)
+						{
+							DBG1(DBG_IKE, "received %N notify error",
+								notify_type_names, type);
+							break;	
+						}
+						DBG2(DBG_IKE, "received %N notify",
+							notify_type_names, type);
+						break;
+					}
+				}
+			}
+		}
+		iterator->destroy(iterator);
+		
+		if (connect_id.ptr)
+		{
+			charon->connect_manager->stop_checks(charon->connect_manager,
+				connect_id);
+			chunk_free(&connect_id);
+		}
+	}
+#endif /* ME */
 	
 	process_payloads(this, message);
 	
@@ -321,11 +375,11 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
 		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
 	{
-		algorithm_t *algo;
+		u_int16_t group;
+		
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
-										  &algo))
+										  &group, NULL))
 		{
-			u_int16_t group = algo->algorithm;
 			SIG(CHILD_UP_FAILED, "DH group %N inacceptable, requesting %N",
 				diffie_hellman_group_names, this->dh_group,
 				diffie_hellman_group_names, group);
@@ -370,9 +424,16 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-	
-	build_payloads(this, message);
 
+	/* Keep the selected IKE proposal for status information purposes */
+	{
+		char buf[BUF_LEN];
+
+		snprintf(buf, BUF_LEN, "%P", this->proposal);
+		this->ike_sa->set_proposal(this->ike_sa, buf+4);
+	}
+
+	build_payloads(this, message);
 	return SUCCESS;
 }
 
@@ -427,7 +488,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					this->cookie = chunk_clone(notify->get_notification_data(notify));
 					this->ike_sa->reset(this->ike_sa);
 					iterator->destroy(iterator);
-					DBG1(DBG_IKE, "received %N notify", notify_type_names, type);
+					DBG2(DBG_IKE, "received %N notify", notify_type_names, type);
 					return NEED_MORE;
 				}
 				default:
@@ -439,7 +500,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 						iterator->destroy(iterator);
 						return FAILED;	
 					}
-					DBG1(DBG_IKE, "received %N notify",
+					DBG2(DBG_IKE, "received %N notify",
 						notify_type_names, type);
 					break;
 				}
@@ -454,7 +515,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
-		SIG(IKE_UP_FAILED, "peers proposal selection invalid");
+		SIG(IKE_UP_FAILED, "peer's proposal selection invalid");
 		return FAILED;
 	}
 	
@@ -462,7 +523,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
 		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
 	{
-		SIG(IKE_UP_FAILED, "peers DH group selection invalid");
+		SIG(IKE_UP_FAILED, "peer's DH group selection invalid");
 		return FAILED;
 	}
 	
@@ -494,6 +555,15 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		SIG(IKE_UP_FAILED, "key derivation failed");
 		return FAILED;
 	}
+
+	/* Keep the selected IKE proposal for status information purposes */
+	{
+		char buf[BUF_LEN];
+
+		snprintf(buf, BUF_LEN, "%P", this->proposal);
+		this->ike_sa->set_proposal(this->ike_sa, buf+4);
+	}
+
 	return SUCCESS;
 }
 
@@ -532,7 +602,7 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 	
 	this->ike_sa = ike_sa;
 	this->proposal = NULL;
-	this->dh = diffie_hellman_create(this->dh_group);
+	this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
 }
 
 /**

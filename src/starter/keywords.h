@@ -1,5 +1,4 @@
 /* strongSwan keywords
- * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -13,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.h 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: keywords.h 3928 2008-05-11 07:59:00Z andreas $
  */
 
 #ifndef _KEYWORDS_H_
@@ -31,6 +30,7 @@ typedef enum {
     KW_CHARONDEBUG,
     KW_PREPLUTO,
     KW_POSTPLUTO,
+    KW_PLUTOSTDERRLOG,
     KW_UNIQUEIDS,
     KW_OVERRIDEMTU,
     KW_CRLCHECKINTERVAL,
@@ -39,8 +39,8 @@ typedef enum {
     KW_NOCRSEND,
     KW_NAT_TRAVERSAL,
     KW_KEEP_ALIVE,
+    KW_FORCE_KEEPALIVE,
     KW_VIRTUAL_PRIVATE,
-    KW_EAPDIR,
     KW_PKCS11MODULE,
     KW_PKCS11INITARGS,
     KW_PKCS11KEEPSTATE,
@@ -88,12 +88,12 @@ typedef enum {
     KW_DPDACTION,
     KW_MODECONFIG,
     KW_XAUTH,
-    KW_P2P_MEDIATION,
-    KW_P2P_MEDIATED_BY,
-    KW_P2P_PEERID,
+    KW_MEDIATION,
+    KW_MEDIATED_BY,
+    KW_ME_PEERID,
 
 #define KW_CONN_FIRST	KW_CONN_SETUP
-#define KW_CONN_LAST	KW_P2P_PEERID
+#define KW_CONN_LAST	KW_ME_PEERID
 
    /* ca section keywords */
     KW_CA_NAME,
@@ -105,9 +105,10 @@ typedef enum {
     KW_CRLURI2,
     KW_OCSPURI,
     KW_OCSPURI2,
+    KW_CERTURIBASE,
 
 #define KW_CA_FIRST	KW_CA_SETUP
-#define KW_CA_LAST	KW_OCSPURI2
+#define KW_CA_LAST	KW_CERTURIBASE
 
    /* end keywords */
     KW_HOST,

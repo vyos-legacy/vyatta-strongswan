@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: crl.c 3252 2007-10-06 21:24:50Z andreas $
+ * RCSID $Id: crl.c 3686 2008-03-28 11:48:14Z martin $
  */
 
 #include <stdlib.h>
@@ -406,7 +406,7 @@ parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl)
     asn1_ctx_t ctx;
     bool critical;
     chunk_t extnID;
-    chunk_t userCertificate;
+    chunk_t userCertificate = empty_chunk;
     chunk_t object;
     u_int level;
     int objectID = 0;

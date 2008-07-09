@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: stroke.c 3271 2007-10-08 20:12:25Z andreas $
+ * RCSID $Id: stroke.c 3875 2008-04-25 12:41:37Z martin $
  */
 
 #include <stdlib.h>
@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stddef.h>
 
-#include "stroke.h"
+#include "stroke_msg.h"
 #include "stroke_keywords.h"
 
 struct stroke_token {
@@ -100,66 +100,30 @@ static int send_stroke_msg (stroke_msg_t *msg)
 static int add_connection(char *name,
 						  char *my_id, char *other_id, 
 						  char *my_addr, char *other_addr,
-						  char *my_net, char *other_net,
-						  u_int my_netmask, u_int other_netmask)
+						  char *my_nets, char *other_nets)
 {
 	stroke_msg_t msg;
 	
+	memset(&msg, 0, sizeof(msg));
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.type = STR_ADD_CONN;
 	
 	msg.add_conn.name = push_string(&msg, name);
 	msg.add_conn.ikev2 = 1;
 	msg.add_conn.auth_method = 2;
-	msg.add_conn.eap_type = 0;
 	msg.add_conn.mode = 1;
 	msg.add_conn.mobike = 1;
-	msg.add_conn.force_encap = 0;
-	
-	msg.add_conn.rekey.reauth = 0;
-	msg.add_conn.rekey.ipsec_lifetime = 0;
-	msg.add_conn.rekey.ike_lifetime = 0;
-	msg.add_conn.rekey.margin = 0;
-	msg.add_conn.rekey.tries = 0;
-	msg.add_conn.rekey.fuzz = 0;
-	
-	msg.add_conn.algorithms.ike = NULL;
-	msg.add_conn.algorithms.esp = NULL;
-	
-	msg.add_conn.dpd.delay = 0;
 	msg.add_conn.dpd.action = 1;
-	
-	msg.add_conn.p2p.mediation = 0;
-	msg.add_conn.p2p.mediated_by = NULL;
-	msg.add_conn.p2p.peerid = NULL;
 	
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
-	msg.add_conn.me.subnet = push_string(&msg, my_net);
-	msg.add_conn.me.subnet_mask = my_netmask;
-	msg.add_conn.me.sourceip = NULL;
-	msg.add_conn.me.virtual_ip = 0;
-	msg.add_conn.me.cert = NULL;
-	msg.add_conn.me.ca = NULL;
+	msg.add_conn.me.subnets = push_string(&msg, my_nets);
 	msg.add_conn.me.sendcert = 1;
-	msg.add_conn.me.hostaccess = 0;
-	msg.add_conn.me.tohost = 0;
-	msg.add_conn.me.protocol = 0;
-	msg.add_conn.me.port = 0;
 	
 	msg.add_conn.other.id = push_string(&msg, other_id);
 	msg.add_conn.other.address = push_string(&msg, other_addr);
-	msg.add_conn.other.subnet = push_string(&msg, other_net);
-	msg.add_conn.other.subnet_mask = other_netmask;
-	msg.add_conn.other.sourceip = NULL;
-	msg.add_conn.other.virtual_ip = 0;
-	msg.add_conn.other.cert = NULL;
-	msg.add_conn.other.ca = NULL;
+	msg.add_conn.other.subnets = push_string(&msg, other_nets);
 	msg.add_conn.other.sendcert = 1;
-	msg.add_conn.other.hostaccess = 0;
-	msg.add_conn.other.tohost = 0;
-	msg.add_conn.other.protocol = 0;
-	msg.add_conn.other.port = 0;
 	
 	return send_stroke_msg(&msg);
 }
@@ -310,8 +274,7 @@ static void exit_usage(char *error)
 	printf("           MY_NET OTHER_NET MY_NETBITS OTHER_NETBITS\n");
 	printf("    where: ID is any IKEv2 ID \n");
 	printf("           ADDR is a IPv4 address\n");
-	printf("           NET is a IPv4 address of the subnet to tunnel\n");
-	printf("           NETBITS is the size of the subnet, as the \"24\" in 192.168.0.0/24\n");
+	printf("           NET is a IPv4 subnet in CIDR notation\n");
 	printf("  Delete a connection:\n");
 	printf("    stroke delete NAME\n");
 	printf("    where: NAME is a connection name added with \"stroke add\"\n");
@@ -367,8 +330,7 @@ int main(int argc, char *argv[])
 			res = add_connection(argv[2],
 								 argv[3], argv[4], 
 								 argv[5], argv[6], 
-								 argv[7], argv[8], 
-								 atoi(argv[9]), atoi(argv[10]));
+								 argv[7], argv[8]);
 			break;
 		case STROKE_DELETE:
 		case STROKE_DEL:

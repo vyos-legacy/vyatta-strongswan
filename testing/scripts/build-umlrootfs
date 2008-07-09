@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: build-umlrootfs 3471 2008-02-14 21:25:38Z andreas $
+# RCSID $Id: build-umlrootfs 4035 2008-06-05 07:25:27Z andreas $
 
 DIR=`dirname $0`
 
@@ -129,11 +129,10 @@ echo "ln -sf /usr/share/zoneinfo/${TZUML} /etc/localtime" >> $INSTALLSHELL
 echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
 echo -n "./configure --sysconfdir=/etc" >> $INSTALLSHELL
 echo -n " --with-random-device=/dev/urandom" >> $INSTALLSHELL
-echo -n " --enable-integrity-test" >> $INSTALLSHELL
 
 if [ "$USE_LIBCURL" = "yes" ]
 then
-    echo -n " --enable-http" >> $INSTALLSHELL
+    echo -n " --enable-curl" >> $INSTALLSHELL
 fi
 
 if [ "$USE_LDAP" = "yes" ]
@@ -151,11 +150,31 @@ then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
     fi
 
-if [ "$USE_P2P" = "yes" ]
+if [ "$USE_EAP_MD5" = "yes" ]
 then
-    echo -n " --enable-p2p" >> $INSTALLSHELL
+    echo -n " --enable-eap-md5" >> $INSTALLSHELL
+    fi
+
+if [ "$USE_SQL" = "yes" ]
+then
+    echo -n " --enable-sql --enable-sqlite" >> $INSTALLSHELL
+    fi
+
+if [ "$USE_MEDIATION" = "yes" ]
+then
+    echo -n " --enable-mediation" >> $INSTALLSHELL
+fi
+
+if [ "$USE_OPENSSL" = "yes" ]
+then
+    echo -n " --enable-openssl" >> $INSTALLSHELL
 fi
     
+if [ "$USE_INTEGRITY_TEST" = "yes" ]
+then
+    echo -n " --enable-integrity-test" >> $INSTALLSHELL
+fi
+
 if [ "$USE_LEAK_DETECTIVE" = "yes" ]
 then
     echo -n " --enable-leak-detective" >> $INSTALLSHELL
@@ -170,6 +189,12 @@ cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot..
 chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
 rm -f $INSTALLSHELL
 cgecho "done"
+
+######################################################
+# copying default /etc/ipsec.d/tables.sql to the root filesystem
+#
+cecho " * Copying '$HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql' to the root filesystem"
+cp -fp $HOSTCONFIGDIR/default/etc/ipsec.d/tables.sql $LOOPDIR/etc/ipsec.d/tables.sql
 
 ######################################################
 # copying the host's ssh public key

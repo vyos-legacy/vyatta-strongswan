@@ -1,5 +1,4 @@
 /* automatic handling of confread struct arguments
- * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2006 Andreas Steffen
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
@@ -13,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: args.c 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: args.c 3932 2008-05-12 10:05:49Z andreas $
  */
 
 #include <stddef.h>
@@ -59,6 +58,14 @@ static const char *LST_sendcert[] = {
     "never",
     "yes",
     "no",
+     NULL
+};
+
+static const char *LST_unique[] = {
+    "no",
+    "yes",
+    "replace",
+    "keep",
      NULL
 };
 
@@ -163,7 +170,8 @@ static const token_info_t token_info[] =
     { ARG_STR,  offsetof(starter_config_t, setup.charondebug),  NULL               },
     { ARG_STR,  offsetof(starter_config_t, setup.prepluto), NULL                   },
     { ARG_STR,  offsetof(starter_config_t, setup.postpluto), NULL                  },
-    { ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_bool              },
+    { ARG_STR,  offsetof(starter_config_t, setup.plutostderrlog), NULL             },
+    { ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_unique            },
     { ARG_UINT, offsetof(starter_config_t, setup.overridemtu), NULL                },
     { ARG_TIME, offsetof(starter_config_t, setup.crlcheckinterval), NULL           },
     { ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },
@@ -171,8 +179,8 @@ static const token_info_t token_info[] =
     { ARG_ENUM, offsetof(starter_config_t, setup.nocrsend), LST_bool               },
     { ARG_ENUM, offsetof(starter_config_t, setup.nat_traversal), LST_bool          },
     { ARG_TIME, offsetof(starter_config_t, setup.keep_alive), NULL                 },
+    { ARG_ENUM, offsetof(starter_config_t, setup.force_keepalive), LST_bool        },
     { ARG_STR,  offsetof(starter_config_t, setup.virtual_private), NULL            },
-    { ARG_STR,  offsetof(starter_config_t, setup.eapdir), NULL                     },
     { ARG_STR,  offsetof(starter_config_t, setup.pkcs11module), NULL               },
     { ARG_STR,  offsetof(starter_config_t, setup.pkcs11initargs), NULL             },
     { ARG_ENUM, offsetof(starter_config_t, setup.pkcs11keepstate), LST_bool        },
@@ -211,9 +219,9 @@ static const token_info_t token_info[] =
     { ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
     { ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
     { ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
-    { ARG_ENUM, offsetof(starter_conn_t, p2p_mediation), LST_bool                  },
-    { ARG_STR,  offsetof(starter_conn_t, p2p_mediated_by), NULL                    },
-    { ARG_STR,  offsetof(starter_conn_t, p2p_peerid), NULL                         },
+    { ARG_ENUM, offsetof(starter_conn_t, me_mediation), LST_bool                   },
+    { ARG_STR,  offsetof(starter_conn_t, me_mediated_by), NULL                     },
+    { ARG_STR,  offsetof(starter_conn_t, me_peerid), NULL                          },
 
     /* ca section keywords */
     { ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },
@@ -225,14 +233,15 @@ static const token_info_t token_info[] =
     { ARG_STR,  offsetof(starter_ca_t, crluri2), NULL                              },
     { ARG_STR,  offsetof(starter_ca_t, ocspuri), NULL                              },
     { ARG_STR,  offsetof(starter_ca_t, ocspuri2), NULL                             },
+    { ARG_STR,  offsetof(starter_ca_t, certuribase), NULL                          },
 
     /* end keywords */
     { ARG_MISC, 0, NULL  /* KW_HOST */                                             },
     { ARG_MISC, 0, NULL  /* KW_NEXTHOP */                                          },
-    { ARG_MISC, 0, NULL  /* KW_SUBNET */                                           },
+    { ARG_STR, offsetof(starter_end_t, subnet), NULL                               },
     { ARG_MISC, 0, NULL  /* KW_SUBNETWITHIN */                                     },
     { ARG_MISC, 0, NULL  /* KW_PROTOPORT */                                        },
-    { ARG_MISC, 0, NULL  /* KW_SOURCEIP */                                         },
+    { ARG_STR, offsetof(starter_end_t, srcip), NULL                                },
     { ARG_MISC, 0, NULL  /* KW_NATIP */                                            },
     { ARG_ENUM, offsetof(starter_end_t, firewall), LST_bool                        },
     { ARG_ENUM, offsetof(starter_end_t, hostaccess), LST_bool                      },

@@ -31,6 +31,11 @@ struct private_bridge_t {
 	/** list of attached interfaces */
 	linked_list_t *ifaces;
 };
+
+/**
+ * defined in iface.c
+ */
+bool iface_control(char *name, bool up);
 	
 /**
  * Implementation of bridge_t.get_name.
@@ -41,11 +46,11 @@ static char* get_name(private_bridge_t *this)
 }
 
 /**
- * Implementation of bridge_t.create_iface_iterator.
+ * Implementation of bridge_t.create_iface_enumerator.
  */
-static iterator_t* create_iface_iterator(private_bridge_t *this)
+static enumerator_t* create_iface_enumerator(private_bridge_t *this)
 {
-	return this->ifaces->create_iterator(this->ifaces, TRUE);
+	return this->ifaces->create_enumerator(this->ifaces);
 }
 
 /**
@@ -53,12 +58,12 @@ static iterator_t* create_iface_iterator(private_bridge_t *this)
  */
 static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 {
-	iterator_t *iterator;
-	iface_t *current;
+	enumerator_t *enumerator;
+	iface_t *current = NULL;
 	bool good = FALSE;
 
-	iterator = this->ifaces->create_iterator(this->ifaces, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		if (current == iface)
 		{
@@ -70,6 +75,7 @@ static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 			else
 			{
 				iface->set_bridge(iface, NULL);
+				this->ifaces->remove_at(this->ifaces, enumerator);
 				good = TRUE;
 			}
 			break;
@@ -80,7 +86,7 @@ static bool disconnect_iface(private_bridge_t *this, iface_t *iface)
 		DBG1("iface '%s' not found on bridge '%s'", iface->get_hostif(iface),
 			 this->name);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return good;
 }
 
@@ -118,8 +124,9 @@ static void unregister(iface_t *iface)
  */
 static void destroy(private_bridge_t *this)
 {
-	this->ifaces->invoke_function(this->ifaces, (void(*)(void*))unregister);
+	this->ifaces->invoke_function(this->ifaces, (linked_list_invoke_t)unregister);
 	this->ifaces->destroy(this->ifaces);
+	iface_control(this->name, FALSE);
 	if (br_del_bridge(this->name) != 0)
 	{
 		DBG1("deleting bridge '%s' from kernel failed: %m", this->name);
@@ -150,7 +157,7 @@ bridge_t *bridge_create(char *name)
 	
 	this = malloc_thing(private_bridge_t);
 	this->public.get_name = (char*(*)(bridge_t*))get_name;
-	this->public.create_iface_iterator = (iterator_t*(*)(bridge_t*))create_iface_iterator;
+	this->public.create_iface_enumerator = (enumerator_t*(*)(bridge_t*))create_iface_enumerator;
 	this->public.disconnect_iface = (bool(*)(bridge_t*, iface_t *iface))disconnect_iface;
 	this->public.connect_iface = (bool(*)(bridge_t*, iface_t *iface))connect_iface;
 	this->public.destroy = (void*)destroy;
@@ -160,6 +167,10 @@ bridge_t *bridge_create(char *name)
 		DBG1("creating bridge '%s' failed: %m", name);
 		free(this);
 		return NULL;
+	}
+	if (!iface_control(name, TRUE))
+	{
+		DBG1("bringing bridge '%s' up failed: %m", name);
 	}
 
 	this->name = strdup(name);

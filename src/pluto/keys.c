@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keys.c 3252 2007-10-06 21:24:50Z andreas $
+ * RCSID $Id: keys.c 3738 2008-04-02 19:04:45Z andreas $
  */
 
 #include <stddef.h>
@@ -83,7 +83,7 @@ static pubkey_t*
 allocate_RSA_public_key(const cert_t cert)
 {
     pubkey_t *pk = alloc_thing(pubkey_t, "pubkey");
-    chunk_t e, n;
+    chunk_t e = empty_chunk, n = empty_chunk;
 
     switch (cert.type)
     {
@@ -335,7 +335,7 @@ get_x509_private_key(const x509cert_t *cert)
 {
     secret_t *s;
     const RSA_private_key_t *pri = NULL;
-    const cert_t c = {CERT_X509_SIGNATURE, {cert}};
+    const cert_t c = {CERT_X509_SIGNATURE, {(x509cert_t*)cert}};
 
     pubkey_t *pubkey = allocate_RSA_public_key(c);
 
@@ -647,7 +647,7 @@ xauth_get_secret(xauth_t *xauth_secret)
  * find a matching secret
  */
 static bool
-xauth_verify_secret(const char *conn_name, const xauth_t *xauth_secret)
+xauth_verify_secret(const xauth_peer_t *peer, const xauth_t *xauth_secret)
 {
     bool found = FALSE;
     secret_t *s;
@@ -1473,7 +1473,7 @@ add_pgp_public_key(pgpcert_t *cert , time_t until
 void
 remove_x509_public_key(const x509cert_t *cert)
 {
-    const cert_t c = {CERT_X509_SIGNATURE, {cert}};
+    const cert_t c = {CERT_X509_SIGNATURE, {(x509cert_t*)cert}};
     pubkey_list_t *p, **pp;
     pubkey_t *revoked_pk;
 

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  * 
- * RCSID $Id: alg_info.c 3253 2007-10-06 21:39:00Z andreas $
+ * RCSID $Id: alg_info.c 3846 2008-04-18 17:01:45Z andreas $
  */
 
 #include <stddef.h>
@@ -96,8 +96,8 @@ alg_info_esp_sadb2aa(int sadb_aalg)
     int auth = 0;
 
     switch(sadb_aalg) {
-	case SADB_AALG_MD5_HMAC:
-	case SADB_AALG_SHA1_HMAC:
+	case SADB_AALG_MD5HMAC:
+	case SADB_AALG_SHA1HMAC:
 	    auth = sadb_aalg - 1;
 	    break;
 	/* since they are the same ...  :)  */
@@ -195,7 +195,11 @@ aalg_getbyname_esp(const char *const str, int len)
 
     /* interpret 'SHA' as 'SHA1' */
     if (strncasecmp("SHA", str, len) == 0)
-	return enum_search(&auth_alg_names, "AUTH_ALGORITHM_HMAC_SHA1");
+	return AUTH_ALGORITHM_HMAC_SHA1;
+
+    /* interpret 'AESXCBC' as 'AES_XCBC_MAC' */
+    if (strncasecmp("AESXCBC", str, len) == 0)
+	return AUTH_ALGORITHM_AES_XCBC_MAC;
 
     ret = enum_search_prefix(&auth_alg_names,"AUTH_ALGORITHM_HMAC_", str ,len);
     if (ret >= 0)

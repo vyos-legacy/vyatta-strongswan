@@ -1,10 +1,3 @@
-/**
- * @file process_message_job.h
- * 
- * @brief Implementation of process_message_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,8 +12,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: process_message_job.c 3666 2008-03-26 18:40:19Z tobias $
  */
-
 
 #include "process_message_job.h"
 
@@ -59,7 +53,7 @@ static void execute(private_process_message_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
-#ifdef P2P
+#ifdef ME
 	/* if this is an unencrypted INFORMATIONAL exchange it is likely a 
 	 * connectivity check. */
 	if (this->message->get_exchange_type(this->message) == INFORMATIONAL &&
@@ -74,7 +68,7 @@ static void execute(private_process_message_job_t *this)
 		destroy(this);
 		return;
 	}
-#endif /* P2P */
+#endif /* ME */
 	
 	ike_sa = charon->ike_sa_manager->checkout_by_message(charon->ike_sa_manager,
 														 this->message);

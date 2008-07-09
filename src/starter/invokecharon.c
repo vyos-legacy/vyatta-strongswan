@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokecharon.c 3344 2007-11-15 18:34:05Z martin $
+ * RCSID $Id: invokecharon.c 3928 2008-05-11 07:59:00Z andreas $
  */
 
 #include <sys/types.h>
@@ -101,11 +101,11 @@ starter_stop_charon (void)
 
 
 int
-starter_start_charon (starter_config_t *cfg, bool debug)
+starter_start_charon (starter_config_t *cfg, bool no_fork)
 {
-    int pid, i;
     struct stat stb;
-    char buffer[BUF_LEN], buffer1[BUF_LEN];
+    int pid, i;
+    char buffer[BUF_LEN];
     int argc = 1;
     char *arg[] = {
 	CHARON_CMD, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -114,29 +114,9 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
     };
 
-    if (!debug)
+    if (!no_fork)
     {
 	arg[argc++] = "--use-syslog";
-    }
-    if (cfg->setup.strictcrlpolicy)
-    {
-	arg[argc++] = "--strictcrlpolicy";
-	arg[argc++] = cfg->setup.strictcrlpolicy == STRICT_IFURI ? "2":"1";
-    }
-    if (cfg->setup.cachecrls)
-    {
-	arg[argc++] = "--cachecrls";
-    }
-    if (cfg->setup.crlcheckinterval > 0)
-    {
-	snprintf(buffer1, BUF_LEN, "%u", cfg->setup.crlcheckinterval);
-	arg[argc++] = "--crlcheckinterval";
-	arg[argc++] = buffer1;
-    }
-    if (cfg->setup.eapdir)
-    {
-	arg[argc++] = "--eapdir";
-	arg[argc++] = cfg->setup.eapdir;
     }
 
     {   /* parse debug string */
@@ -178,34 +158,6 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     {
 	unlink(CHARON_CTL_FILE);
 	_stop_requested = 0;
-
-	/* if ipsec.secrets file is missing then generate RSA default key pair */
-	if (stat(SECRETS_FILE, &stb) != 0)
-	{
-	    mode_t oldmask;
-	    FILE *f;
-
-	    plog("no %s file, generating RSA key", SECRETS_FILE);
-	    seteuid(IPSEC_UID);
-	    setegid(IPSEC_GID);
-	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
-	    seteuid(0);
-	    setegid(0);
-
-	    /* ipsec.secrets is root readable only */
-	    oldmask = umask(0066);
-
-	    f = fopen(SECRETS_FILE, "w");
-	    if (f)
-	    {
-		fprintf(f, "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n");
-		fprintf(f, "\n");
-		fprintf(f, ": RSA myKey.der\n");
-		fclose(f);
-	    }
-	    chown(SECRETS_FILE, IPSEC_UID, IPSEC_GID);
-	    umask(oldmask);
-	}
 
 	pid = fork();
 	switch (pid)

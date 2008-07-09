@@ -1,10 +1,3 @@
-/**
- * @file ike_dpd.c
- *
- * @brief Implementation of the ike_dpd task.
- *
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_dpd.c 3589 2008-03-13 14:14:44Z martin $
  */
 
 #include "ike_dpd.h"

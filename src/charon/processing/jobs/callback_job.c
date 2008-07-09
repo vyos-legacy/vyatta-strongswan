@@ -1,10 +1,3 @@
-/**
- * @file callback_job.c
- * 
- * @brief Implementation of callback_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: callback_job.c 3742 2008-04-03 09:19:12Z tobias $
  */
  
 #include "callback_job.h"
@@ -60,11 +55,6 @@ struct private_callback_job_t {
 	 */
 	pthread_mutex_t mutex;
 
-	/**
-	 * condvar to synchronize thread startup/cancellation
-	 */
-	pthread_cond_t condvar;
-	
 	/**
 	 * list of asociated child jobs
 	 */
@@ -145,7 +135,6 @@ static void execute(private_callback_job_t *this)
 
 	pthread_mutex_lock(&this->mutex);
 	this->thread = pthread_self();
-	pthread_cond_signal(&this->condvar);
 	pthread_mutex_unlock(&this->mutex);
 	
 	pthread_cleanup_push((void*)destroy, this);
@@ -192,7 +181,6 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 
 	/* private variables */
 	pthread_mutex_init(&this->mutex, NULL);
-	pthread_cond_init(&this->condvar, NULL);
 	this->callback = cb;
 	this->data = data;
 	this->cleanup = cleanup;

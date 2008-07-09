@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterwhack.c 3405 2007-12-19 00:49:32Z andreas $
+ * RCSID $Id: starterwhack.c 3880 2008-04-27 10:49:31Z andreas $
  */
 
 #include <sys/types.h>
@@ -31,6 +31,8 @@
 #include "starterwhack.h"
 #include "confread.h"
 #include "files.h"
+
+#define ip_version(string)	(strchr(string, '.') ? AF_INET : AF_INET6)
 
 static int
 pack_str (char **p, char **next, char **roof)
@@ -149,13 +151,31 @@ connection_name(starter_conn_t *conn)
 
 static void
 set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
-{
+{   
+    if (end->srcip && end->srcip[0] != '%')
+    {
+	int len = 0;
+	char *pos;
+
+	pos = strchr(end->srcip, '/');
+	if (pos)
+	{
+	    /* use first address only for pluto */
+	    len = pos - end->srcip;
+	}
+	w->has_srcip = !end->has_natip;
+	ttoaddr(end->srcip, len, ip_version(end->srcip), &w->host_srcip);
+    }
+    else
+    {
+	anyaddr(AF_INET, &w->host_srcip);	
+    }
+    
     w->id                  = end->id;
     w->cert                = end->cert;
     w->ca                  = end->ca;
     w->groups              = end->groups;
     w->host_addr           = end->addr;
-    w->host_srcip          = end->srcip;
     w->has_client          = end->has_client;
 
     if (family == AF_INET6 && isanyaddr(&end->nexthop))
@@ -165,13 +185,28 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
     w->host_nexthop        = end->nexthop;
 
     if (w->has_client)
-	w->client          = end->subnet;
+    {
+	char *pos;
+	int len = 0;
+
+	pos = strchr(end->subnet, ',');
+	if (pos)
+	{
+	    len = pos - end->subnet;
+	}
+	ttosubnet(end->subnet, len, ip_version(end->subnet), &w->client);
+    }
     else
+    {
+	if (end->has_virt)
+	{
+	    w->virt = end->subnet;
+	}
 	w->client.addr.u.v4.sin_family = addrtypeof(&w->host_addr);
+    }
 
     w->has_client_wildcard = end->has_client_wildcard;
     w->has_port_wildcard   = end->has_port_wildcard;
-    w->has_srcip           = end->has_srcip;
     w->has_natip           = end->has_natip;
     w->allow_any           = end->allow_any && !end->dns_failed;
     w->modecfg             = end->modecfg;
@@ -181,7 +216,6 @@ set_whack_end(whack_end_t *w, starter_end_t *end, sa_family_t family)
     w->host_port           = IKE_UDP_PORT;
     w->port                = end->port;
     w->protocol            = end->protocol;
-    w->virt                = end->virt;
 
     if (w->port != 0)
     {
@@ -250,6 +284,14 @@ starter_whack_add_conn(starter_conn_t *conn)
     msg.sa_rekey_fuzz         = conn->sa_rekey_fuzz;
     msg.sa_keying_tries       = conn->sa_keying_tries;
     msg.policy                = conn->policy;
+
+    /*
+     * Make sure the IKEv2-only policy bits are unset for IKEv1 connections
+     */
+    msg.policy &= ~POLICY_DONT_REAUTH;
+    msg.policy &= ~POLICY_BEET;
+    msg.policy &= ~POLICY_MOBIKE;
+    msg.policy &= ~POLICY_FORCE_ENCAP;
 
     set_whack_end(&msg.left, &conn->left, conn->addr_family);
     set_whack_end(&msg.right, &conn->right, conn->addr_family);

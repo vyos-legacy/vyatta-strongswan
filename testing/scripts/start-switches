@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: start-switches 3273 2007-10-08 20:18:34Z andreas $
+# RCSID $Id: start-switches 3590 2008-03-13 14:20:20Z martin $
 
 DIR=`dirname $0`
 

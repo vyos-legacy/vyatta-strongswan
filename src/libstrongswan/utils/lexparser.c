@@ -1,12 +1,5 @@
-/**
- * @file lexparser.c
- * 
- * @brief lexical parser for text-based configuration files
- *  
- */
-
 /*
- * Copyright (C) 2001-2006 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2001-2006 Andreas Steffen
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: lexparser.c 3353 2007-11-19 12:27:08Z martin $
+ * $Id: lexparser.c 3872 2008-04-25 07:04:59Z andreas $
  */
 
 /* memrchr is a GNU extension */
@@ -55,6 +48,14 @@ bool extract_token(chunk_t *token, const char termination, chunk_t *src)
 {
 	u_char *eot = memchr(src->ptr, termination, src->len);
 	
+	if (termination == ' ')
+	{
+		u_char *eot_tab = memchr(src->ptr, '\t', src->len);
+
+		/* check if a tab instead of a space terminates the token */
+		eot = ( eot_tab == NULL || (eot && eot < eot_tab) ) ? eot : eot_tab;
+	}
+
 	/* initialize empty token */
 	*token = chunk_empty;
 	

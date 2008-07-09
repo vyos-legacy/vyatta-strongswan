@@ -1,10 +1,3 @@
-/**
- * @file ike_delete.c
- *
- * @brief Implementation of the ike_delete task.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_delete.c 3802 2008-04-14 08:17:18Z martin $
  */
 
 #include "ike_delete.h"
@@ -87,18 +82,18 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 	 * come so far without being correct */
 	switch (this->ike_sa->get_state(this->ike_sa))
 	{
-		case IKE_DELETING:
-			this->simultaneous = TRUE;
-			break;
 		case IKE_ESTABLISHED:
 			DBG1(DBG_IKE, "deleting IKE_SA on request");
+			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
+			this->ike_sa->reestablish(this->ike_sa);
 			break;
-		case IKE_REKEYING:
-			break;
+		case IKE_DELETING:
+			this->simultaneous = TRUE;
+			/* FALL */
 		default:
+			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 			break;
 	}
-	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 	return NEED_MORE;
 }
 

@@ -1,12 +1,5 @@
-/**
- * @file initiate_mediation_job.c
- * 
- * @brief Implementation of initiate_mediation_job_t.
- * 
- */
-
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,8 +11,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: initiate_mediation_job.c 3792 2008-04-10 12:51:04Z tobias $
  */
-
 
 #include "initiate_mediation_job.h"
 
@@ -44,11 +38,6 @@ struct private_initiate_mediation_job_t {
 	ike_sa_id_t *mediated_sa_id;
 	
 	/**
-	 * Child config of the CHILD_SA of the mediated connection.
-	 */
-	child_cfg_t *mediated_child;
-	
-	/**
 	 * ID of the IKE_SA of the mediation connection.
 	 */
 	ike_sa_id_t *mediation_sa_id;
@@ -61,7 +50,6 @@ static void destroy(private_initiate_mediation_job_t *this)
 {
 	DESTROY_IF(this->mediation_sa_id);
 	DESTROY_IF(this->mediated_sa_id);
-	DESTROY_IF(this->mediated_child);
 	free(this);
 }
 
@@ -100,11 +88,12 @@ static void initiate(private_initiate_mediation_job_t *this)
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediated_sa);
 		
 		mediation_cfg = mediated_cfg->get_mediated_by(mediated_cfg);
+		mediation_cfg->get_ref(mediation_cfg);
 		
 		if (charon->connect_manager->check_and_register(charon->connect_manager,
 				mediation_cfg->get_my_id(mediation_cfg),
 				mediated_cfg->get_peer_id(mediated_cfg),
-				this->mediated_sa_id, this->mediated_child))
+				this->mediated_sa_id))
 		{
 			mediated_cfg->destroy(mediated_cfg);
 			mediation_cfg->destroy(mediation_cfg);
@@ -121,8 +110,8 @@ static void initiate(private_initiate_mediation_job_t *this)
 		 * we do not check the status, but NEED_MORE would be returned on success
 		 * because the registered callback returns FALSE then
 		 * this->mediation_sa_id is set in the callback */
-		charon->interfaces->initiate(charon->interfaces,
-				mediation_cfg, NULL, (interface_manager_cb_t)initiate_callback, this);
+		charon->controller->initiate(charon->controller,
+				mediation_cfg, NULL, (controller_cb_t)initiate_callback, this);
 		if (!this->mediation_sa_id)
 		{
 			DBG1(DBG_JOB, "initiating mediation connection '%s' failed",
@@ -216,7 +205,6 @@ static private_initiate_mediation_job_t *initiate_mediation_job_create_empty()
 	/* private variables */
 	this->mediation_sa_id = NULL;
 	this->mediated_sa_id = NULL;
-	this->mediated_child = NULL;
 
 	return this;
 }
@@ -224,16 +212,13 @@ static private_initiate_mediation_job_t *initiate_mediation_job_create_empty()
 /*
  * Described in header
  */
-initiate_mediation_job_t *initiate_mediation_job_create(ike_sa_id_t *ike_sa_id,
-		child_cfg_t *child_cfg)
+initiate_mediation_job_t *initiate_mediation_job_create(ike_sa_id_t *ike_sa_id)
 {
 	private_initiate_mediation_job_t *this = initiate_mediation_job_create_empty();
 	
 	this->public.job_interface.execute = (void (*) (job_t *)) initiate;
 	
 	this->mediated_sa_id = ike_sa_id->clone(ike_sa_id);
-	child_cfg->get_ref(child_cfg);
-	this->mediated_child = child_cfg;
 
 	return &this->public;
 }

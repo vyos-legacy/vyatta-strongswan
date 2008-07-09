@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.h 3252 2007-10-06 21:24:50Z andreas $
+ * RCSID $Id: constants.h 4051 2008-06-10 09:08:27Z tobias $
  */
 
 #ifndef _CONSTANTS_H
@@ -877,6 +877,7 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_BEET		LELEM(22)	/* bound end2end tunnel, IKEv2 */
 #define POLICY_MOBIKE		LELEM(23)	/* enable MOBIKE for IKEv2  */
 #define POLICY_FORCE_ENCAP	LELEM(24)	/* force UDP encapsulation (IKEv2)  */
+#define POLICY_ECDSASIG	LELEM(25)   /* ecdsa signature (IKEv2) */
 
 /* Any IPsec policy?  If not, a connection description
  * is only for ISAKMP SA, not IPSEC SA.  (A pun, I admit.)
@@ -992,6 +993,8 @@ extern enum_names auth_alg_names, extended_auth_alg_names;
 #define AUTH_ALGORITHM_HMAC_SHA2_384	6
 #define AUTH_ALGORITHM_HMAC_SHA2_512	7
 #define AUTH_ALGORITHM_HMAC_RIPEMD	8
+#define AUTH_ALGORITHM_AES_XCBC_MAC	9
+#define AUTH_ALGORITHM_SIG_RSA		10
 #define AUTH_ALGORITHM_NULL		251
 
 /* Oakley Lifetime Type attribute

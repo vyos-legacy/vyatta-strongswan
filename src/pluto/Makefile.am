@@ -123,12 +123,19 @@ if USE_NAT_TRANSPORT
 endif
 
 # This compile option activates dynamic URL fetching using libcurl
-if USE_LIBCURL
+if USE_CURL
   pluto_LDADD += -lcurl
+  AM_CFLAGS += -DLIBCURL
 endif
 
 # This compile option activates dynamic LDAP CRL fetching
-if USE_LIBLDAP
+if USE_LDAP
   pluto_LDADD += -lldap -llber
+  AM_CFLAGS += -DLIBLDAP
+endif
+
+# This compile option activates smartcard support
+if USE_SMARTCARD
+  AM_CFLAGS += -DSMARTCARD
 endif
 

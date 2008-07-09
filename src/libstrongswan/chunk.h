@@ -1,12 +1,5 @@
-/**
- * @file chunk.h
- *
- * @brief Pointer/length abstraction and its functions.
- *
- */
-
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,6 +12,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: chunk.h 3868 2008-04-24 13:26:22Z martin $
+ */
+
+/**
+ * @defgroup chunk chunk
+ * @{ @ingroup libstrongswan
  */
 
 #ifndef CHUNK_H_
@@ -26,8 +26,7 @@
 
 #include <string.h>
 #include <stdarg.h>
-
-#include <library.h>
+#include <sys/types.h>
 
 typedef struct chunk_t chunk_t;
 
@@ -40,6 +39,8 @@ struct chunk_t {
 	/** Length of data in bytes */
 	size_t len;
 };
+
+#include <library.h>
 
 /**
  * A { NULL, 0 }-chunk handy for initialization.
@@ -64,7 +65,7 @@ size_t chunk_length(const char *mode, ...);
 /**
  * Concatenate chunks into a chunk pointing to "ptr",
  * "mode" is a string of "c" (copy) and "m" (move), which says
- * how to handle to chunks in "..."
+ * how to handle the chunks in "..."
  */
 chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...);
 
@@ -81,12 +82,54 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
 /**
   * Write the binary contents of a chunk_t to a file
   */
-bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask, bool force);
+bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
 
 /**
- * convert a chunk to an allocated hex string 
+ * Convert a chunk of data to hex encoding.
+ *
+ * The resulting string is '\0' terminated, but the chunk does not include
+ * the '\0'. If buf is supplied, it must hold at least (chunk.len * 2 + 1).
+ *
+ * @param chunk			data to convert
+ * @param buff			buffer to write to, NULL to malloc
+ * @param uppercase		TRUE to use uppercase letters
+ * @return				chunk of encoded data
  */
-char *chunk_to_hex(chunk_t chunk, bool uppercase);
+chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase);
+
+/**
+ * Convert a hex encoded in a binary chunk.
+ *
+ * If buf is supplied, it must hold at least (hex.len / 2).
+ *
+ * @param hex			hex encoded input data
+ * @param buf			buffer to write decoded data, NULL to malloc
+ * @return				converted data
+ */
+chunk_t chunk_from_hex(chunk_t hex, char *buf);
+
+/**
+ * Convert a chunk of data to its base64 encoding.
+ *
+ * The resulting string is '\0' terminated, but the chunk does not include
+ * the '\0'. If buf is supplied, it must hold at least (chunk.len * 4 / 3 + 1).
+ *
+ * @param chunk			data to convert
+ * @param buff			buffer to write to, NULL to malloc
+ * @return				chunk of encoded data
+ */
+chunk_t chunk_to_base64(chunk_t chunk, char *buf);
+
+/**
+ * Convert a base64 in a binary chunk.
+ *
+ * If buf is supplied, it must hold at least (base64.len / 4 * 3).
+ *
+ * @param base64		base64 encoded input data
+ * @param buf			buffer to write decoded data, NULL to malloc
+ * @return				converted data
+ */
+chunk_t chunk_from_base64(chunk_t base64, char *buf);
 
 /**
  * Free contents of a chunk
@@ -94,9 +137,9 @@ char *chunk_to_hex(chunk_t chunk, bool uppercase);
 void chunk_free(chunk_t *chunk);
 
 /**
- * Overwrite the contents of a chunk with pseudo-random bytes and free them
+ * Overwrite the contents of a chunk and free it
  */
-void chunk_free_randomized(chunk_t *chunk);
+void chunk_clear(chunk_t *chunk);
 
 /**
  * Initialize a chunk to point to buffer inspectable by sizeof()
@@ -156,9 +199,11 @@ int chunk_compare(chunk_t a, chunk_t b);
 bool chunk_equals(chunk_t a, chunk_t b);
 
 /**
- * Compare two chunks for equality,
- * NULL chunks are always equal.
+ * Get printf hooks for a chunk.
+ *
+ * Arguments are: 
+ *    chunk_t *chunk
  */
-bool chunk_equals_or_null(chunk_t a, chunk_t b);
+printf_hook_functions_t chunk_get_printf_hooks();
 
-#endif /* CHUNK_H_ */
+#endif /* CHUNK_H_ @}*/

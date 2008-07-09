@@ -1,14 +1,9 @@
-/**
- * @file fips_canister_start.c
- * 
- * @brief Marks the start of TEXT and RODATA.
- * 
- */
-
 /* ====================================================================
  * Copyright (c) 2005 The OpenSSL Project. Rights for redistribution
  * and usage in source and binary forms are granted according to the
  * OpenSSL license.
+ *
+ * $Id: fips_canister_start.c 3589 2008-03-13 14:14:44Z martin $
  */
 
 #include <stdio.h>

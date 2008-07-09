@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokepluto.c 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: invokepluto.c 3942 2008-05-13 07:37:08Z martin $
  */
 
 #include <sys/types.h>
@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <freeswan.h>
 
@@ -104,10 +105,10 @@ starter_stop_pluto (void)
 	}
 
 int
-starter_start_pluto (starter_config_t *cfg, bool debug)
+starter_start_pluto (starter_config_t *cfg, bool no_fork)
 {
-    int i;
     struct stat stb;
+    int i;
     pid_t pid;
     char **l;
     int argc = 2;
@@ -121,7 +122,7 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 
     printf ("starter_start_pluto entered\n");
 
-    if (debug)
+    if (cfg->setup.plutostderrlog || no_fork)
     {
 	arg[argc++] = "--stderrlog";
     }
@@ -167,6 +168,10 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
     {
 	arg[argc++] = "--nat_traversal";
     }
+    if (cfg->setup.force_keepalive)
+    {
+	arg[argc++] = "--force_keepalive";
+    }
     if (cfg->setup.keep_alive)
     {
 	static char buf2[15];
@@ -175,13 +180,11 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 	snprintf(buf2, sizeof(buf2), "%u", cfg->setup.keep_alive);
 	arg[argc++] = buf2;
     }
-#ifdef VIRTUAL_IP
     if (cfg->setup.virtual_private)
     {
 	arg[argc++] = "--virtual_private";
 	arg[argc++] = cfg->setup.virtual_private;
     }
-#endif
     if (cfg->setup.pkcs11module)
     {
 	arg[argc++] = "--pkcs11module";
@@ -214,34 +217,6 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 	if (cfg->setup.prepluto)
 	    system(cfg->setup.prepluto);
 
-	/* if ipsec.secrets file is missing then generate RSA default key pair */
-	if (stat(SECRETS_FILE, &stb) != 0)
-	{
-	    mode_t oldmask;
-	    FILE *f;
-
-	    plog("no %s file, generating RSA key", SECRETS_FILE);
-	    seteuid(IPSEC_UID);
-	    setegid(IPSEC_GID);
-	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
-	    seteuid(0);
-	    setegid(0);
-
-	    /* ipsec.secrets is root readable only */
-	    oldmask = umask(0066);
-
-	    f = fopen(SECRETS_FILE, "w");
-	    if (f)
-	    {
-		fprintf(f, "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n");
-		fprintf(f, "\n");
-		fprintf(f, ": RSA myKey.der\n");
-		fclose(f);
-	    }
-	    chown(SECRETS_FILE, IPSEC_UID, IPSEC_GID);
-	    umask(oldmask);
-	}
-
 	pid = fork();
 	switch (pid)
 	{
@@ -250,6 +225,21 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 	    return -1;
 	case 0:
 	    /* child */
+	    if (cfg->setup.plutostderrlog)
+	    {
+		int f = creat(cfg->setup.plutostderrlog, 00644);
+
+   		/* redirect stderr to file */
+		if (f < 0)
+		{
+		    plog("couldn't open stderr redirection file '%s'",
+			  cfg->setup.plutostderrlog);
+		}
+		else
+		{
+		    dup2(f, 2);
+		}
+	    }
 	    setsid();
 	    sigprocmask(SIG_SETMASK, 0, NULL);
 	    execv(arg[0], arg);

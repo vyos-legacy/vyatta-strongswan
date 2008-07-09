@@ -1,10 +1,3 @@
-/**
- * @file main.c
- *
- * @brief Implementation of dispatcher_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,54 +11,68 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: main.c 3967 2008-05-16 08:52:32Z martin $
  */
 
 #include <dispatcher.h>
+#include <debug.h>
 #include <stdio.h>
 
 #include "manager.h"
-#include "database.h"
+#include "storage.h"
 #include "controller/auth_controller.h"
 #include "controller/ikesa_controller.h"
 #include "controller/gateway_controller.h"
 #include "controller/control_controller.h"
 #include "controller/config_controller.h"
 
-#define DBFILE IPSECDIR "/manager.db"
-#define SESSION_TIMEOUT 900
-#define THREADS 10
-
 int main (int arc, char *argv[])
 {
 	dispatcher_t *dispatcher;
-	database_t *database;
-	char *socket = NULL;
+	storage_t *storage;
+	char *socket;
+	char *database;
+	bool debug;
+	int threads, timeout;
+
+	library_init(STRONGSWAN_CONF);
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
+		lib->settings->get_str(lib->settings, "manager.load", PLUGINS));
 	
-#ifdef FCGI_SOCKET
-	socket = FCGI_SOCKET;
-#endif /* FCGI_SOCKET */
-	
-	database = database_create(DBFILE);
-	if (database == NULL)
+	socket = lib->settings->get_str(lib->settings, "manager.socket", NULL);
+	debug = lib->settings->get_bool(lib->settings, "manager.debug", FALSE);
+	timeout = lib->settings->get_int(lib->settings, "manager.timeout", 900);
+	threads = lib->settings->get_int(lib->settings, "manager.threads", 10);
+	database = lib->settings->get_str(lib->settings, "manager.database", NULL);
+	if (!database)
 	{
-		fprintf(stderr, "opening database '%s' failed.\n", DBFILE);
+		DBG1("database URI undefined, set manager.database in strongswan.conf");
 		return 1;
 	}
 	
-	dispatcher = dispatcher_create(socket, SESSION_TIMEOUT,
-						(context_constructor_t)manager_create, database);
+	storage = storage_create(database);
+	if (storage == NULL)
+	{
+		return 1;
+	}
+	
+	dispatcher = dispatcher_create(socket, debug, timeout,
+						(context_constructor_t)manager_create, storage);
 	dispatcher->add_controller(dispatcher, ikesa_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, gateway_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, auth_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, control_controller_create, NULL);
 	dispatcher->add_controller(dispatcher, config_controller_create, NULL);
 	
-	dispatcher->run(dispatcher, THREADS, NULL, NULL, NULL, NULL);
+	dispatcher->run(dispatcher, threads);
 	
 	dispatcher->waitsignal(dispatcher);
 	
 	dispatcher->destroy(dispatcher);
-	database->destroy(database);
+	storage->destroy(storage);
+	
+	library_deinit();
 
     return 0;
 }

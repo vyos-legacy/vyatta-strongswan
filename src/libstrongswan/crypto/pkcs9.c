@@ -1,13 +1,5 @@
-/**
- * @file pkcs9.c
- *
- * @brief Implementation of pkcs9_t.
- *
- */
-
 /*
  * Copyright (C)2008 Andreas Steffen
- *
  * Hochschule fuer Technik Rapperswil, Switzerland
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: pkcs7.c 3423 2008-01-22 10:32:37Z andreas $
+ * $Id: pkcs9.c 3891 2008-04-28 16:00:52Z andreas $
  */
 
 #include <library.h>
@@ -28,6 +20,7 @@
 
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
+#include <asn1/asn1_parser.h>
 #include <utils/linked_list.h>
 
 #include "pkcs9.h"
@@ -83,22 +76,6 @@ struct attribute_t {
 	void (*destroy) (attribute_t *this);
 
 };
-
-/* ASN.1 definition of the X.501 atttribute type */
-
-static const asn1Object_t attributesObjects[] = {
-	{ 0, "attributes",		ASN1_SET,		ASN1_LOOP }, /* 0 */
-	{ 1,   "attribute",		ASN1_SEQUENCE,	ASN1_NONE }, /* 1 */
-	{ 2,     "type",		ASN1_OID,		ASN1_BODY }, /* 2 */
-	{ 2,     "values",		ASN1_SET,		ASN1_LOOP }, /* 3 */
-	{ 3,       "value",		ASN1_EOC,		ASN1_RAW  }, /* 4 */
-	{ 2,     "end loop",	ASN1_EOC,		ASN1_END  }, /* 5 */
-	{ 0, "end loop",		ASN1_EOC,		ASN1_END  }, /* 6 */
-};
-
-#define ATTRIBUTE_OBJ_TYPE 	2
-#define ATTRIBUTE_OBJ_VALUE	4
-#define ATTRIBUTE_OBJ_ROOF	7
 
 /**
  * PKCS#9 attribute type OIDs
@@ -267,7 +244,7 @@ static void build_encoding(private_pkcs9_t *this)
 
 	/* allocate memory for the attributes and build the encoding */
 	{
-		u_char *pos = build_asn1_object(&this->encoding, ASN1_SET, attributes_len);
+		u_char *pos = asn1_build_object(&this->encoding, ASN1_SET, attributes_len);
 		
 		iterator = this->attributes->create_iterator(this->attributes, TRUE);
 
@@ -335,7 +312,8 @@ static chunk_t get_messageDigest(private_pkcs9_t *this)
 	{
 		return chunk_empty;
 	}
-	if (!parse_asn1_simple_object(&value, asn1_attributeType(oid), 0, oid_names[oid].name))
+	if (!asn1_parse_simple_object(&value, asn1_attributeType(oid), 0,
+								  oid_names[oid].name))
 	{
 		return chunk_empty;
 	}
@@ -398,29 +376,41 @@ pkcs9_t *pkcs9_create(void)
 }
 
 /**
+ * ASN.1 definition of the X.501 atttribute type
+ */
+static const asn1Object_t attributesObjects[] = {
+	{ 0, "attributes",		ASN1_SET,		ASN1_LOOP }, /* 0 */
+	{ 1,   "attribute",		ASN1_SEQUENCE,	ASN1_NONE }, /* 1 */
+	{ 2,     "type",		ASN1_OID,		ASN1_BODY }, /* 2 */
+	{ 2,     "values",		ASN1_SET,		ASN1_LOOP }, /* 3 */
+	{ 3,       "value",		ASN1_EOC,		ASN1_RAW  }, /* 4 */
+	{ 2,     "end loop",	ASN1_EOC,		ASN1_END  }, /* 5 */
+	{ 0, "end loop",		ASN1_EOC,		ASN1_END  }, /* 6 */
+	{ 0, "exit",			ASN1_EOC,		ASN1_EXIT }
+};
+#define ATTRIBUTE_OBJ_TYPE 	2
+#define ATTRIBUTE_OBJ_VALUE	4
+
+/**
  * Parse a PKCS#9 attribute list
  */
 static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 {
-	asn1_ctx_t ctx;
+	asn1_parser_t *parser;
 	chunk_t object;
-	u_int level;
+	int objectID;
 	int oid = OID_UNKNOWN;
-	int objectID = 0;
+	bool success = FALSE;
 
-	asn1_init(&ctx, chunk, level0, FALSE, FALSE);
+	parser = asn1_parser_create(attributesObjects, chunk);
+	parser->set_top_level(parser, level0);
 
-	while (objectID < ATTRIBUTE_OBJ_ROOF)
+	while (parser->iterate(parser, &objectID, &object))
 	{
-		if (!extract_object(attributesObjects, &objectID, &object, &level, &ctx))
-		{
-	     return FALSE;
-		}
-
 		switch (objectID)
 		{
 			case ATTRIBUTE_OBJ_TYPE:
-				oid = known_oid(object);
+				oid = asn1_known_oid(object);
 				break;
 			case ATTRIBUTE_OBJ_VALUE:
 				if (oid == OID_UNKNOWN)
@@ -431,7 +421,8 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 				{
 					attribute_t *attribute = attribute_create(oid, object);
 
-					this->attributes->insert_last(this->attributes, (void*)attribute);
+					this->attributes->insert_last(this->attributes,
+												 (void*)attribute);
 				}
 				/* parse known attributes  */
 				{
@@ -439,16 +430,21 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 
 					if (type != ASN1_EOC)
 					{
-				    	if (!parse_asn1_simple_object(&object, type, level+1, oid_names[oid].name))
+				    	if (!asn1_parse_simple_object(&object, type,
+										parser->get_level(parser)+1,
+										oid_names[oid].name))
 						{
-							return FALSE;
+							goto end;
 						}
 					}
 				}
 		}
-		objectID++;
 	}
-	return TRUE;
+	success = parser->success(parser);
+
+end:
+	parser->destroy(parser);
+	return success;
 }
 
 

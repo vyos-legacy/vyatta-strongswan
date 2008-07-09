@@ -1,5 +1,5 @@
 .TH IPSEC.CONF 5 "27 Jun 2007"
-.\" RCSID $Id: ipsec.conf.5 3394 2007-12-13 17:31:21Z martin $
+.\" RCSID $Id: ipsec.conf.5 3934 2008-05-12 12:46:30Z andreas $
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
@@ -373,7 +373,7 @@ for the connection, e.g.
 (encryption-integrity-[dh-group]). If dh-group is specified, CHILD_SA setup
 and rekeying include a separate diffe hellman exchange (IKEv2 only).
 .TP
-.B force_encap
+.B forceencaps
 Force UDP encapsulation for ESP packets even if no NAT situation is detected.
 This may help to hurdle restrictive firewalls. To enforce the peer to 
 encapsulate packets, NAT detection payloads are faked (IKEv2 only).
@@ -633,7 +633,10 @@ The internal source IP to use in a tunnel for the remote peer. If the
 value is
 .B %config
 on the responder side, the initiator must propose a address which is then echoed
-back.
+back. The IKEv2 daemon also supports address pools expressed as
+\fInetwork\fB/\fInetmask\fR
+or the use of an external IP address pool using %\fIpoolname\fR
+, where \fIpoolname\fR is the name of the IP address pool used for the lookup.
 .TP
 .B leftsubnet
 private subnet behind the left participant, expressed as
@@ -643,7 +646,9 @@ private subnet behind the left participant, expressed as
 if omitted, essentially assumed to be \fIleft\fB/32\fR,
 signifying that the left end of the connection goes to the left participant
 only. When using IKEv2, the configured subnet of the peers may differ, the
-protocol narrows it to the greates common subnet.
+protocol narrows it to the greatest common subnet. Further, IKEv2 supports
+multiple subnets separated by commas. IKEv1 only interprets the first subnet
+of such a definition.
 .TP
 .B leftsubnetwithin
 the peer can propose any subnet or single IP address that fits within the
@@ -788,31 +793,31 @@ and
 .B client
 (the default).
 
-.SS "CONN PARAMETERS: PEER-TO-PEER"
-The following parameters are relevant to Peer-to-Peer NAT-T operation
-only.
+.SS "CONN PARAMETERS: IKEv2 MEDIATION EXTENSION"
+The following parameters are relevant to IKEv2 Mediation Extension 
+operation only.
 .TP 14
-.B p2p_mediation
-whether this connection is a P2P mediation connection, ie. whether this
+.B mediation
+whether this connection is a mediation connection, ie. whether this
 connection is used to mediate other connections.  Mediation connections
 create no child SA. Acceptable values are
 .B no
 (the default) and
 .BR yes .
 .TP
-.B p2p_mediated_by
+.B mediated_by
 the name of the connection to mediate this connection through.  If given,
 the connection will be mediated through the named mediation connection.
 The mediation connection must set
-.BR p2p_mediation=yes .
+.BR mediation=yes .
 .TP
-.B p2p_peerid
+.B me_peerid
 ID as which the peer is known to the mediation server, ie. which the other
 end of this connection uses as its
 .B leftid
 on its connection to the mediation server.  This is the ID we request the
 mediation server to mediate us with.  If
-.B p2p_peerid
+.B me_peerid
 is not given, the
 .B rightid
 of this connection will be used as peer ID.
@@ -855,6 +860,11 @@ synonym for
 .TP
 .B ocspuri2
 defines an alternative OCSP URI. Currently used by IKEv2 only.
+.B certuribase
+defines the base URI for the Hash and URL feature supported by IKEv2.
+Instead of exchanging complete certificates, IKEv2 allows to send an URI
+that resolves to the DER encoded certificate. The certificate URIs are built
+by appending the SHA1 hash of the DER encoded certificates to this base URI.
 .SH "CONFIG SECTIONS"
 At present, the only
 .B config
@@ -882,7 +892,7 @@ The currently-accepted
 names in a
 .B config
 .B setup
-section are:
+section affecting both daemons are:
 .TP 14
 .B cachecrls
 certificate revocation lists (CRLs) fetched via http or ldap will be cached in
@@ -901,11 +911,6 @@ Accepted values are
 (the default)
 or
 .BR no .
-.TP
-.B crlcheckinterval
-interval in seconds. CRL fetching is enabled if the value is greater than zero.
-Asynchronous, periodic checking for fresh CRLs is currently done by the
-IKEv1 Pluto daemon only.
 .TP
 .B dumpdir
 in what directory should things started by \fBipsec starter\fR
@@ -937,10 +942,36 @@ which reverts to
 if at least one CRL URI is defined and to
 .B no
 if no URI is known.
+.TP
+.B uniqueids
+whether a particular participant ID should be kept unique,
+with any new (automatically keyed)
+connection using an ID from a different IP address
+deemed to replace all old ones using that ID;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+Participant IDs normally \fIare\fR unique,
+so a new (automatically-keyed) connection using the same ID is
+almost invariably intended to replace an old one.
+The IKEv2 daemon also accepts the value
+.B replace
+wich is identical to
+.B yes
+and the value
+.B keep
+to reject new IKE_SA setups and keep the duplicate established earlier.
 .PP
 The following
 .B config section
 parameters are used by the IKEv1 Pluto daemon only:
+.TP
+.B crlcheckinterval
+interval in seconds. CRL fetching is enabled if the value is greater than zero.
+Asynchronous, periodic checking for fresh CRLs is currently done by the
+IKEv1 Pluto daemon only.
 .TP
 .B keep_alive
 interval in seconds between NAT keep alive packets, the default being 20 seconds.
@@ -1004,6 +1035,10 @@ separated by white space) are enabled;
 for details on available debugging types, see
 .IR pluto (8).
 .TP
+.B plutostderrlog
+Pluto will not use syslog, but rather log to stderr, and redirect stderr
+to the argument file.
+.TP
 .B postpluto
 shell command to run after starting Pluto
 (e.g., to remove a decrypted copy of the
@@ -1032,20 +1067,6 @@ Default is none.
 .TP
 .B virtual_private
 defines private networks using a wildcard notation.
-.TP
-.B uniqueids
-whether a particular participant ID should be kept unique,
-with any new (automatically keyed)
-connection using an ID from a different IP address
-deemed to replace all old ones using that ID;
-acceptable values are
-.B yes
-(the default)
-and
-.BR no .
-Participant IDs normally \fIare\fR unique,
-so a new (automatically-keyed) connection using the same ID is
-almost invariably intended to replace an old one.
 .PP
 The following
 .B config section

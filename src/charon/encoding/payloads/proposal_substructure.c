@@ -1,10 +1,3 @@
-/**
- * @file proposal_substructure.h
- * 
- * @brief Implementation of proposal_substructure_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: proposal_substructure.c 3658 2008-03-26 10:06:45Z martin $
  */
 
 #include <stddef.h>
@@ -521,60 +516,62 @@ proposal_substructure_t *proposal_substructure_create()
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal)
 {
-	private_proposal_substructure_t *this = (private_proposal_substructure_t*)
-												proposal_substructure_create();
-	iterator_t *iterator;
-	algorithm_t *algo;
 	transform_substructure_t *transform;
+	private_proposal_substructure_t *this;
+	u_int16_t alg, key_size;
+	enumerator_t *enumerator;
+	
+	this = (private_proposal_substructure_t*)proposal_substructure_create();
 	
 	/* encryption algorithm is only availble in ESP */
-	iterator = proposal->create_algorithm_iterator(proposal, ENCRYPTION_ALGORITHM);
-	while (iterator->iterate(iterator, (void**)&algo))
+	enumerator = proposal->create_enumerator(proposal, ENCRYPTION_ALGORITHM);
+	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		transform = transform_substructure_create_type(ENCRYPTION_ALGORITHM,
-												algo->algorithm, algo->key_size);
-		this->public.add_transform_substructure(&(this->public), transform);
+													   alg, key_size);
+		add_transform_substructure(this, transform);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	/* integrity algorithms */
-	iterator = proposal->create_algorithm_iterator(proposal, INTEGRITY_ALGORITHM);
-	while (iterator->iterate(iterator, (void**)&algo))
+	enumerator = proposal->create_enumerator(proposal, INTEGRITY_ALGORITHM);
+	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		transform = transform_substructure_create_type(INTEGRITY_ALGORITHM,
-												algo->algorithm, algo->key_size);
-		this->public.add_transform_substructure(&(this->public), transform);
+													   alg, key_size);
+		add_transform_substructure(this, transform);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	/* prf algorithms */
-	iterator = proposal->create_algorithm_iterator(proposal, PSEUDO_RANDOM_FUNCTION);
-	while (iterator->iterate(iterator, (void**)&algo))
+	enumerator = proposal->create_enumerator(proposal, PSEUDO_RANDOM_FUNCTION);
+	while (enumerator->enumerate(enumerator, &alg, &key_size))
 	{
 		transform = transform_substructure_create_type(PSEUDO_RANDOM_FUNCTION,
-												algo->algorithm, algo->key_size);
-		this->public.add_transform_substructure(&(this->public), transform);
+													   alg, key_size);
+		add_transform_substructure(this, transform);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	/* dh groups */
-	iterator = proposal->create_algorithm_iterator(proposal, DIFFIE_HELLMAN_GROUP);
-	while (iterator->iterate(iterator, (void**)&algo))
+	enumerator = proposal->create_enumerator(proposal, DIFFIE_HELLMAN_GROUP);
+	while (enumerator->enumerate(enumerator, &alg, NULL))
 	{
-		transform = transform_substructure_create_type(DIFFIE_HELLMAN_GROUP, algo->algorithm, 0);
-		this->public.add_transform_substructure(&(this->public), transform);
+		transform = transform_substructure_create_type(DIFFIE_HELLMAN_GROUP, 
+													   alg, 0);
+		add_transform_substructure(this, transform);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	/* extended sequence numbers */
-	iterator = proposal->create_algorithm_iterator(proposal, EXTENDED_SEQUENCE_NUMBERS);
-	while (iterator->iterate(iterator, (void**)&algo))
+	enumerator = proposal->create_enumerator(proposal, EXTENDED_SEQUENCE_NUMBERS);
+	while (enumerator->enumerate(enumerator, &alg, NULL))
 	{
 		transform = transform_substructure_create_type(EXTENDED_SEQUENCE_NUMBERS,
-															algo->algorithm, 0);
-		this->public.add_transform_substructure(&(this->public), transform);
+													   alg, 0);
+		add_transform_substructure(this, transform);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	/* add SPI, if necessary */
 	switch (proposal->get_protocol(proposal))

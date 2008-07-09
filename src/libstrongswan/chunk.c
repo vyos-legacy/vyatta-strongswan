@@ -1,10 +1,3 @@
-/**
- * @file chunk.c
- *
- * @brief Pointer/lenght abstraction and its functions.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,16 +12,19 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: chunk.c 3868 2008-04-24 13:26:22Z martin $
  */
 
 #include <stdio.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include "chunk.h"
 
 #include <debug.h>
 #include <printf_hook.h>
-#include <utils/randomizer.h>
 
 /**
  * Empty chunk.
@@ -211,42 +207,40 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 /**
  * Described in header.
  */
-bool chunk_write(chunk_t chunk, const char *path, const char *label, mode_t mask, bool force)
+bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 {
 	mode_t oldmask;
 	FILE *fd;
+	bool good = FALSE;
 
-	if (!force)
+	if (!force && access(path, F_OK) == 0)
 	{
-		fd = fopen(path, "r");
-		if (fd)
-		{
-			fclose(fd);
-			DBG1("  %s file '%s' already exists", label, path);
-			return FALSE;
-		}
+		DBG1("  file '%s' already exists", path);
+		return FALSE;
 	}
-
-	/* set umask */
 	oldmask = umask(mask);
-
 	fd = fopen(path, "w");
-
 	if (fd)
 	{
-		fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd);
+		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
+		{
+			good = TRUE;
+		}
+		else
+		{
+			DBG1("  writing to file '%s' failed: %s", path, strerror(errno));
+		}
 		fclose(fd);
-		DBG1("  written %s file '%s' (%u bytes)", label, path, chunk.len);
-		umask(oldmask);
 		return TRUE;
 	}
 	else
 	{
-		DBG1("  could not open %s file '%s' for writing", label, path);
-		umask(oldmask);
-		return FALSE;
+		DBG1("  could not open file '%s': %s", path, strerror(errno));
 	}
+	umask(oldmask);
+	return good;
 }
+
 
 /** hex conversion digits */
 static char hexdig_upper[] = "0123456789ABCDEF";
@@ -255,10 +249,9 @@ static char hexdig_lower[] = "0123456789abcdef";
 /**
  * Described in header.
  */
-char *chunk_to_hex(chunk_t chunk, bool uppercase)
+chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase)
 {
-	int i;
-	char *str;
+	int i, len;;
 	char *hexdig = hexdig_lower;
 	
 	if (uppercase)
@@ -266,15 +259,158 @@ char *chunk_to_hex(chunk_t chunk, bool uppercase)
 		hexdig = hexdig_upper;
 	}
 	
-	str = malloc(chunk.len * 2 + 1);
-	str[chunk.len * 2] = '\0';
-	
-	for (i = 0; i < chunk.len; i ++)
+	len = chunk.len * 2;
+	if (!buf)
 	{
-		str[i*2]   = hexdig[(chunk.ptr[i] >> 4) & 0xF];
-		str[i*2+1] = hexdig[(chunk.ptr[i]     ) & 0xF];
+		buf = malloc(len + 1);
 	}
-	return str;
+	buf[len] = '\0';
+	
+	for (i = 0; i < chunk.len; i++)
+	{
+		buf[i*2]   = hexdig[(chunk.ptr[i] >> 4) & 0xF];
+		buf[i*2+1] = hexdig[(chunk.ptr[i]     ) & 0xF];
+	}
+	return chunk_create(buf, len);
+}
+
+/**
+ * convert a signle hex character to its binary value
+ */
+static char hex2bin(char hex)
+{
+	switch (hex)
+	{
+		case '0' ... '9':
+			return hex - '0';
+		case 'A' ... 'F':
+			return hex - 'A' + 10;
+		case 'a' ... 'f':
+			return hex - 'a' + 10;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_from_hex(chunk_t hex, char *buf)
+{
+	int i, len;
+	
+	len = hex.len / 2;
+	if (!buf)
+	{
+		buf = malloc(len);
+	}
+	for (i = 0; i < len; i++)
+	{
+		buf[i] =  hex2bin(*hex.ptr++) << 4;
+		buf[i] |= hex2bin(*hex.ptr++);
+	}
+	return chunk_create(buf, len);
+}
+
+/** base 64 conversion digits */
+static char b64digits[] = 
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_to_base64(chunk_t chunk, char *buf)
+{
+	int i, len;
+	char *pos;
+	
+	len = chunk.len + ((3 - chunk.len % 3) % 3);
+	if (!buf)
+	{
+		buf = malloc(len * 4 / 3 + 1);
+	}
+	pos = buf;
+	for (i = 0; i < len; i+=3)
+	{
+		*pos++ = b64digits[chunk.ptr[i] >> 2];
+		if (i+1 >= chunk.len)
+		{
+			*pos++ = b64digits[(chunk.ptr[i] & 0x03) << 4];
+			*pos++ = '=';
+			*pos++ = '=';
+			break;
+		}
+		*pos++ = b64digits[((chunk.ptr[i] & 0x03) << 4) | (chunk.ptr[i+1] >> 4)];
+		if (i+2 >= chunk.len)
+		{
+			*pos++ = b64digits[(chunk.ptr[i+1] & 0x0F) << 2];
+			*pos++ = '=';
+			break;
+		}
+		*pos++ = b64digits[((chunk.ptr[i+1] & 0x0F) << 2) | (chunk.ptr[i+2] >> 6)];
+		*pos++ = b64digits[chunk.ptr[i+2] & 0x3F];
+	}
+	*pos = '\0';
+	return chunk_create(buf, len * 4 / 3);
+}
+
+/**
+ * convert a base 64 digit to its binary form (inversion of b64digits array)
+ */
+static int b642bin(char b64)
+{
+	switch (b64)
+	{
+		case 'A' ... 'Z':
+			return b64 - 'A';
+		case 'a' ... 'z':
+			return ('Z' - 'A' + 1) + b64 - 'a';
+		case '0' ... '9':
+			return ('Z' - 'A' + 1) + ('z' - 'a' + 1) + b64 - '0';
+		case '+':
+		case '-':
+			return 62;
+		case '/':
+		case '_':
+			return 63;
+		case '=':
+			return 0;
+		default:
+			return -1;
+	}
+}
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_from_base64(chunk_t base64, char *buf)
+{
+	u_char *pos, byte[4];
+	int i, j, len, outlen;
+	
+	len = base64.len / 4 * 3;
+	if (!buf)
+	{
+		buf = malloc(len);
+	}
+	pos = base64.ptr;
+	outlen = 0;
+	for (i = 0; i < len; i+=3)
+	{
+		outlen += 3;
+		for (j = 0; j < 4; j++)
+		{
+			if (*pos == '=')
+			{
+				outlen--;
+			}
+			byte[j] = b642bin(*pos++);
+		}
+		buf[i] = (byte[0] << 2) | (byte[1] >> 4);
+		buf[i+1] = (byte[1] << 4) | (byte[2] >> 2);
+		buf[i+2] = (byte[2] << 6) | (byte[3]);
+	}
+	return chunk_create(buf, outlen);
 }
 
 /**
@@ -290,22 +426,10 @@ void chunk_free(chunk_t *chunk)
 /**
  * Described in header.
  */
-void chunk_free_randomized(chunk_t *chunk)
+void chunk_clear(chunk_t *chunk)
 {
-	if (chunk->ptr)
-	{
-		if (chunk->len > 0)
-		{
-			randomizer_t *randomizer = randomizer_create();
-
-			randomizer->get_pseudo_random_bytes(randomizer,
-												chunk->len, chunk->ptr);
-			randomizer->destroy(randomizer);
-		};
-		free(chunk->ptr);
-		chunk->ptr = NULL;
-	}
-	chunk->len = 0;
+	memset(chunk->ptr, 0, chunk->len);
+	chunk_free(chunk);
 }
 
 /**
@@ -347,91 +471,21 @@ bool chunk_equals(chunk_t a, chunk_t b)
 }
 
 /**
- * Described in header.
- */
-bool chunk_equals_or_null(chunk_t a, chunk_t b)
-{
-	if (a.ptr == NULL || b.ptr == NULL)
-		return TRUE;
-	return a.len == b.len && memeq(a.ptr, b.ptr, a.len);
-}
-
-/**
- * Number of bytes per line to dump raw data
- */
-#define BYTES_PER_LINE 16
-
-/**
- * output handler in printf() for byte ranges
- */
-static int print_bytes(FILE *stream, const struct printf_info *info,
-					   const void *const *args)
-{
-	char *bytes = *((void**)(args[0]));
-	int len = *((size_t*)(args[1]));
-	
-	char buffer[BYTES_PER_LINE * 3];
-	char ascii_buffer[BYTES_PER_LINE + 1];
-	char *buffer_pos = buffer;
-	char *bytes_pos  = bytes;
-	char *bytes_roof = bytes + len;
-	int line_start = 0;
-	int i = 0;
-	int written = 0;
-	
-	written += fprintf(stream, "=> %d bytes @ %p", len, bytes);
-	
-	while (bytes_pos < bytes_roof)
-	{
-		*buffer_pos++ = hexdig_upper[(*bytes_pos >> 4) & 0xF];
-		*buffer_pos++ = hexdig_upper[ *bytes_pos       & 0xF];
-
-		ascii_buffer[i++] =
-				(*bytes_pos > 31 && *bytes_pos < 127) ? *bytes_pos : '.';
-
-		if (++bytes_pos == bytes_roof || i == BYTES_PER_LINE) 
-		{
-			int padding = 3 * (BYTES_PER_LINE - i);
-			int written;
-			
-			while (padding--)
-			{
-				*buffer_pos++ = ' ';
-			}
-			*buffer_pos++ = '\0';
-			ascii_buffer[i] = '\0';
-			
-			written += fprintf(stream, "\n%4d: %s  %s",
-							   line_start, buffer, ascii_buffer);
-
-			
-			buffer_pos = buffer;
-			line_start += BYTES_PER_LINE;
-			i = 0;
-		}
-		else
-		{
-			*buffer_pos++ = ' ';
-		}
-	}
-	return written;
-}
-
-/**
  * output handler in printf() for chunks
  */
-static int print_chunk(FILE *stream, const struct printf_info *info,
+static int chunk_print(FILE *stream, const struct printf_info *info,
 					   const void *const *args)
 {
 	chunk_t *chunk = *((chunk_t**)(args[0]));
 	bool first = TRUE;
 	chunk_t copy = *chunk;
 	int written = 0;
+	printf_hook_functions_t mem = mem_get_printf_hooks();
 	
 	if (!info->alt)
 	{
 		const void *new_args[] = {&chunk->ptr, &chunk->len};
-		return print_bytes(stream, info, new_args);
+		return mem.print(stream, info, new_args);
 	}
 	
 	while (copy.len > 0)
@@ -451,10 +505,24 @@ static int print_chunk(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * register printf() handlers
+ * arginfo handler for printf() mem ranges
  */
-static void __attribute__ ((constructor))print_register()
+static int chunk_arginfo(const struct printf_info *info, size_t n, int *argtypes)
 {
-	register_printf_function(PRINTF_CHUNK, print_chunk, arginfo_ptr);
-	register_printf_function(PRINTF_BYTES, print_bytes, arginfo_ptr_int);
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
 }
+
+/**
+ * return printf hook functions for a chunk
+ */
+printf_hook_functions_t chunk_get_printf_hooks()
+{
+	printf_hook_functions_t hooks = {chunk_print, chunk_arginfo};
+	
+	return hooks;
+}
+

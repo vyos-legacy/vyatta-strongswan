@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: start-testing,v 1.4 2004/12/07 18:04:57 as Exp $
+# RCSID $Id: start-testing 3517 2008-03-01 10:25:52Z andreas $
 
 DIR=`dirname $0`
 

@@ -1,10 +1,3 @@
-/**
- * @file ike_reauth.c
- *
- * @brief Implementation of the ike_reauth task.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_reauth.c 3793 2008-04-11 08:14:48Z martin $
  */
 
 #include "ike_reauth.h"
@@ -66,22 +61,30 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	host_t *host;
 	iterator_t *iterator;
 	child_sa_t *child_sa;
+	peer_cfg_t *peer_cfg;
 	
 	/* process delete response first */
 	this->ike_delete->task.process(&this->ike_delete->task, message);
 	
-	/* reestablish only if we have children */
+	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+	
+	/* reauthenticate only if we have children */
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
-	if (iterator->get_count(iterator) == 0)
+	if (iterator->get_count(iterator) == 0
+#ifdef ME
+		/* we allow a peer to reauth a mediation connection (without CHILD_SA) */
+		&& !peer_cfg->is_mediation(peer_cfg)
+#endif /* ME */
+		)
 	{
-		DBG1(DBG_IKE, "unable to reestablish IKE_SA, no CHILD_SA to recreate");
+		DBG1(DBG_IKE, "unable to reauthenticate IKE_SA, no CHILD_SA to recreate");
 		iterator->destroy(iterator);
 		return FAILED;
 	}
 	
 	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager, TRUE);
 	
-	new->set_peer_cfg(new, this->ike_sa->get_peer_cfg(this->ike_sa));
+	new->set_peer_cfg(new, peer_cfg);
 	host = this->ike_sa->get_other_host(this->ike_sa);
 	new->set_other_host(new, host->clone(host));
 	host = this->ike_sa->get_my_host(this->ike_sa);
@@ -92,6 +95,20 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	{
 		new->set_virtual_ip(new, TRUE, host);
 	}
+	
+#ifdef ME
+	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
+	if (peer_cfg->is_mediation(peer_cfg))
+	{
+		if (new->initiate(new, NULL) == DESTROY_ME)
+		{
+			charon->ike_sa_manager->checkin_and_destroy(
+								charon->ike_sa_manager, new);
+			DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
+			return FAILED;
+		}
+	}
+#endif /* ME */
 	
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
@@ -114,7 +131,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 					iterator->destroy(iterator);
 					charon->ike_sa_manager->checkin_and_destroy(
 										charon->ike_sa_manager, new);
-					DBG1(DBG_IKE, "reestablishing IKE_SA failed");
+					DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
 					return FAILED;
 				}
 				break;

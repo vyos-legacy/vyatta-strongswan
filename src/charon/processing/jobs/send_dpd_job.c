@@ -1,10 +1,3 @@
-/**
- * @file send_dpd_job.c
- * 
- * @brief Implementation of send_dpd_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Hochschule fuer Technik Rapperswil
@@ -18,8 +11,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: send_dpd_job.c 3589 2008-03-13 14:14:44Z martin $
  */
-
 
 #include <stdlib.h>
 

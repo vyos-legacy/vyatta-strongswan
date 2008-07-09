@@ -1,13 +1,7 @@
-/**
- * @file daemon.c
- * 
- * @brief Implementation of daemon_t and main of IKEv2-Daemon.
- * 
- */
-
-/* Copyright (C) 2006-2007 Tobias Brunner
+/* 
+ * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,6 +16,11 @@
  * for more details.
  */
 
+#ifdef HAVE_DLADDR
+# define _GNU_SOURCE
+# include <dlfcn.h>
+#endif /* HAVE_DLADDR */
+
 #include <stdio.h>
 #include <linux/capability.h>
 #include <sys/prctl.h>
@@ -34,6 +33,8 @@
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#include <pwd.h>
+#include <grp.h>
 #ifdef HAVE_BACKTRACE
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
@@ -41,11 +42,8 @@
 #include "daemon.h"
 
 #include <library.h>
-#include <crypto/ca.h>
-#include <utils/fetcher.h>
-#include <config/credentials/local_credential_store.h>
-#include <config/backends/local_backend.h>
-#include <sa/authenticators/eap/eap_method.h>
+#include <config/traffic_selector.h>
+#include <config/proposal.h>
 
 /* on some distros, a capset definition is missing */
 #ifdef NO_CAPSET_DEFINED
@@ -108,11 +106,14 @@ static void dbg_stderr(int level, char *fmt, ...)
 {
 	va_list args;
 	
-	va_start(args, fmt);
-	fprintf(stderr, "00[LIB] ");
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, "\n");
-	va_end(args);
+	if (level <= 1)
+	{
+		va_start(args, fmt);
+		fprintf(stderr, "00[LIB] ");
+		vfprintf(stderr, fmt, args);
+		fprintf(stderr, "\n");
+		va_end(args);
+	}
 }
 
 /**
@@ -171,17 +172,28 @@ static void run(private_daemon_t *this)
 static void destroy(private_daemon_t *this)
 {
 	/* terminate all idle threads */
-	this->public.processor->set_threads(this->public.processor, 0);
+	if (this->public.processor)
+	{
+		this->public.processor->set_threads(this->public.processor, 0);
+	}
 	/* close all IKE_SAs */
+	if (this->public.ike_sa_manager)
+	{
+		this->public.ike_sa_manager->flush(this->public.ike_sa_manager);
+	}
+	/* unload plugins to release threads */
+	lib->plugins->unload(lib->plugins);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
-	DESTROY_IF(this->public.interfaces);
-#ifdef P2P	
+	DESTROY_IF(this->public.controller);
+	DESTROY_IF(this->public.eap);
+#ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
-#endif /* P2P */
+#endif /* ME */
 	DESTROY_IF(this->public.backends);
+	DESTROY_IF(this->public.attributes);
 	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.receiver);
@@ -204,11 +216,17 @@ static void destroy(private_daemon_t *this)
 static void kill_daemon(private_daemon_t *this, char *reason)
 {
 	/* we send SIGTERM, so the daemon can cleanly shut down */
-	DBG1(DBG_DMN, "killing daemon: %s", reason);
+	if (this->public.bus)
+	{
+		DBG1(DBG_DMN, "killing daemon: %s", reason);
+	}
+	else
+	{
+		fprintf(stderr, "killing daemon: %s\n", reason);
+	}
 	if (this->main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
-		destroy(this);
 		unlink(PID_FILE);
 		exit(-1);
 	}
@@ -230,22 +248,18 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	struct __user_cap_data_struct data;
 	
 	/* CAP_NET_ADMIN is needed to use netlink */
-	u_int32_t keep = (1<<CAP_NET_ADMIN);
+	u_int32_t keep = (1<<CAP_NET_ADMIN) | (1<<CAP_SYS_NICE);
 	
 	if (full)
 	{
-#		if IPSEC_GID
-		if (setgid(IPSEC_GID) != 0)
+		if (setgid(charon->gid) != 0)
 		{
-			kill_daemon(this, "changing GID to unprivileged group failed");
+			kill_daemon(this, "change to unprivileged group failed");	
 		}
-#		endif
-#		if IPSEC_UID
-		if (setuid(IPSEC_UID) != 0)
+		if (setuid(charon->uid) != 0)
 		{
-			kill_daemon(this, "changing UID to unprivileged user failed");
+			kill_daemon(this, "change to unprivileged user failed");	
 		}
-#		endif
 	}
 	else
 	{
@@ -263,7 +277,13 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 		keep |= (1<<CAP_SETGID);
 	}
 
+	/* we use the old capset version for now. For systems with version 2
+	 * available, we specifiy version 1 excplicitly. */
+#ifdef _LINUX_CAPABILITY_VERSION_1
+	hdr.version = _LINUX_CAPABILITY_VERSION_1;
+#else
 	hdr.version = _LINUX_CAPABILITY_VERSION;
+#endif
 	hdr.pid = 0;
 	data.inheritable = data.effective = data.permitted = keep;
 	
@@ -271,6 +291,39 @@ static void drop_capabilities(private_daemon_t *this, bool full)
 	{
 		kill_daemon(this, "unable to drop daemon capabilities");
 	}
+}
+
+/**
+ * lookup UID and GID 
+ */
+static void lookup_uid_gid(private_daemon_t *this)
+{
+#ifdef IPSEC_USER
+	{
+		char buf[1024];
+		struct passwd passwd, *pwp;
+	
+		if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) != 0 ||
+			pwp == NULL)
+		{
+			kill_daemon(this, "resolving user '"IPSEC_USER"' failed");
+		}
+		charon->uid = pwp->pw_uid;
+	}
+#endif
+#ifdef IPSEC_GROUP
+	{
+		char buf[1024];
+		struct group group, *grp;
+	
+		if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
+			grp == NULL)
+		{
+			kill_daemon(this, "reslvoing group '"IPSEC_GROUP"' failed");
+		}
+		charon->gid = grp->gr_gid;
+	}
+#endif
 }
 
 /**
@@ -321,31 +374,42 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 		return FALSE;
 	}
 #endif /* INTEGRITY_TEST */
-	
-	this->public.ike_sa_manager = ike_sa_manager_create();
-	this->public.processor = processor_create();
-	this->public.scheduler = scheduler_create();
 
 	/* load secrets, ca certificates and crls */
-	this->public.credentials = (credential_store_t*)local_credential_store_create();
-	this->public.credentials->load_ca_certificates(this->public.credentials);
-	this->public.credentials->load_aa_certificates(this->public.credentials);
-	this->public.credentials->load_attr_certificates(this->public.credentials);
-	this->public.credentials->load_ocsp_certificates(this->public.credentials);
-	this->public.credentials->load_crls(this->public.credentials);
-	this->public.credentials->load_secrets(this->public.credentials, FALSE);
-	
-	this->public.interfaces = interface_manager_create();
+	this->public.processor = processor_create();
+	this->public.scheduler = scheduler_create();
+	this->public.credentials = credential_manager_create();
+	this->public.controller = controller_create();
+	this->public.eap = eap_manager_create();
 	this->public.backends = backend_manager_create();
+	this->public.attributes = attribute_manager_create();
 	this->public.kernel_interface = kernel_interface_create();
 	this->public.socket = socket_create();
+	
+	/* load plugins, further infrastructure may need it */
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
+	
+	this->public.ike_sa_manager = ike_sa_manager_create();
+	if (this->public.ike_sa_manager == NULL)
+	{
+		return FALSE;
+	}
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
+	if (this->public.receiver == NULL)
+	{
+		return FALSE;
+	}
 	
-#ifdef P2P
+#ifdef ME
 	this->public.connect_manager = connect_manager_create();
+	if (this->public.connect_manager == NULL)
+	{
+		return FALSE;
+	}
 	this->public.mediation_manager = mediation_manager_create();
-#endif /* P2P */
+#endif /* ME */
 	
 	return TRUE;
 }
@@ -369,7 +433,25 @@ static void segv_handler(int signal)
 
 	for (i = 0; i < size; i++)
 	{
-		DBG1(DBG_DMN, "    %s", strings[i]);
+#ifdef HAVE_DLADDR
+		Dl_info info;
+		
+		if (dladdr(array[i], &info))
+		{
+			void *ptr = array[i];
+			if (strstr(info.dli_fname, ".so"))
+			{
+				ptr = (void*)(array[i] - info.dli_fbase);
+			}
+			DBG1(DBG_DMN, "    %s [%p]", info.dli_fname, ptr);
+		}
+		else
+		{
+#endif /* HAVE_DLADDR */
+			DBG1(DBG_DMN, "    %s", strings[i]);
+#ifdef HAVE_DLADDR
+		}
+#endif /* HAVE_DLADDR */
 	}
 	free (strings);
 #else /* !HAVE_BACKTRACE */
@@ -396,16 +478,24 @@ private_daemon_t *daemon_create(void)
 	this->public.ike_sa_manager = NULL;
 	this->public.credentials = NULL;
 	this->public.backends = NULL;
+	this->public.attributes = NULL;
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;
 	this->public.kernel_interface = NULL;
 	this->public.processor = NULL;
-	this->public.interfaces = NULL;
+	this->public.controller = NULL;
+	this->public.eap = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;
 	this->public.authlog = NULL;
+#ifdef ME
+	this->public.connect_manager = NULL;
+	this->public.mediation_manager = NULL;
+#endif /* ME */
+	this->public.uid = 0;
+	this->public.gid = 0;
 	
 	this->main_thread_id = pthread_self();
 	
@@ -440,10 +530,6 @@ static void usage(const char *msg)
 	fprintf(stderr, "Usage: charon\n"
 					"         [--help]\n"
 					"         [--version]\n"
-					"         [--strictcrlpolicy]\n"
-					"         [--cachecrls]\n"
-					"         [--crlcheckinterval <interval>]\n"
-					"         [--eapdir <dir>]\n"
 					"         [--use-syslog]\n"
 					"         [--debug-<type> <level>]\n"
 					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|lib)\n"
@@ -459,11 +545,7 @@ static void usage(const char *msg)
  */
 int main(int argc, char *argv[])
 {
-	u_int crl_check_interval = 0;
-	strict_t strict_crl_policy = STRICT_NO;
-	bool cache_crls = FALSE;
 	bool use_syslog = FALSE;
-	char *eapdir = IPSEC_EAPDIR;
 
 	private_daemon_t *private_charon;
 	FILE *pid_file;
@@ -471,8 +553,19 @@ int main(int argc, char *argv[])
 	level_t levels[DBG_MAX];
 	int signal;
 	
+	/* logging for library during initialization, as we have no bus yet */
+	dbg = dbg_stderr;
+	
+	/* initialize library */
+	library_init(STRONGSWAN_CONF);
+	lib->printf_hook->add_handler(lib->printf_hook, 'R',
+								  traffic_selector_get_printf_hooks());
+	lib->printf_hook->add_handler(lib->printf_hook, 'P',
+								  proposal_get_printf_hooks());
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
+	
+	lookup_uid_gid(private_charon);
 	
 	/* drop the capabilities we won't need for initialization */
 	prctl(PR_SET_KEEPCAPS, 1);
@@ -491,10 +584,6 @@ int main(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
-			{ "strictcrlpolicy", required_argument, NULL, 'r' },
-			{ "cachecrls", no_argument, NULL, 'C' },
-			{ "crlcheckinterval", required_argument, NULL, 'x' },
-			{ "eapdir", required_argument, NULL, 'e' },
 			/* TODO: handle "debug-all" */
 			{ "debug-dmn", required_argument, &signal, DBG_DMN },
 			{ "debug-mgr", required_argument, &signal, DBG_MGR },
@@ -523,18 +612,6 @@ int main(int argc, char *argv[])
 			case 'l':
 				use_syslog = TRUE;
 				continue;
-			case 'r':
-				strict_crl_policy = atoi(optarg);
-				continue;
-			case 'C':
-				cache_crls = TRUE;
-				continue;
-			case 'x':
-				crl_check_interval = atoi(optarg);
-				continue;
-			case 'e':
-				eapdir = optarg;
-				continue;
 			case 0:
 				/* option is in signal */
 				levels[signal] = atoi(optarg);
@@ -554,14 +631,6 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	/* initialize fetcher_t class */
-	fetcher_initialize();
-	/* load pluggable EAP modules */
-	eap_method_load(eapdir);
-	
-	/* set strict_crl_policy, cache_crls and crl_check_interval options */
-	ca_info_set_options(strict_crl_policy, cache_crls, crl_check_interval);
-
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
 	{
@@ -573,7 +642,7 @@ int main(int argc, char *argv[])
 	if (pid_file)
 	{
 		fprintf(pid_file, "%d\n", getpid());
-		fchown(fileno(pid_file), IPSEC_UID, IPSEC_GID);
+		fchown(fileno(pid_file), charon->uid, charon->gid);
 		fclose(pid_file);
 	}
 	
@@ -581,16 +650,18 @@ int main(int argc, char *argv[])
 	drop_capabilities(private_charon, TRUE);
 	
 	/* start the engine, go multithreaded */
-	charon->processor->set_threads(charon->processor, WORKER_THREADS);
+	charon->processor->set_threads(charon->processor,
+						lib->settings->get_int(lib->settings, "charon.threads",
+											   DEFAULT_THREADS));
 	
 	/* run daemon */
 	run(private_charon);
 	
-	eap_method_unload();
-	fetcher_finalize();
 	/* normal termination, cleanup and exit */
 	destroy(private_charon);
 	unlink(PID_FILE);
+	
+	library_deinit();
 	
 	return 0;
 }

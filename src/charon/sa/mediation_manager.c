@@ -1,10 +1,3 @@
-/**
- * @file mediation_manager.c
- *
- * @brief Implementation of mediation_manager_t.
- *
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: mediation_manager.c 3773 2008-04-07 09:36:52Z tobias $
  */
 
 #include "mediation_manager.h"
@@ -246,6 +241,7 @@ static void update_sa_id(private_mediation_manager_t *this, identification_t *pe
 	{
 		job_t *job = (job_t*)mediation_callback_job_create(requester, peer_id);
 		charon->processor->queue_job(charon->processor, job);
+		requester->destroy(requester);
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
