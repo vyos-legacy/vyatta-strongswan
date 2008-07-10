@@ -1,5 +1,4 @@
 /* Stroke for charon is the counterpart to whack from pluto
- * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -13,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterstroke.c 3394 2007-12-13 17:31:21Z martin $
+ * RCSID $Id: starterstroke.c 4100 2008-06-24 13:36:10Z martin $
  */
 
 #include <sys/types.h>
@@ -32,20 +31,19 @@
 #include <defs.h>
 #include <log.h>
 
-#include <stroke.h>
+#include <stroke_msg.h>
 
 #include "starterstroke.h"
 #include "confread.h"
 #include "files.h"
 
 /**
- * Authentication mehtods, must be the same values as in charon
+ * Authentication methods, must be the same as in charons authenticator.h
  */
 enum auth_method_t {
-	AUTH_RSA = 1,
-	AUTH_PSK = 2,
-	AUTH_DSS = 3,
-	AUTH_EAP = 201,
+	AUTH_PUBKEY =	1,
+	AUTH_PSK =		2,
+	AUTH_EAP =		3
 };
 
 static char* push_string(stroke_msg_t *msg, char *string)
@@ -162,32 +160,62 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->updown = push_string(msg, conn_end->updown);
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
 	msg_end->address = push_string(msg, buffer);
-	ip_address2string(&conn_end->subnet.addr, buffer, sizeof(buffer));
-	msg_end->subnet = push_string(msg, buffer);
-	msg_end->subnet_mask = conn_end->subnet.maskbits;
+	msg_end->subnets = push_string(msg, conn_end->subnet);
 	msg_end->sendcert = conn_end->sendcert;
 	msg_end->hostaccess = conn_end->hostaccess;
 	msg_end->tohost = !conn_end->has_client;
 	msg_end->protocol = conn_end->protocol;
 	msg_end->port = conn_end->port;
-	msg_end->virtual_ip = conn_end->modecfg || conn_end->has_srcip;
-	ip_address2string(&conn_end->srcip, buffer, sizeof(buffer));
-	msg_end->sourceip = push_string(msg, buffer);
+	if (conn_end->srcip)
+	{
+		if (conn_end->srcip[0] == '%')
+		{	/* %poolname, strip % */
+			msg_end->sourceip_size = 0;
+			msg_end->sourceip = push_string(msg, conn_end->srcip + 1);
+		}
+		else
+		{
+			char *pos = strchr(conn_end->srcip, '/');
+			if (pos)
+			{	/* CIDR subnet definition */
+				snprintf(buffer, pos - conn_end->srcip + 1, "%s", conn_end->srcip);
+				msg_end->sourceip = push_string(msg, buffer);
+				msg_end->sourceip_size = atoi(pos + 1);
+			}
+			else
+			{	/* a single address */
+				msg_end->sourceip = push_string(msg, conn_end->srcip);
+				if (strchr(conn_end->srcip, ':'))
+				{	/* IPv6 */
+					msg_end->sourceip_size = 128;
+				}
+				else
+				{	/* IPv4 */
+					msg_end->sourceip_size = 32;
+				}
+			}
+		}
+	}
+	else if (conn_end->modecfg)
+	{
+		msg_end->sourceip_size = 1;
+	}
 }
 
-int starter_stroke_add_conn(starter_conn_t *conn)
+int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 {
 	stroke_msg_t msg;
 
+	memset(&msg, 0, sizeof(msg));
 	msg.type = STR_ADD_CONN;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
 	
-	/* RSA is preferred before PSK and EAP */
-	if (conn->policy & POLICY_RSASIG)
+	/* PUBKEY is preferred to PSK and EAP */
+	if (conn->policy & POLICY_RSASIG || conn->policy & POLICY_ECDSASIG)
 	{
-		msg.add_conn.auth_method = AUTH_RSA;
+		msg.add_conn.auth_method = AUTH_PUBKEY;
 	}
 	else if (conn->policy & POLICY_PSK)
 	{
@@ -213,15 +241,7 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 		msg.add_conn.mode = 0; /* XFRM_MODE_TUNNEL */
 	}
  
-	if (conn->policy & POLICY_DONT_REKEY)
-	{
-		msg.add_conn.rekey.ipsec_lifetime = 0;
-		msg.add_conn.rekey.ike_lifetime = 0;
-		msg.add_conn.rekey.margin = 0;
-		msg.add_conn.rekey.tries = 0;
-		msg.add_conn.rekey.fuzz = 0;
-	}
-	else
+	if (!(conn->policy & POLICY_DONT_REKEY))
 	{
 		msg.add_conn.rekey.reauth = (conn->policy & POLICY_DONT_REAUTH) == LEMPTY;
 		msg.add_conn.rekey.ipsec_lifetime = conn->sa_ipsec_life_seconds;
@@ -232,13 +252,16 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	}
 	msg.add_conn.mobike = conn->policy & POLICY_MOBIKE;
 	msg.add_conn.force_encap = conn->policy & POLICY_FORCE_ENCAP;
+	msg.add_conn.ipcomp = conn->policy & POLICY_COMPRESS;
+	msg.add_conn.crl_policy = cfg->setup.strictcrlpolicy;
+	msg.add_conn.unique = cfg->setup.uniqueids;
 	msg.add_conn.algorithms.ike = push_string(&msg, conn->ike);
 	msg.add_conn.algorithms.esp = push_string(&msg, conn->esp);
 	msg.add_conn.dpd.delay = conn->dpd_delay;
 	msg.add_conn.dpd.action = conn->dpd_action;
-	msg.add_conn.p2p.mediation = conn->p2p_mediation;
-	msg.add_conn.p2p.mediated_by = push_string(&msg, conn->p2p_mediated_by);
-	msg.add_conn.p2p.peerid = push_string(&msg, conn->p2p_peerid);
+	msg.add_conn.ikeme.mediation = conn->me_mediation;
+	msg.add_conn.ikeme.mediated_by = push_string(&msg, conn->me_mediated_by);
+	msg.add_conn.ikeme.peerid = push_string(&msg, conn->me_peerid);
 
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->left);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->right);
@@ -282,12 +305,13 @@ int starter_stroke_add_ca(starter_ca_t *ca)
 
 	msg.type = STR_ADD_CA;
 	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.add_ca.name =     push_string(&msg, ca->name);
-	msg.add_ca.cacert =   push_string(&msg, ca->cacert);
-	msg.add_ca.crluri =   push_string(&msg, ca->crluri);
-	msg.add_ca.crluri2 =  push_string(&msg, ca->crluri2);
-	msg.add_ca.ocspuri =  push_string(&msg, ca->ocspuri);
-	msg.add_ca.ocspuri2 = push_string(&msg, ca->ocspuri2);
+	msg.add_ca.name =        push_string(&msg, ca->name);
+	msg.add_ca.cacert =      push_string(&msg, ca->cacert);
+	msg.add_ca.crluri =      push_string(&msg, ca->crluri);
+	msg.add_ca.crluri2 =     push_string(&msg, ca->crluri2);
+	msg.add_ca.ocspuri =     push_string(&msg, ca->ocspuri);
+	msg.add_ca.ocspuri2 =    push_string(&msg, ca->ocspuri2);
+	msg.add_ca.certuribase = push_string(&msg, ca->certuribase);
 	return send_stroke_msg(&msg);
 }
 
@@ -301,4 +325,17 @@ int starter_stroke_del_ca(starter_ca_t *ca)
 	return send_stroke_msg(&msg);
 }
 
+int starter_stroke_configure(starter_config_t *cfg)
+{
+	stroke_msg_t msg;
+    
+	if (cfg->setup.cachecrls)
+	{
+		msg.type = STR_CONFIG;
+		msg.length = offsetof(stroke_msg_t, buffer);
+		msg.config.cachecrl = 1;
+		return send_stroke_msg(&msg);
+	}
+	return 0;
+}
 

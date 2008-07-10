@@ -1,10 +1,3 @@
-/**
- * @file id_payload.h
- * 
- * @brief Interface of id_payload_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
@@ -21,6 +14,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: id_payload.c 3589 2008-03-13 14:14:44Z martin $
  */
 
 #include <stddef.h>

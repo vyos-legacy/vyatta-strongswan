@@ -1,12 +1,5 @@
-/**
- * @file connect_manager.c
- *
- * @brief Implementation of connect_manager_t.
- *
- */
-
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2008 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: connect_manager.c 3792 2008-04-10 12:51:04Z tobias $
  */
 
 #include "connect_manager.h"
@@ -34,13 +29,20 @@
 #include <encoding/payloads/endpoint_notify.h>
 
 /* base timeout
- * the sending interval is P2P_INTERVAL * active checklists (N)
- * retransmission timeout is P2P_INTERVAL * N * checks in waiting state (NW) */
-#define P2P_INTERVAL 20 /* ms */
-/* min retransmission timeout (RTO is P2P_INTERVAL * N * checks in waiting state) */
-#define P2P_RTO_MIN 100 /* ms */
-/* max number of retransmissions (+ the initial check) */
-#define P2P_MAX_RETRANS 2
+ * the check interval is ME_INTERVAL */
+#define ME_INTERVAL 25 /* ms */
+/* retransmission timeout is first ME_INTERVAL for ME_BOOST retransmissions
+ * then gets reduced to ME_INTERVAL * ME_RETRANS_BASE ^ (sent retransmissions - ME_BOOST). */
+/* number of initial retransmissions sent in short interval */
+#define ME_BOOST 2
+/* base for retransmissions */
+#define ME_RETRANS_BASE 1.8
+/* max number of retransmissions */
+#define ME_MAX_RETRANS 13
+
+/* time to wait before the initiator finishes the connectivity checks after
+ * the first check has succeeded */
+#define ME_WAIT_TO_FINISH 1000 /* ms */
 
 
 typedef struct private_connect_manager_t private_connect_manager_t;
@@ -70,7 +72,7 @@ struct private_connect_manager_t {
 	 linked_list_t *initiated;
 	 
 	 /**
-	  * Linked list with checklists (hash table with session ID as key would be better).
+	  * Linked list with checklists (hash table with connect ID as key would be better).
 	  */
 	 linked_list_t *checklists;
 };
@@ -180,8 +182,8 @@ struct check_list_t {
 		linked_list_t *endpoints;
 	} responder;
 	
-	/** session id */
-	chunk_t session_id;
+	/** connect id */
+	chunk_t connect_id;
 	
     /** list of endpoint pairs */
     linked_list_t *pairs;
@@ -195,6 +197,12 @@ struct check_list_t {
     /** TRUE if this is the initiator */
 	bool is_initiator;
 	
+	/** TRUE if the initiator is finishing the checks */
+	bool is_finishing;
+	
+	/** the current sender job */
+	job_t *sender;
+	
 };
 
 /**
@@ -205,7 +213,7 @@ static void check_list_destroy(check_list_t *this)
 	DESTROY_IF(this->initiator.id);
 	DESTROY_IF(this->responder.id);
 	
-	chunk_free(&this->session_id);
+	chunk_free(&this->connect_id);
 	chunk_free(&this->initiator.key);
 	chunk_free(&this->responder.key);
 	
@@ -223,12 +231,12 @@ static void check_list_destroy(check_list_t *this)
  * Creates a new checklist
  */
 static check_list_t *check_list_create(identification_t *initiator, identification_t *responder,
-		chunk_t session_id, chunk_t initiator_key, linked_list_t *initiator_endpoints,
+		chunk_t connect_id, chunk_t initiator_key, linked_list_t *initiator_endpoints,
 		bool is_initiator)
 {
 	check_list_t *this = malloc_thing(check_list_t);
 	
-	this->session_id = chunk_clone(session_id);
+	this->connect_id = chunk_clone(connect_id);
 	
 	this->initiator.id = initiator->clone(initiator);
 	this->initiator.key = chunk_clone(initiator_key);
@@ -242,43 +250,7 @@ static check_list_t *check_list_create(identification_t *initiator, identificati
     this->triggered = linked_list_create();
     this->state = CHECK_NONE;
     this->is_initiator = is_initiator;
-    
-	return this;
-}
-
-
-typedef struct waiting_sa_t waiting_sa_t;
-
-/**
- * For an initiator, the data stored about a waiting mediated sa
- */
-struct waiting_sa_t {
-	/** ike sa id */
-	ike_sa_id_t *ike_sa_id;
-	
-	/** list of child_cfg_t */
-	linked_list_t *childs;
-};
-
-/**
- * Destroys a queued mediated sa
- */
-static void waiting_sa_destroy(waiting_sa_t *this)
-{
-	DESTROY_IF(this->ike_sa_id);
-	this->childs->destroy_offset(this->childs, offsetof(child_cfg_t, destroy));
-	free(this);
-}
-
-/**
- * Creates a new mediated sa object
- */
-static waiting_sa_t *waiting_sa_create(ike_sa_id_t *ike_sa_id)
-{
-	waiting_sa_t *this = malloc_thing(waiting_sa_t);
-	
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->childs = linked_list_create();
+    this->is_finishing = FALSE;
     
 	return this;
 }
@@ -306,7 +278,7 @@ static void initiated_destroy(initiated_t *this)
 {
 	DESTROY_IF(this->id);
 	DESTROY_IF(this->peer_id);
-	this->mediated->destroy_function(this->mediated, (void*)waiting_sa_destroy);
+	this->mediated->destroy_offset(this->mediated, offsetof(ike_sa_id_t, destroy));
 	free(this);
 }
 
@@ -340,8 +312,8 @@ struct check_t {
 	/** destination of the connectivity check */
 	host_t *dst;
 	
-	/** session id */
-	chunk_t session_id;
+	/** connect id */
+	chunk_t connect_id;
 	
 	/** endpoint */
 	endpoint_notify_t *endpoint;
@@ -349,8 +321,8 @@ struct check_t {
 	/** raw endpoint payload (to verify the signature) */
 	chunk_t endpoint_raw;
 	
-    /** cookie */
-    chunk_t cookie;
+    /** connect auth */
+    chunk_t auth;
 };
 
 /**
@@ -358,9 +330,11 @@ struct check_t {
  */
 static void check_destroy(check_t *this)
 {
-	chunk_free(&this->session_id);
+	chunk_free(&this->connect_id);
 	chunk_free(&this->endpoint_raw);
-	chunk_free(&this->cookie);
+	chunk_free(&this->auth);
+	DESTROY_IF(this->src);
+	DESTROY_IF(this->dst);
 	DESTROY_IF(this->endpoint);
 	free(this);
 }
@@ -372,9 +346,11 @@ static check_t *check_create()
 {
 	check_t *this = malloc_thing(check_t);
 	
-	this->session_id = chunk_empty;
-	this->cookie = chunk_empty;
+	this->connect_id = chunk_empty;
+	this->auth = chunk_empty;
 	this->endpoint_raw = chunk_empty;
+	this->src = NULL;
+	this->dst = NULL;
 	this->endpoint = NULL;
 	
 	this->mid = 0;
@@ -382,76 +358,52 @@ static check_t *check_create()
 	return this;
 }
 
-typedef struct sender_data_t sender_data_t;
+typedef struct callback_data_t callback_data_t;
 
 /**
- * Data required by the sender
+ * Data required by several callback jobs used in this file
  */
-struct sender_data_t {
+struct callback_data_t {
 	/** connect manager */
 	private_connect_manager_t *connect_manager;
 	
-	/** session id */
-	chunk_t session_id;
-};
-
-/**
- * Destroys a sender data object
- */
-static void sender_data_destroy(sender_data_t *this)
-{
-	chunk_free(&this->session_id);
-	free(this);
-}
-
-/**
- * Creates a new sender data object
- */
-static sender_data_t *sender_data_create(private_connect_manager_t *connect_manager, chunk_t session_id)
-{
-	sender_data_t *this = malloc_thing(sender_data_t);	
-	this->connect_manager = connect_manager;
-	this->session_id = session_id;
-	return this;
-}
-
-typedef struct retransmit_data_t retransmit_data_t;
-
-/**
- * Data required by the retransmission job
- */
-struct retransmit_data_t {
-	/** connect manager */
-	private_connect_manager_t *connect_manager;
-	
-	/** session id */
-	chunk_t session_id;
+	/** connect id */
+	chunk_t connect_id;
 	
 	/** message (pair) id */
 	u_int32_t mid;
 };
 
 /**
- * Destroys a retransmission data object
+ * Destroys a callback data object
  */
-static void retransmit_data_destroy(retransmit_data_t *this)
+static void callback_data_destroy(callback_data_t *this)
 {
-	chunk_free(&this->session_id);
+	chunk_free(&this->connect_id);
 	free(this);
+}
+
+/**
+ * Creates a new callback data object
+ */
+static callback_data_t *callback_data_create(private_connect_manager_t *connect_manager,
+		chunk_t connect_id)
+{
+	callback_data_t *this = malloc_thing(callback_data_t);	
+	this->connect_manager = connect_manager;
+	this->connect_id = chunk_clone(connect_id);
+	this->mid = 0;
+	return this;
 }
 
 /**
  * Creates a new retransmission data object
  */
-static retransmit_data_t *retransmit_data_create(private_connect_manager_t *connect_manager,
-		chunk_t session_id, u_int32_t mid)
+static callback_data_t *retransmit_data_create(private_connect_manager_t *connect_manager,
+		chunk_t connect_id, u_int32_t mid)
 {
-	retransmit_data_t *this = malloc_thing(retransmit_data_t);
-	
-	this->connect_manager = connect_manager;
-	this->session_id = session_id;
+	callback_data_t *this = callback_data_create(connect_manager, connect_id);
 	this->mid = mid;
-
 	return this;
 }
 
@@ -529,34 +481,19 @@ static void remove_initiated(private_connect_manager_t *this, initiated_t *initi
 }
 
 /**
- * Finds a waiting sa
+ * Find the checklist with a specific connect ID
  */
-static bool match_waiting_sa(waiting_sa_t *current, ike_sa_id_t *ike_sa_id)
+static bool match_checklist_by_id(check_list_t *current, chunk_t *connect_id)
 {
-	return ike_sa_id->equals(ike_sa_id, current->ike_sa_id);
-}
-
-static status_t get_waiting_sa(initiated_t *initiated, ike_sa_id_t *ike_sa_id, waiting_sa_t **waiting_sa)
-{
-	return initiated->mediated->find_first(initiated->mediated,
-				(linked_list_match_t)match_waiting_sa,
-				(void**)waiting_sa, ike_sa_id);
-}
-
-/**
- * Find the checklist with a specific session ID
- */
-static bool match_checklist_by_id(check_list_t *current, chunk_t *session_id)
-{
-	return chunk_equals(*session_id, current->session_id);
+	return chunk_equals(*connect_id, current->connect_id);
 }
 
 static status_t get_checklist_by_id(private_connect_manager_t *this,
-		chunk_t session_id, check_list_t **check_list)
+		chunk_t connect_id, check_list_t **check_list)
 {
 	return this->checklists->find_first(this->checklists,
 				(linked_list_match_t)match_checklist_by_id,
-				(void**)check_list, &session_id);
+				(void**)check_list, &connect_id);
 }
 
 /**
@@ -592,51 +529,6 @@ static status_t endpoints_contain(linked_list_t *endpoints, host_t *host, endpoi
 	return endpoints->find_first(endpoints,
 				(linked_list_match_t)match_endpoint_by_host,
 				(void**)endpoint, host);
-}
-
-/**
- * Updates the state of the whole checklist
- */
-static void update_checklist_state(check_list_t *checklist)
-{
-	iterator_t *iterator;
-	endpoint_pair_t *current;
-	bool in_progress = FALSE, succeeded = FALSE;
-
-	iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
-	{
-		switch(current->state)
-		{
-			case CHECK_WAITING:
-				/* at least one is still waiting -> checklist remains
-				 * in waiting state */
-				iterator->destroy(iterator);
-				return;
-			case CHECK_IN_PROGRESS:
-				in_progress = TRUE;
-				break;
-			case CHECK_SUCCEEDED:
-				succeeded = TRUE;
-				break;
-			default:
-				break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	if (in_progress)
-	{
-		checklist->state = CHECK_IN_PROGRESS;
-	}
-	else if (succeeded)
-	{
-		checklist->state = CHECK_SUCCEEDED;
-	}
-	else
-	{
-		checklist->state = CHECK_FAILED;
-	}
 }
 
 /**
@@ -681,14 +573,14 @@ static status_t get_pair_by_hosts(linked_list_t *pairs, host_t *local, host_t *r
 				(void**)pair, local, remote);
 }
 
-/**
- * Searches for a pair with a specific id
- */
 static bool match_pair_by_id(endpoint_pair_t *current, u_int32_t *id)
 {
 	return current->id == *id;
 }
 
+/**
+ * Searches for a pair with a specific id
+ */
 static status_t get_pair_by_id(check_list_t *checklist, u_int32_t id, endpoint_pair_t **pair)
 {
 	return checklist->pairs->find_first(checklist->pairs,
@@ -696,14 +588,14 @@ static status_t get_pair_by_id(check_list_t *checklist, u_int32_t id, endpoint_p
 				(void**)pair, &id);
 }
 
-/**
- * Returns the best pair of state CHECK_SUCCEEDED from a checklist. 
- */
 static bool match_succeeded_pair(endpoint_pair_t *current)
 {
 	return current->state == CHECK_SUCCEEDED;
 }
 
+/**
+ * Returns the best pair of state CHECK_SUCCEEDED from a checklist. 
+ */
 static status_t get_best_valid_pair(check_list_t *checklist, endpoint_pair_t **pair)
 {
 	return checklist->pairs->find_first(checklist->pairs,
@@ -711,14 +603,14 @@ static status_t get_best_valid_pair(check_list_t *checklist, endpoint_pair_t **p
 				(void**)pair);
 }
 
-/**
- * Returns and *removes* the first triggered pair in state CHECK_WAITING. 
- */
 static bool match_waiting_pair(endpoint_pair_t *current)
 {
 	return current->state == CHECK_WAITING;
 }
 
+/**
+ * Returns and *removes* the first triggered pair in state CHECK_WAITING. 
+ */
 static status_t get_triggered_pair(check_list_t *checklist, endpoint_pair_t **pair)
 {
 	iterator_t *iterator;
@@ -743,6 +635,24 @@ static status_t get_triggered_pair(check_list_t *checklist, endpoint_pair_t **pa
 	iterator->destroy(iterator);
 	
 	return status;
+}
+
+/**
+ * Prints all the pairs on a checklist
+ */
+static void print_checklist(check_list_t *checklist)
+{
+	iterator_t *iterator;
+	endpoint_pair_t *current;
+	
+	DBG1(DBG_IKE, "pairs on checklist %#B:", &checklist->connect_id);
+	iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		DBG1(DBG_IKE, " * %#H - %#H (%d)", current->local, current->remote,
+				current->priority);
+	}
+	iterator->destroy(iterator);
 }
 
 /**
@@ -775,7 +685,7 @@ static void prune_pairs(linked_list_t *pairs)
 				 * order, and we iterate the list from the beginning, we are
 				 * sure that the priority of 'other' is lower than that of
 				 * 'current', remove it */
-				DBG1(DBG_IKE, "pruning endpoint pair %H - %H with priority %d",
+				DBG1(DBG_IKE, "pruning endpoint pair %#H - %#H with priority %d",
 						other->local, other->remote, other->priority);
 				search->remove(search);
 				endpoint_pair_destroy(other);
@@ -792,6 +702,7 @@ static void prune_pairs(linked_list_t *pairs)
  */
 static void build_pairs(check_list_t *checklist)
 {
+	/* FIXME: limit endpoints and pairs */
 	iterator_t *iterator_i, *iterator_r;
 	endpoint_notify_t *initiator, *responder;
 	
@@ -812,6 +723,8 @@ static void build_pairs(check_list_t *checklist)
 		iterator_r->destroy(iterator_r);
 	}
 	iterator_i->destroy(iterator_i);
+	
+	print_checklist(checklist);
 
 	prune_pairs(checklist->pairs);
 }
@@ -838,45 +751,45 @@ static status_t process_payloads(message_t *message, check_t *check)
 		
 		switch (notify->get_notify_type(notify))
 		{
-			case P2P_ENDPOINT:
+			case ME_ENDPOINT:
 			{
 				if (check->endpoint)
 				{
-					DBG1(DBG_IKE, "connectivity check contains multiple P2P_ENDPOINT notifies");
+					DBG1(DBG_IKE, "connectivity check contains multiple ME_ENDPOINT notifies");
 					break;
 				}
 				
 				endpoint_notify_t *endpoint = endpoint_notify_create_from_payload(notify);
 				if (!endpoint)
 				{
-					DBG1(DBG_IKE, "received invalid P2P_ENDPOINT notify");
+					DBG1(DBG_IKE, "received invalid ME_ENDPOINT notify");
 					break;
 				}
 				check->endpoint = endpoint;
 				check->endpoint_raw = chunk_clone(notify->get_notification_data(notify));
-				DBG2(DBG_IKE, "received P2P_ENDPOINT notify");
+				DBG2(DBG_IKE, "received ME_ENDPOINT notify");
 				break;
 			}
-			case P2P_SESSIONID:
+			case ME_CONNECTID:
 			{
-				if (check->session_id.ptr)
+				if (check->connect_id.ptr)
 				{
-					DBG1(DBG_IKE, "connectivity check contains multiple P2P_SESSIONID notifies");
+					DBG1(DBG_IKE, "connectivity check contains multiple ME_CONNECTID notifies");
 					break;
 				}
-				check->session_id = chunk_clone(notify->get_notification_data(notify));
-				DBG3(DBG_IKE, "received p2p_sessionid %B", &check->session_id);
+				check->connect_id = chunk_clone(notify->get_notification_data(notify));
+				DBG2(DBG_IKE, "received ME_CONNECTID %#B", &check->connect_id);
 				break;
 			}
-			case COOKIE:
+			case ME_CONNECTAUTH:
 			{
-				if (check->cookie.ptr)
+				if (check->auth.ptr)
 				{
-					DBG1(DBG_IKE, "connectivity check contains multiple COOKIE notifies");
+					DBG1(DBG_IKE, "connectivity check contains multiple ME_CONNECTAUTH notifies");
 					break;
 				}
-				check->cookie = chunk_clone(notify->get_notification_data(notify));
-				DBG3(DBG_IKE, "received cookie %B", &check->cookie);
+				check->auth = chunk_clone(notify->get_notification_data(notify));
+				DBG2(DBG_IKE, "received ME_CONNECTAUTH %#B", &check->auth);
 				break;
 			}
 			default:
@@ -885,7 +798,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 	}
 	iterator->destroy(iterator);
 	
-	if (!check->session_id.ptr || !check->endpoint || !check->cookie.ptr)
+	if (!check->connect_id.ptr || !check->endpoint || !check->auth.ptr)
 	{
 		DBG1(DBG_IKE, "at least one payload was missing from the connectivity check");
 		return FAILED;
@@ -900,42 +813,129 @@ static status_t process_payloads(message_t *message, check_t *check)
 static chunk_t build_signature(private_connect_manager_t *this, 
 		check_list_t *checklist, check_t *check, bool outbound)
 {
+	u_int32_t mid;
 	chunk_t mid_chunk, key_chunk, sig_chunk;
 	chunk_t sig_hash;
 	
-	mid_chunk = chunk_from_thing(check->mid);
+	mid = htonl(check->mid);
+	mid_chunk = chunk_from_thing(mid);
 	
 	key_chunk = (checklist->is_initiator && outbound) || (!checklist->is_initiator && !outbound)
 					? checklist->initiator.key : checklist->responder.key;
 	
-	/* signature = SHA1( MID | P2P_SESSIONID | P2P_ENDPOINT | P2P_SESSIONKEY ) */
-	sig_chunk = chunk_cat("cccc", mid_chunk, check->session_id, check->endpoint_raw, key_chunk);
+	/* signature = SHA1( MID | ME_CONNECTID | ME_ENDPOINT | ME_CONNECTKEY ) */
+	sig_chunk = chunk_cat("cccc", mid_chunk, check->connect_id, check->endpoint_raw, key_chunk);
 	this->hasher->allocate_hash(this->hasher, sig_chunk, &sig_hash);
-	DBG3(DBG_IKE, "sig_chunk %B", &sig_chunk);
-	DBG3(DBG_IKE, "sig_hash %B", &sig_hash);
+	DBG3(DBG_IKE, "sig_chunk %#B", &sig_chunk);
+	DBG3(DBG_IKE, "sig_hash %#B", &sig_hash);
 	
 	chunk_free(&sig_chunk);
 	return sig_hash;
 }
 
-static void queue_retransmission(private_connect_manager_t *this, chunk_t session_id, u_int32_t mid);
+static void queue_retransmission(private_connect_manager_t *this, check_list_t *checklist, endpoint_pair_t *pair);
 static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time);
 static void finish_checks(private_connect_manager_t *this, check_list_t *checklist);
 
 /**
+ * After one of the initiator's pairs has succeeded we finish the checks without
+ * waiting for all the timeouts  
+ */
+static job_requeue_t initiator_finish(callback_data_t *data)
+{
+	private_connect_manager_t *this = data->connect_manager;
+
+	pthread_mutex_lock(&(this->mutex));
+
+	check_list_t *checklist;
+	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
+	{
+		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't finish connectivity checks",
+				&data->connect_id);
+		pthread_mutex_unlock(&(this->mutex));
+		return JOB_REQUEUE_NONE;
+	}
+	
+	finish_checks(this, checklist);
+	
+	pthread_mutex_unlock(&(this->mutex));
+	
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * Updates the state of the whole checklist
+ */
+static void update_checklist_state(private_connect_manager_t *this, check_list_t *checklist)
+{
+	iterator_t *iterator;
+	endpoint_pair_t *current;
+	bool in_progress = FALSE, succeeded = FALSE;
+
+	iterator = checklist->pairs->create_iterator(checklist->pairs, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		switch(current->state)
+		{
+			case CHECK_WAITING:
+				/* at least one is still waiting -> checklist remains
+				 * in waiting state */
+				iterator->destroy(iterator);
+				return;
+			case CHECK_IN_PROGRESS:
+				in_progress = TRUE;
+				break;
+			case CHECK_SUCCEEDED:
+				succeeded = TRUE;
+				break;
+			default:
+				break;
+		}
+	}
+	iterator->destroy(iterator);
+	
+	if (checklist->is_initiator && succeeded && !checklist->is_finishing)
+	{
+		/* instead of waiting until all checks have finished (i.e. all
+		 * retransmissions have failed) the initiator finishes the checks
+		 * right after the first check has succeeded. to allow a probably
+		 * better pair to succeed, we still wait a certain time */
+		DBG2(DBG_IKE, "fast finishing checks for checklist '%#B'", &checklist->connect_id);
+		
+		callback_data_t *data = callback_data_create(this, checklist->connect_id);
+		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
+		charon->scheduler->schedule_job(charon->scheduler, job, ME_WAIT_TO_FINISH);
+		checklist->is_finishing = TRUE;
+	}
+	
+	if (in_progress)
+	{
+		checklist->state = CHECK_IN_PROGRESS;
+	}
+	else if (succeeded)
+	{
+		checklist->state = CHECK_SUCCEEDED;
+	}
+	else
+	{
+		checklist->state = CHECK_FAILED;
+	}
+}
+
+/**
  * This function is triggered for each sent check after a specific timeout
  */
-static job_requeue_t retransmit(retransmit_data_t *data)
+static job_requeue_t retransmit(callback_data_t *data)
 {
 	private_connect_manager_t *this = data->connect_manager;
 	
 	pthread_mutex_lock(&(this->mutex));
 
 	check_list_t *checklist;
-	if (get_checklist_by_id(this, data->session_id, &checklist) != SUCCESS)
+	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found, can't retransmit connectivity check",
-				&data->session_id);
+		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't retransmit connectivity check",
+				&data->connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return JOB_REQUEUE_NONE;
 	}
@@ -955,20 +955,20 @@ static job_requeue_t retransmit(retransmit_data_t *data)
 		goto retransmit_end;
 	}
 	
-	if (++pair->retransmitted >= P2P_MAX_RETRANS)
+	if (++pair->retransmitted > ME_MAX_RETRANS)
 	{
-		DBG2(DBG_IKE, "pair with id '%d' failed after %d tries",
-				data->mid, pair->retransmitted);
+		DBG2(DBG_IKE, "pair with id '%d' failed after %d retransmissions",
+				data->mid, ME_MAX_RETRANS);
 		pair->state = CHECK_FAILED;
 		goto retransmit_end;
 	}
 	
 	charon->sender->send(charon->sender, pair->packet->clone(pair->packet));
 	
-	queue_retransmission(this, checklist->session_id, pair->id);
+	queue_retransmission(this, checklist, pair);
 
 retransmit_end:
-	update_checklist_state(checklist);
+	update_checklist_state(this, checklist);
 	
 	switch(checklist->state)
 	{
@@ -989,11 +989,20 @@ retransmit_end:
 /**
  * Queues a retransmission job
  */
-static void queue_retransmission(private_connect_manager_t *this, chunk_t session_id, u_int32_t mid)
+static void queue_retransmission(private_connect_manager_t *this, check_list_t *checklist, endpoint_pair_t *pair)
 {
-	retransmit_data_t *data = retransmit_data_create(this, chunk_clone(session_id), mid);
-	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data, (callback_job_cleanup_t)retransmit_data_destroy, NULL);
-	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, P2P_RTO_MIN);
+	callback_data_t *data = retransmit_data_create(this, checklist->connect_id, pair->id);
+	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)retransmit, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
+	
+	u_int32_t retransmission = pair->retransmitted + 1;
+	u_int32_t rto = ME_INTERVAL;
+	if (retransmission > ME_BOOST)
+	{
+		rto = (u_int32_t)(ME_INTERVAL * pow(ME_RETRANS_BASE, retransmission - ME_BOOST));
+	}
+	DBG2(DBG_IKE, "scheduling retransmission %d of pair '%d' in %dms", retransmission, pair->id, rto);
+	
+	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, rto);
 }
 
 /**
@@ -1009,16 +1018,21 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 	message->set_destination(message, check->dst->clone(check->dst));
 	message->set_source(message, check->src->clone(check->src));
 	
-	message->set_ike_sa_id(message, ike_sa_id_create(0, 0, request));
+	ike_sa_id_t *ike_sa_id = ike_sa_id_create(0, 0, request);
+	message->set_ike_sa_id(message, ike_sa_id);
+	ike_sa_id->destroy(ike_sa_id);
 
-	message->add_notify(message, FALSE, P2P_SESSIONID, check->session_id);
+	message->add_notify(message, FALSE, ME_CONNECTID, check->connect_id);
+	DBG2(DBG_IKE, "send ME_CONNECTID %#B", &check->connect_id);
 	
 	notify_payload_t *endpoint = check->endpoint->build_notify(check->endpoint);
 	check->endpoint_raw = chunk_clone(endpoint->get_notification_data(endpoint));
 	message->add_payload(message, (payload_t*)endpoint);
+	DBG2(DBG_IKE, "send ME_ENDPOINT notify");
 	
-	check->cookie = build_signature(this, checklist, check, TRUE);
-	message->add_notify(message, FALSE, COOKIE, check->cookie);
+	check->auth = build_signature(this, checklist, check, TRUE);
+	message->add_notify(message, FALSE, ME_CONNECTAUTH, check->auth);
+	DBG2(DBG_IKE, "send ME_CONNECTAUTH %#B", &check->auth);
 	
 	packet_t *packet;
 	if (message->generate(message, NULL, NULL, &packet) == SUCCESS)
@@ -1029,41 +1043,54 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 		{
 			DESTROY_IF(pair->packet);
 			pair->packet = packet;
-			queue_retransmission(this, checklist->session_id, pair->id);
+			pair->retransmitted = 0;
+			queue_retransmission(this, checklist, pair);
 		}
 		else
 		{
 			packet->destroy(packet);
 		}
 	}
+	message->destroy(message);
 }
 
 /**
  * Queues a triggered check
  */
-static void queue_triggered_check(check_list_t *checklist, endpoint_pair_t *pair)
+static void queue_triggered_check(private_connect_manager_t *this, 
+		check_list_t *checklist, endpoint_pair_t *pair)
 {
+	DBG2(DBG_IKE, "queueing triggered check for pair '%d'", pair->id);
  	pair->state = CHECK_WAITING;
  	checklist->triggered->insert_last(checklist->triggered, pair);
+ 	
+ 	if (!checklist->sender)
+ 	{
+ 		/* if the sender is not running we restart it */
+ 		schedule_checks(this, checklist, ME_INTERVAL);
+ 	}
 }
 
 /**
  * This function is triggered for each checklist at a specific interval
  */
-static job_requeue_t sender(sender_data_t *data)
+static job_requeue_t sender(callback_data_t *data)
 {
 	private_connect_manager_t *this = data->connect_manager;
 
 	pthread_mutex_lock(&(this->mutex));
-
+	
 	check_list_t *checklist;
-	if (get_checklist_by_id(this, data->session_id, &checklist) != SUCCESS)
+	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found, can't send connectivity check",
-				&data->session_id);
+		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't send connectivity check",
+				&data->connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return JOB_REQUEUE_NONE;
 	}
+	
+	/* reset the sender */
+	checklist->sender = NULL;
 	
 	endpoint_pair_t *pair;
 	if (get_triggered_pair(checklist, &pair) != SUCCESS)
@@ -1087,7 +1114,7 @@ static job_requeue_t sender(sender_data_t *data)
 	check->mid = pair->id;
 	check->src = pair->local->clone(pair->local);
 	check->dst = pair->remote->clone(pair->remote);
-	check->session_id = chunk_clone(checklist->session_id);
+	check->connect_id = chunk_clone(checklist->connect_id);
 	check->endpoint = endpoint_notify_create();
 	
 	pair->state = CHECK_IN_PROGRESS;
@@ -1097,8 +1124,7 @@ static job_requeue_t sender(sender_data_t *data)
 	check_destroy(check);
 	
 	/* schedule this job again */
-	u_int32_t N = this->checklists->get_count(this->checklists);
-	schedule_checks(this, checklist, P2P_INTERVAL * N);
+	schedule_checks(this, checklist, ME_INTERVAL);
 	
 	pthread_mutex_unlock(&(this->mutex));
 	
@@ -1111,10 +1137,9 @@ static job_requeue_t sender(sender_data_t *data)
  */
 static void schedule_checks(private_connect_manager_t *this, check_list_t *checklist, u_int32_t time)
 {
-	chunk_t session_id = chunk_clone(checklist->session_id);
-	sender_data_t *data = sender_data_create(this, session_id);
-	job_t *job = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)sender_data_destroy, NULL);
-	charon->scheduler->schedule_job(charon->scheduler, job, time);
+	callback_data_t *data = callback_data_create(this, checklist->connect_id);
+	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
+	charon->scheduler->schedule_job(charon->scheduler, checklist->sender, time);
 }
 
 /**
@@ -1128,12 +1153,12 @@ static job_requeue_t initiate_mediated(initiate_data_t *data)
 	endpoint_pair_t *pair;
 	if (get_best_valid_pair(checklist, &pair) == SUCCESS)
 	{
-		waiting_sa_t *waiting_sa;
+		ike_sa_id_t *waiting_sa;
 		iterator_t *iterator = initiated->mediated->create_iterator(initiated->mediated, TRUE);
 		while (iterator->iterate(iterator, (void**)&waiting_sa))
 		{
-			ike_sa_t *sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, waiting_sa->ike_sa_id);
-			if (sa->initiate_mediated(sa, pair->local, pair->remote, waiting_sa->childs) != SUCCESS)
+			ike_sa_t *sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, waiting_sa);
+			if (sa->initiate_mediated(sa, pair->local, pair->remote, checklist->connect_id) != SUCCESS)
 			{
 				SIG(IKE_UP_FAILED, "establishing the mediated connection failed");
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, sa);
@@ -1175,11 +1200,6 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 					"and '%D'", checklist->initiator.id, checklist->responder.id);
 		}
 	}
-	
-	/* remove_checklist(this, checklist);
-	 * check_list_destroy(checklist);
-	 * FIXME: we should do this ^^^ after a specific timeout on the 
-	 * responder side */
 }
 
 /**
@@ -1212,7 +1232,7 @@ static void process_response(private_connect_manager_t *this, check_t *check,
 			local_endpoints->insert_last(local_endpoints, local_endpoint);
 		}
 		
-		update_checklist_state(checklist);
+		update_checklist_state(this, checklist);
 		
 		switch(checklist->state)
 		{
@@ -1253,12 +1273,12 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 		{
 			case CHECK_IN_PROGRESS:
 				/* prevent retransmissions */
-				pair->retransmitted = P2P_MAX_RETRANS; 
+				pair->retransmitted = ME_MAX_RETRANS;
 				/* FIXME: we should wait to the next rto to send the triggered check
 				 * fall-through */
 			case CHECK_WAITING:
 			case CHECK_FAILED:
-				queue_triggered_check(checklist, pair);
+				queue_triggered_check(this, checklist, pair);
 				break;
 			case CHECK_SUCCEEDED:
 			default:
@@ -1277,7 +1297,7 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 		
 		insert_pair_by_priority(checklist->pairs, pair);
 		
-		queue_triggered_check(checklist, pair);
+		queue_triggered_check(this, checklist, pair);
 		
 		local_endpoint->destroy(local_endpoint);
 	}
@@ -1288,7 +1308,7 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 	response->mid = check->mid;
 	response->src = check->dst->clone(check->dst);
 	response->dst = check->src->clone(check->src);
-	response->session_id = chunk_clone(check->session_id);
+	response->connect_id = chunk_clone(check->connect_id);
 	response->endpoint = peer_reflexive;
 	
 	send_check(this, checklist, response, pair, FALSE);
@@ -1313,7 +1333,9 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 	check_t *check = check_create();
 	check->mid = message->get_message_id(message);
 	check->src = message->get_source(message);
+	check->src = check->src->clone(check->src);
 	check->dst = message->get_destination(message);
+	check->dst = check->dst->clone(check->dst);
 	
 	if (process_payloads(message, check) != SUCCESS)
 	{
@@ -1326,17 +1348,17 @@ static void process_check(private_connect_manager_t *this, message_t *message)
 	pthread_mutex_lock(&(this->mutex));
 	
 	check_list_t *checklist;
-	if (get_checklist_by_id(this, check->session_id, &checklist) != SUCCESS)
+	if (get_checklist_by_id(this, check->connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found",
-				&check->session_id);
+		DBG1(DBG_IKE, "checklist with id '%#B' not found",
+				&check->connect_id);
 		check_destroy(check);
 		pthread_mutex_unlock(&(this->mutex));
 		return;
 	}
 	
 	chunk_t sig = build_signature(this, checklist, check, FALSE); 
-	if (!chunk_equals(sig, check->cookie))
+	if (!chunk_equals(sig, check->auth))
 	{
 		DBG1(DBG_IKE, "connectivity check verification failed");
 		check_destroy(check);
@@ -1365,7 +1387,7 @@ static void process_check(private_connect_manager_t *this, message_t *message)
  */
 static bool check_and_register(private_connect_manager_t *this,
 			identification_t *id, identification_t *peer_id,
-			ike_sa_id_t *mediated_sa, child_cfg_t *child)
+			ike_sa_id_t *mediated_sa)
 {
 	initiated_t *initiated;
 	bool already_there = TRUE;
@@ -1380,15 +1402,11 @@ static bool check_and_register(private_connect_manager_t *this,
 		already_there = FALSE;
 	}
 	
-	waiting_sa_t *waiting_sa;
-	if (get_waiting_sa(initiated, mediated_sa, &waiting_sa) != SUCCESS)
+	if (initiated->mediated->find_first(initiated->mediated, 
+			(linked_list_match_t)mediated_sa->equals, NULL, mediated_sa) != SUCCESS)
 	{
-		waiting_sa = waiting_sa_create(mediated_sa);
-		initiated->mediated->insert_last(initiated->mediated, waiting_sa);
+		initiated->mediated->insert_last(initiated->mediated, mediated_sa->clone(mediated_sa));
 	}
-
-	child->get_ref(child);
-	waiting_sa->childs->insert_last(waiting_sa->childs, child);
 
 	pthread_mutex_unlock(&(this->mutex));
 
@@ -1412,14 +1430,14 @@ static void check_and_initiate(private_connect_manager_t *this, ike_sa_id_t *med
 		return;
 	}
 	
-	waiting_sa_t *waiting_sa;
+	ike_sa_id_t *waiting_sa;
 	iterator_t *iterator = initiated->mediated->create_iterator(initiated->mediated, TRUE);
 	while (iterator->iterate(iterator, (void**)&waiting_sa))
 	{
-		job_t *job = (job_t*)reinitiate_mediation_job_create(mediation_sa,
-				waiting_sa->ike_sa_id);
+		job_t *job = (job_t*)reinitiate_mediation_job_create(mediation_sa, waiting_sa);
 		charon->processor->queue_job(charon->processor, job);
 	}
+	iterator->destroy(iterator);
 
 	pthread_mutex_unlock(&(this->mutex));
 }
@@ -1429,21 +1447,21 @@ static void check_and_initiate(private_connect_manager_t *this, ike_sa_id_t *med
  */
 static status_t set_initiator_data(private_connect_manager_t *this,
 		identification_t *initiator, identification_t *responder,
-		chunk_t session_id, chunk_t key, linked_list_t *endpoints, bool is_initiator)
+		chunk_t connect_id, chunk_t key, linked_list_t *endpoints, bool is_initiator)
 {
 	check_list_t *checklist;
 	
 	pthread_mutex_lock(&(this->mutex));	
 	
-	if (get_checklist_by_id(this, session_id, NULL) == SUCCESS)
+	if (get_checklist_by_id(this, connect_id, NULL) == SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' already exists, aborting",
-				&session_id);
+		DBG1(DBG_IKE, "checklist with id '%#B' already exists, aborting",
+				&connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return FAILED;
 	}
 	
-	checklist = check_list_create(initiator, responder, session_id, key, endpoints, is_initiator);
+	checklist = check_list_create(initiator, responder, connect_id, key, endpoints, is_initiator);
 	this->checklists->insert_last(this->checklists, checklist);
 	
 	pthread_mutex_unlock(&(this->mutex));
@@ -1455,16 +1473,16 @@ static status_t set_initiator_data(private_connect_manager_t *this,
  * Implementation of connect_manager_t.set_responder_data.
  */
 static status_t set_responder_data(private_connect_manager_t *this,
-		chunk_t session_id, chunk_t key, linked_list_t *endpoints)
+		chunk_t connect_id, chunk_t key, linked_list_t *endpoints)
 {
 	check_list_t *checklist;
 
 	pthread_mutex_lock(&(this->mutex));
 	
-	if (get_checklist_by_id(this, session_id, &checklist) != SUCCESS)
+	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
 	{
-		DBG1(DBG_IKE, "checklist with id '%B' not found",
-				&session_id);
+		DBG1(DBG_IKE, "checklist with id '%#B' not found",
+				&connect_id);
 		pthread_mutex_unlock(&(this->mutex));
 		return NOT_FOUND;
 	}
@@ -1477,6 +1495,33 @@ static status_t set_responder_data(private_connect_manager_t *this,
 	
 	/* send the first check immediately */
 	schedule_checks(this, checklist, 0);
+	
+	pthread_mutex_unlock(&(this->mutex));
+	
+	return SUCCESS;
+}
+
+/**
+ * Implementation of connect_manager_t.stop_checks.
+ */
+static status_t stop_checks(private_connect_manager_t *this, chunk_t connect_id)
+{
+	check_list_t *checklist;
+
+	pthread_mutex_lock(&(this->mutex));
+	
+	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
+	{
+		DBG1(DBG_IKE, "checklist with id '%#B' not found",
+				&connect_id);
+		pthread_mutex_unlock(&(this->mutex));
+		return NOT_FOUND;
+	}
+	
+	DBG1(DBG_IKE, "removing checklist with id '%#B'", &connect_id);
+	
+	remove_checklist(this, checklist);
+	check_list_destroy(checklist);
 	
 	pthread_mutex_unlock(&(this->mutex));
 	
@@ -1507,13 +1552,21 @@ connect_manager_t *connect_manager_create()
 	private_connect_manager_t *this = malloc_thing(private_connect_manager_t);
 
 	this->public.destroy = (void(*)(connect_manager_t*))destroy;
-	this->public.check_and_register = (bool(*)(connect_manager_t*,identification_t*,identification_t*,ike_sa_id_t*,child_cfg_t*))check_and_register;
+	this->public.check_and_register = (bool(*)(connect_manager_t*,identification_t*,identification_t*,ike_sa_id_t*))check_and_register;
 	this->public.check_and_initiate = (void(*)(connect_manager_t*,ike_sa_id_t*,identification_t*,identification_t*))check_and_initiate;
 	this->public.set_initiator_data = (status_t(*)(connect_manager_t*,identification_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool))set_initiator_data;
 	this->public.set_responder_data = (status_t(*)(connect_manager_t*,chunk_t,chunk_t,linked_list_t*))set_responder_data;
 	this->public.process_check = (void(*)(connect_manager_t*,message_t*))process_check;
+	this->public.stop_checks = (status_t(*)(connect_manager_t*,chunk_t))stop_checks;
 	
-	this->hasher = hasher_create(HASH_SHA1);
+	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (this->hasher == NULL)
+	{
+		DBG1(DBG_IKE, "unable to create connect manager, SHA1 not supported");
+		free(this);
+		return NULL;
+	}
+	
 	this->checklists = linked_list_create();
 	this->initiated = linked_list_create();
 	

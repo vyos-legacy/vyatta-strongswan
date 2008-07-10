@@ -20,7 +20,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: openac.c 3442 2008-02-04 14:46:43Z andreas $
+ * RCSID $Id: openac.c 3967 2008-05-16 08:52:32Z martin $
  */
 
 #include <stdio.h>
@@ -33,11 +33,12 @@
 #include <time.h>
 #include <gmp.h>
 
+#include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
-#include <asn1/ttodata.h>
-#include <crypto/ac.h>
-#include <crypto/ietf_attr_list.h>
+#include <asn1/pem.h>
+#include <credentials/certificates/x509.h>
+#include <credentials/certificates/ac.h>
 #include <utils/optionsfrom.h>
 
 #ifdef INTEGRITY_TEST
@@ -45,10 +46,10 @@
 #include <fips_signature.h>
 #endif /* INTEGRITY_TEST */
 
-#include "build.h"
+#define OPENAC_PATH   		IPSEC_CONFDIR "/openac"
+#define OPENAC_SERIAL 		IPSEC_CONFDIR "/openac/serial"
 
-#define OPENAC_PATH   IPSEC_CONFDIR "/openac"
-#define OPENAC_SERIAL IPSEC_CONFDIR "/openac/serial"
+#define DEFAULT_VALIDITY	24*3600		/* seconds */
 
 /**
  * @brief prints the usage of the program to the stderr
@@ -113,7 +114,8 @@ static chunk_t read_serial(void)
 	mpz_t number;
 
 	char buf[BUF_LEN], buf1[BUF_LEN];
-	chunk_t last_serial = { buf1, BUF_LEN};
+	chunk_t hex_serial  = { buf, BUF_LEN };
+	chunk_t last_serial = { buf1, BUF_LEN };
 	chunk_t serial;
 
 	FILE *fd = fopen(OPENAC_SERIAL, "r");
@@ -124,15 +126,10 @@ static chunk_t read_serial(void)
 
 	if (fd)
 	{
-		if (fscanf(fd, "%s", buf))
+		if (fscanf(fd, "%s", hex_serial.ptr))
 		{
-			err_t ugh = ttodata(buf, 0, 16, last_serial.ptr, BUF_LEN, &last_serial.len);
-
-			if (ugh != NULL)
-			{
-				DBG1("  error reading serial number from %s: %s",
-		    		 OPENAC_SERIAL, ugh);
-			}
+			hex_serial.len = strlen(hex_serial.ptr);
+			last_serial = chunk_from_hex(hex_serial, last_serial.ptr);
 		}
 		fclose(fd);
 	}
@@ -164,9 +161,13 @@ static void write_serial(chunk_t serial)
 
 	if (fd)
 	{
+		chunk_t hex_serial;
+
 		DBG1("  serial number is %#B", &serial);
-		fprintf(fd, "%#B\n", &serial);
+		hex_serial = chunk_to_hex(serial, NULL, FALSE);
+		fprintf(fd, "%.*s\n", hex_serial.len, hex_serial.ptr);
 		fclose(fd);
+		free(hex_serial.ptr);
 	}
 	else
 	{
@@ -175,18 +176,33 @@ static void write_serial(chunk_t serial)
 }
 
 /**
+ * Load and parse a private key file
+ */
+static private_key_t* private_key_create_from_file(char *path, chunk_t *secret)
+{
+	bool pgp = FALSE;
+	chunk_t chunk = chunk_empty;
+	private_key_t *key = NULL;
+
+	if (!pem_asn1_load_file(path, secret, &chunk, &pgp))
+	{
+		DBG1("  could not load private key file '%s'", path);
+		return NULL;
+	}
+	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+							 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+	if (key == NULL)
+	{
+		DBG1("  could not parse loaded private key file '%s'", path);
+		return NULL;
+	}
+	DBG1("  loaded private key file '%s'", path);
+	return key;
+}
+
+/**
  * global variables accessible by both main() and build.c
  */
-x509_t *usercert   = NULL;
-x509_t *signercert = NULL;
-
-linked_list_t *groups = NULL;
-rsa_private_key_t *signerkey = NULL;
-
-time_t notBefore = UNDEFINED_TIME;
-time_t notAfter = UNDEFINED_TIME;
-
-chunk_t serial;
 
 static int debug_level = 1;
 static bool stderr_quiet = FALSE;
@@ -220,29 +236,42 @@ static void openac_dbg(int level, char *fmt, ...)
  */
 int main(int argc, char **argv)
 {
+	certificate_t *attr_cert   = NULL;
+	certificate_t *userCert   = NULL;
+	certificate_t *signerCert = NULL;
+	private_key_t *signerKey  = NULL;
+
+	time_t notBefore = UNDEFINED_TIME;
+	time_t notAfter  = UNDEFINED_TIME;
+	time_t validity = 0;
+
 	char *keyfile = NULL;
 	char *certfile = NULL;
 	char *usercertfile = NULL;
 	char *outfile = NULL;
+	char *groups = "";
 	char buf[BUF_LEN];
 
 	chunk_t passphrase = { buf, 0 };
-	chunk_t attr_cert = chunk_empty;
-	x509ac_t *ac = NULL;
+	chunk_t serial = chunk_empty;
+	chunk_t attr_chunk = chunk_empty;
 
-	const time_t default_validity = 24*3600; 	/* 24 hours */
-	time_t validity = 0;
 	int status = 1;
 	
-	options_t *options = options_create();
-
 	/* enable openac debugging hook */
 	dbg = openac_dbg;
 
 	passphrase.ptr[0] = '\0';
-	groups = linked_list_create();
 
 	openlog("openac", 0, LOG_AUTHPRIV);
+
+	/* initialize library */
+	library_init(STRONGSWAN_CONF);
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+		lib->settings->get_str(lib->settings, "openac.load", PLUGINS));
+
+	/* initialize optionsfrom */
+	options_t *options = options_create();
 
 	/* handle arguments */
 	for (;;)
@@ -337,7 +366,7 @@ int main(int argc, char **argv)
 				continue;
 
 			case 'g':	/* --groups */
-				ietfAttr_list_create_from_string(optarg, groups);
+				groups = optarg;
 				continue;
 
 			case 'D':	/* --days */
@@ -390,7 +419,7 @@ int main(int argc, char **argv)
 				{
 					chunk_t date = { optarg, 15 };
 
-					notBefore = asn1totime(&date, ASN1_GENERALIZEDTIME);
+					notBefore = asn1_to_time(&date, ASN1_GENERALIZEDTIME);
 				}
 				continue;
 
@@ -403,7 +432,7 @@ int main(int argc, char **argv)
 				else
 				{
 					chunk_t date = { optarg, 15 };
-					notAfter = asn1totime(&date, ASN1_GENERALIZEDTIME);
+					notAfter = asn1_to_time(&date, ASN1_GENERALIZEDTIME);
 				}
 				continue;
 
@@ -449,9 +478,9 @@ int main(int argc, char **argv)
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)
 	{
-		signerkey = rsa_private_key_create_from_file(keyfile, &passphrase);
+		signerKey = private_key_create_from_file(keyfile, &passphrase);
 
-		if (signerkey == NULL)
+		if (signerKey == NULL)
 		{
 			goto end;
 		}
@@ -460,9 +489,12 @@ int main(int argc, char **argv)
 	/* load the signer's X.509 certificate */
 	if (certfile != NULL)
 	{
-		signercert = x509_create_from_file(certfile, "signer cert");
-
-		if (signercert == NULL)
+		signerCert = lib->creds->create(lib->creds,
+										CRED_CERTIFICATE, CERT_X509,
+										BUILD_FROM_FILE, certfile,
+										BUILD_X509_FLAG, 0,
+										BUILD_END);
+		if (signerCert == NULL)
 		{
 			goto end;
 		}
@@ -471,46 +503,69 @@ int main(int argc, char **argv)
 	/* load the users's X.509 certificate */
 	if (usercertfile != NULL)
 	{
-		usercert = x509_create_from_file(usercertfile, "user cert");
-
-		if (usercert == NULL)
+		userCert = lib->creds->create(lib->creds,
+									  CRED_CERTIFICATE, CERT_X509,
+									  BUILD_FROM_FILE, usercertfile,
+									  BUILD_X509_FLAG, 0,
+									  BUILD_END);
+		if (userCert == NULL)
 		{
 			goto end;
 		}
 	}
 
 	/* compute validity interval */
-	validity = (validity)? validity : default_validity;
+	validity = (validity)? validity : DEFAULT_VALIDITY;
 	notBefore = (notBefore == UNDEFINED_TIME) ? time(NULL) : notBefore;
 	notAfter =  (notAfter  == UNDEFINED_TIME) ? time(NULL) + validity : notAfter;
 
 	/* build and parse attribute certificate */
-	if (usercert != NULL && signercert != NULL && signerkey != NULL)
+	if (userCert != NULL && signerCert != NULL && signerKey != NULL)
 	{
 		/* read the serial number and increment it by one */
 		serial = read_serial();
 
-		attr_cert = build_attr_cert();
-		ac = x509ac_create_from_chunk(attr_cert);
+		attr_cert = lib->creds->create(lib->creds,
+							CRED_CERTIFICATE, CERT_X509_AC,
+							BUILD_CERT, userCert->get_ref(userCert),
+							BUILD_NOT_BEFORE_TIME, notBefore,
+							BUILD_NOT_AFTER_TIME, notAfter,
+							BUILD_SERIAL, serial,
+							BUILD_IETF_GROUP_ATTR, groups,
+							BUILD_SIGNING_CERT, signerCert->get_ref(signerCert),
+							BUILD_SIGNING_KEY, signerKey->get_ref(signerKey),
+							BUILD_END);
+		if (!attr_cert)
+		{
+			goto end;
+		}
 	
 		/* write the attribute certificate to file */
-		if (chunk_write(attr_cert, outfile, "attribute cert", 0022, TRUE))
+		attr_chunk = attr_cert->get_encoding(attr_cert);
+		if (chunk_write(attr_chunk, outfile, 0022, TRUE))
 		{
+			DBG1("  wrote attribute cert file '%s' (%u bytes)", outfile, attr_chunk.len);
 			write_serial(serial);
 			status = 0;
 		}
 	}
+	else
+	{
+		usage("some of the mandatory parameters --usercert --cert --key "
+			  "are missing");
+	}
 
 end:
 	/* delete all dynamically allocated objects */
-	DESTROY_IF(signerkey);
-	DESTROY_IF(signercert);
-	DESTROY_IF(usercert);
-	DESTROY_IF(ac);
-	ietfAttr_list_destroy(groups);
+	DESTROY_IF(signerKey);
+	DESTROY_IF(signerCert);
+	DESTROY_IF(userCert);
+	DESTROY_IF(attr_cert);
+	free(attr_chunk.ptr);
 	free(serial.ptr);
 	closelog();
 	dbg = dbg_default;
 	options->destroy(options);
+	library_deinit();
 	exit(status);
 }

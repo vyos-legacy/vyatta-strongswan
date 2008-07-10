@@ -1,10 +1,3 @@
-/**
- * @file transform_substructure.h
- * 
- * @brief Implementation of transform_substructure_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: transform_substructure.c 3971 2008-05-16 13:27:21Z tobias $
  */
 
 #include <stddef.h>
@@ -395,14 +390,28 @@ transform_substructure_t *transform_substructure_create_type(transform_type_t tr
 	transform->set_transform_id(transform,transform_id);
 	
 	/* a keylength attribute is only created for variable length algos */
-	if (transform_type == ENCRYPTION_ALGORITHM &&
-		(transform_id == ENCR_AES_CBC ||
-		 transform_id == ENCR_IDEA ||
-		 transform_id == ENCR_CAST ||
-		 transform_id == ENCR_BLOWFISH))
+	if (transform_type == ENCRYPTION_ALGORITHM)
 	{
-		transform_attribute_t *attribute = transform_attribute_create_key_length(key_length);
-		transform->add_transform_attribute(transform,attribute);
+		switch(transform_id)
+		{
+			case ENCR_AES_CBC:
+			case ENCR_IDEA:
+			case ENCR_CAST:
+			case ENCR_BLOWFISH:
+			case ENCR_AES_CCM_ICV8:
+			case ENCR_AES_CCM_ICV12:
+			case ENCR_AES_CCM_ICV16:
+			case ENCR_AES_GCM_ICV8:
+			case ENCR_AES_GCM_ICV12:
+			case ENCR_AES_GCM_ICV16:
+			{
+				transform_attribute_t *attribute = transform_attribute_create_key_length(key_length);
+				transform->add_transform_attribute(transform,attribute);
+				break;
+			}
+			default:
+				break;
+		}
 	}
 
 	return transform;

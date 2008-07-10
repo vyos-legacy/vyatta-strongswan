@@ -1,10 +1,3 @@
-/**
- * @file rekey_ike_sa_job.c
- * 
- * @brief Implementation of rekey_ike_sa_job_t.
- * 
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,12 +11,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: rekey_ike_sa_job.c 3793 2008-04-11 08:14:48Z martin $
  */
-
+ 
 #include "rekey_ike_sa_job.h"
 
 #include <daemon.h>
-
 
 typedef struct private_rekey_ike_sa_job_t private_rekey_ike_sa_job_t;
 
@@ -74,7 +68,7 @@ static void execute(private_rekey_ike_sa_job_t *this)
 	{
 		if (this->reauth)
 		{
-			status = ike_sa->reestablish(ike_sa);
+			status = ike_sa->reauth(ike_sa);
 		}
 		else
 		{

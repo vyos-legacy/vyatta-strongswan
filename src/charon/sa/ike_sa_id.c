@@ -1,10 +1,3 @@
-/**
- * @file ike_sa_id.c
- *
- * @brief Implementation of ike_sa_id_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,8 +12,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_sa_id.c 3589 2008-03-13 14:14:44Z martin $
  */
-
 
 #include "ike_sa_id.h"
 

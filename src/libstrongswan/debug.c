@@ -1,10 +1,3 @@
-/**
- * @file library.c
- *
- * @brief Logging functions for the library.
- *
- */
-
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: debug.c 4058 2008-06-11 14:09:46Z martin $
  */
 
 #include <stdarg.h>
@@ -30,12 +25,15 @@
  */
 void dbg_default(int level, char *fmt, ...)
 {
-	va_list args;
+	if (level <= 1)
+	{
+		va_list args;
 	
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	fprintf(stderr, "\n");
-	va_end(args);
+		va_start(args, fmt);
+		vfprintf(stderr, fmt, args);
+		fprintf(stderr, "\n");
+		va_end(args);
+	}
 }
 
 void (*dbg) (int level, char *fmt, ...) = dbg_default;

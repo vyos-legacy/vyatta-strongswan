@@ -1,10 +1,3 @@
-/**
- * @file traffic_selector.c
- * 
- * @brief Implementation of traffic_selector_t.
- * 
- */
-
 /*
  * Copyright (C) 2007 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
@@ -20,6 +13,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: traffic_selector.c 3658 2008-03-26 10:06:45Z martin $
  */
 
 #include <arpa/inet.h>
@@ -276,11 +271,25 @@ static int print(FILE *stream, const struct printf_info *info,
 }
 
 /**
- * register printf() handlers
+ * arginfo handler for printf() traffic selector
  */
-static void __attribute__ ((constructor))print_register()
+static int arginfo(const struct printf_info *info, size_t n, int *argtypes)
 {
-	register_printf_function(PRINTF_TRAFFIC_SELECTOR, print, arginfo_ptr);
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * return printf hook functions for a chunk
+ */
+printf_hook_functions_t traffic_selector_get_printf_hooks()
+{
+	printf_hook_functions_t hooks = {print, arginfo};
+	
+	return hooks;
 }
 
 /**
@@ -709,6 +718,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 		}
 		default:
 		{
+			net->destroy(net);
 			free(this);
 			return NULL;
 		}
@@ -718,6 +728,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 		this->from_port = port;
 		this->to_port = port;
 	}
+	net->destroy(net);
 	return (&this->public);
 }
 
@@ -770,12 +781,11 @@ traffic_selector_t *traffic_selector_create_from_string(
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_dynamic(
-									u_int8_t protocol, ts_type_t type,
+traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol, 
 									u_int16_t from_port, u_int16_t to_port)
 {
-	private_traffic_selector_t *this = traffic_selector_create(protocol, type,
-															from_port, to_port);
+	private_traffic_selector_t *this = traffic_selector_create(
+							protocol, TS_IPV4_ADDR_RANGE, from_port, to_port);
 	
 	memset(this->from6, 0, sizeof(this->from6));
 	memset(this->to6, 0xFF, sizeof(this->to6));
@@ -818,4 +828,3 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 	return this;
 }
 
-/* vim: set ts=4 sw=4 noet: */

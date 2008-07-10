@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.c 3405 2007-12-19 00:49:32Z andreas $
+ * RCSID $Id: confread.c 4051 2008-06-10 09:08:27Z tobias $
  */
 
 #include <stddef.h>
@@ -32,7 +32,7 @@
 #include "interfaces.h"
 
 /* strings containing a colon are interpreted as an IPv6 address */
-#define ip_version(string)	(strchr(string, ':') != NULL)? AF_INET6 : AF_INET;
+#define ip_version(string)	(strchr(string, '.') ? AF_INET : AF_INET6)
 
 static const char ike_defaults[] = "aes128-sha-modp2048";
 static const char esp_defaults[] = "aes128-sha1, 3des-md5";
@@ -79,6 +79,8 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.sa_keying_tries       = SA_REPLACEMENT_RETRIES_DEFAULT;
 	cfg->conn_default.addr_family           = AF_INET;
 	cfg->conn_default.tunnel_addr_family    = AF_INET;
+	cfg->conn_default.dpd_delay		=  30; /* seconds */
+	cfg->conn_default.dpd_timeout		= 150; /* seconds */
 
 	cfg->conn_default.left.seen  = LEMPTY;
 	cfg->conn_default.right.seen = LEMPTY;
@@ -88,10 +90,8 @@ static void default_values(starter_config_t *cfg)
 
 	anyaddr(AF_INET, &cfg->conn_default.left.addr);
 	anyaddr(AF_INET, &cfg->conn_default.left.nexthop);
-	anyaddr(AF_INET, &cfg->conn_default.left.srcip);
 	anyaddr(AF_INET, &cfg->conn_default.right.addr);
 	anyaddr(AF_INET, &cfg->conn_default.right.nexthop);
-	anyaddr(AF_INET, &cfg->conn_default.right.srcip);
 
 	cfg->ca_default.seen = LEMPTY;
 }
@@ -146,17 +146,91 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 	if (!assign_arg(token, KW_END_FIRST, kw, (char *)end, &assigned))
 		goto err;
 
-	if (token == KW_SENDCERT)
+	/* post processing of some keywords that were assigned automatically */
+	switch (token)
 	{
+	case KW_SUBNET:
+		if ((strlen(value) >= 6 && strncmp(value,"vhost:",6) == 0)
+		||  (strlen(value) >= 5 && strncmp(value,"vnet:",5) == 0))
+		{
+			/* used by pluto only */
+			end->has_virt = TRUE;
+		}
+		else
+		{
+			ip_subnet net;
+			char *pos;
+			int len = 0;
+			
+			end->has_client = TRUE;
+			conn->tunnel_addr_family = ip_version(value);
+			
+			pos = strchr(value, ',');
+			if (pos)
+			{
+				len = pos - value;
+			}
+			ugh = ttosubnet(value, len, ip_version(value), &net);
+			if (ugh != NULL)
+			{
+				plog("# bad subnet: %s=%s [%s]", name, value, ugh);
+				goto err;
+			}
+		}
+		break;
+	case KW_SOURCEIP:
+		if (end->has_natip)
+		{
+			plog("# natip and sourceip cannot be defined at the same time");
+			goto err;
+		}
+		if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
+			streq(value, "%config") || streq(value, "%cfg"))
+		{
+			pfree(end->srcip);
+			end->srcip = NULL;
+			end->modecfg = TRUE;
+		}
+		else
+		{
+			ip_address addr;
+			ip_subnet net;
+		
+			conn->tunnel_addr_family = ip_version(value);
+			if (strchr(value, '/'))
+			{	/* CIDR notation, address pool */
+				ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &net);
+			}
+			else if (value[0] != '%')
+			{	/* old style fixed srcip, a %poolname otherwise */
+				ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
+			}
+			if (ugh != NULL)
+			{
+				plog("# bad addr: %s=%s [%s]", name, value, ugh);
+				goto err;
+			}
+		}
+		conn->policy |= POLICY_TUNNEL;
+		break;
+	case KW_SENDCERT:
 		if (end->sendcert == CERT_YES_SEND)
+		{
 			end->sendcert = CERT_ALWAYS_SEND;
+		}
 		else if (end->sendcert == CERT_NO_SEND)
+		{
 			end->sendcert = CERT_NEVER_SEND;
+		}
+		break;
+	default:
+		break;
 	}
 
 	if (assigned)
 		return;
 
+	/* individual processing of keywords that were not assigned automatically */
 	switch (token)
 	{
 	case KW_HOST:
@@ -189,7 +263,6 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			conn->policy |= POLICY_GROUP | POLICY_TUNNEL;
 			anyaddr(conn->addr_family, &end->addr);
 			anyaddr(conn->tunnel_addr_family, &any);
-			initsubnet(&any, 0, '0', &end->subnet);
 			end->has_client = TRUE;
 		}
 		else
@@ -243,69 +316,41 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			goto err;
 		}
 		break;
-	case KW_SUBNET:
-		if ((strlen(value) >= 6 && strncmp(value,"vhost:",6) == 0)
-		||  (strlen(value) >= 5 && strncmp(value,"vnet:",5) == 0))
-		{
-			end->virt = clone_str(value, "virt");
-		}
-		else
-		{
-			end->has_client = TRUE;
-			conn->tunnel_addr_family = ip_version(value);
-			ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &end->subnet);
-			if (ugh != NULL)
-			{
-				plog("# bad subnet: %s=%s [%s]", name, value, ugh);
-				goto err;
-			}
-		}
-		break;
 	case KW_SUBNETWITHIN:
+	{
+		ip_subnet net;
+		
 		end->has_client = TRUE;
 		end->has_client_wildcard = TRUE;
 		conn->tunnel_addr_family = ip_version(value);
-		ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &end->subnet);
+
+		ugh = ttosubnet(value, 0, ip_version(value), &net);
+		if (ugh != NULL)
+		{
+			plog("# bad subnet: %s=%s [%s]", name, value, ugh);
+			goto err;
+		}
+		end->subnet = clone_str(value, "subnetwithin");
 		break;
+	}
 	case KW_PROTOPORT:
 		ugh = ttoprotoport(value, 0, &end->protocol, &end->port, &has_port_wildcard);
 		end->has_port_wildcard = has_port_wildcard;
 		break;
-	case KW_SOURCEIP:
-		if (end->has_natip)
-		{
-			plog("# natip and sourceip cannot be defined at the same time");
-			goto err;
-		}
-		if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
-			streq(value, "%config") || streq(value, "%cfg"))
-		{
-			end->modecfg = TRUE;
-		}
-		else
-		{
-			conn->tunnel_addr_family = ip_version(value);
-			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &end->srcip);
-			if (ugh != NULL)
-			{
-				plog("# bad addr: %s=%s [%s]", name, value, ugh);
-				goto err;
-			}
-			end->has_srcip = TRUE;
-		}
-		conn->policy |= POLICY_TUNNEL;
-		break;
 	case KW_NATIP:
-		if (end->has_srcip)
+		if (end->srcip)
 		{
 			plog("# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
 		if (streq(value, "%defaultroute"))
 		{
+			char buf[64];
+		
 			if (cfg->defaultroute.defined)
 			{
-				end->srcip    = cfg->defaultroute.addr;
+				addrtot(&cfg->defaultroute.addr, 0, buf, sizeof(buf));
+				end->srcip = clone_str(buf, "natip");
 			}
 			else
 			{
@@ -315,13 +360,16 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		}
 		else
 		{
+			ip_address addr;
+			
 			conn->tunnel_addr_family = ip_version(value);
-			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &end->srcip);
+			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
 			if (ugh != NULL)
 			{
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);
 				goto err;
 			}
+			end->srcip = clone_str(value, "srcip");
 		}
 		end->has_natip = TRUE;
 		conn->policy |= POLICY_TUNNEL;
@@ -487,10 +535,12 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 				/* also handles the cases secret|rsasig and rsasig|secret */
 				for (;;)
 				{
-					if (streq(value, "rsasig"))
+					if (streq(value, "rsa") || streq(value, "rsasig"))
 						conn->policy |= POLICY_RSASIG | POLICY_ENCRYPT;
 					else if (streq(value, "secret") || streq(value, "psk"))
 						conn->policy |= POLICY_PSK | POLICY_ENCRYPT;
+					else if (streq(value, "ecdsa") || streq(value, "ecdsasig"))
+						conn->policy |= POLICY_ECDSASIG | POLICY_ENCRYPT;
 					else if (streq(value, "xauthrsasig"))
 						conn->policy |= POLICY_XAUTH_RSASIG | POLICY_ENCRYPT;
 					else if (streq(value, "xauthpsk"))

@@ -1,12 +1,5 @@
-/**
- * @file notify_payload.c
- * 
- * @brief Implementation of notify_payload_t.
- * 
- */
-
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -21,6 +14,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: notify_payload.c 3920 2008-05-08 16:19:11Z tobias $
  */
 
 #include <stddef.h>
@@ -57,9 +52,9 @@ ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED, AUTH
 	"INVALID_SELECTORS",
 	"UNACCEPTABLE_ADDRESSES",
 	"UNEXPECTED_NAT_DETECTED");
-ENUM_NEXT(notify_type_names, P2P_CONNECT_FAILED, P2P_CONNECT_FAILED, UNEXPECTED_NAT_DETECTED,
-	"P2P_CONNECT_FAILED");
-ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, P2P_CONNECT_FAILED,
+ENUM_NEXT(notify_type_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, UNEXPECTED_NAT_DETECTED,
+	"ME_CONNECT_FAILED");
+ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, ME_CONNECT_FAILED,
 	"INITIAL_CONTACT",
 	"SET_WINDOW_SIZE",
 	"ADDITIONAL_TS_POSSIBLE",
@@ -84,14 +79,15 @@ ENUM_NEXT(notify_type_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, A
 	"EAP_ONLY_AUTHENTICATION");
 ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"USE_BEET_MODE");
-ENUM_NEXT(notify_type_names, P2P_MEDIATION, P2P_RESPONSE, USE_BEET_MODE,
-	"P2P_MEDIATION",
-	"P2P_ENDPOINT",
-	"P2P_CALLBACK",
-	"P2P_SESSIONID",
-	"P2P_SESSIONKEY",
-	"P2P_RESPONSE");
-ENUM_END(notify_type_names, P2P_RESPONSE);
+ENUM_NEXT(notify_type_names, ME_MEDIATION, ME_RESPONSE, USE_BEET_MODE,
+	"ME_MEDIATION",
+	"ME_ENDPOINT",
+	"ME_CALLBACK",
+	"ME_CONNECTID",
+	"ME_CONNECTKEY",
+	"ME_CONNECTAUTH",
+	"ME_RESPONSE");
+ENUM_END(notify_type_names, ME_RESPONSE);
 
 
 ENUM_BEGIN(notify_type_short_names, UNSUPPORTED_CRITICAL_PAYLOAD, UNSUPPORTED_CRITICAL_PAYLOAD,
@@ -120,9 +116,9 @@ ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED
 	"INVAL_SEL",
 	"UNACCEPT_ADDR",
 	"UNEXPECT_NAT");
-ENUM_NEXT(notify_type_short_names, P2P_CONNECT_FAILED, P2P_CONNECT_FAILED, UNEXPECTED_NAT_DETECTED,
-	"P2P_CONN_FAIL");
-ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, AUTH_LIFETIME, P2P_CONNECT_FAILED,
+ENUM_NEXT(notify_type_short_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, UNEXPECTED_NAT_DETECTED,
+	"ME_CONN_FAIL");
+ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, AUTH_LIFETIME, ME_CONNECT_FAILED,
 	"INIT_CONTACT",
 	"SET_WINSIZE",
 	"ADD_TS_POSS",
@@ -147,14 +143,15 @@ ENUM_NEXT(notify_type_short_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICAT
 	"EAP_ONLY");
 ENUM_NEXT(notify_type_short_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"BEET_MODE");
-ENUM_NEXT(notify_type_short_names, P2P_MEDIATION, P2P_RESPONSE, USE_BEET_MODE,
-	"P2P_MED",
-	"P2P_EP",
-	"P2P_CB",
-	"P2P_SID",
-	"P2P_SKEY",
-	"P2P_R");
-ENUM_END(notify_type_short_names, P2P_RESPONSE);
+ENUM_NEXT(notify_type_short_names, ME_MEDIATION, ME_RESPONSE, USE_BEET_MODE,
+	"ME_MED",
+	"ME_EP",
+	"ME_CB",
+	"ME_CID",
+	"ME_CKEY",
+	"ME_CAUTH",
+	"ME_R");
+ENUM_END(notify_type_short_names, ME_RESPONSE);
 
 
 typedef struct private_notify_payload_t private_notify_payload_t;
@@ -293,6 +290,7 @@ static status_t verify(private_notify_payload_t *this)
 		}
 		case NAT_DETECTION_SOURCE_IP:
 		case NAT_DETECTION_DESTINATION_IP:
+		case ME_CONNECTAUTH:
 		{
 			if (this->notification_data.len != HASH_SIZE_SHA1)
 			{
@@ -334,7 +332,36 @@ static status_t verify(private_notify_payload_t *this)
 			}
 			break;
 		}
-		/* FIXME: check size of P2P-NAT-T payloads */
+		case IPCOMP_SUPPORTED:
+		{
+			if (this->notification_data.len != 3)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		}
+		case ME_ENDPOINT:
+			if (this->notification_data.len != 8 &&
+				this->notification_data.len != 12 &&
+				this->notification_data.len != 24)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		case ME_CONNECTID:
+			if (this->notification_data.len < 4 ||
+				this->notification_data.len > 16)
+			{
+				bad_length = TRUE;
+			}
+			break;
+		case ME_CONNECTKEY:
+			if (this->notification_data.len < 16 ||
+				this->notification_data.len > 32)
+			{
+				bad_length = TRUE;
+			}
+			break;
 		default:
 			/* TODO: verify */
 			break;

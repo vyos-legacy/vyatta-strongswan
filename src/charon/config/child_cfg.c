@@ -1,11 +1,5 @@
-/**
- * @file child_cfg.c
- * 
- * @brief Implementation of child_cfg_t.
- * 
- */
-
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -19,8 +13,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: child_cfg.c 4062 2008-06-12 11:42:19Z martin $
  */
-
 
 #include "child_cfg.h"
 
@@ -33,6 +28,21 @@ ENUM(mode_names, MODE_TRANSPORT, MODE_BEET,
 	"3",
 	"BEET",
 );
+
+ENUM(action_names, ACTION_NONE, ACTION_RESTART,
+	"ACTION_NONE",
+	"ACTION_ROUTE",
+	"ACTION_RESTART",
+);
+
+ENUM_BEGIN(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_NONE, 
+	"IPCOMP_NONE");
+ENUM_NEXT(ipcomp_transform_names, IPCOMP_OUI, IPCOMP_LZJH, IPCOMP_NONE,
+	"IPCOMP_OUI",
+	"IPCOMP_DEFLATE",
+	"IPCOMP_LZS",
+	"IPCOMP_LZJH");
+ENUM_END(ipcomp_transform_names, IPCOMP_LZJH);
 
 typedef struct private_child_cfg_t private_child_cfg_t;
 
@@ -87,6 +97,16 @@ struct private_child_cfg_t {
 	mode_t mode;
 	
 	/**
+	 * action to take on DPD
+	 */
+	action_t dpd_action;
+	
+	/**
+	 * action to take on CHILD_SA close
+	 */
+	action_t close_action;
+	
+	/**
 	 * Time before an SA gets invalid
 	 */
 	u_int32_t lifetime;
@@ -101,6 +121,11 @@ struct private_child_cfg_t {
 	 * substracted from rekeytime.
 	 */
 	u_int32_t jitter;
+	
+	/**
+	 * enable IPComp
+	 */
+	bool use_ipcomp;
 };
 
 /**
@@ -120,42 +145,25 @@ static void add_proposal(private_child_cfg_t *this, proposal_t *proposal)
 }
 
 /**
- * strip out DH groups from a proposal
- */
-static void strip_dh_from_proposal(proposal_t *proposal)
-{
-	iterator_t *iterator;
-	algorithm_t *algo;
-	
-	iterator = proposal->create_algorithm_iterator(proposal, DIFFIE_HELLMAN_GROUP);
-	while (iterator->iterate(iterator, (void**)&algo))
-	{
-		iterator->remove(iterator);
-		free(algo);
-	}
-	iterator->destroy(iterator);
-}
-
-/**
  * Implementation of child_cfg_t.get_proposals
  */
 static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	proposal_t *current;
 	linked_list_t *proposals = linked_list_create();
 	
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		current = current->clone(current);
 		if (strip_dh)
 		{
-			strip_dh_from_proposal(current);
+			current->strip_dh(current);
 		}
 		proposals->insert_last(proposals, current);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	return proposals;
 }
@@ -166,26 +174,28 @@ static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 static proposal_t* select_proposal(private_child_cfg_t*this,
 								   linked_list_t *proposals, bool strip_dh)
 {
-	iterator_t *stored_iter, *supplied_iter;
+	enumerator_t *stored_enum, *supplied_enum;
 	proposal_t *stored, *supplied, *selected = NULL;
 	
-	stored_iter = this->proposals->create_iterator(this->proposals, TRUE);
-	supplied_iter = proposals->create_iterator(proposals, TRUE);
+	stored_enum = this->proposals->create_enumerator(this->proposals);
+	supplied_enum = proposals->create_enumerator(proposals);
 	
 	/* compare all stored proposals with all supplied. Stored ones are preferred. */
-	while (stored_iter->iterate(stored_iter, (void**)&stored))
+	while (stored_enum->enumerate(stored_enum, &stored))
 	{
 		stored = stored->clone(stored);
-		supplied_iter->reset(supplied_iter);
-		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
+		while (supplied_enum->enumerate(supplied_enum, &supplied))
 		{
 			if (strip_dh)
 			{
-				strip_dh_from_proposal(stored);
+				stored->strip_dh(stored);
 			}
 			selected = stored->select(stored, supplied);
 			if (selected)
 			{
+				DBG2(DBG_CFG, "received proposals: %#P", proposals);
+				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
+				DBG2(DBG_CFG, "selected proposal: %P", selected);
 				break;
 			}
 		}
@@ -194,9 +204,16 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 		{
 			break;
 		}
+		supplied_enum->destroy(supplied_enum);
+		supplied_enum = proposals->create_enumerator(proposals);	
 	}
-	stored_iter->destroy(stored_iter);
-	supplied_iter->destroy(supplied_iter);
+	stored_enum->destroy(stored_enum);
+	supplied_enum->destroy(supplied_enum);
+	if (selected == NULL)
+	{
+		DBG1(DBG_CFG, "received proposals: %#P", proposals);
+		DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
+	}
 	return selected;
 }
 
@@ -223,17 +240,17 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 											linked_list_t *supplied,
 											host_t *host)
 {
-	iterator_t *i1, *i2;
+	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
 	linked_list_t *result = linked_list_create();
 	
 	if (local)
 	{
-		i1 = this->my_ts->create_iterator(this->my_ts, TRUE);
+		e1 = this->my_ts->create_enumerator(this->my_ts);
 	}
 	else
 	{
-		i1 = this->other_ts->create_iterator(this->other_ts, FALSE);
+		e1 = this->other_ts->create_enumerator(this->other_ts);
 	}
 	
 	/* no list supplied, just fetch the stored traffic selectors */
@@ -241,7 +258,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	{
 		DBG2(DBG_CFG, "proposing traffic selectors for %s:", 
 			 local ? "us" : "other");
-		while (i1->iterate(i1, (void**)&ts1))
+		while (e1->enumerate(e1, &ts1))
 		{
 			/* we make a copy of the TS, this allows us to update dynamic TS' */
 			selected = ts1->clone(ts1);
@@ -252,15 +269,15 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 			DBG2(DBG_CFG, " %R (derived from %R)", selected, ts1);
 			result->insert_last(result, selected);
 		}
-		i1->destroy(i1);
+		e1->destroy(e1);
 	}
 	else
 	{
 		DBG2(DBG_CFG, "selecting traffic selectors for %s:", 
 			 local ? "us" : "other");
-		i2 = supplied->create_iterator(supplied, TRUE);
+		e2 = supplied->create_enumerator(supplied);
 		/* iterate over all stored selectors */
-		while (i1->iterate(i1, (void**)&ts1))
+		while (e1->enumerate(e1, &ts1))
 		{
 			/* we make a copy of the TS, as we have to update dynamic TS' */
 			ts1 = ts1->clone(ts1);
@@ -269,9 +286,8 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 				ts1->set_address(ts1, host);
 			}
 			
-			i2->reset(i2);
 			/* iterate over all supplied traffic selectors */
-			while (i2->iterate(i2, (void**)&ts2))
+			while (e2->enumerate(e2, &ts2))
 			{
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
@@ -286,40 +302,44 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 						 ts1, ts2, selected);
 				}
 			}
+			e2->destroy(e2);
+			e2 = supplied->create_enumerator(supplied);
 			ts1->destroy(ts1);
 		}
-		i1->destroy(i1);
-		i2->destroy(i2);
+		e1->destroy(e1);
+		e2->destroy(e2);
 	}
 	
 	/* remove any redundant traffic selectors in the list */
-	i1 = result->create_iterator(result, TRUE);
-	i2 = result->create_iterator(result, TRUE);
-	while (i1->iterate(i1, (void**)&ts1))
+	e1 = result->create_enumerator(result);
+	e2 = result->create_enumerator(result);
+	while (e1->enumerate(e1, &ts1))
 	{
-		while (i2->iterate(i2, (void**)&ts2))
+		while (e2->enumerate(e2, &ts2))
 		{
 			if (ts1 != ts2)
 			{
 				if (ts2->is_contained_in(ts2, ts1))
 				{
-					i2->remove(i2);
+					result->remove_at(result, e2);
 					ts2->destroy(ts2);
-					i1->reset(i1);
+					e1->destroy(e1);
+					e1 = result->create_enumerator(result);
 					break;
 				}
 				if (ts1->is_contained_in(ts1, ts2))
 				{
-					i1->remove(i1);
+					result->remove_at(result, e1);
 					ts1->destroy(ts1);
-					i2->reset(i2);
+					e2->destroy(e2);
+					e2 = result->create_enumerator(result);
 					break;
 				}
 			}
 		}
 	}
-	i1->destroy(i1);
-	i2->destroy(i2);
+	e1->destroy(e1);
+	e2->destroy(e2);
 	
 	return result;
 }
@@ -357,7 +377,7 @@ static u_int32_t get_lifetime(private_child_cfg_t *this, bool rekey)
 }
 
 /**
- * Implementation of child_cfg_t.get_name
+ * Implementation of child_cfg_t.get_mode
  */
 static mode_t get_mode(private_child_cfg_t *this)
 {
@@ -365,34 +385,57 @@ static mode_t get_mode(private_child_cfg_t *this)
 }
 
 /**
+ * Implementation of child_cfg_t.get_dpd_action
+ */
+static action_t get_dpd_action(private_child_cfg_t *this)
+{
+	return this->dpd_action;
+}
+
+/**
+ * Implementation of child_cfg_t.get_close_action
+ */
+static action_t get_close_action(private_child_cfg_t *this)
+{
+	return this->close_action;
+}
+
+/**
  * Implementation of child_cfg_t.get_dh_group.
  */
 static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	proposal_t *proposal;
-	algorithm_t *algo;
-	diffie_hellman_group_t dh_group = MODP_NONE;
+	u_int16_t dh_group = MODP_NONE;
 	
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->iterate(iterator, (void**)&proposal))
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo))
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
 		{
-			dh_group = algo->algorithm;
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return dh_group;
+}
+
+/**
+ * Implementation of child_cfg_t.use_ipcomp.
+ */
+static bool use_ipcomp(private_child_cfg_t *this)
+{
+	return this->use_ipcomp;
 }
 
 /**
  * Implementation of child_cfg_t.get_name
  */
-static void get_ref(private_child_cfg_t *this)
+static child_cfg_t* get_ref(private_child_cfg_t *this)
 {
 	ref_get(&this->refcount);
+	return &this->public;
 }
 
 /**
@@ -419,11 +462,11 @@ static void destroy(private_child_cfg_t *this)
  */
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
-							  char *updown, bool hostaccess, mode_t mode)
+							  char *updown, bool hostaccess, mode_t mode,
+							  action_t dpd_action, action_t close_action, bool ipcomp)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
 
-	/* public functions */
 	this->public.get_name = (char* (*) (child_cfg_t*))get_name;
 	this->public.add_traffic_selector = (void (*)(child_cfg_t*,bool,traffic_selector_t*))add_traffic_selector;
 	this->public.get_traffic_selectors = (linked_list_t*(*)(child_cfg_t*,bool,linked_list_t*,host_t*))get_traffic_selectors;
@@ -433,12 +476,14 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->public.get_updown = (char* (*) (child_cfg_t*))get_updown;
 	this->public.get_hostaccess = (bool (*) (child_cfg_t*))get_hostaccess;
 	this->public.get_mode = (mode_t (*) (child_cfg_t *))get_mode;
+	this->public.get_dpd_action = (action_t (*) (child_cfg_t *))get_dpd_action;
+	this->public.get_close_action = (action_t (*) (child_cfg_t *))get_close_action;
 	this->public.get_lifetime = (u_int32_t (*) (child_cfg_t *,bool))get_lifetime;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(child_cfg_t*)) get_dh_group;
-	this->public.get_ref = (void (*) (child_cfg_t*))get_ref;
+	this->public.use_ipcomp = (bool (*) (child_cfg_t *))use_ipcomp;
+	this->public.get_ref = (child_cfg_t* (*) (child_cfg_t*))get_ref;
 	this->public.destroy = (void (*) (child_cfg_t*))destroy;
 	
-	/* apply init values */
 	this->name = strdup(name);
 	this->lifetime = lifetime;
 	this->rekeytime = rekeytime;
@@ -446,8 +491,9 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 	this->updown = updown ? strdup(updown) : NULL;
 	this->hostaccess = hostaccess;
 	this->mode = mode;
-	
-	/* initialize private members*/
+	this->dpd_action = dpd_action;
+	this->close_action = close_action;
+	this->use_ipcomp = ipcomp; 
 	this->refcount = 1;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();
@@ -455,3 +501,4 @@ child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 
 	return &this->public;
 }
+

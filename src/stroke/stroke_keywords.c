@@ -1,4 +1,4 @@
-/* C code produced by gperf version 3.0.1 */
+/* C code produced by gperf version 3.0.3 */
 /* Command-line: /usr/bin/gperf -C -G -t  */
 /* Computed positions: -k'1,5,7' */
 
@@ -169,6 +169,9 @@ static const struct stroke_token wordlist[] =
 
 #ifdef __GNUC__
 __inline
+#ifdef __GNUC_STDC_INLINE__
+__attribute__ ((__gnu_inline__))
+#endif
 #endif
 const struct stroke_token *
 in_word_set (str, len)

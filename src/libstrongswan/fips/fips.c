@@ -1,10 +1,3 @@
-/**
- * @file fips.c
- * 
- * @brief Implementation of the libstrongswan integrity test.
- * 
- */
-
 /*
  * Copyright (C) 2007 Bruno Krieg, Daniel Wydler
  * Hochschule fuer Technik Rapperswil
@@ -18,12 +11,14 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: fips.c 3681 2008-03-28 10:21:04Z martin $
  */
 
 #include <stdio.h>
 
 #include <debug.h>
-#include <crypto/signers/hmac_signer.h>
+#include <crypto/signers/signer.h>
 #include "fips.h"
 
 extern const u_char FIPS_rodata_start[];
@@ -61,7 +56,7 @@ bool fips_compute_hmac_signature(const char *key, char *signature)
     DBG1("  RODATA: %p + %6d = %p",
 			FIPS_rodata_start, (int)rodata_len, FIPS_rodata_end);
 
-    signer = (signer_t *)hmac_signer_create(HASH_SHA1, HASH_SIZE_SHA1);
+    signer = lib->crypto->create_signer(lib->crypto, AUTH_HMAC_SHA1_128);
 	if (signer == NULL)
 	{
 	    DBG1("  SHA-1 HMAC signer could not be created");
@@ -69,7 +64,7 @@ bool fips_compute_hmac_signature(const char *key, char *signature)
 	}
 	else
 	{
-		chunk_t hmac_key = { key, strlen(key) };
+		chunk_t hmac_key = { (u_char *)key, strlen(key) };
 		chunk_t text_chunk = { text_start, text_len };
 		chunk_t rodata_chunk = { (u_char *)FIPS_rodata_start, rodata_len };
 		chunk_t signature_chunk = chunk_empty;

@@ -1,12 +1,5 @@
-/**
- * @file ike_sa.c
- *
- * @brief Implementation of ike_sa_t.
- *
- */
-
 /*
- * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -21,6 +14,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_sa.c 4106 2008-06-25 11:40:50Z martin $
  */
 
 #include <sys/time.h>
@@ -53,7 +48,8 @@
 #include <sa/tasks/ike_auth.h>
 #include <sa/tasks/ike_auth_lifetime.h>
 #include <sa/tasks/ike_config.h>
-#include <sa/tasks/ike_cert.h>
+#include <sa/tasks/ike_cert_pre.h>
+#include <sa/tasks/ike_cert_post.h>
 #include <sa/tasks/ike_rekey.h>
 #include <sa/tasks/ike_reauth.h>
 #include <sa/tasks/ike_delete.h>
@@ -67,8 +63,8 @@
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
 
-#ifdef P2P
-#include <sa/tasks/ike_p2p.h>
+#ifdef ME
+#include <sa/tasks/ike_me.h>
 #include <processing/jobs/initiate_mediation_job.h>
 #endif
 
@@ -122,6 +118,16 @@ struct private_ike_sa_t {
 	peer_cfg_t *peer_cfg;
 	
 	/**
+	 * associated authentication/authorization info for local peer
+	 */
+	auth_info_t *my_auth;
+	
+	/**
+	 * associated authentication/authorization info for remote peer
+	 */
+	auth_info_t *other_auth;
+	
+	/**
 	 * Juggles tasks to process messages
 	 */
 	task_manager_t *task_manager;
@@ -136,12 +142,22 @@ struct private_ike_sa_t {
 	 */
 	host_t *other_host;
 	
-#ifdef P2P	
+#ifdef ME
+	/**
+	 * Are we mediation server
+	 */
+	bool is_mediation_server;
+	
 	/**
 	 * Server reflexive host
 	 */
 	host_t *server_reflexive_host;
-#endif /* P2P */
+	
+	/**
+	 * Connect ID
+	 */
+	chunk_t connect_id;
+#endif /* ME */
 		
 	/**
 	 * Identification used for us
@@ -152,11 +168,6 @@ struct private_ike_sa_t {
 	 * Identification used for other
 	 */
 	identification_t *other_id;
-	
-	/**
-	 * CA that issued the certificate of other
-	 */
-	ca_info_t *other_ca;
 	
 	/**
 	 * set of extensions the peer supports
@@ -173,6 +184,11 @@ struct private_ike_sa_t {
 	 */
 	linked_list_t *child_sas;
 	
+	/**
+	 * String describing the selected IKE proposal
+	 */
+	char *selected_proposal;
+
 	/**
 	 * crypter for inbound traffic
 	 */
@@ -390,6 +406,7 @@ static peer_cfg_t* get_peer_cfg(private_ike_sa_t *this)
  */
 static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 {
+	DESTROY_IF(this->peer_cfg);
 	peer_cfg->get_ref(peer_cfg);
 	this->peer_cfg = peer_cfg;
 
@@ -397,18 +414,6 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 	{
 		this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 		this->ike_cfg->get_ref(this->ike_cfg);
-	}
-	
-	/* apply values, so we are ready to initate/acquire */
-	if (this->my_host->is_anyaddr(this->my_host))
-	{
-		host_t *me = this->ike_cfg->get_my_host(this->ike_cfg);
-		set_my_host(this, me->clone(me));
-	}
-	if (this->other_host->is_anyaddr(this->other_host))
-	{
-		host_t *other = this->ike_cfg->get_other_host(this->ike_cfg);
-		set_other_host(this, other->clone(other));
 	}
 	/* apply IDs if they are not already set */
 	if (this->my_id->contains_wildcards(this->my_id))
@@ -423,6 +428,22 @@ static void set_peer_cfg(private_ike_sa_t *this, peer_cfg_t *peer_cfg)
 		this->other_id = this->peer_cfg->get_other_id(this->peer_cfg);
 		this->other_id = this->other_id->clone(this->other_id);
 	}
+}
+
+/**
+ * Implementation of ike_sa_t.get_my_auth.
+ */
+static auth_info_t* get_my_auth(private_ike_sa_t *this)
+{
+	return this->my_auth;
+}
+
+/**
+ * Implementation of ike_sa_t.get_other_auth.
+ */
+static auth_info_t* get_other_auth(private_ike_sa_t *this)
+{
+	return this->other_auth;
 }
 
 /**
@@ -480,6 +501,15 @@ static void set_ike_cfg(private_ike_sa_t *this, ike_cfg_t *ike_cfg)
 	ike_cfg->get_ref(ike_cfg);
 	this->ike_cfg = ike_cfg;
 }
+
+/**
+ * Implementation of ike_sa_t.is_ike_initiator
+ */
+static bool is_ike_initiator(private_ike_sa_t *this)
+{
+	return this->ike_initiator;
+}
+
 /**
  * Implementation of ike_sa_t.enable_extension.
  */
@@ -562,7 +592,7 @@ static status_t send_dpd(private_ike_sa_t *this)
 	send_dpd_job_t *job;
 	time_t diff, delay;
 	
-	delay = this->peer_cfg->get_dpd_delay(this->peer_cfg);
+	delay = this->peer_cfg->get_dpd(this->peer_cfg);
 	
 	if (delay == 0)
 	{
@@ -907,7 +937,17 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	response->destroy(response);
 }
 
-#ifdef P2P
+#ifdef ME
+/**
+ * Implementation of ike_sa_t.act_as_mediation_server.
+ */
+static void act_as_mediation_server(private_ike_sa_t *this)
+{
+	charon->mediation_manager->update_sa_id(charon->mediation_manager,
+			this->other_id, this->ike_sa_id);
+	this->is_mediation_server = TRUE;
+}
+
 /**
  * Implementation of ike_sa_t.get_server_reflexive_host.
  */
@@ -926,13 +966,21 @@ static void set_server_reflexive_host(private_ike_sa_t *this, host_t *host)
 }
 
 /**
+ * Implementation of ike_sa_t.get_connect_id.
+ */
+static chunk_t get_connect_id(private_ike_sa_t *this)
+{
+	return this->connect_id;
+}
+
+/**
  * Implementation of ike_sa_t.respond
  */
 static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
-		chunk_t session_id)
+		chunk_t connect_id)
 {
-	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
-	task->respond(task, peer_id, session_id);
+	ike_me_t *task = ike_me_create(&this->public, TRUE);
+	task->respond(task, peer_id, connect_id);
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -942,7 +990,7 @@ static status_t respond(private_ike_sa_t *this, identification_t *peer_id,
  */
 static status_t callback(private_ike_sa_t *this, identification_t *peer_id)
 {
-	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
+	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->callback(task, peer_id);
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
 	return this->task_manager->initiate(this->task_manager);
@@ -952,10 +1000,10 @@ static status_t callback(private_ike_sa_t *this, identification_t *peer_id)
  * Implementation of ike_sa_t.relay
  */
 static status_t relay(private_ike_sa_t *this, identification_t *requester,
-			chunk_t session_id, chunk_t session_key, linked_list_t *endpoints, bool response)
+			chunk_t connect_id, chunk_t connect_key, linked_list_t *endpoints, bool response)
 {
-	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
-	task->relay(task, requester, session_id, session_key, endpoints, response);
+	ike_me_t *task = ike_me_create(&this->public, TRUE);
+	task->relay(task, requester, connect_id, connect_key, endpoints, response);
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
 	return this->task_manager->initiate(this->task_manager);
 }
@@ -965,7 +1013,7 @@ static status_t relay(private_ike_sa_t *this, identification_t *requester,
  */
 static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_cfg)
 {
-	ike_p2p_t *task = ike_p2p_create(&this->public, TRUE);
+	ike_me_t *task = ike_me_create(&this->public, TRUE);
 	task->connect(task, mediated_cfg->get_peer_id(mediated_cfg));
 	this->task_manager->queue_task(this->task_manager, (task_t*)task);
 	return this->task_manager->initiate(this->task_manager);
@@ -975,37 +1023,54 @@ static status_t initiate_mediation(private_ike_sa_t *this, peer_cfg_t *mediated_
  * Implementation of ike_sa_t.initiate_mediated
  */
 static status_t initiate_mediated(private_ike_sa_t *this, host_t *me, host_t *other,
-		linked_list_t *childs)
+		chunk_t connect_id)
 {
-	this->my_host = me->clone(me);
-	this->other_host = other->clone(other);
+	set_my_host(this, me->clone(me));
+	set_other_host(this, other->clone(other));
+	chunk_free(&this->connect_id);
+	this->connect_id = chunk_clone(connect_id);
 	
-	task_t *task;
-	child_cfg_t *child_cfg;	
-	iterator_t *iterator = childs->create_iterator(childs, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_cfg))
-	{
-		task = (task_t*)child_create_create(&this->public, child_cfg);
-		this->task_manager->queue_task(this->task_manager, task);
-	}
-	iterator->destroy(iterator);
 	return this->task_manager->initiate(this->task_manager);
 }
-#endif /* P2P */
+#endif /* ME */
 
 /**
- * Implementation of ike_sa_t.initiate.
+ * Resolve DNS host in configuration
  */
-static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
+static void resolve_hosts(private_ike_sa_t *this)
+{
+	host_t *host;
+	
+	host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg), 0, 
+								IKEV2_UDP_PORT);
+	if (host)
+	{
+		set_my_host(this, host);
+	}
+	host = host_create_from_dns(this->ike_cfg->get_other_addr(this->ike_cfg),
+								this->my_host->get_family(this->my_host),
+								IKEV2_UDP_PORT);
+	if (host)
+	{
+		set_other_host(this, host);
+	}
+}
+
+/**
+ * Initiates a CHILD_SA using the appropriate reqid
+ */
+static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_cfg, u_int32_t reqid)
 {
 	task_t *task;
 	
 	if (this->state == IKE_CREATED)
 	{
+		resolve_hosts(this);
+		
 		if (this->other_host->is_anyaddr(this->other_host)
-#ifdef P2P
+#ifdef ME
 			&& !this->peer_cfg->get_mediated_by(this->peer_cfg)
-#endif /* P2P */
+#endif /* ME */
 			)
 		{
 			child_cfg->destroy(child_cfg);
@@ -1020,9 +1085,11 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_natd_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_cert_create(&this->public, TRUE);
+		task = (task_t*)ike_cert_pre_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_auth_create(&this->public, TRUE);
+		this->task_manager->queue_task(this->task_manager, task);
+		task = (task_t*)ike_cert_post_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
 		task = (task_t*)ike_config_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
@@ -1033,50 +1100,65 @@ static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
 			task = (task_t*)ike_mobike_create(&this->public, TRUE);
 			this->task_manager->queue_task(this->task_manager, task);
 		}
-#ifdef P2P
-		task = (task_t*)ike_p2p_create(&this->public, TRUE);
+#ifdef ME
+		task = (task_t*)ike_me_create(&this->public, TRUE);
 		this->task_manager->queue_task(this->task_manager, task);
-#endif /* P2P */
+#endif /* ME */
 	}
 
-#ifdef P2P
-	if (this->peer_cfg->get_mediated_by(this->peer_cfg))
+#ifdef ME
+	if (this->peer_cfg->is_mediation(this->peer_cfg))
 	{
-		/* mediated connection, initiate mediation process */
-		job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id, child_cfg);
-		child_cfg->destroy(child_cfg);
-		charon->processor->queue_job(charon->processor, job);
-		return SUCCESS;
-	}
-	else if (this->peer_cfg->is_mediation(this->peer_cfg))
-	{
+		/* mediation connection */
 		if (this->state == IKE_ESTABLISHED)
 		{	/* FIXME: we should try to find a better solution to this */
 			SIG(CHILD_UP_SUCCESS, "mediation connection is already up and running");
 		}
+		DESTROY_IF(child_cfg);
 	}
 	else
-#endif /* P2P */
+#endif /* ME */
 	{
 		/* normal IKE_SA with CHILD_SA */
 		task = (task_t*)child_create_create(&this->public, child_cfg);
 		child_cfg->destroy(child_cfg);
+		if (reqid)
+		{
+			child_create_t *child_create = (child_create_t*)task;
+			child_create->use_reqid(child_create, reqid);
+		}
 		this->task_manager->queue_task(this->task_manager, task);
+
+#ifdef ME
+		if (this->peer_cfg->get_mediated_by(this->peer_cfg))
+		{
+			/* mediated connection, initiate mediation process */
+			job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id);
+			charon->processor->queue_job(charon->processor, job);
+			return SUCCESS;
+		}
+#endif /* ME */
 	}
 	
 	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
+ * Implementation of ike_sa_t.initiate.
+ */
+static status_t initiate(private_ike_sa_t *this, child_cfg_t *child_cfg)
+{
+	return initiate_with_reqid(this, child_cfg, 0);
+}
+
+/**
  * Implementation of ike_sa_t.acquire.
  */
 static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
-{	/* FIXME: P2P-NAT-T */
+{
 	child_cfg_t *child_cfg;
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
-	task_t *task;
-	child_create_t *child_create;
 	
 	if (this->state == IKE_DELETING)
 	{
@@ -1105,34 +1187,10 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		return FAILED;
 	}
 	
-	
-	if (this->state == IKE_CREATED)
-	{
-		task = (task_t*)ike_init_create(&this->public, TRUE, NULL);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_natd_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_cert_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_auth_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_config_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		task = (task_t*)ike_auth_lifetime_create(&this->public, TRUE);
-		this->task_manager->queue_task(this->task_manager, task);
-		if (this->peer_cfg->use_mobike(this->peer_cfg))
-		{
-			task = (task_t*)ike_mobike_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, task);
-		}
-	}
-	
 	child_cfg = child_sa->get_config(child_sa);
-	child_create = child_create_create(&this->public, child_cfg);
-	child_create->use_reqid(child_create, reqid);
-	this->task_manager->queue_task(this->task_manager, (task_t*)child_create);
+	child_cfg->get_ref(child_cfg);
 	
-	return this->task_manager->initiate(this->task_manager);
+	return initiate_with_reqid(this, child_cfg, reqid);
 }
 
 /**
@@ -1175,10 +1233,12 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		default:
 			break;
 	}
+	
+	resolve_hosts(this);
 
 	/* install kernel policies */
 	child_sa = child_sa_create(this->my_host, this->other_host, this->my_id,
-							   this->other_id, child_cfg, FALSE, 0);
+							   this->other_id, child_cfg, 0, FALSE);
 	me = this->my_host;
 	if (this->my_virtual_ip)
 	{
@@ -1394,145 +1454,6 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 }
 
 /**
- * Implementation of ike_sa_t.retransmit.
- */
-static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
-{	/* FIXME: P2P-NAT-T */
-	this->time.outbound = time(NULL);
-	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
-	{
-		child_cfg_t *child_cfg;
-		child_sa_t* child_sa;
-		linked_list_t *to_route, *to_restart;
-		iterator_t *iterator;
-		
-		/* send a proper signal to brief interested bus listeners */
-		switch (this->state)
-		{
-			case IKE_CONNECTING:
-			{
-				/* retry IKE_SA_INIT if we have multiple keyingtries */
-				u_int32_t tries = this->peer_cfg->get_keyingtries(this->peer_cfg);
-				this->keyingtry++;
-				if (tries == 0 || tries > this->keyingtry)
-				{
-					SIG(IKE_UP_FAILED, "peer not responding, trying again "
-						"(%d/%d) in background ", this->keyingtry + 1, tries);
-					reset(this);
-					return this->task_manager->initiate(this->task_manager);
-				}
-				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
-				break;
-			}
-			case IKE_REKEYING:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
-				break;
-			case IKE_DELETING:
-				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
-				break;
-			default:
-				break;
-		}
-		
-		/* summarize how we have to handle each child */
-		to_route = linked_list_create();
-		to_restart = linked_list_create();
-		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-		while (iterator->iterate(iterator, (void**)&child_sa))
-		{
-			child_cfg = child_sa->get_config(child_sa);
-			
-			if (child_sa->get_state(child_sa) == CHILD_ROUTED)
-			{
-				/* reroute routed CHILD_SAs */
-				to_route->insert_last(to_route, child_cfg);
-			}
-			else
-			{
-				/* use DPD action for established CHILD_SAs */
-				switch (this->peer_cfg->get_dpd_action(this->peer_cfg))
-				{
-					case DPD_ROUTE:
-						to_route->insert_last(to_route, child_cfg);
-						break;
-					case DPD_RESTART:
-						to_restart->insert_last(to_restart, child_cfg);
-						break;
-					default:
-						break;
-				}
-			}
-		}
-		iterator->destroy(iterator);
-		
-		/* create a new IKE_SA if we have to route or to restart */
-		if (to_route->get_count(to_route) || to_restart->get_count(to_restart))
-		{
-			private_ike_sa_t *new;
-			task_t *task;
-			
-			new = (private_ike_sa_t*)charon->ike_sa_manager->checkout_new(
-												charon->ike_sa_manager, TRUE);
-			
-			set_peer_cfg(new, this->peer_cfg);
-			/* use actual used host, not the wildcarded one in config */
-			new->other_host->destroy(new->other_host);
-			new->other_host = this->other_host->clone(this->other_host);
-			/* reset port to 500, but only if peer is not NATed */
-			if (!has_condition(this, COND_NAT_THERE))
-			{
-				new->other_host->set_port(new->other_host, IKEV2_UDP_PORT);
-			}
-			/* take over virtual ip, as we need it for a proper route */
-			if (this->my_virtual_ip)
-			{
-				set_virtual_ip(new, TRUE, this->my_virtual_ip);
-			}
-			
-			/* install routes */
-			while (to_route->remove_last(to_route, (void**)&child_cfg) == SUCCESS)
-			{
-				route(new, child_cfg);
-			}
-			
-			/* restart children */
-			if (to_restart->get_count(to_restart))
-			{
-				task = (task_t*)ike_init_create(&new->public, TRUE, NULL);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_natd_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_cert_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_config_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				task = (task_t*)ike_auth_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				
-				while (to_restart->remove_last(to_restart, (void**)&child_cfg) == SUCCESS)
-				{
-					task = (task_t*)child_create_create(&new->public, child_cfg);
-					new->task_manager->queue_task(new->task_manager, task);
-				}		
-				task = (task_t*)ike_auth_lifetime_create(&new->public, TRUE);
-				new->task_manager->queue_task(new->task_manager, task);
-				if (this->peer_cfg->use_mobike(this->peer_cfg))
-				{
-					task = (task_t*)ike_mobike_create(&new->public, TRUE);
-					new->task_manager->queue_task(new->task_manager, task);
-				}
-				new->task_manager->initiate(new->task_manager);
-			}
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, &new->public);
-		}
-		to_route->destroy(to_route);
-		to_restart->destroy(to_restart);
-		return DESTROY_ME;
-	}
-	return SUCCESS;
-}
-
-/**
  * Implementation of ike_sa_t.get_prf.
  */
 static prf_t *get_prf(private_ike_sa_t *this)
@@ -1607,22 +1528,6 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
 }
 
 /**
- * Implementation of ike_sa_t.get_other_ca.
- */
-static ca_info_t* get_other_ca(private_ike_sa_t *this)
-{
-	return this->other_ca;
-}
-
-/**
- * Implementation of ike_sa_t.set_other_ca.
- */
-static void set_other_ca(private_ike_sa_t *this, ca_info_t *other_ca)
-{
-	this->other_ca = other_ca;
-}
-
-/**
  * Implementation of ike_sa_t.derive_keys.
  */
 static status_t derive_keys(private_ike_sa_t *this,
@@ -1631,9 +1536,8 @@ static status_t derive_keys(private_ike_sa_t *this,
 							bool initiator, prf_t *child_prf, prf_t *old_prf)
 {
 	prf_plus_t *prf_plus;
-	chunk_t skeyseed, key, nonces, prf_plus_seed;
-	algorithm_t *algo;
-	size_t key_size;
+	chunk_t skeyseed, key, full_nonce, fixed_nonce, prf_plus_seed;
+	u_int16_t alg, key_size;
 	crypter_t *crypter_i, *crypter_r;
 	signer_t *signer_i, *signer_r;
 	u_int8_t spi_i_buf[sizeof(u_int64_t)], spi_r_buf[sizeof(u_int64_t)];
@@ -1641,24 +1545,42 @@ static status_t derive_keys(private_ike_sa_t *this,
 	chunk_t spi_r = chunk_from_buf(spi_r_buf);
 	
 	/* Create SAs general purpose PRF first, we may use it here */
-	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo))
+	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
 	{
-		DBG1(DBG_IKE, "key derivation failed: no PSEUDO_RANDOM_FUNCTION");;
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
 		return FAILED;
 	}
-	this->prf = prf_create(algo->algorithm);
+	this->prf = lib->crypto->create_prf(lib->crypto, alg);
 	if (this->prf == NULL)
 	{
-		DBG1(DBG_IKE, "key derivation failed: PSEUDO_RANDOM_FUNCTION "
-			 "%N not supported!", pseudo_random_function_names, algo->algorithm);
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, PSEUDO_RANDOM_FUNCTION,
+			 pseudo_random_function_names, alg);
 		return FAILED;
 	}
-	
 	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
-	nonces = chunk_cat("cc", nonce_i, nonce_r);
+	/* full nonce is used as seed for PRF+ ... */
+	full_nonce = chunk_cat("cc", nonce_i, nonce_r);
+	/* but the PRF may need a fixed key which only uses the first bytes of
+	 * the nonces. */
+	switch (alg)
+	{
+		case PRF_AES128_XCBC:
+			/* while rfc4434 defines variable keys for AES-XCBC, rfc3664 does
+			 * not and therefore fixed key semantics apply to XCBC for key
+			 * derivation. */
+			nonce_i.len = min(nonce_i.len, this->prf->get_key_size(this->prf)/2);
+			nonce_r.len = min(nonce_r.len, this->prf->get_key_size(this->prf)/2);
+			break;
+		default:
+			/* all other algorithms use variable key length, full nonce */
+			break;
+	}
+	fixed_nonce = chunk_cat("cc", nonce_i, nonce_r);
 	*((u_int64_t*)spi_i.ptr) = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
 	*((u_int64_t*)spi_r.ptr) = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
-	prf_plus_seed = chunk_cat("ccc", nonces, spi_i, spi_r);
+	prf_plus_seed = chunk_cat("ccc", full_nonce, spi_i, spi_r);
 	
 	/* KEYMAT = prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr) 
 	 *
@@ -1667,7 +1589,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 	if (child_prf == NULL) /* not rekeying */
 	{
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
-		this->prf->set_key(this->prf, nonces);
+		this->prf->set_key(this->prf, fixed_nonce);
 		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
 		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		this->prf->set_key(this->prf, skeyseed);
@@ -1679,7 +1601,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 	{
 		/* SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr) 
 		 * use OLD SAs PRF functions for both prf_plus and prf */
-		secret = chunk_cat("mc", secret, nonces);
+		secret = chunk_cat("mc", secret, full_nonce);
 		child_prf->allocate_bytes(child_prf, secret, &skeyseed);
 		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		old_prf->set_key(old_prf, skeyseed);
@@ -1687,14 +1609,15 @@ static status_t derive_keys(private_ike_sa_t *this,
 		chunk_free(&secret);
 		prf_plus = prf_plus_create(old_prf, prf_plus_seed);
 	}
-	chunk_free(&nonces);
+	chunk_free(&full_nonce);
+	chunk_free(&fixed_nonce);
 	chunk_free(&prf_plus_seed);
 	
 	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
 	
 	/* SK_d is used for generating CHILD_SA key mat => child_prf */
-	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
-	this->child_prf = prf_create(algo->algorithm);
+	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL);
+	this->child_prf = lib->crypto->create_prf(lib->crypto, alg);
 	key_size = this->child_prf->get_key_size(this->child_prf);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_d secret %B", &key);
@@ -1702,17 +1625,20 @@ static status_t derive_keys(private_ike_sa_t *this,
 	chunk_free(&key);
 	
 	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
-	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
+	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
 	{
-		DBG1(DBG_IKE, "key derivation failed: no INTEGRITY_ALGORITHM");
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, INTEGRITY_ALGORITHM);
 		return FAILED;
 	}
-	signer_i = signer_create(algo->algorithm);
-	signer_r = signer_create(algo->algorithm);
+	signer_i = lib->crypto->create_signer(lib->crypto, alg);
+	signer_r = lib->crypto->create_signer(lib->crypto, alg);
 	if (signer_i == NULL || signer_r == NULL)
 	{
-		DBG1(DBG_IKE, "key derivation failed: INTEGRITY_ALGORITHM "
-			"%N not supported!", integrity_algorithm_names ,algo->algorithm);
+		DBG1(DBG_IKE, "%N %N not supported!",
+			 transform_type_names, INTEGRITY_ALGORITHM,
+			 integrity_algorithm_names ,alg);
+		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}
 	key_size = signer_i->get_key_size(signer_i);
@@ -1739,18 +1665,21 @@ static status_t derive_keys(private_ike_sa_t *this,
 	}
 	
 	/* SK_ei/SK_er used for encryption => crypter_in/crypter_out */
-	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
+	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &key_size))
 	{
-		DBG1(DBG_IKE, "key derivation failed: no ENCRYPTION_ALGORITHM");
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, ENCRYPTION_ALGORITHM);
+		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}
-	crypter_i = crypter_create(algo->algorithm, algo->key_size / 8);
-	crypter_r = crypter_create(algo->algorithm, algo->key_size / 8);
+	crypter_i = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
+	crypter_r = lib->crypto->create_crypter(lib->crypto, alg, key_size / 8);
 	if (crypter_i == NULL || crypter_r == NULL)
 	{
-		DBG1(DBG_IKE, "key derivation failed: ENCRYPTION_ALGORITHM "
-			"%N (key size %d) not supported!",
-			encryption_algorithm_names, algo->algorithm, algo->key_size);
+		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
+			 transform_type_names, ENCRYPTION_ALGORITHM,
+			 encryption_algorithm_names, alg, key_size);
+		prf_plus->destroy(prf_plus);
 		return FAILED;
 	}
 	key_size = crypter_i->get_key_size(crypter_i);
@@ -1803,6 +1732,23 @@ static status_t derive_keys(private_ike_sa_t *this,
 	prf_plus->destroy(prf_plus);
 	
 	return SUCCESS;
+}
+
+/**
+ * Implementation of ike_sa_t.get_proposal.
+ */
+static char* get_proposal(private_ike_sa_t *this)
+{
+	return this->selected_proposal;
+}
+
+/**
+ * Implementation of ike_sa_t.set_proposal.
+ */
+static void set_proposal(private_ike_sa_t *this, char *proposal)
+{
+	free(this->selected_proposal);
+	this->selected_proposal = strdup(proposal);
 }
 
 /**
@@ -1944,9 +1890,9 @@ static status_t rekey(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of ike_sa_t.reestablish
+ * Implementation of ike_sa_t.reauth
  */
-static status_t reestablish(private_ike_sa_t *this)
+static status_t reauth(private_ike_sa_t *this)
 {
 	task_t *task;
 
@@ -1957,7 +1903,12 @@ static status_t reestablish(private_ike_sa_t *this)
 	{
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
 		if (this->other_virtual_ip != NULL ||
-			has_condition(this, COND_EAP_AUTHENTICATED))
+			has_condition(this, COND_EAP_AUTHENTICATED)
+#ifdef ME
+			/* if we are mediation server we too cannot reauth the IKE_SA */
+			|| this->is_mediation_server
+#endif /* ME */
+			)
 		{
 			time_t now = time(NULL);
 			
@@ -1973,6 +1924,176 @@ static status_t reestablish(private_ike_sa_t *this)
 	this->task_manager->queue_task(this->task_manager, task);
 
 	return this->task_manager->initiate(this->task_manager);
+}
+
+/**
+ * Implementation of ike_sa_t.reestablish
+ */
+static status_t reestablish(private_ike_sa_t *this)
+{
+	ike_sa_t *new;
+	host_t *host;
+	action_t action;
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	child_cfg_t *child_cfg;
+	bool required = FALSE;
+	status_t status = FAILED;
+	
+	/* check if we have children to keep up at all*/
+	iterator = create_child_sa_iterator(this);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		child_cfg = child_sa->get_config(child_sa);
+		if (this->state == IKE_DELETING)
+		{
+			action = child_cfg->get_close_action(child_cfg);
+		}
+		else
+		{
+			action = child_cfg->get_dpd_action(child_cfg);
+		}
+		switch (action)
+		{
+			case ACTION_RESTART:
+			case ACTION_ROUTE:
+				required = TRUE;
+			default:
+				break;
+		}
+	}
+	iterator->destroy(iterator);
+#ifdef ME
+	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
+	if (this->peer_cfg->is_mediation(this->peer_cfg))
+	{
+		required = TRUE;
+	}
+#endif /* ME */
+	if (!required)
+	{
+		return FAILED;
+	}
+	
+	/* check if we are able to reestablish this IKE_SA */
+	if (!this->ike_initiator &&
+		(this->other_virtual_ip != NULL ||
+		 has_condition(this, COND_EAP_AUTHENTICATED)
+#ifdef ME
+		 || this->is_mediation_server
+#endif /* ME */
+		))
+	{
+		DBG1(DBG_IKE, "unable to reestablish IKE_SA due asymetric setup");
+		return FAILED;
+	}
+	
+	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager, TRUE);
+	new->set_peer_cfg(new, this->peer_cfg);
+	host = this->other_host;
+	new->set_other_host(new, host->clone(host));
+	host = this->my_host;
+	new->set_my_host(new, host->clone(host));
+	/* if we already have a virtual IP, we reuse it */
+	host = this->my_virtual_ip;
+	if (host)
+	{
+		new->set_virtual_ip(new, TRUE, host);
+	}
+	
+#ifdef ME
+	if (this->peer_cfg->is_mediation(this->peer_cfg))
+	{
+		status = new->initiate(new, NULL);
+	}
+	else
+#endif /* ME */
+	{
+		iterator = create_child_sa_iterator(this);
+		while (iterator->iterate(iterator, (void**)&child_sa))
+		{
+			child_cfg = child_sa->get_config(child_sa);
+			if (this->state == IKE_DELETING)
+			{
+				action = child_cfg->get_close_action(child_cfg);
+			}
+			else
+			{
+				action = child_cfg->get_dpd_action(child_cfg);
+			}
+			switch (action)
+			{
+				case ACTION_RESTART:
+					DBG1(DBG_IKE, "restarting CHILD_SA %s",
+						 child_cfg->get_name(child_cfg));
+					child_cfg->get_ref(child_cfg);
+					status = new->initiate(new, child_cfg);
+					break;
+				case ACTION_ROUTE:
+					status = new->route(new, child_cfg);
+					break;
+				default:
+					continue;
+			}
+			if (status == DESTROY_ME)
+			{
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+	}
+	
+	if (status == DESTROY_ME)
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
+		return FAILED;
+	}
+	else
+	{
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+		return SUCCESS;
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.retransmit.
+ */
+static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
+{
+	this->time.outbound = time(NULL);
+	if (this->task_manager->retransmit(this->task_manager, message_id) != SUCCESS)
+	{
+		/* send a proper signal to brief interested bus listeners */
+		switch (this->state)
+		{
+			case IKE_CONNECTING:
+			{
+				/* retry IKE_SA_INIT if we have multiple keyingtries */
+				u_int32_t tries = this->peer_cfg->get_keyingtries(this->peer_cfg);
+				this->keyingtry++;
+				if (tries == 0 || tries > this->keyingtry)
+				{
+					SIG(IKE_UP_FAILED, "peer not responding, trying again "
+						"(%d/%d) in background ", this->keyingtry + 1, tries);
+					reset(this);
+					return this->task_manager->initiate(this->task_manager);
+				}
+				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
+				break;
+			}
+			case IKE_DELETING:
+				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
+				break;
+			case IKE_REKEYING:
+				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
+				/* FALL */
+			default:
+				reestablish(this);
+				break;
+		}
+		return DESTROY_ME;
+	}
+	return SUCCESS;
 }
 
 /**
@@ -2009,6 +2130,14 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	host_t *me, *other;
 	ike_mobike_t *mobike;
 	
+	switch (this->state)
+	{
+		case IKE_CREATED:
+		case IKE_DELETING:
+			return SUCCESS;
+		default:
+			break;
+	}
 	/* responder just updates the peer about changed address config */
 	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
@@ -2048,9 +2177,9 @@ static status_t roam(private_ike_sa_t *this, bool address)
 		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
 		return this->task_manager->initiate(this->task_manager);
 	}
-	DBG1(DBG_IKE, "reestablishing IKE_SA due address change");
-	/* ... reestablish if not */
-	return reestablish(this);
+	DBG1(DBG_IKE, "reauthenticating IKE_SA due address change");
+	/* ... reauth if not */
+	return reauth(this);
 }
 
 /**
@@ -2097,6 +2226,18 @@ static status_t inherit(private_ike_sa_t *this, private_ike_sa_t *other)
 	{
 		send_keepalive(this);
 	}
+	
+#ifdef ME
+	if (other->is_mediation_server)
+	{
+		act_as_mediation_server(this);
+	}
+	else if (other->server_reflexive_host)
+	{
+		this->server_reflexive_host = other->server_reflexive_host->clone(
+				other->server_reflexive_host);
+	}
+#endif /* ME */
 
 	/* adopt all children */
 	while (other->child_sas->remove_last(other->child_sas,
@@ -2270,6 +2411,8 @@ static void destroy(private_ike_sa_t *this)
 {
 	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
 	
+	this->task_manager->destroy(this->task_manager);
+	
 	DESTROY_IF(this->crypter_in);
 	DESTROY_IF(this->crypter_out);
 	DESTROY_IF(this->signer_in);
@@ -2278,6 +2421,7 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->child_prf);
 	chunk_free(&this->skp_verify);
 	chunk_free(&this->skp_build);
+	free(this->selected_proposal);
 	
 	if (this->my_virtual_ip)
 	{
@@ -2285,22 +2429,30 @@ static void destroy(private_ike_sa_t *this)
 										 this->my_virtual_ip);
 		this->my_virtual_ip->destroy(this->my_virtual_ip);
 	}
-	DESTROY_IF(this->other_virtual_ip);
+	if (this->other_virtual_ip)
+	{
+		if (this->peer_cfg && this->peer_cfg->get_pool(this->peer_cfg))
+		{
+			charon->attributes->release_address(charon->attributes,
+									this->peer_cfg->get_pool(this->peer_cfg),
+									this->other_virtual_ip);
+		}
+		this->other_virtual_ip->destroy(this->other_virtual_ip);
+	}
 	
 	remove_dns_servers(this);
 	this->dns_servers->destroy_offset(this->dns_servers,
 													offsetof(host_t, destroy));
 	this->additional_addresses->destroy_offset(this->additional_addresses,
 													offsetof(host_t, destroy));
-#ifdef P2P	
-	if (this->peer_cfg && this->peer_cfg->is_mediation(this->peer_cfg) &&
-			!this->ike_sa_id->is_initiator(this->ike_sa_id))
+#ifdef ME
+	if (this->is_mediation_server)
 	{
-		/* mediation server */
 		charon->mediation_manager->remove(charon->mediation_manager, this->ike_sa_id);
 	}
 	DESTROY_IF(this->server_reflexive_host);
-#endif /* P2P */
+	chunk_free(&this->connect_id);
+#endif /* ME */
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -2309,9 +2461,10 @@ static void destroy(private_ike_sa_t *this)
 	
 	DESTROY_IF(this->ike_cfg);
 	DESTROY_IF(this->peer_cfg);
+	DESTROY_IF(this->my_auth);
+	DESTROY_IF(this->other_auth);
 	
 	this->ike_sa_id->destroy(this->ike_sa_id);
-	this->task_manager->destroy(this->task_manager);
 	free(this);
 }
 
@@ -2337,6 +2490,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_ike_cfg = (void (*)(ike_sa_t*,ike_cfg_t*))set_ike_cfg;
 	this->public.get_peer_cfg = (peer_cfg_t* (*)(ike_sa_t*))get_peer_cfg;
 	this->public.set_peer_cfg = (void (*)(ike_sa_t*,peer_cfg_t*))set_peer_cfg;
+	this->public.get_my_auth = (auth_info_t*(*)(ike_sa_t*))get_my_auth;
+	this->public.get_other_auth = (auth_info_t*(*)(ike_sa_t*))get_other_auth;
 	this->public.get_id = (ike_sa_id_t* (*)(ike_sa_t*)) get_id;
 	this->public.get_my_host = (host_t* (*)(ike_sa_t*)) get_my_host;
 	this->public.set_my_host = (void (*)(ike_sa_t*,host_t*)) set_my_host;
@@ -2347,14 +2502,13 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
 	this->public.get_other_id = (identification_t* (*)(ike_sa_t*)) get_other_id;
 	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
-	this->public.get_other_ca = (ca_info_t* (*)(ike_sa_t*)) get_other_ca;
-	this->public.set_other_ca = (void (*)(ike_sa_t*,ca_info_t*)) set_other_ca;
 	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
 	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
 	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
 	this->public.has_condition = (bool (*)(ike_sa_t*,ike_condition_t)) has_condition;
 	this->public.set_pending_updates = (void(*)(ike_sa_t*, u_int32_t updates))set_pending_updates;
 	this->public.get_pending_updates = (u_int32_t(*)(ike_sa_t*))get_pending_updates;
+	this->public.is_ike_initiator = (bool (*)(ike_sa_t*))is_ike_initiator;
 	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
 	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
 	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
@@ -2367,6 +2521,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_skp_verify = (chunk_t (*)(ike_sa_t *)) get_skp_verify;
 	this->public.get_skp_build = (chunk_t (*)(ike_sa_t *)) get_skp_build;
 	this->public.derive_keys = (status_t (*)(ike_sa_t *,proposal_t*,chunk_t,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
+	this->public.get_proposal = (char* (*)(ike_sa_t*)) get_proposal;
+	this->public.set_proposal = (void (*)(ike_sa_t*,char*)) set_proposal;
 	this->public.add_child_sa = (void (*)(ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
 	this->public.create_child_sa_iterator = (iterator_t* (*)(ike_sa_t*)) create_child_sa_iterator;
@@ -2374,6 +2530,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.delete_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
 	this->public.rekey = (status_t (*)(ike_sa_t*))rekey;
+	this->public.reauth = (status_t (*)(ike_sa_t*))reauth;
 	this->public.reestablish = (status_t (*)(ike_sa_t*))reestablish;
 	this->public.set_auth_lifetime = (void(*)(ike_sa_t*, u_int32_t lifetime))set_auth_lifetime;
 	this->public.roam = (status_t(*)(ike_sa_t*,bool))roam;
@@ -2384,26 +2541,28 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_virtual_ip = (void (*)(ike_sa_t*,bool,host_t*))set_virtual_ip;
 	this->public.get_virtual_ip = (host_t* (*)(ike_sa_t*,bool))get_virtual_ip;
 	this->public.add_dns_server = (void (*)(ike_sa_t*,host_t*))add_dns_server;
-#ifdef P2P
+#ifdef ME
+	this->public.act_as_mediation_server = (void (*)(ike_sa_t*)) act_as_mediation_server;
 	this->public.get_server_reflexive_host = (host_t* (*)(ike_sa_t*)) get_server_reflexive_host;
 	this->public.set_server_reflexive_host = (void (*)(ike_sa_t*,host_t*)) set_server_reflexive_host;
+	this->public.get_connect_id = (chunk_t (*)(ike_sa_t*)) get_connect_id;
 	this->public.initiate_mediation = (status_t (*)(ike_sa_t*,peer_cfg_t*)) initiate_mediation;
-	this->public.initiate_mediated = (status_t (*)(ike_sa_t*,host_t*,host_t*,linked_list_t*)) initiate_mediated;
+	this->public.initiate_mediated = (status_t (*)(ike_sa_t*,host_t*,host_t*,chunk_t)) initiate_mediated;
 	this->public.relay = (status_t (*)(ike_sa_t*,identification_t*,chunk_t,chunk_t,linked_list_t*,bool)) relay;
 	this->public.callback = (status_t (*)(ike_sa_t*,identification_t*)) callback;
 	this->public.respond = (status_t (*)(ike_sa_t*,identification_t*,chunk_t)) respond;
-#endif /* P2P */
+#endif /* ME */
 	
 	/* initialize private fields */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();
-	this->my_host = host_create_any(AF_INET);
-	this->other_host = host_create_any(AF_INET);
+	this->my_host = host_create_from_string("0.0.0.0", IKEV2_UDP_PORT);
+	this->other_host = host_create_from_string("0.0.0.0", IKEV2_UDP_PORT);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
-	this->other_ca = NULL;
 	this->extensions = 0;
 	this->conditions = 0;
+	this->selected_proposal = NULL;
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;
@@ -2420,6 +2579,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->time.delete = 0;
 	this->ike_cfg = NULL;
 	this->peer_cfg = NULL;
+	this->my_auth = auth_info_create();
+	this->other_auth = auth_info_create();
 	this->task_manager = task_manager_create(&this->public);
 	this->unique_id = ++unique_id;
 	this->my_virtual_ip = NULL;
@@ -2429,9 +2590,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->pending_updates = 0;
 	this->keyingtry = 0;
 	this->ike_initiator = FALSE;
-#ifdef P2P
+#ifdef ME
+	this->is_mediation_server = FALSE;
 	this->server_reflexive_host = NULL;
-#endif /* P2P */
+	this->connect_id = chunk_empty;
+#endif /* ME */
 	
 	return &this->public;
 }

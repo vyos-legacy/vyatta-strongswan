@@ -1,10 +1,3 @@
-/**
- * @file ike_cfg.c
- *
- * @brief Implementation of ike_cfg_t.
- *
- */
-
 /*
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,11 +12,15 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_cfg.c 4062 2008-06-12 11:42:19Z martin $
  */
 
 #include "ike_cfg.h"
 
 #include <string.h>
+
+#include <daemon.h>
 
 
 typedef struct private_ike_cfg_t private_ike_cfg_t;
@@ -46,12 +43,12 @@ struct private_ike_cfg_t {
 	/**
 	 * Address of local host
 	 */
-	host_t *my_host;
+	char *me;
 
 	/**
 	 * Address of remote host
 	 */	
-	host_t *other_host;
+	char *other;
 	
 	/**
 	 * should we send a certificate request?
@@ -86,19 +83,19 @@ static bool force_encap_meth(private_ike_cfg_t *this)
 }
 
 /**
- * Implementation of ike_cfg_t.get_my_host.
+ * Implementation of ike_cfg_t.get_my_addr.
  */
-static host_t *get_my_host (private_ike_cfg_t *this)
+static char *get_my_addr(private_ike_cfg_t *this)
 {
-	return this->my_host;
+	return this->me;
 }
 
 /**
- * Implementation of ike_cfg_t.get_other_host.
+ * Implementation of ike_cfg_t.get_other_addr.
  */
-static host_t *get_other_host (private_ike_cfg_t *this)
+static char *get_other_addr(private_ike_cfg_t *this)
 {
-	return this->other_host;
+	return this->other;
 }
 
 /**
@@ -141,6 +138,7 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 	stored_iter = this->proposals->create_iterator(this->proposals, TRUE);
 	supplied_iter = proposals->create_iterator(proposals, TRUE);
 	
+	
 	/* compare all stored proposals with all supplied. Stored ones are preferred.*/
 	while (stored_iter->iterate(stored_iter, (void**)&stored))
 	{
@@ -154,6 +152,9 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 				/* they match, return */
 				stored_iter->destroy(stored_iter);
 				supplied_iter->destroy(supplied_iter);
+				DBG2(DBG_CFG, "received proposals: %#P", proposals);
+				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
+				DBG2(DBG_CFG, "selected proposal: %P", selected);
 				return selected;
 			}
 		}
@@ -161,6 +162,8 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
 	/* no proposal match :-(, will result in a NO_PROPOSAL_CHOSEN... */
 	stored_iter->destroy(stored_iter);
 	supplied_iter->destroy(supplied_iter);
+	DBG1(DBG_CFG, "received proposals: %#P", proposals);
+	DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
 	
 	return NULL;
 }
@@ -170,30 +173,71 @@ static proposal_t *select_proposal(private_ike_cfg_t *this,
  */
 static diffie_hellman_group_t get_dh_group(private_ike_cfg_t *this)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	proposal_t *proposal;
-	algorithm_t *algo;
-	diffie_hellman_group_t dh_group = MODP_NONE;
+	u_int16_t dh_group = MODP_NONE;
 	
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->iterate(iterator, (void**)&proposal))
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo))
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
 		{
-			dh_group = algo->algorithm;
 			break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	return dh_group;
+}
+
+/**
+ * Implementation of ike_cfg_t.equals.
+ */
+static bool equals(private_ike_cfg_t *this, private_ike_cfg_t *other)
+{
+	enumerator_t *e1, *e2;
+	proposal_t *p1, *p2;
+	bool eq = TRUE;
+	
+	if (this == other)
+	{
+		return TRUE;
+	}
+	if (this->public.equals != other->public.equals)
+	{
+		return FALSE;
+	}
+	if (this->proposals->get_count(this->proposals) !=
+		other->proposals->get_count(other->proposals))
+	{
+		return FALSE;
+	}
+	e1 = this->proposals->create_enumerator(this->proposals);
+	e2 = this->proposals->create_enumerator(this->proposals);
+	while (e1->enumerate(e1, &p1) && e2->enumerate(e2, &p2))
+	{
+		if (!p1->equals(p1, p2))
+		{
+			eq = FALSE;
+			break;
+		}
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+
+	return (eq &&
+		this->certreq == other->certreq &&
+		this->force_encap == other->force_encap &&
+		streq(this->me, other->me) &&
+		streq(this->other, other->other));
 }
 
 /**
  * Implementation of ike_cfg_t.get_ref.
  */
-static void get_ref(private_ike_cfg_t *this)
+static ike_cfg_t* get_ref(private_ike_cfg_t *this)
 {
 	ref_get(&this->refcount);
+	return &this->public;
 }
 
 /**
@@ -205,8 +249,8 @@ static void destroy(private_ike_cfg_t *this)
 	{
 		this->proposals->destroy_offset(this->proposals,
 										offsetof(proposal_t, destroy));
-		this->my_host->destroy(this->my_host);
-		this->other_host->destroy(this->other_host);
+		free(this->me);
+		free(this->other);
 		free(this);
 	}
 }
@@ -215,29 +259,29 @@ static void destroy(private_ike_cfg_t *this)
  * Described in header.
  */
 ike_cfg_t *ike_cfg_create(bool certreq, bool force_encap,
-						  host_t *my_host, host_t *other_host)
+						  char *me, char *other)
 {
 	private_ike_cfg_t *this = malloc_thing(private_ike_cfg_t);
 	
 	/* public functions */
 	this->public.send_certreq = (bool(*)(ike_cfg_t*))send_certreq;
 	this->public.force_encap = (bool (*) (ike_cfg_t *))force_encap_meth;
-	this->public.get_my_host = (host_t*(*)(ike_cfg_t*))get_my_host;
-	this->public.get_other_host = (host_t*(*)(ike_cfg_t*))get_other_host;
+	this->public.get_my_addr = (char*(*)(ike_cfg_t*))get_my_addr;
+	this->public.get_other_addr = (char*(*)(ike_cfg_t*))get_other_addr;
 	this->public.add_proposal = (void(*)(ike_cfg_t*, proposal_t*)) add_proposal;
 	this->public.get_proposals = (linked_list_t*(*)(ike_cfg_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(ike_cfg_t*,linked_list_t*))select_proposal;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(ike_cfg_t*)) get_dh_group;
-	this->public.get_ref = (void(*)(ike_cfg_t*))get_ref;
+	this->public.equals = (bool(*)(ike_cfg_t*,ike_cfg_t*)) equals;
+	this->public.get_ref = (ike_cfg_t*(*)(ike_cfg_t*))get_ref;
 	this->public.destroy = (void(*)(ike_cfg_t*))destroy;
 	
 	/* private variables */
 	this->refcount = 1;
 	this->certreq = certreq;
 	this->force_encap = force_encap;
-	this->my_host = my_host;
-	this->other_host = other_host;
-	
+	this->me = strdup(me);
+	this->other = strdup(other);
 	this->proposals = linked_list_create();
 	
 	return &this->public;

@@ -1,10 +1,3 @@
-/**
- * @file socket.c
- *
- * @brief Implementation of socket_t.
- *
- */
-
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
@@ -20,7 +13,12 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: socket-raw.c 3870 2008-04-24 13:49:20Z martin $
  */
+
+/* for struct in6_pktinfo */
+#define _GNU_SOURCE
 
 #include <pthread.h>
 #include <sys/types.h>

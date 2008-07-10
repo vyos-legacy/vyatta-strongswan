@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: load-testconfig 3273 2007-10-08 20:18:34Z andreas $
+# RCSID $Id: load-testconfig 3935 2008-05-12 20:06:58Z andreas $
 
 DIR=`dirname $0`
 
@@ -47,7 +47,7 @@ then
     for host in `ls $TESTSDIR/$testname/hosts`
     do
 	eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-	scp -rp $TESTSDIR/$testname/hosts/$host/etc $HOSTLOGIN:/ > /dev/null 2>&1
+	scp -r $TESTSDIR/$testname/hosts/$host/etc $HOSTLOGIN:/ > /dev/null 2>&1
     done
 fi
 

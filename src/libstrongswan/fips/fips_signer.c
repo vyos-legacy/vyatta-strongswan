@@ -1,10 +1,3 @@
-/**
- * @file fips_signer.c
- * 
- * @brief Computes a HMAC signature and stores it in fips_signature.h.
- * 
- */
-
 /*
  * Copyright (C) 2007 Bruno Krieg, Daniel Wydler
  * Hochschule fuer Technik Rapperswil, Switzerland
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: fips_signer.c 3964 2008-05-15 14:01:26Z martin $
  */
 
 #include <stdio.h>
@@ -30,6 +25,10 @@ int main(int argc, char* argv[])
 	FILE *f;
 	char *hmac_key = "strongSwan Version " VERSION;
 	char  hmac_signature[BUF_LEN];
+
+	/* initialize library */
+	library_init(STRONGSWAN_CONF);
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, "sha1 hmac");
 
 	if (!fips_compute_hmac_signature(hmac_key, hmac_signature))
 	{
@@ -57,7 +56,9 @@ int main(int argc, char* argv[])
 	fprintf(f, "const char *hmac_key = \"%s\";\n", hmac_key);
 	fprintf(f, "const char *hmac_signature = \"%s\";\n", hmac_signature);
 	fprintf(f, "\n");
-	fprintf(f, "#endif /* FIPS_SIGNATURE_H_ */\n");
+	fprintf(f, "#endif /* FIPS_SIGNATURE_H_ @} */\n");
 	fclose(f);
+
+	library_deinit();
 	exit(0);
 }

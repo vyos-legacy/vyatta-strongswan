@@ -1,10 +1,3 @@
-/**
- * @file child_delete.c
- *
- * @brief Implementation of the child_delete task.
- *
- */
-
 /*
  * Copyright (C) 2006-2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: child_delete.c 3802 2008-04-14 08:17:18Z martin $
  */
 
 #include "child_delete.h"
@@ -157,23 +152,48 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 }
 
 /**
- * destroy the children listed in this->child_sas
+ * destroy the children listed in this->child_sas, reestablish by policy
  */
-static void destroy_children(private_child_delete_t *this)
+static status_t destroy_and_reestablish(private_child_delete_t *this)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
+	child_cfg_t *child_cfg;
 	protocol_id_t protocol;
 	u_int32_t spi;
+	status_t status = SUCCESS;
 	
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
 		spi = child_sa->get_spi(child_sa, TRUE);
 		protocol = child_sa->get_protocol(child_sa);
+		child_cfg = child_sa->get_config(child_sa);
+		child_cfg->get_ref(child_cfg);
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
+		if (!this->initiator)
+		{	/* enforce child_cfg policy if deleted passively */
+			switch (child_cfg->get_close_action(child_cfg))
+			{
+				case ACTION_RESTART:
+					child_cfg->get_ref(child_cfg);
+					status = this->ike_sa->initiate(this->ike_sa, child_cfg);
+					break;
+				case ACTION_ROUTE:
+					status = this->ike_sa->route(this->ike_sa, child_cfg);
+					break;
+				default:
+					break;
+			}
+		}
+		child_cfg->destroy(child_cfg);
+		if (status != SUCCESS)
+		{
+			break;
+		}
 	}
 	iterator->destroy(iterator);
+	return status;
 }
 
 /**
@@ -214,9 +234,8 @@ static status_t process_i(private_child_delete_t *this, message_t *message)
 	this->child_sas = linked_list_create();
 	
 	process_payloads(this, message);
-	destroy_children(this);
 	SIG(CHILD_DOWN_SUCCESS, "CHILD_SA closed");
-	return SUCCESS;
+	return destroy_and_reestablish(this);
 }
 
 /**
@@ -239,9 +258,8 @@ static status_t build_r(private_child_delete_t *this, message_t *message)
 	{
 		build_payloads(this, message);	
 	}
-	destroy_children(this);
 	SIG(CHILD_DOWN_SUCCESS, "CHILD_SA closed");
-	return SUCCESS;
+	return destroy_and_reestablish(this);
 }
 
 /**

@@ -1,10 +1,3 @@
-/**
- * @file auth_payload.h
- * 
- * @brief Implementation of auth_payload_t.
- * 
- */
-
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -19,6 +12,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: auth_payload.c 4051 2008-06-10 09:08:27Z tobias $
  */
 
 #include "auth_payload.h"
@@ -116,7 +111,8 @@ encoding_rule_t auth_payload_encodings[] = {
 static status_t verify(private_auth_payload_t *this)
 {
 	if (this->auth_method == 0 ||
-		(this->auth_method >= 4 && this->auth_method <= 200))
+		(this->auth_method >= 4 && this->auth_method <= 8) ||
+		(this->auth_method >= 12 && this->auth_method <= 200))
 	{
 		/* reserved IDs */
 		return FAILED;

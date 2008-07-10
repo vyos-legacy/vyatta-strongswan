@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: fetch.c 3252 2007-10-06 21:24:50Z andreas $
+ * RCSID $Id: fetch.c 3686 2008-03-28 11:48:14Z martin $
  */
 
 #include <stdlib.h>
@@ -825,7 +825,9 @@ fetch_thread(void *arg)
 void
 init_fetch(void)
 {
+#if defined(LIBCURL) || defined (THREADS)
     int status;
+#endif
 
 #ifdef LIBCURL
     /* init curl */

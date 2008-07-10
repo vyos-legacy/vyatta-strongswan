@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ac.c 3253 2007-10-06 21:39:00Z andreas $
+ * RCSID $Id: ac.c 3686 2008-03-28 11:48:14Z martin $
  */
 
 #include <stdlib.h>
@@ -596,16 +596,6 @@ parse_ac(chunk_t blob, x509acert_t *ac)
     }
     time(&ac->installed);
     return TRUE;
-}
-
-/*
- *  compare two X.509 attribute certificates by comparing their signatures
- */
-static bool
-same_x509acert(x509acert_t *a, x509acert_t *b)
-{
-    return a->signature.len == b->signature.len &&
-	memcmp(a->signature.ptr, b->signature.ptr, b->signature.len) == 0;
 }
 
 /*

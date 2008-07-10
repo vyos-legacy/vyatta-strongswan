@@ -1,10 +1,3 @@
-/**
- * @file ike_mobike.c
- *
- * @brief Implementation of the ike_mobike task.
- *
- */
-
 /*
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -18,6 +11,8 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: ike_mobike.c 4006 2008-05-23 15:43:42Z martin $
  */
 
 #include "ike_mobike.h"
@@ -28,6 +23,7 @@
 #include <sa/tasks/ike_natd.h>
 #include <encoding/payloads/notify_payload.h>
 
+#define COOKIE2_SIZE 16
 
 typedef struct private_ike_mobike_t private_ike_mobike_t;
 
@@ -125,6 +121,12 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 				this->ike_sa->enable_extension(this->ike_sa, EXT_MOBIKE);
 				break;
 			}
+			case COOKIE2:
+			{
+				chunk_free(&this->cookie2);
+				this->cookie2 = chunk_clone(notify->get_notification_data(notify));
+				break;
+			}
 			case ADDITIONAL_IP6_ADDRESS:
 			{
 				family = AF_INET6;
@@ -211,6 +213,23 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 }
 
 /**
+ * build a cookie and add it to the message 
+ */
+static void build_cookie(private_ike_mobike_t *this, message_t *message)
+{
+	rng_t *rng;
+
+	chunk_free(&this->cookie2);
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (rng)
+	{
+		rng->allocate_bytes(rng, COOKIE2_SIZE, &this->cookie2);
+		rng->destroy(rng);
+		message->add_notify(message, FALSE, COOKIE2, this->cookie2);
+	}
+}
+
+/**
  * update addresses of associated CHILD_SAs
  */
 static void update_children(private_ike_mobike_t *this)
@@ -262,6 +281,11 @@ static void transmit(private_ike_mobike_t *this, packet_t *packet)
 											charon->kernel_interface, other);
 		if (me)
 		{
+			if (me->get_family(me) != other->get_family(other))
+			{
+				me->destroy(me);
+				continue;
+			}
 			/* reuse port for an active address, 4500 otherwise */
 			me->set_port(me, me->ip_equals(me, me_old) ?
 						 me_old->get_port(me_old) : IKEV2_NATT_PORT);
@@ -297,6 +321,7 @@ static status_t build_i(private_ike_mobike_t *this, message_t *message)
 		if (this->update)
 		{
 			message->add_notify(message, FALSE, UPDATE_SA_ADDRESSES, chunk_empty);
+			build_cookie(this, message);
 			update_children(this);
 		}
 		if (this->address)
@@ -363,6 +388,11 @@ static status_t build_r(private_ike_mobike_t *this, message_t *message)
 		{
 			this->natd->task.build(&this->natd->task, message);
 		}
+		if (this->cookie2.ptr)
+		{
+			message->add_notify(message, FALSE, COOKIE2, this->cookie2);
+			chunk_free(&this->cookie2);
+		}
 		if (this->update)
 		{
 			update_children(this);
@@ -392,7 +422,25 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 			/* newer update queued, ignore this one */
 			return SUCCESS;
 		}
-		process_payloads(this, message);
+		if (this->cookie2.ptr)
+		{	/* check cookie if we included none */
+			chunk_t cookie2;
+			
+			cookie2 = this->cookie2;
+			this->cookie2 = chunk_empty;
+			process_payloads(this, message);
+			if (!chunk_equals(cookie2, this->cookie2))
+			{
+				chunk_free(&cookie2);
+				DBG1(DBG_IKE, "COOKIE2 mismatch, closing IKE_SA");
+				return FAILED;
+			}
+			chunk_free(&cookie2);
+		}
+		else
+		{
+			process_payloads(this, message);
+		}
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);

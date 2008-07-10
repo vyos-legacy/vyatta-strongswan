@@ -1,6 +1,4 @@
 /* strongSwan IPsec config file parser
- * Copyright (C) 2007 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2001-2002 Mathieu Lafon
  * Arkoon Network Security
  *
@@ -14,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.h 3394 2007-12-13 17:31:21Z martin $
+ * RCSID $Id: confread.h 3932 2008-05-12 10:05:49Z andreas $
  */
 
 #ifndef _IPSEC_CONFREAD_H_
@@ -67,13 +65,12 @@ struct starter_end {
 	char		*iface;
 	ip_address	addr;
 	ip_address	nexthop;
-	ip_address	srcip;
-	ip_subnet	subnet;
+	char 		*subnet;
 	bool		has_client;
 	bool		has_client_wildcard;
 	bool		has_port_wildcard;
-	bool		has_srcip;
 	bool		has_natip;
+	bool		has_virt;
 	bool		modecfg;
 	certpolicy_t	sendcert;
 	bool		firewall;
@@ -83,7 +80,7 @@ struct starter_end {
 	char 		*updown;
 	u_int16_t	port;
 	u_int8_t	protocol;
-	char		*virt;
+	char		*srcip;
 };
 
 typedef struct also also_t;
@@ -130,9 +127,9 @@ struct starter_conn {
 	dpd_action_t	dpd_action;
 	int		dpd_count;
 	
-	bool		p2p_mediation;
-	char		*p2p_mediated_by;
-	char		*p2p_peerid;
+	bool		me_mediation;
+	char		*me_mediated_by;
+	char		*me_peerid;
 
 	starter_conn_t *next;
 };
@@ -155,6 +152,7 @@ struct starter_ca {
 	char		*crluri2;
 	char		*ocspuri;
 	char		*ocspuri2;
+	char        *certuribase;
 
 	bool		strict;
 
@@ -176,6 +174,7 @@ struct starter_config {
 		char	 *charondebug;
 		char	 *prepluto;
 		char	 *postpluto;
+		char	 *plutostderrlog;
 		bool	 uniqueids;
 		u_int	 overridemtu;
 		u_int	 crlcheckinterval;
@@ -184,8 +183,8 @@ struct starter_config {
 		bool	 nocrsend;
 		bool	 nat_traversal;
 		u_int	 keep_alive;
+		u_int	 force_keepalive;
 		char	 *virtual_private;
-		char	 *eapdir;
 		char	 *pkcs11module;
 		char	 *pkcs11initargs;
 		bool	 pkcs11keepstate;

@@ -1,12 +1,7 @@
-/**
- * @file lexparser.h
- * 
- * @brief lexical parser for text-based configuration files
- *  
- */
-
 /*
- * Copyright (C) 2001-2006 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2001-2008 Andreas Steffen
+ *
+ * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,47 +13,57 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: lexparser.h 3346 2007-11-16 20:23:29Z andreas $
+ * $Id: lexparser.h 3876 2008-04-26 09:24:14Z andreas $
  */
+ 
+/**
+ * @defgroup lexparser lexparser
+ * @{ @ingroup utils
+ */
+
+#ifndef LEXPARSER_H_
+#define LEXPARSER_H_
 
 #include <library.h>
 
 /**
- * @brief Eats whitespace
+ * Eats whitespace
  */
 bool eat_whitespace(chunk_t *src);
 
 /**
- * @brief Compare null-terminated pattern with chunk
+ * Compare null-terminated pattern with chunk
  */
 bool match(const char *pattern, const chunk_t *ch);
 
 /**
- * @brief Extracts a token ending with the first occurence a given termination symbol
+ * Extracts a token ending with the first occurence a given termination symbol
  */
 bool extract_token(chunk_t *token, const char termination, chunk_t *src);
 
 /**
- * @brief Extracts a token ending with the last occurence a given termination symbol
+ * Extracts a token ending with the last occurence a given termination symbol
  */
 bool extract_last_token(chunk_t *token, const char termination, chunk_t *src);
 
 /**
- *  @brief Fetches a new text line terminated by \n or \r\n
+ *  Fetches a new text line terminated by \n or \r\n
  */
 bool fetchline(chunk_t *src, chunk_t *line);
 
 /**
- * @brief Extracts a value that might be single or double quoted
+ * Extracts a value that might be single or double quoted
  */
 err_t extract_value(chunk_t *value, chunk_t *line);
 
 /**
- * @brief extracts a name: value pair from a text line
+ * extracts a name: value pair from a text line
  */
 err_t extract_name_value(chunk_t *name, chunk_t *value, chunk_t *line);
 
 /**
- * @brief extracts a parameter: value from a text line
+ * extracts a parameter: value from a text line
  */
 err_t extract_parameter_value(chunk_t *name, chunk_t *value, chunk_t *line);
+
+#endif /* LEXPARSER_H_ @} */

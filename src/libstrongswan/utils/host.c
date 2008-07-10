@@ -1,10 +1,3 @@
-/**
- * @file host.c
- * 
- * @brief Implementation of host_t.
- * 
- */
-
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -21,18 +14,23 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ *
+ * $Id: host.c 4056 2008-06-11 07:44:23Z martin $
  */
 
+#define _GNU_SOURCE
+#include <netdb.h>
 #include <string.h>
 #include <printf.h>
 
 #include "host.h"
 
+#include <debug.h>
 
 typedef struct private_host_t private_host_t;
 
 /**
- * @brief Private Data of a host object.
+ * Private Data of a host object.
  */
 struct private_host_t { 	
 	/**
@@ -111,56 +109,79 @@ static int print(FILE *stream, const struct printf_info *info,
 				 const void *const *args)
 {
 	private_host_t *this = *((private_host_t**)(args[0]));
-	char buffer[INET6_ADDRSTRLEN];
-	void *address;
-	u_int16_t port;
+	char buffer[INET6_ADDRSTRLEN + 16];
 	
 	if (this == NULL)
 	{
-		return fprintf(stream, "(null)");
+		snprintf(buffer, sizeof(buffer), "(null)");
 	}
-	
-	if (is_anyaddr(this))
+	else if (is_anyaddr(this))
 	{
-		return fprintf(stream, "%%any");
-	}
-	
-	switch (this->address.sa_family)
-	{
-		case AF_INET:
-			address = &this->address4.sin_addr;
-			port = this->address4.sin_port;
-			break;
-		case AF_INET6:
-			address = &this->address6.sin6_addr;
-			port = this->address6.sin6_port;
-			break;
-		default:
-			return fprintf(stream, "(family not supported)");
-	}
-	
-	if (inet_ntop(this->address.sa_family, address,
-				  buffer, sizeof(buffer)) == NULL)
-	{
-		return fprintf(stream, "(address conversion failed)");
-	}
-	
-	if (info->alt)
-	{
-		return fprintf(stream, "%s[%d]", buffer, ntohs(port));
+		snprintf(buffer, sizeof(buffer), "%%any");
 	}
 	else
 	{
-		return fprintf(stream, "%s", buffer);
+		void *address;
+		u_int16_t port;
+		int len;
+		
+		address = &this->address6.sin6_addr;
+		port = this->address6.sin6_port;
+		
+		switch (this->address.sa_family)
+		{
+			case AF_INET:
+				address = &this->address4.sin_addr;
+				port = this->address4.sin_port;
+				/* fall */
+			case AF_INET6:
+	
+				if (inet_ntop(this->address.sa_family, address,
+							  buffer, sizeof(buffer)) == NULL)
+				{
+					snprintf(buffer, sizeof(buffer),
+							 "(address conversion failed)");
+				}
+				else if (info->alt)
+				{
+					len = strlen(buffer);
+					snprintf(buffer + len, sizeof(buffer) - len,
+							 "[%d]", ntohs(port));
+				}
+				break;
+			default:
+				snprintf(buffer, sizeof(buffer), "(family not supported)");
+				break;
+		}
 	}
+	if (info->left)
+	{
+		return fprintf(stream, "%-*s", info->width, buffer);
+	}
+	return fprintf(stream, "%*s", info->width, buffer);
+}
+
+
+/**
+ * arginfo handler for printf() hosts
+ */
+int arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
 }
 
 /**
- * register printf() handlers
+ * return printf hook functions for a host
  */
-static void __attribute__ ((constructor))print_register()
+printf_hook_functions_t host_get_printf_hooks()
 {
-	register_printf_function(PRINTF_HOST, print, arginfo_ptr);
+	printf_hook_functions_t hooks = {print, arginfo};
+	
+	return hooks;
 }
 
 /**
@@ -428,6 +449,61 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 	}
 	free(this);
 	return NULL;
+}
+
+/*
+ * Described in header.
+ */
+host_t *host_create_from_dns(char *string, int af, u_int16_t port)
+{
+	private_host_t *this;
+	struct hostent host, *ptr;
+	char buf[512];
+	int err, ret;
+	
+	if (strchr(string, ':'))
+	{	/* gethostbyname does not like IPv6 addresses, fallback */
+		return host_create_from_string(string, port);
+	}
+	
+	if (af)
+	{	
+		ret = gethostbyname2_r(string, af, &host, buf, sizeof(buf), &ptr, &err);
+	}
+	else
+	{
+		ret = gethostbyname_r(string, &host, buf, sizeof(buf), &ptr, &err);
+	}
+	if (ret != 0)
+	{
+		DBG1("resolving '%s' failed: %s", string, hstrerror(err));
+		return NULL;
+	}
+	if (ptr == NULL)
+	{
+		DBG1("resolving '%s' failed", string);
+	}
+	this = host_create_empty();
+	this->address.sa_family = host.h_addrtype;
+	switch (this->address.sa_family)
+	{
+		case AF_INET:
+			memcpy(&this->address4.sin_addr.s_addr,
+				   host.h_addr_list[0], host.h_length);
+			this->address4.sin_port = htons(port);
+			this->socklen = sizeof(struct sockaddr_in);
+			break;
+		case AF_INET6:
+			memcpy(&this->address6.sin6_addr.s6_addr,
+				   host.h_addr_list[0], host.h_length);
+			this->address6.sin6_port = htons(port);
+			this->socklen = sizeof(struct sockaddr_in6);
+			break;
+		default:
+			free(this);
+			return NULL;
+	}
+	return &this->public;
 }
 
 /*

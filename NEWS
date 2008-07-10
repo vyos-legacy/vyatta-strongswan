@@ -1,3 +1,133 @@
+strongswan-4.2.4
+----------------
+
+- Added statistics functions to ip pool --status and ip pool --leases
+  and input validation checks to various ip pool commands.
+
+- ipsec statusall now lists all loaded charon plugins and displays
+  the negotiated IKE cipher suite proposal.
+
+- The openssl plugin supports the elliptic curve Diffie-Hellman groups
+  19, 20, 21, 25, and 26.
+
+- The openssl plugin supports ECDSA authentication using elliptic curve
+  X.509 certificates.
+
+- Fixed a bug in stroke which caused multiple charon threads to close
+  the file descriptors during packet transfers over the stroke socket.
+ 
+- ESP sequence numbers are now migrated in IPsec SA updates handled by
+  MOBIKE. Works only with Linux kernels >= 2.6.17.
+
+
+strongswan-4.2.3
+----------------
+
+- Fixed the strongswan.conf path configuration problem that occurred when 
+  --sysconfig was not set explicitly in ./configure.
+
+- Fixed a number of minor bugs that where discovered during the 4th
+  IKEv2 interoperability workshop in San Antonio, TX.
+
+
+strongswan-4.2.2
+----------------
+
+- Plugins for libstrongswan and charon can optionally be loaded according
+  to a configuration in strongswan.conf. Most components provide a
+  "load = " option followed by a space separated list of plugins to load.
+  This allows e.g. the fallback from a hardware crypto accelerator to
+  to software-based crypto plugins.
+
+- Charons SQL plugin has been extended by a virtual IP address pool.
+  Configurations with a rightsourceip=%poolname setting query a SQLite or
+  MySQL database for leases. The "ipsec pool" command helps in administrating
+  the pool database. See ipsec pool --help for the available options
+
+- The Authenticated Encryption Algorithms AES-CCM-8/12/16 and AES-GCM-8/12/16
+  for ESP are now supported starting with the Linux 2.6.25 kernel. The 
+  syntax is e.g. esp=aes128ccm12 or esp=aes256gcm16.
+
+
+strongswan-4.2.1
+----------------
+
+- Support for "Hash and URL" encoded certificate payloads has been implemented
+  in the IKEv2 daemon charon. Using the "certuribase" option of a CA section
+  allows to assign a base URL to all certificates issued by the specified CA.
+  The final URL is then built by concatenating that base and the hex encoded
+  SHA1 hash of the DER encoded certificate. Note that this feature is disabled
+  by default and must be enabled using the option "charon.hash_and_url".
+
+- The IKEv2 daemon charon now supports the "uniqueids" option to close multiple
+  IKE_SAs with the same peer. The option value "keep" prefers existing
+  connection setups over new ones, where the value "replace" replaces existing
+  connections.
+  
+- The crypto factory in libstrongswan additionaly supports random number 
+  generators, plugins may provide other sources of randomness. The default
+  plugin reads raw random data from /dev/(u)random.
+
+- Extended the credential framework by a caching option to allow plugins 
+  persistent caching of fetched credentials. The "cachecrl" option has been
+  re-implemented.
+
+- The new trustchain verification introduced in 4.2.0 has been parallelized.
+  Threads fetching CRL or OCSP information no longer block other threads.
+
+- A new IKEv2 configuration attribute framework has been introduced allowing
+  plugins to provide virtual IP addresses, and in the future, other
+  configuration attribute services (e.g. DNS/WINS servers).
+
+- The stroke plugin has been extended to provide virtual IP addresses from
+  a pool defined in ipsec.conf. The "rightsourceip" parameter now accepts
+  address pools in CIDR notation (e.g. 10.1.1.0/24). The parameter also accepts
+  the value "%poolname", where "poolname" identifies a pool provided by a
+  separate plugin.
+
+- Fixed compilation on uClibc and a couple of other minor bugs.
+
+- Set DPD defaults in ipsec starter to dpd_delay=30s and dpd_timeout=150s.
+
+- The IKEv1 pluto daemon now supports the ESP encryption algorithm CAMELLIA
+  with key lengths of 128, 192, and 256 bits, as well as the authentication
+  algorithm AES_XCBC_MAC. Configuration example: esp=camellia192-aesxcbc.
+
+
+strongswan-4.2.0
+----------------
+
+- libstrongswan has been modularized to attach crypto algorithms,
+  credential implementations (keys, certificates) and fetchers dynamically
+  through plugins. Existing code has been ported to plugins:
+    - RSA/Diffie-Hellman implementation using the GNU Multi Precision library
+    - X509 certificate system supporting CRLs, OCSP and attribute certificates
+    - Multiple plugins providing crypto algorithms in software
+    - CURL and OpenLDAP fetcher
+
+- libstrongswan gained a relational database API which uses pluggable database
+  providers. Plugins for MySQL and SQLite are available.
+
+- The IKEv2 keying daemon charon is more extensible. Generic plugins may provide
+  connection configuration, credentials and EAP methods or control the daemon.
+  Existing code has been ported to plugins:
+    - EAP-AKA, EAP-SIM, EAP-MD5 and EAP-Identity
+    - stroke configuration, credential and control (compatible to pluto)
+    - XML bases management protocol to control and query the daemon
+  The following new plugins are available:
+    - An experimental SQL configuration, credential and logging plugin on
+      top of either MySQL or SQLite
+    - A unit testing plugin to run tests at daemon startup
+
+- The authentication and credential framework in charon has been heavily
+  refactored to support modular credential providers, proper
+  CERTREQ/CERT payload exchanges and extensible authorization rules.
+
+- The framework of strongSwan Manager has envolved to the web application 
+  framework libfast (FastCGI Application Server w/ Templates) and is usable
+  by other applications.
+	
+
 strongswan-4.1.11
 -----------------
 
