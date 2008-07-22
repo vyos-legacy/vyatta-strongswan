@@ -1,5 +1,8 @@
-strongswan (4.2.4-1) unstable; urgency=low
+strongswan (4.2.4-1) unstable; urgency=medium
 
+  Urgency medium because this new upstream versions no longer uses
+  dbus and thus fixed the grave bug from the last Debian package. This
+  version should transit to testing.
   * New upstream release. Starting with version 4.2.0, crypto algorithms have
     beeen modularized with existing code ported over. Among other improvments, 
     this version now supports AES-CCM (e.g. with esp=aes128ccm12) and AES-GCM
