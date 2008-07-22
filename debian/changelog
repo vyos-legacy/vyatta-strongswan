@@ -16,7 +16,7 @@ strongswan (4.2.4-1) unstable; urgency=low
     support. Mea culpa.
     Closes: #475098: charon needs dbus but strongswan does not depend on dbus
 
- -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Thu, 10 Jul 2008 14:40:43 +0200
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 10 Jul 2008 14:40:43 +0200
 
 strongswan (4.1.11-1) unstable; urgency=low
 

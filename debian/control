@@ -2,7 +2,7 @@ Source: strongswan
 Section: net
 Priority: optional
 Maintainer: Rene Mayrhofer <rmayr@debian.org>
-Standards-Version: 3.7.2.1
+Standards-Version: 3.8.0
 Build-Depends: debhelper (>= 4.1.16), libtool, libgmp3-dev, libssl-dev (>= 0.9.8-1), libcurl3-dev | libcurl2-dev, libopensc2-dev | libopensc1-dev | libopensc0-dev, libldap2-dev, libpam0g-dev, libkrb5-dev, bison, flex, dpatch, bzip2, po-debconf, hardening-wrapper, network-manager-dev, libfcgi-dev, clearsilver-dev, libxml2-dev, libdbus-1-dev, libsqlite3-dev
 
 Package: strongswan
