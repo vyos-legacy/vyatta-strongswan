@@ -20,7 +20,7 @@ configure-stamp: patch
 		--enable-nonblocking --enable-thread \
 		--enable-smartcard --enable-cisco-quirks \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
-		--enable-dbus --enable-xml \
+		--enable-xml \
 		--enable-p2p --enable-manager \
 		--enable-padlock --enable-openssl \
 		--enable-integrity-test --enable-unit-tests

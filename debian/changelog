@@ -8,8 +8,10 @@ strongswan (4.2.4-1) unstable; urgency=medium
     this version now supports AES-CCM (e.g. with esp=aes128ccm12) and AES-GCM
     (e.g. with esp=aes256gcm16) starting with kernel 2.6.25 and enables dead
     peer detection by default.
-    Note that charon (IKEv2) now used /etc/strongswan.conf as its
-    config file.
+    Note that charon (IKEv2) now used /etc/strongswan.conf as its config 
+    file.
+  * Enabled building of VIA Padlock and openssl crypto plugins and unit and 
+    integrity testing.
   * Drop patch to rename AES_cbc_encrypt so as not to conflict with an
     openssl method of the same name. This has been applied upstream.
   * This new upstream version no longer uses dbus.
