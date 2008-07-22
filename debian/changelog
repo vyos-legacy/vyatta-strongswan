@@ -1,6 +1,10 @@
 strongswan (4.2.4-1) unstable; urgency=low
 
-  * New upstream release.
+  * New upstream release. Starting with version 4.2.0, crypto algorithms have
+    beeen modularized with existing code ported over. Among other improvments, 
+    this version now supports AES-CCM (e.g. with esp=aes128ccm12) and AES-GCM
+    (e.g. with esp=aes256gcm16) starting with kernel 2.6.25 and enables dead
+    peer detection by default.
   * Apply patch to ipsec init script to fix bashism.
     Closes: #473703: strongswan: bashism in /bin/sh script 
   * Updated Czech debconf translation.
