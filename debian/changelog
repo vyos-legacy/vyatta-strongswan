@@ -5,16 +5,18 @@ strongswan (4.2.4-1) unstable; urgency=low
     this version now supports AES-CCM (e.g. with esp=aes128ccm12) and AES-GCM
     (e.g. with esp=aes256gcm16) starting with kernel 2.6.25 and enables dead
     peer detection by default.
+    Note that charon (IKEv2) now used /etc/strongswan.conf as its
+    config file.
   * Drop patch to rename AES_cbc_encrypt so as not to conflict with an
     openssl method of the same name. This has been applied upstream.
+  * This new upstream version no longer uses dbus.
+    Closes: #475098: charon needs dbus but strongswan does not depend on dbus
+    Closes: #475099: charon does not work any more
   * Apply patch to ipsec init script to fix bashism.
     Closes: #473703: strongswan: bashism in /bin/sh script 
   * Updated Czech debconf translation.
     Closes: #480928: [l10n] Updated Czech translation of strongswan debconf
                      messages
-  * Need to depend on dbus, since charon is now being compiled with dbus
-    support. Mea culpa.
-    Closes: #475098: charon needs dbus but strongswan does not depend on dbus
 
  -- Rene Mayrhofer <rmayr@debian.org>  Thu, 10 Jul 2008 14:40:43 +0200
 
