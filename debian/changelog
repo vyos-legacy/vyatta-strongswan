@@ -9,8 +9,7 @@ strongswan (4.2.4-1) unstable; urgency=medium
     (e.g. with esp=aes256gcm16) starting with kernel 2.6.25 and enables dead
     peer detection by default.
     Note that charon (IKEv2) now uses the new /etc/strongswan.conf.
-  * Enabled building of VIA Padlock and openssl crypto plugins and unit and 
-    integrity testing.
+  * Enabled building of VIA Padlock and openssl crypto plugins.
   * Drop patch to rename AES_cbc_encrypt so as not to conflict with an
     openssl method of the same name. This has been applied upstream.
   * This new upstream version no longer uses dbus.

@@ -22,8 +22,7 @@ configure-stamp: patch
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-xml \
 		--enable-p2p --enable-manager \
-		--enable-padlock --enable-openssl \
-		--enable-integrity-test --enable-unit-tests
+		--enable-padlock --enable-openssl
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!
 	# And for --enable-eap-sim we would need the library, which we don't
