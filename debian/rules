@@ -127,7 +127,7 @@ binary-common:
 	dh_testroot
 	dh_installinit --name=ipsec
 	dh_installdebconf
-	dh_installchangelogs ChangeLog
+	dh_installchangelogs NEWS
 	dh_link
 	dh_strip
 	dh_compress
