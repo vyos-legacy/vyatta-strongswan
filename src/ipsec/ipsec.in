@@ -326,7 +326,7 @@ update)
 	;;
 version|--version)
 	echo "Linux $IPSEC_NAME $IPSEC_VERSION"
-	echo -e $IPSEC_DISTRO
+	printf "$IPSEC_DISTRO\n"
 	echo "See \`ipsec --copyright' for copyright information."
 	exit 0
 	;;

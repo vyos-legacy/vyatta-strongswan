@@ -1,6 +1,14 @@
-strongswan (4.2.4-1) UNRELEASED; urgency=low
+strongswan (4.2.4-1) unstable; urgency=low
 
-  * (NOT RELEASED YET) New upstream release
+  * New upstream release.
+  * Apply patch to ipsec init script to fix bashism.
+    Closes: #473703: strongswan: bashism in /bin/sh script 
+  * Updated Czech debconf translation.
+    Closes: #480928: [l10n] Updated Czech translation of strongswan debconf
+                     messages
+  * Need to depend on dbus, since charon is now being compiled with dbus
+    support. Mea culpa.
+    Closes: #475098: charon needs dbus but strongswan does not depend on dbus
 
  -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Thu, 10 Jul 2008 14:40:43 +0200
 
