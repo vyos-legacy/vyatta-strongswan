@@ -15,6 +15,9 @@ strongswan (4.2.4-1) unstable; urgency=medium
   * This new upstream version no longer uses dbus.
     Closes: #475098: charon needs dbus but strongswan does not depend on dbus
     Closes: #475099: charon does not work any more
+  * This new upstream version no longer prints error messages in its
+    init script.
+    Closes: #465718: strongswan: startup on booting returns error messages 
   * Apply patch to ipsec init script to fix bashism.
     Closes: #473703: strongswan: bashism in /bin/sh script 
   * Updated Czech debconf translation.
