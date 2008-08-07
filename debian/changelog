@@ -1,3 +1,14 @@
+strongswan (4.2.4-2) intrepid; urgency=low
+
+  * Only compile padlock crypto acceleration support for i386. Thanks for
+    the patch!
+    Closes: #492455: strongswan: FTBFS: Uses i386 assembler on non-i386 
+                     arches. 
+  * Updated Swedish debconf translation.
+    Closes: #492902: [INTL:sv] po-debconf file for strongswan
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 07 Aug 2008 13:02:54 +0200
+
 strongswan (4.2.4-1) unstable; urgency=medium
 
   Urgency medium because this new upstream versions no longer uses

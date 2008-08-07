@@ -10,11 +10,7 @@ export DH_OPTIONS
 # this is a security-critical package, set all the options we can
 export DEB_BUILD_HARDENING=1
 
-configure: configure-stamp
-configure-stamp: patch
-	dh_testdir
-	# Add here commands to configure the package.
-	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
 		--enable-http --enable-ldap \
 		--enable-nonblocking --enable-thread \
@@ -22,11 +18,25 @@ configure-stamp: patch
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-xml \
 		--enable-p2p --enable-manager \
-		--enable-padlock --enable-openssl
+		--enable-openssl
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!
 	# And for --enable-eap-sim we would need the library, which we don't
 	# have right now.
+
+DEB_BUILD_ARCH_CPU ?=$(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
+
+#the padlock plugin only makes sense on i386 
+ifeq ($(DEB_BUILD_ARCH_CPU),i386)
+  CONFIGUREARGS += --enable-padlock
+endif
+
+
+configure: configure-stamp
+configure-stamp: patch
+	dh_testdir
+	# Add here commands to configure the package.
+	./configure $(CONFIGUREARGS)
 
 	touch configure-stamp
 
