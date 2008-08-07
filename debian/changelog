@@ -1,5 +1,6 @@
-strongswan (4.2.4-2) intrepid; urgency=low
+strongswan (4.2.4-2) unstable; urgency=medium
 
+  Urgency medium because this fixes an FTFBS bug on non-i386.
   * Only compile padlock crypto acceleration support for i386. Thanks for
     the patch!
     Closes: #492455: strongswan: FTBFS: Uses i386 assembler on non-i386 
