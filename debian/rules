@@ -17,7 +17,7 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-smartcard --enable-cisco-quirks \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-xml \
-		--enable-p2p --enable-manager \
+		--enable-mediation --enable-manager \
 		--enable-openssl
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!

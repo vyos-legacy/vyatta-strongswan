@@ -1,3 +1,11 @@
+strongswan (4.2.4-3) unstable; urgency=low
+
+  * Changed configure option to build peer-to-peer service again.
+    Closes: #494678: strongswan: configure option --enable-p2p changed to 
+                     --enable-mediation
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Tue, 12 Aug 2008 20:08:26 +0200
+
 strongswan (4.2.4-2) unstable; urgency=medium
 
   Urgency medium because this fixes an FTFBS bug on non-i386.
