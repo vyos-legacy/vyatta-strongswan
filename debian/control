@@ -3,12 +3,12 @@ Section: net
 Priority: optional
 Maintainer: Rene Mayrhofer <rmayr@debian.org>
 Standards-Version: 3.8.0
-Build-Depends: debhelper (>= 4.1.16), libtool, libgmp3-dev, libssl-dev (>= 0.9.8-1), libcurl3-dev | libcurl2-dev, libopensc2-dev | libopensc1-dev | libopensc0-dev, libldap2-dev, libpam0g-dev, libkrb5-dev, bison, flex, dpatch, bzip2, po-debconf, hardening-wrapper, network-manager-dev, libfcgi-dev, clearsilver-dev, libxml2-dev, libdbus-1-dev, libsqlite3-dev
+Build-Depends: debhelper (>= 4.1.16), libtool, libgmp3-dev, libssl-dev (>= 0.9.8-1), libcurl3-dev | libcurl2-dev, libopensc2-dev | libopensc1-dev | libopensc0-dev, libldap2-dev, libpam0g-dev, libkrb5-dev, bison, flex, dpatch, bzip2, po-debconf, hardening-wrapper, network-manager-dev, libfcgi-dev, clearsilver-dev, libxml2-dev, libsqlite3-dev
 
 Package: strongswan
 Architecture: any
 Pre-Depends: debconf | debconf-2.0
-Depends: ${shlibs:Depends}, ${misc:Depends}, bsdmainutils, debianutils (>=1.7), ipsec-tools, openssl, host, iproute, dbus
+Depends: ${shlibs:Depends}, ${misc:Depends}, bsdmainutils, debianutils (>=1.7), ipsec-tools, openssl, host, iproute
 Suggests: curl
 Provides: ike-server
 Conflicts: freeswan (<< 2.04-12), openswan

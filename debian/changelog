@@ -11,6 +11,7 @@ strongswan (4.2.4-4) unstable; urgency=low
     for IKEv2 key agreement adds complexity for little gain.
     Thanks to Thomas Kallenberg of strongswan upstream team for 
     suggesting these changes. The package is now noticable smaller.
+  * Also remove dbus dependency, which is no longer necessary.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Mon, 01 Sep 2008 08:59:10 +0200
 
