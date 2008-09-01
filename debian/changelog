@@ -1,3 +1,19 @@
+strongswan (4.2.4-4) unstable; urgency=low
+
+  * Tweaked configure options for lenny to remove somewhat experimental,
+    incomplete, or unnecessary features. Removed --enable-xml,
+    --enable-padlock, and --enable-manager and added --disable-aes,
+    --disable-des, --disable-fips-prf, --disable-gmp, --disable-md5,
+    --disable-sha1, and --disable-sha2 because openssl already
+    contains this code, we depend on it and thus don't need it twice.
+    Padlock support does not do much, because the bulk encryption uses
+    it anyway (being done internally in the kernel) and using padlock
+    for IKEv2 key agreement adds complexity for little gain.
+    Thanks to Thomas Kallenberg of strongswan upstream team for 
+    suggesting these changes. The package is now noticable smaller.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Mon, 01 Sep 2008 08:59:10 +0200
+
 strongswan (4.2.4-3) unstable; urgency=low
 
   * Changed configure option to build peer-to-peer service again.

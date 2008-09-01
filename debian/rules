@@ -16,9 +16,10 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-nonblocking --enable-thread \
 		--enable-smartcard --enable-cisco-quirks \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
-		--enable-xml \
-		--enable-mediation --enable-manager \
-		--enable-openssl
+		--enable-mediation \
+		--enable-openssl \
+		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
+		--disable-md5 --disable-sha1 --disable-sha2
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!
 	# And for --enable-eap-sim we would need the library, which we don't
@@ -26,10 +27,11 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 
 DEB_BUILD_ARCH_CPU ?=$(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
 
-#the padlock plugin only makes sense on i386 
-ifeq ($(DEB_BUILD_ARCH_CPU),i386)
-  CONFIGUREARGS += --enable-padlock
-endif
+# the padlock plugin only makes sense on i386 
+# but it actually doesn't do much, so no need to enable it
+#ifeq ($(DEB_BUILD_ARCH_CPU),i386)
+#  CONFIGUREARGS += --enable-padlock
+#endif
 
 
 configure: configure-stamp
