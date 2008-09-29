@@ -1,3 +1,11 @@
+strongswan (4.2.4-5) unstable; urgency=high
+
+  Reason for urgency high: this is potentially security relevant.
+  * Patch backported from 4.2.7 to fix a potential DoS issue.
+    Thanks to Thomas Kallenberg for the patch.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Mon, 29 Sep 2008 10:35:30 +0200
+
 strongswan (4.2.4-4) unstable; urgency=low
 
   * Tweaked configure options for lenny to remove somewhat experimental,

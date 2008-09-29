@@ -1,0 +1,111 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 01-fix-potential-DoS.dpatch by  <rene@mayrhofer.eu.org>
+##
+## All lines beginning with ## DP:' are a description of the patch.
+## DP: Fixes a potential DoS issue, backported from 4.2.7.
+
+@DPATCH@
+
+Index: strongswan/src/libstrongswan/plugins/gmp/gmp_rsa_public_key.c
+===================================================================
+--- strongswan/src/libstrongswan/plugins/gmp/gmp_rsa_public_key.c (revision 4317)
++++ strongswan/src/libstrongswan/plugins/gmp/gmp_rsa_public_key.c (revision 4345)
+@@ -94,9 +94,13 @@
+ 	mpz_powm(c, m, this->e, this->n);
+ 
+-    encrypted.len = this->k;
+-    encrypted.ptr = mpz_export(NULL, NULL, 1, encrypted.len, 1, 0, c);
++	encrypted.len = this->k;
++	encrypted.ptr = mpz_export(NULL, NULL, 1, encrypted.len, 1, 0, c);
++	if (encrypted.ptr == NULL)
++	{
++		encrypted.len = 0;
++	}
+ 	
+ 	mpz_clear(c);
+-	mpz_clear(m);	
++	mpz_clear(m);
+ 	
+ 	return encrypted;
+Index: strongswan/src/libstrongswan/plugins/gmp/gmp_diffie_hellman.c
+===================================================================
+--- strongswan/src/libstrongswan/plugins/gmp/gmp_diffie_hellman.c (revision 3806)
++++ strongswan/src/libstrongswan/plugins/gmp/gmp_diffie_hellman.c (revision 4345)
+@@ -344,5 +344,5 @@
+ 	 */	
+ 	mpz_t g;
+-
++	
+ 	/**
+ 	 * My private value.
+@@ -354,5 +354,5 @@
+ 	 */
+ 	mpz_t ya;
+-
++	
+ 	/**
+ 	 * Other public value.
+@@ -374,5 +374,5 @@
+ 	 */
+ 	size_t p_len;
+-
++	
+ 	/**
+ 	 * True if shared secret is computed and stored in my_public_value.
+@@ -441,5 +441,9 @@
+ 	}
+ 	value->len = this->p_len;
+-    value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->yb);
++	value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->yb);
++	if (value->ptr == NULL)
++	{
++		return FAILED;
++	}
+ 	return SUCCESS;
+ }
+@@ -452,4 +456,8 @@
+ 	value->len = this->p_len;
+     value->ptr = mpz_export(NULL, NULL, 1, value->len, 1, 0, this->ya);
++    if (value->ptr == NULL)
++    {
++    	value->len = 0;
++    }
+ }
+ 
+@@ -464,5 +472,9 @@
+ 	}
+ 	secret->len = this->p_len;
+-    secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->zz);
++	secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->zz);
++	if (secret->ptr == NULL)
++	{
++		return FAILED;
++	}
+ 	return SUCCESS;
+ }
+Index: strongswan/src/libstrongswan/plugins/gmp/gmp_rsa_private_key.c
+===================================================================
+--- strongswan/src/libstrongswan/plugins/gmp/gmp_rsa_private_key.c (revision 4317)
++++ strongswan/src/libstrongswan/plugins/gmp/gmp_rsa_private_key.c (revision 4345)
+@@ -192,4 +192,8 @@
+ 	decrypted.len = this->k;
+ 	decrypted.ptr = mpz_export(NULL, NULL, 1, decrypted.len, 1, 0, t1);
++	if (decrypted.ptr == NULL)
++	{
++		decrypted.len = 0;
++	}
+ 	
+ 	mpz_clear_randomized(t1);
+Index: strongswan/src/openac/openac.c
+===================================================================
+--- strongswan/src/openac/openac.c (revision 4318)
++++ strongswan/src/openac/openac.c (revision 4345)
+@@ -104,4 +104,8 @@
+ 	chunk.len = 1 + mpz_sizeinbase(number, 2)/BITS_PER_BYTE;
+ 	chunk.ptr = mpz_export(NULL, NULL, 1, chunk.len, 1, 0, number);
++	if (chunk.ptr == NULL)
++	{
++		chunk.len = 0;
++	}
+ 	return chunk;
+ }
