@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.2.4)
+AC_INIT(strongSwan,4.2.8)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_C_BIGENDIAN
 AC_SUBST(confdir, '${sysconfdir}')
@@ -77,28 +77,28 @@ AC_ARG_WITH(
 	[ipsecdir],
 	AS_HELP_STRING([--with-ipsecdir=dir],[installation path for ipsec tools other than "libexecdir/ipsec"]),
 	[AC_SUBST(ipsecdir, "$withval")],
-	[AC_SUBST(ipsecdir, "${libexecdir}/ipsec")]
+	[AC_SUBST(ipsecdir, "${libexecdir%/}/ipsec")]
 )
-AC_SUBST(plugindir, "${ipsecdir}/plugins")
+AC_SUBST(plugindir, "${ipsecdir%/}/plugins")
 
 AC_ARG_WITH(
 	[plugindir],
 	AS_HELP_STRING([--with-plugindir=dir],[installation path for plugins other than "ipsecdir/plugins"]),
 	[AC_SUBST(plugindir, "$withval")],
-	[AC_SUBST(plugindir, "${ipsecdir}/plugins")]
+	[AC_SUBST(plugindir, "${ipsecdir%/}/plugins")]
 )
 
 AC_ARG_WITH(
 	[sim-reader],
 	AS_HELP_STRING([--with-sim-reader=library.so],[library containing the sim_run_alg()/sim_get_triplet() function for EAP-SIM]),
 	[AC_SUBST(simreader, "$withval")],
-	[AC_SUBST(simreader, "${plugindir}/libeapsim-file.so")]
+	[AC_SUBST(simreader, "${plugindir%/}/libeapsim-file.so")]
 )
 
 AC_ARG_WITH(
 	[linux-headers],
 	AS_HELP_STRING([--with-linux-headers=dir],[use the linux header files in dir instead of the supplied ones in "src/include"]),
-	[AC_SUBST(linuxdir, "$withval")], [AC_SUBST(linuxdir, "../include")]
+	[AC_SUBST(linuxdir, "$withval")], [AC_SUBST(linuxdir, "\${top_srcdir}/src/include")]
 )
 AC_SUBST(LINUX_HEADERS)
 
@@ -136,6 +136,14 @@ AC_ARG_WITH(
 	AS_HELP_STRING([--with-group=group],[change group of the daemons to "group" after startup (default is 0).]),
 	[AC_DEFINE_UNQUOTED(IPSEC_GROUP, "$withval") AC_SUBST(ipsecgroup, "$withval")],
 	[AC_SUBST(ipsecgroup, "root")]
+)
+
+dnl Will be extended to --with-capabilities=libcap|libcap2
+AC_ARG_WITH(
+	[capabilities],
+	AS_HELP_STRING([--with-capabilities=libcap],[capability dropping using libcap. Currenlty only the value "libcap" is supported (default is NO).]),
+	[capabilities="$withval"],
+	[capabilities=no]
 )
 
 AC_ARG_ENABLE(
@@ -386,6 +394,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[eap-sim-file],
+	AS_HELP_STRING([--enable-eap-sim-file],[build EAP-SIM backend based on a triplet file (default is NO).]),
+	[if test x$enableval = xyes; then
+		eap_sim_file=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[eap-identity],
 	AS_HELP_STRING([--enable-eap-identity],[build EAP module providing EAP-Identity helper (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -402,11 +418,30 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[eap-gtc],
+	AS_HELP_STRING([--enable-eap-gtc],[build PAM based GTC authenication module for EAP (default is NO).]),
+	[if test x$enableval = xyes; then
+		eap_gtc=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[eap-aka],
 	AS_HELP_STRING([--enable-eap-aka],[build AKA authentication module for EAP (default is NO).]),
 	[if test x$enableval = xyes; then
 		eap_aka=true
 	fi]
+)
+
+AC_ARG_ENABLE(
+	[kernel-netlink],
+	AS_HELP_STRING([--disable-kernel-netlink],[disable the netlink kernel interface. (default is NO).]),
+	[if test x$enableval = xyes; then
+		kernel_netlink=true
+	 else
+		kernel_netlink=false
+	fi],
+	kernel_netlink=true
 )
 
 AC_ARG_ENABLE(
@@ -556,10 +591,28 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[agent],
+	AS_HELP_STRING([--enable-agent],[enables the ssh-agent signing plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		agent=true
+	 else
+		agent=false
+	fi],
+)
+
+AC_ARG_ENABLE(
 	[uci],
 	AS_HELP_STRING([--enable-uci],[enable OpenWRT UCI configuration plugin (default is NO).]),
 	[if test x$enableval = xyes; then
 		uci=true
+	fi]
+)
+
+AC_ARG_ENABLE(
+	[nm],
+	AS_HELP_STRING([--enable-nm],[enable NetworkManager plugin (default is NO).]),
+	[if test x$enableval = xyes; then
+		nm=true
 	fi]
 )
 
@@ -611,15 +664,6 @@ dnl ==========================================
 AC_HAVE_LIBRARY(dl)
 AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(dladdr)
-
-AC_MSG_CHECKING([capset() definition])
-AC_TRY_COMPILE(
-	[#include <linux/capset.h>],
-	[
-		void *test = capset;
-	], 
-	[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_DEFINE_UNQUOTED(NO_CAPSET_DEFINED, 1)]
-)
 
 if test x$gmp = xtrue; then
 	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
@@ -684,6 +728,15 @@ if test x$sqlite = xtrue; then
 			void *test = sqlite3_prepare_v2;
 		], 
 		[AC_MSG_RESULT([yes])]; AC_DEFINE_UNQUOTED(HAVE_SQLITE3_PREPARE_V2, 1), [AC_MSG_RESULT([no])])
+	AC_MSG_CHECKING([sqlite3.h version >= 3.3.1])
+	AC_TRY_COMPILE(
+		[#include <sqlite3.h>],
+		[
+			#if SQLITE_VERSION_NUMBER < 3003001
+				#error bad sqlite
+			#endif
+		], 
+		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([SQLite version >= 3.3.1 required!])])
 fi
 
 if test x$openssl = xtrue; then
@@ -694,6 +747,22 @@ fi
 if test x$uci = xtrue; then
 	AC_HAVE_LIBRARY([uci],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
+fi
+
+if test x$nm = xtrue; then
+	PKG_CHECK_MODULES(nm, [NetworkManager libnm_glib_vpn gthread-2.0])
+	AC_SUBST(nm_CFLAGS)
+	AC_SUBST(nm_LIBS)
+fi
+
+if test x$eap_gtc = xtrue; then
+	AC_HAVE_LIBRARY([pam],[LIBS="$LIBS"],[AC_MSG_ERROR([PAM library not found])])
+	AC_CHECK_HEADER([security/pam_appl.h],,[AC_MSG_ERROR([PAM header security/pam_appl.h not found!])])
+fi
+
+if test x$capabilities = xlibcap; then
+	AC_HAVE_LIBRARY([cap],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])])
+	AC_CHECK_HEADER([sys/capability.h],,[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
 fi
 
 dnl ======================================
@@ -714,20 +783,17 @@ fi
 if test x$des = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" des"
 fi
-if test x$md5 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" md5"
-fi
 if test x$sha1 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha1"
 fi
 if test x$sha2 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
 fi
+if test x$md5 = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" md5"
+fi
 if test x$fips_prf = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
-fi
-if test x$gmp = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 fi
 if test x$random = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" random"
@@ -738,11 +804,11 @@ fi
 if test x$pubkey = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
 fi
-if test x$hmac = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
-fi
 if test x$xcbc = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
+fi
+if test x$hmac = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
 fi
 if test x$mysql = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
@@ -755,6 +821,12 @@ if test x$padlock = xtrue; then
 fi
 if test x$openssl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
+fi
+if test x$agent = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" agent"
+fi
+if test x$gmp = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 fi
 
 AC_SUBST(libstrongswan_plugins)
@@ -783,20 +855,25 @@ AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
+AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 
 dnl charon plugins
 dnl ==============
 AM_CONDITIONAL(USE_STROKE, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
+AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
+AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
 AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
+AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
+AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 
 dnl other options
 dnl =============
@@ -812,6 +889,7 @@ AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$me = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
 AM_CONDITIONAL(USE_SELF_TEST, test x$self_test = xtrue)
+AM_CONDITIONAL(USE_CAPABILITIES, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
@@ -825,6 +903,9 @@ dnl ==============================
 
 if test x$me = xtrue; then
 	AC_DEFINE(ME)
+fi
+if test x$capabilities = xlibcap; then
+	AC_DEFINE(CAPABILITIES)
 fi
 
 dnl ==============================
@@ -854,6 +935,8 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/sqlite/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
+	src/libstrongswan/plugins/agent/Makefile
+	src/libstrongswan/fips/Makefile
 	src/libcrypto/Makefile
 	src/libfreeswan/Makefile
 	src/pluto/Makefile
@@ -862,11 +945,15 @@ AC_OUTPUT(
 	src/charon/plugins/eap_aka/Makefile
 	src/charon/plugins/eap_identity/Makefile
 	src/charon/plugins/eap_md5/Makefile
+	src/charon/plugins/eap_gtc/Makefile
 	src/charon/plugins/eap_sim/Makefile
+	src/charon/plugins/eap_sim_file/Makefile
+	src/charon/plugins/kernel_netlink/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile
 	src/charon/plugins/medsrv/Makefile
 	src/charon/plugins/medcli/Makefile
+	src/charon/plugins/nm/Makefile
 	src/charon/plugins/uci/Makefile
 	src/charon/plugins/stroke/Makefile
 	src/charon/plugins/unit_tester/Makefile
@@ -882,5 +969,6 @@ AC_OUTPUT(
 	src/libfast/Makefile
 	src/manager/Makefile
 	src/medsrv/Makefile
+	scripts/Makefile
 	testing/Makefile
 )

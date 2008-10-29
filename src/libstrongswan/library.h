@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: library.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: library.h 4311 2008-08-28 16:27:48Z martin $
  */
 
 /**
@@ -108,6 +108,11 @@ struct library_t {
 	 * various settings loaded from settings file
 	 */
 	settings_t *settings;
+	
+	/**
+	 * is leak detective running?
+	 */
+	bool leak_detective;
 };
 
 /**

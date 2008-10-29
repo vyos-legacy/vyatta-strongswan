@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509_ocsp_response.c 4091 2008-06-22 17:41:07Z andreas $
+ * $Id: x509_ocsp_response.c 4317 2008-09-02 11:00:13Z martin $
  */
 
 #include "x509_ocsp_response.h"
@@ -560,8 +560,7 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 			case BASIC_RESPONSE_CERTIFICATE:
 			{
 				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,CERT_X509,
-										  BUILD_BLOB_ASN1_DER,
-										  chunk_clone(object),
+										  BUILD_BLOB_ASN1_DER, object,
 										  BUILD_END);
 				if (cert)
 				{
@@ -944,27 +943,30 @@ static x509_ocsp_response_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	va_list args;
-	
+	if (!this->res)
+	{
+		va_list args;
+		chunk_t chunk;
+		
+		switch (part)
+		{
+			case BUILD_BLOB_ASN1_DER:
+			{
+				va_start(args, part);
+				chunk = va_arg(args, chunk_t);
+				this->res = load(chunk_clone(chunk));
+				va_end(args);
+				return;
+			}
+			default:
+				break;
+		}
+	}
 	if (this->res)
 	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
+		destroy((private_x509_ocsp_response_t*)this->res);
 	}
-	
-	switch (part)
-	{
-		case BUILD_BLOB_ASN1_DER:
-		{
-			va_start(args, part);
-			this->res = load(va_arg(args, chunk_t));
-			va_end(args);
-			break;
-		}
-		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
-			break;
-	}
+	builder_cancel(&this->public);
 }
 
 /**

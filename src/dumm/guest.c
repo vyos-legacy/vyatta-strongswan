@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -25,6 +26,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include <termios.h>
+#include <stdarg.h>
 
 #include <debug.h>
 #include <utils/linked_list.h>
@@ -40,7 +42,7 @@
 #define MASTER_DIR "master"
 #define DIFF_DIR "diff"
 #define UNION_DIR "union"
-#define MEMORY_FILE "mem"
+#define ARGS_FILE "args"
 #define PID_FILE "pid"
 #define KERNEL_FILE "linux"
 #define LOG_FILE "boot.log"
@@ -58,8 +60,8 @@ struct private_guest_t {
 	int dir;
 	/** directory name of guest */
 	char *dirname;
-	/** amount of memory for guest, in MB */
-	int mem;
+	/** additional args to pass to guest */
+	char *args;
 	/** pid of guest child process */
 	int pid;
 	/** state of guest */
@@ -114,7 +116,7 @@ static iface_t* create_iface(private_guest_t *this, char *name)
 	}
 	enumerator->destroy(enumerator);
 
-	iface = iface_create(this->name, name, this->mconsole);
+	iface = iface_create(name, &this->public, this->mconsole);
 	if (iface)
 	{
 		this->ifaces->insert_last(this->ifaces, iface);
@@ -212,6 +214,7 @@ static void stop(private_guest_t *this, idle_function_t idle)
 			}
 		}
 		unlinkat(this->dir, PID_FILE, 0);
+		this->pid = 0;
 	}
 }
 
@@ -255,15 +258,19 @@ static bool start(private_guest_t *this, invoke_function_t invoke, void* data,
 	
 	notify = write_arg(&pos, &left, "%s/%s", this->dirname, NOTIFY_FILE);
 	
+	args[i++] = write_arg(&pos, &left, "nice");
 	args[i++] = write_arg(&pos, &left, "%s/%s", this->dirname, KERNEL_FILE);
 	args[i++] = write_arg(&pos, &left, "root=/dev/root");
 	args[i++] = write_arg(&pos, &left, "rootfstype=hostfs");
 	args[i++] = write_arg(&pos, &left, "rootflags=%s/%s", this->dirname, UNION_DIR);
 	args[i++] = write_arg(&pos, &left, "uml_dir=%s", this->dirname);
 	args[i++] = write_arg(&pos, &left, "umid=%s", this->name);
-	args[i++] = write_arg(&pos, &left, "mem=%dM", this->mem);
 	args[i++] = write_arg(&pos, &left, "mconsole=notify:%s", notify);
 	args[i++] = write_arg(&pos, &left, "con=null");
+	if (this->args)
+	{
+		args[i++] = this->args;
+	}
 	  
 	this->pid = invoke(data, &this->public, args, i);
 	if (!this->pid)
@@ -307,7 +314,7 @@ static bool load_template(private_guest_t *this, char *path)
 	}
 	if (access(dir, F_OK) != 0)
 	{
-		if (mkdir(dir, PERME) != 0)
+		if (!mkdir_p(dir, PERME))
 		{
 			DBG1("creating overlay for guest '%s' failed: %m", this->name);
 			return FALSE;
@@ -322,6 +329,119 @@ static bool load_template(private_guest_t *this, char *path)
 		iface->destroy(iface);
 	}
 	return TRUE;
+}
+
+/**
+ * Variadic version of the exec function
+ */
+static int vexec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *data,
+				 char *cmd, va_list args)
+{
+	char buf[1024];
+	size_t len;
+	
+	if (this->mconsole)
+	{
+		len = vsnprintf(buf, sizeof(buf), cmd, args);
+		
+		if (len > 0 && len < sizeof(buf))
+		{
+			return this->mconsole->exec(this->mconsole, cb, data, buf);
+		}
+	}
+	return -1;
+}
+
+/**
+ * Implementation of guest_t.exec
+ */
+static int exec(private_guest_t *this, void(*cb)(void*,char*,size_t), void *data,
+				char *cmd, ...)
+{
+	int res;
+	va_list args;
+	va_start(args, cmd);
+	res = vexec(this, cb, data, cmd, args);
+	va_end(args);
+	return res;
+}
+
+typedef struct {
+	chunk_t buf;
+	void (*cb)(void*,char*);
+	void *data;
+} exec_str_t;
+
+/**
+ * callback that combines chunks to a string. if a callback is given, the string
+ * is split at newlines and the callback is called for each line.
+ */
+static void exec_str_cb(exec_str_t *data, char *buf, size_t len)
+{
+	if (!data->buf.ptr)
+	{
+		data->buf = chunk_alloc(len + 1);
+		memcpy(data->buf.ptr, buf, len);
+		data->buf.ptr[len] = '\0';
+	}
+	else
+	{
+		size_t newlen = strlen(data->buf.ptr) + len + 1;
+		if (newlen > data->buf.len)
+		{
+			data->buf.ptr = realloc(data->buf.ptr, newlen);
+			data->buf.len = newlen;
+		}
+		strncat(data->buf.ptr, buf, len);
+	}
+	
+	if (data->cb)
+	{
+		char *nl;
+		while ((nl = strchr(data->buf.ptr, '\n')) != NULL)
+		{
+			*nl++ = '\0';
+			data->cb(data->data, data->buf.ptr);
+			memmove(data->buf.ptr, nl, strlen(nl) + 1);
+		}
+	}
+}
+
+/**
+ * Implementation of guest_t.exec_str
+ */
+static int exec_str(private_guest_t *this, void(*cb)(void*,char*), bool lines,
+					void *data, char *cmd, ...)
+{
+	int res;
+	va_list args;
+	va_start(args, cmd);
+	if (cb)
+	{
+		exec_str_t exec = { chunk_empty, NULL, NULL };
+		if (lines)
+		{
+			exec.cb = cb;
+			exec.data = data;
+		}
+		res = vexec(this, (void(*)(void*,char*,size_t))exec_str_cb, &exec, cmd, args);
+		if (exec.buf.ptr)
+		{
+			if (!lines || strlen(exec.buf.ptr) > 0)
+			{
+				/* return the complete string or the remaining stuff in the
+				 * buffer (i.e. when there was no newline at the end) */
+				cb(data, exec.buf.ptr);
+			}
+			chunk_free(&exec.buf);
+		}
+	}
+	else
+	{
+		res = vexec(this, NULL, NULL, cmd, args);
+	}
+	va_end(args);
+	return res;
 }
 
 /**
@@ -373,38 +493,38 @@ static bool mount_unionfs(private_guest_t *this)
 }
 
 /**
- * load memory configuration from file
+ * load args configuration from file
  */
-int loadmem(private_guest_t *this)
+char *loadargs(private_guest_t *this)
 {
 	FILE *file;
-	int mem = 0;
+	char buf[512], *args = NULL;
 	
-	file = fdopen(openat(this->dir, MEMORY_FILE, O_RDONLY, PERM), "r");
+	file = fdopen(openat(this->dir, ARGS_FILE, O_RDONLY, PERM), "r");
 	if (file)
 	{
-		if (fscanf(file, "%d", &mem) <= 0)
+		if (fgets(buf, sizeof(buf), file))
 		{
-			mem = 0;
+			args = strdup(buf);
 		}
 		fclose(file);
 	}
-	return mem;
+	return args;
 }
 
 /**
- * save memory configuration to file
+ * save args configuration to file
  */
-bool savemem(private_guest_t *this, int mem)
+bool saveargs(private_guest_t *this, char *args)
 {
 	FILE *file;
 	bool retval = FALSE;
 	
-	file = fdopen(openat(this->dir, MEMORY_FILE, O_RDWR | O_CREAT | O_TRUNC,
+	file = fdopen(openat(this->dir, ARGS_FILE, O_RDWR | O_CREAT | O_TRUNC,
 						 PERM), "w");
 	if (file)
 	{
-		if (fprintf(file, "%d", mem) > 0)
+		if (fprintf(file, "%s", args) > 0)
 		{
 			retval = TRUE;
 		}
@@ -424,7 +544,9 @@ static void destroy(private_guest_t *this)
 	{
 		close(this->dir);
 	}
+	this->ifaces->destroy(this->ifaces);
 	free(this->dirname);
+	free(this->args);
 	free(this->name);
 	free(this);
 }
@@ -447,6 +569,8 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->public.start = (void*)start;
 	this->public.stop = (void*)stop;
 	this->public.load_template = (bool(*)(guest_t*, char *path))load_template;
+	this->public.exec = (int(*)(guest_t*, void(*cb)(void*,char*,size_t),void*,char*,...))exec;
+	this->public.exec_str = (int(*)(guest_t*, void(*cb)(void*,char*),bool,void*,char*,...))exec_str;
 	this->public.sigchild = (void(*)(guest_t*))sigchild;
 	this->public.destroy = (void*)destroy;
 		
@@ -474,7 +598,7 @@ static private_guest_t *guest_create_generic(char *parent, char *name,
 	this->state = GUEST_STOPPED;
 	this->mconsole = NULL;
 	this->ifaces = linked_list_create();
-	this->mem = 0;
+	this->args = NULL;
 	this->name = strdup(name);
 	this->cowfs = NULL;
 	
@@ -505,7 +629,7 @@ static bool make_symlink(private_guest_t *this, char *old, char *new)
  * create the guest instance, including required dirs and mounts 
  */
 guest_t *guest_create(char *parent, char *name, char *kernel,
-					  char *master, int mem)
+					  char *master, char *args)
 {
 	private_guest_t *this = guest_create_generic(parent, name, TRUE);
 	
@@ -530,8 +654,8 @@ guest_t *guest_create(char *parent, char *name, char *kernel,
 		return NULL;
 	}
 	
-	this->mem = mem;
-	if (!savemem(this, mem))
+	this->args = args;
+	if (args && !saveargs(this, args))
 	{
 		destroy(this);
 		return NULL;
@@ -558,13 +682,7 @@ guest_t *guest_load(char *parent, char *name)
 		return NULL;
 	}
 	
-	this->mem = loadmem(this);
-	if (this->mem == 0)
-	{
-		DBG1("unable to open memory configuration file: %m", name);
-		destroy(this);
-		return NULL;
-	}
+	this->args = loadargs(this);
 	
 	if (!mount_unionfs(this))
 	{

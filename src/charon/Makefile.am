@@ -41,6 +41,8 @@ encoding/payloads/ts_payload.c encoding/payloads/ts_payload.h \
 encoding/payloads/unknown_payload.c encoding/payloads/unknown_payload.h \
 encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
 kernel/kernel_interface.c kernel/kernel_interface.h \
+kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_net.h \
 network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
@@ -57,12 +59,14 @@ processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
+processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/scheduler.c processing/scheduler.h \
 processing/processor.c processing/processor.h  \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
 sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
 sa/authenticators/eap/eap_manager.c sa/authenticators/eap/eap_manager.h \
+sa/authenticators/eap/sim_manager.c sa/authenticators/eap/sim_manager.h \
 sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/pubkey_authenticator.c sa/authenticators/pubkey_authenticator.h \
 sa/child_sa.c sa/child_sa.h \
@@ -129,15 +133,20 @@ if USE_SELF_TEST
   AM_CFLAGS += -DSELF_TEST
 endif
 
+if USE_CAPABILITIES
+  charon_LDADD += -lcap
+endif
+
+
 # build optional plugins
 ########################
 
 SUBDIRS = . 
 PLUGINS = ${libstrongswan_plugins}
 
-if USE_UNIT_TESTS
-  SUBDIRS += plugins/unit_tester
-  PLUGINS += unit-tester
+if USE_KERNEL_NETLINK
+  SUBDIRS += plugins/kernel_netlink
+  PLUGINS += kernel-netlink
 endif
 
 if USE_STROKE
@@ -165,9 +174,19 @@ if USE_EAP_SIM
   PLUGINS += eapsim
 endif
 
+if USE_EAP_SIM_FILE
+  SUBDIRS += plugins/eap_sim_file
+  PLUGINS += eapsim-file
+endif
+
 if USE_EAP_MD5
   SUBDIRS += plugins/eap_md5
   PLUGINS += eapmd5
+endif
+
+if USE_EAP_GTC
+  SUBDIRS += plugins/eap_gtc
+  PLUGINS += eapgtc
 endif
 
 if USE_EAP_AKA
@@ -185,9 +204,19 @@ if USE_MEDCLI
   PLUGINS += medcli
 endif
 
+if USE_NM
+  SUBDIRS += plugins/nm
+  PLUGINS += nm
+endif
+
 if USE_UCI
   SUBDIRS += plugins/uci
   PLUGINS += uci
+endif
+
+if USE_UNIT_TESTS
+  SUBDIRS += plugins/unit_tester
+  PLUGINS += unit-tester
 endif
 
 AM_CFLAGS += -DPLUGINS=\""${PLUGINS}\""

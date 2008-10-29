@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_natd.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ike_natd.h 4368 2008-10-06 13:37:04Z martin $
  */
 
 /**
@@ -38,6 +38,15 @@ struct ike_natd_t {
 	 * Implements the task_t interface
 	 */
 	task_t task;
+	
+	/**
+	 * Check if the NAT mapping has changed for our address.
+	 *
+	 * MOBIKE uses NAT payloads in DPD to detect changes in the NAT mappings.
+	 *
+	 * @return 	TRUE if mappings have changed
+	 */
+	bool (*has_mapping_changed)(ike_natd_t *this);
 };
 
 /**

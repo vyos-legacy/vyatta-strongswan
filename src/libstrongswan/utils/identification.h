@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: identification.h 3838 2008-04-18 11:24:45Z tobias $
+ * $Id: identification.h 4344 2008-09-17 02:17:01Z andreas $
  */
  
 /**
@@ -131,17 +131,27 @@ enum id_type_t {
 	/**
 	 * SHA1 hash over PKCS#1 subjectPublicKeyInfo
 	 */
-	ID_PUBKEY_INFO_SHA1,
+	ID_PUBKEY_INFO_SHA1 = 202,
 	
 	/**
 	 * SHA1 hash over PKCS#1 subjectPublicKey
 	 */
-	ID_PUBKEY_SHA1,
+	ID_PUBKEY_SHA1 = 203,
 	
 	/**
 	 * SHA1 hash of the binary DER encoding of a certificate
 	 */
-	ID_CERT_DER_SHA1,
+	ID_CERT_DER_SHA1 = 204,
+	
+	/**
+	 * Generic EAP identity
+	 */
+	ID_EAP = 205,
+
+	/**
+	 * IETF Attribute Syntax String (RFC 3281)
+	 */
+	ID_IETF_ATTR_STRING = 206,
 };
 
 /**

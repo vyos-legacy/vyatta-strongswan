@@ -18,6 +18,7 @@
 
 #include <library.h>
 #include <utils/enumerator.h>
+#include <utils/host.h>
 
 #define TAP_DEVICE "/dev/net/tun"
 
@@ -25,6 +26,7 @@ typedef struct iface_t iface_t;
 
 #include "mconsole.h"
 #include "bridge.h"
+#include "guest.h"
 
 /**
  * @brief Interface in a guest, connected to a tap device on the host.
@@ -46,16 +48,48 @@ struct iface_t {
 	char* (*get_hostif)(iface_t *this);
 	
 	/**
+	 * Add an address to the interface.
+	 *
+	 * @param addr		address to add to interface
+	 * @return			TRUE if address added
+	 */
+	bool (*add_address)(iface_t *this, host_t *addr);
+	
+	/**
+	 * Create an enumerator over all installed addresses.
+	 *
+	 * @return			enumerator over host_t*
+	 */
+	enumerator_t* (*create_address_enumerator)(iface_t *this);
+	
+	/**
+	 * Remove an address from an interface.
+	 *
+	 * @param addr		address to remove
+	 * @return			TRUE if address removed
+	 */
+	bool (*delete_address)(iface_t *this, host_t *addr);	
+	
+	/**
 	 * @brief Set the bridge this interface is attached to.
 	 *
 	 * @param bridge	assigned bridge, or NULL for none
 	 */
 	void (*set_bridge)(iface_t *this, bridge_t *bridge);
 	
-	/*
-	bool (*add_addr) (iface_t *this, host_t *addr);
-	enumerator_t* (*create_addr_enumerator) (iface_t *this);
-	*/
+	/**
+	 * @brief Get the bridge this iface is connected, or NULL.
+	 *
+	 * @return			connected bridge, or NULL
+	 */
+	bridge_t* (*get_bridge)(iface_t *this);
+	
+	/**
+	 * @brief Get the guest this iface belongs to.
+	 *
+	 * @return			guest of this iface
+	 */
+	guest_t* (*get_guest)(iface_t *this);
 	
 	/**
 	 * @brief Destroy an interface
@@ -66,12 +100,12 @@ struct iface_t {
 /**
  * @brief Create a new interface for a guest
  *
- * @param guest		name of the guest for this interface
- * @param guestif	name of the interface in the guest
+ * @param name		name of the interface in the guest
+ * @param guest		guest this iface is connecting
  * @param mconsole	mconsole of guest
  * @return			interface descriptor, or NULL if failed
  */
-iface_t *iface_create(char *guest, char *guestif, mconsole_t *mconsole);
+iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole);
 
 #endif /* IFACE_H */
 

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_cert_post.c 4051 2008-06-10 09:08:27Z tobias $
+ * $Id: ike_cert_post.c 4276 2008-08-22 10:44:51Z martin $
  */
 
 #include "ike_cert_post.h"
@@ -98,6 +98,11 @@ static cert_payload_t *build_cert_payload(private_ike_cert_post_t *this, certifi
 }
 
 /**
+ * from ike_auth.c
+ */
+auth_class_t get_auth_class(peer_cfg_t *config);
+
+/**
  * add certificates to message
  */
 static void build_certs(private_ike_cert_post_t *this, message_t *message)
@@ -105,7 +110,7 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 	peer_cfg_t *peer_cfg;
 	
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg && peer_cfg->get_auth_method(peer_cfg) == CONF_AUTH_PUBKEY)
+	if (peer_cfg && get_auth_class(peer_cfg) == AUTH_CLASS_PUBKEY)
 	{
 		switch (peer_cfg->get_cert_policy(peer_cfg))
 		{

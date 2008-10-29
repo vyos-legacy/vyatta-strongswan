@@ -51,7 +51,7 @@ pluginLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(plugin_LTLIBRARIES)
 libstrongswan_uci_la_DEPENDENCIES =
 am_libstrongswan_uci_la_OBJECTS = uci_plugin.lo uci_parser.lo \
-	uci_config.lo uci_creds.lo
+	uci_config.lo uci_creds.lo uci_control.lo
 libstrongswan_uci_la_OBJECTS = $(am_libstrongswan_uci_la_OBJECTS)
 libstrongswan_uci_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
@@ -188,6 +188,8 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+nm_CFLAGS = @nm_CFLAGS@
+nm_LIBS = @nm_LIBS@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
@@ -212,7 +214,8 @@ AM_CFLAGS = -rdynamic
 plugin_LTLIBRARIES = libstrongswan-uci.la
 libstrongswan_uci_la_SOURCES = \
   uci_plugin.h uci_plugin.c uci_parser.h uci_parser.c \
-  uci_config.h uci_config.c uci_creds.h uci_creds.c
+  uci_config.h uci_config.c uci_creds.h uci_creds.c \
+  uci_control.h uci_control.c
 
 libstrongswan_uci_la_LDFLAGS = -module
 libstrongswan_uci_la_LIBADD = -luci
@@ -286,6 +289,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/uci_config.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/uci_control.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/uci_creds.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/uci_parser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/uci_plugin.Plo@am__quote@

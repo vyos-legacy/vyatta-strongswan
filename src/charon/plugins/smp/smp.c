@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: smp.c 4073 2008-06-20 07:14:35Z martin $
+ * $Id: smp.c 4358 2008-09-25 13:56:23Z tobias $
  */
 
 #include <stdlib.h>
@@ -181,7 +181,7 @@ static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool loca
  */
 static void write_child(xmlTextWriterPtr writer, child_sa_t *child)
 {
-	mode_t mode;
+	ipsec_mode_t mode;
 	encryption_algorithm_t encr;
 	integrity_algorithm_t int_algo;
 	size_t encr_len, int_len;
@@ -360,7 +360,7 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
  * callback which logs to a XML writer
  */
 static bool xml_callback(xmlTextWriterPtr writer, signal_t signal, level_t level,
-						 ike_sa_t* ike_sa, char* format, va_list args)
+						 ike_sa_t* ike_sa, void *data, char* format, va_list args)
 {
 	if (level <= 1)
 	{

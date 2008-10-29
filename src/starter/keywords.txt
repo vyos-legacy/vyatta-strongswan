@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt 3928 2008-05-11 07:59:00Z andreas $
+ * RCSID $Id: keywords.txt 4276 2008-08-22 10:44:51Z martin $
  */
 
 #include <string.h>
@@ -50,6 +50,7 @@ keep_alive,        KW_KEEP_ALIVE
 force_keepalive,   KW_FORCE_KEEPALIVE
 virtual_private,   KW_VIRTUAL_PRIVATE
 eap,               KW_EAP
+eap_identity,      KW_EAP_IDENTITY
 mobike,	           KW_MOBIKE
 forceencaps,       KW_FORCEENCAPS
 pkcs11module,      KW_PKCS11MODULE

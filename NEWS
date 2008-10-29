@@ -1,11 +1,101 @@
+strongswan-4.2.8
+----------------
+
+- IKEv2 charon daemon supports authentication based on raw public keys
+  stored in the SQL database backend. The ipsec listpubkeys command
+  lists the available raw public keys via the stroke interface.
+
+- Several MOBIKE improvements: Detect changes in NAT mappings in DPD exchanges,
+  handle events if kernel detects NAT mapping changes in UDP-encapsulated
+  ESP packets (requires kernel patch), reuse old addesses in MOBIKE updates as
+  long as possible and other fixes.
+
+- Fixed a bug in addr_in_subnet() which caused insertion of wrong source
+  routes for destination subnets having netwmasks not being a multiple of 8 bits.
+  Thanks go to Wolfgang Steudel, TU Ilmenau for reporting this bug.
+
+
+strongswan-4.2.7
+----------------
+
+- Fixed a Denial-of-Service vulnerability where an IKE_SA_INIT message with
+  a KE payload containing zeroes only can cause a crash of the IKEv2 charon
+  daemon due to a NULL pointer returned by the mpz_export() function of the
+  GNU Multiprecision Library (GMP). Thanks go to Mu Dynamics Research Labs
+  for making us aware of this problem. 
+
+- The new agent plugin provides a private key implementation on top of an 
+  ssh-agent.
+
+- The NetworkManager plugin has been extended to support certificate client
+  authentication using RSA keys loaded from a file or using ssh-agent.
+
+- Daemon capability dropping has been ported to libcap and must be enabled
+  explicitly --with-capabilities=libcap. Future version will support the
+  newer libcap2 library.
+
+- ipsec listalgs lists the IKEv2 cryptografic algorithms registered with the
+  charon keying daemon.
+
+
+strongswan-4.2.6
+----------------
+
+- A NetworkManager plugin allows GUI-based configuration of road-warrior
+  clients in a simple way. It features X509 based gateway authentication
+  and EAP client authentication, tunnel setup/teardown and storing passwords
+  in the Gnome Keyring.
+
+- A new EAP-GTC plugin implements draft-sheffer-ikev2-gtc-00.txt and allows
+  username/password authentication against any PAM service on the gateway.
+  The new EAP method interacts nicely with the NetworkManager plugin and allows 
+  client authentication against e.g. LDAP.
+
+- Improved support for the EAP-Identity method. The new ipsec.conf eap_identity
+  parameter defines an additional identity to pass to the server in EAP
+  authentication.
+
+- The "ipsec statusall" command now lists CA restrictions, EAP
+  authentication types and EAP identities.
+
+- Fixed two multithreading deadlocks occurring when starting up
+  several hundred tunnels concurrently.
+
+- Fixed the --enable-integrity-test configure option which
+  computes a SHA-1 checksum over the libstrongswan library.
+
+
+strongswan-4.2.5
+----------------
+
+- Consistent logging of IKE and CHILD SAs at the audit (AUD) level. 
+
+- Improved the performance of the SQL-based virtual IP address pool
+  by introducing an additional addresses table. The leases table
+  storing only history information has become optional and can be
+  disabled by setting charon.plugins.sql.lease_history = no in
+  strongswan.conf.
+
+- The XFRM_STATE_AF_UNSPEC flag added to xfrm.h allows IPv4-over-IPv6
+  and IPv6-over-IPv4 tunnels with the 2.6.26 and later Linux kernels.
+
+- management of different virtual IP pools for different
+  network interfaces have become possible.
+
+- fixed a bug which prevented the assignment of more than 256 
+  virtual IP addresses from a pool managed by an sql database.
+
+- fixed a bug which did not delete own IPCOMP SAs in the kernel.
+
+ 
 strongswan-4.2.4
 ----------------
 
-- Added statistics functions to ip pool --status and ip pool --leases
-  and input validation checks to various ip pool commands.
+- Added statistics functions to ipsec pool --status and ipsec pool --leases
+  and input validation checks to various ipsec pool commands.
 
 - ipsec statusall now lists all loaded charon plugins and displays
-  the negotiated IKE cipher suite proposal.
+  the negotiated IKEv2 cipher suite proposals.
 
 - The openssl plugin supports the elliptic curve Diffie-Hellman groups
   19, 20, 21, 25, and 26.

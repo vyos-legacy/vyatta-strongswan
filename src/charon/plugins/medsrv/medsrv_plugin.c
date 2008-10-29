@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: medsrv_plugin.c 3915 2008-05-08 12:11:30Z martin $
+ * $Id: medsrv_plugin.c 4137 2008-07-01 13:57:47Z martin $
  */
 
 #include "medsrv_plugin.h"
@@ -74,7 +74,7 @@ plugin_t *plugin_create()
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
 	uri = lib->settings->get_str(lib->settings,
-								 "medmanager.database", NULL);
+								 "medsrv.database", NULL);
 	if (!uri)
 	{
 		DBG1(DBG_CFG, "mediation database URI not defined, skipped");

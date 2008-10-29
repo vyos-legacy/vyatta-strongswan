@@ -49,14 +49,8 @@ am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
 am__installdirs = "$(DESTDIR)$(plugindir)"
 pluginLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(plugin_LTLIBRARIES)
-libeapsim_file_la_LIBADD =
-am_libeapsim_file_la_OBJECTS = eap_sim_file.lo
-libeapsim_file_la_OBJECTS = $(am_libeapsim_file_la_OBJECTS)
-libeapsim_file_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libeapsim_file_la_LDFLAGS) $(LDFLAGS) -o $@
 libstrongswan_eapsim_la_LIBADD =
-am_libstrongswan_eapsim_la_OBJECTS = eap_sim_plugin.lo eap_sim.lo
+am_libstrongswan_eapsim_la_OBJECTS = eap_sim.lo eap_sim_plugin.lo
 libstrongswan_eapsim_la_OBJECTS =  \
 	$(am_libstrongswan_eapsim_la_OBJECTS)
 libstrongswan_eapsim_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -74,10 +68,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libeapsim_file_la_SOURCES) \
-	$(libstrongswan_eapsim_la_SOURCES)
-DIST_SOURCES = $(libeapsim_file_la_SOURCES) \
-	$(libstrongswan_eapsim_la_SOURCES)
+SOURCES = $(libstrongswan_eapsim_la_SOURCES)
+DIST_SOURCES = $(libstrongswan_eapsim_la_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -196,6 +188,8 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+nm_CFLAGS = @nm_CFLAGS@
+nm_LIBS = @nm_LIBS@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
@@ -217,11 +211,11 @@ xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 AM_CFLAGS = -rdynamic -DIPSEC_CONFDIR=\"${confdir}\" -DSIM_READER_LIB=\"${simreader}\"
-plugin_LTLIBRARIES = libstrongswan-eapsim.la libeapsim-file.la
-libstrongswan_eapsim_la_SOURCES = eap_sim_plugin.h eap_sim_plugin.c eap_sim.h eap_sim.c
+plugin_LTLIBRARIES = libstrongswan-eapsim.la
+libstrongswan_eapsim_la_SOURCES = eap_sim.h eap_sim.c \
+  eap_sim_plugin.h eap_sim_plugin.c
+
 libstrongswan_eapsim_la_LDFLAGS = -module
-libeapsim_file_la_SOURCES = eap_sim_file.c
-libeapsim_file_la_LDFLAGS = -module
 all: all-am
 
 .SUFFIXES:
@@ -282,8 +276,6 @@ clean-pluginLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-libeapsim-file.la: $(libeapsim_file_la_OBJECTS) $(libeapsim_file_la_DEPENDENCIES) 
-	$(libeapsim_file_la_LINK) -rpath $(plugindir) $(libeapsim_file_la_OBJECTS) $(libeapsim_file_la_LIBADD) $(LIBS)
 libstrongswan-eapsim.la: $(libstrongswan_eapsim_la_OBJECTS) $(libstrongswan_eapsim_la_DEPENDENCIES) 
 	$(libstrongswan_eapsim_la_LINK) -rpath $(plugindir) $(libstrongswan_eapsim_la_OBJECTS) $(libstrongswan_eapsim_la_LIBADD) $(LIBS)
 
@@ -294,7 +286,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_sim.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_sim_file.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap_sim_plugin.Plo@am__quote@
 
 .c.o:

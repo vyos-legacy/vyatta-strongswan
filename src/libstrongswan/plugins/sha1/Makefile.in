@@ -50,7 +50,8 @@ am__installdirs = "$(DESTDIR)$(plugindir)"
 pluginLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(plugin_LTLIBRARIES)
 libstrongswan_sha1_la_LIBADD =
-am_libstrongswan_sha1_la_OBJECTS = sha1_plugin.lo sha1_hasher.lo
+am_libstrongswan_sha1_la_OBJECTS = sha1_plugin.lo sha1_hasher.lo \
+	sha1_prf.lo
 libstrongswan_sha1_la_OBJECTS = $(am_libstrongswan_sha1_la_OBJECTS)
 libstrongswan_sha1_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
@@ -187,6 +188,8 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+nm_CFLAGS = @nm_CFLAGS@
+nm_LIBS = @nm_LIBS@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
@@ -209,7 +212,9 @@ xml_LIBS = @xml_LIBS@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -rdynamic
 plugin_LTLIBRARIES = libstrongswan-sha1.la
-libstrongswan_sha1_la_SOURCES = sha1_plugin.h sha1_plugin.c sha1_hasher.c sha1_hasher.h
+libstrongswan_sha1_la_SOURCES = sha1_plugin.h sha1_plugin.c \
+	sha1_hasher.c sha1_hasher.h sha1_prf.c sha1_prf.h
+
 libstrongswan_sha1_la_LDFLAGS = -module
 all: all-am
 
@@ -282,6 +287,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sha1_hasher.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sha1_plugin.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sha1_prf.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

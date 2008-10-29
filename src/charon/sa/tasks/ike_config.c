@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_config.c 3800 2008-04-14 07:18:16Z martin $
+ * $Id: ike_config.c 4129 2008-07-01 06:36:52Z martin $
  */
 
 #include "ike_config.h"
@@ -315,7 +315,10 @@ static status_t build_r(private_ike_config_t *this, message_t *message)
 			}
 			if (ip == NULL)
 			{
-				DBG1(DBG_IKE, "not assigning a virtual IP to peer");
+				DBG1(DBG_IKE, "no virtual IP found, sending %N",
+					 notify_type_names, INTERNAL_ADDRESS_FAILURE);
+				message->add_notify(message, FALSE, INTERNAL_ADDRESS_FAILURE,
+									chunk_empty);
 				return SUCCESS;
 			}
 			DBG1(DBG_IKE, "assigning virtual IP %H to peer", ip);

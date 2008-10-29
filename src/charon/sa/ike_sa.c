@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa.c 4106 2008-06-25 11:40:50Z martin $
+ * $Id: ike_sa.c 4394 2008-10-09 08:25:11Z martin $
  */
 
 #include <sys/time.h>
@@ -170,6 +170,11 @@ struct private_ike_sa_t {
 	identification_t *other_id;
 	
 	/**
+	 * EAP Identity exchange in EAP-Identity method
+	 */
+	identification_t *eap_identity;;
+	
+	/**
 	 * set of extensions the peer supports
 	 */
 	ike_extension_t extensions;
@@ -250,9 +255,19 @@ struct private_ike_sa_t {
 	linked_list_t *additional_addresses;
 	
 	/**
+	 * previously value of received DESTINATION_IP hash
+	 */
+	chunk_t nat_detection_dest;
+	
+	/**
 	 * number pending UPDATE_SA_ADDRESS (MOBIKE)
 	 */
 	u_int32_t pending_updates;
+
+	/**
+	 * NAT keep alive interval
+	 */
+	u_int32_t keepalive_interval;
 
 	/**
 	 * Timestamps for this IKE_SA
@@ -454,7 +469,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	send_keepalive_job_t *job;
 	time_t last_out, now, diff;
 	
-	if (!(this->conditions & COND_NAT_HERE))
+	if (!(this->conditions & COND_NAT_HERE) || this->keepalive_interval == 0)
 	{	/* disable keep alives if we are not NATed anymore */
 		return;
 	}
@@ -464,7 +479,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	
 	diff = now - last_out;
 	
-	if (diff >= KEEPALIVE_INTERVAL)
+	if (diff >= this->keepalive_interval)
 	{
 		packet_t *packet;
 		chunk_t data;
@@ -482,7 +497,7 @@ static void send_keepalive(private_ike_sa_t *this)
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
 	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
-									(KEEPALIVE_INTERVAL - diff) * 1000);
+									(this->keepalive_interval - diff) * 1000);
 }
 
 /**
@@ -616,8 +631,20 @@ static status_t send_dpd(private_ike_sa_t *this)
 		{
 			/* to long ago, initiate dead peer detection */
 			task_t *task;
+			ike_mobike_t *mobike;
 			
-			task = (task_t*)ike_dpd_create(TRUE);
+			if (supports_extension(this, EXT_MOBIKE) &&
+				has_condition(this, COND_NAT_HERE))
+			{
+				/* use mobike enabled DPD to detect NAT mapping changes */
+				mobike = ike_mobike_create(&this->public, TRUE);
+				mobike->dpd(mobike);
+				task = &mobike->task;
+			}
+			else
+			{
+				task = (task_t*)ike_dpd_create(TRUE);
+			}
 			diff = 0;
 			DBG1(DBG_IKE, "sending DPD request");
 			
@@ -645,8 +672,8 @@ static ike_sa_state_t get_state(private_ike_sa_t *this)
  */
 static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 {
-	DBG1(DBG_IKE, "IKE_SA '%s' state change: %N => %N",
-		 get_name(this),
+	DBG2(DBG_IKE, "IKE_SA %s[%d] state change: %N => %N",
+		 get_name(this), this->unique_id,
 		 ike_sa_state_names, this->state,
 		 ike_sa_state_names, state);
 	
@@ -807,7 +834,26 @@ static iterator_t* create_additional_address_iterator(private_ike_sa_t *this)
 	return this->additional_addresses->create_iterator(
 											this->additional_addresses, TRUE);
 }
-	
+
+/**
+ * Implementation of ike_sa_t.has_mapping_changed
+ */
+static bool has_mapping_changed(private_ike_sa_t *this, chunk_t hash)
+{
+	if (this->nat_detection_dest.ptr == NULL)
+	{
+		this->nat_detection_dest = chunk_clone(hash);
+		return FALSE;
+	}
+	if (chunk_equals(hash, this->nat_detection_dest))
+	{
+		return FALSE;
+	}
+	free(this->nat_detection_dest.ptr);
+	this->nat_detection_dest = chunk_clone(hash);
+	return TRUE;
+}
+
 /**
  * Implementation of ike_sa_t.set_pending_updates.
  */
@@ -830,11 +876,6 @@ static u_int32_t get_pending_updates(private_ike_sa_t *this)
 static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 {
 	bool update = FALSE;
-	
-	if (supports_extension(this, EXT_MOBIKE))
-	{	/* if peer speaks mobike, address updates are explicit only */
-		return;
-	}
 	
 	if (me == NULL)
 	{
@@ -1041,18 +1082,31 @@ static void resolve_hosts(private_ike_sa_t *this)
 {
 	host_t *host;
 	
-	host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg), 0, 
-								IKEV2_UDP_PORT);
-	if (host)
-	{
-		set_my_host(this, host);
-	}
 	host = host_create_from_dns(this->ike_cfg->get_other_addr(this->ike_cfg),
-								this->my_host->get_family(this->my_host),
-								IKEV2_UDP_PORT);
+								0, IKEV2_UDP_PORT);
 	if (host)
 	{
 		set_other_host(this, host);
+	}
+	
+	host = host_create_from_dns(this->ike_cfg->get_my_addr(this->ike_cfg),
+								this->my_host->get_family(this->my_host),
+								IKEV2_UDP_PORT);
+	
+	if (host && host->is_anyaddr(host) &&
+		!this->other_host->is_anyaddr(this->other_host))
+	{
+		host->destroy(host);
+		host = charon->kernel_interface->get_source_addr(
+							charon->kernel_interface, this->other_host, NULL);
+		if (host)
+		{
+			host->set_port(host, IKEV2_UDP_PORT);
+		}
+	}
+	if (host)
+	{
+		set_my_host(this, host);
 	}
 }
 
@@ -1074,8 +1128,8 @@ static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_c
 			)
 		{
 			child_cfg->destroy(child_cfg);
-			SIG(IKE_UP_START, "initiating IKE_SA");
-			SIG(IKE_UP_FAILED, "unable to initiate to %%any");
+			SIG_IKE(UP_START, "initiating IKE_SA");
+			SIG_IKE(UP_FAILED, "unable to initiate to %%any");
 			return DESTROY_ME;
 		}
 		
@@ -1112,7 +1166,7 @@ static status_t initiate_with_reqid(private_ike_sa_t *this, child_cfg_t *child_c
 		/* mediation connection */
 		if (this->state == IKE_ESTABLISHED)
 		{	/* FIXME: we should try to find a better solution to this */
-			SIG(CHILD_UP_SUCCESS, "mediation connection is already up and running");
+			SIG_CHD(UP_SUCCESS, NULL, "mediation connection is already up and running");
 		}
 		DESTROY_IF(child_cfg);
 	}
@@ -1162,8 +1216,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	
 	if (this->state == IKE_DELETING)
 	{
-		SIG(CHILD_UP_START, "acquiring CHILD_SA on kernel request");
-		SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG_CHD(UP_START, NULL, "acquiring CHILD_SA on kernel request");
+		SIG_CHD(UP_FAILED, NULL, "acquiring CHILD_SA {reqid %d} failed: "
 			"IKE_SA is deleting", reqid);
 		return FAILED;
 	}
@@ -1181,8 +1235,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	iterator->destroy(iterator);
 	if (!child_sa)
 	{
-		SIG(CHILD_UP_START, "acquiring CHILD_SA on kernel request");
-		SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG_CHD(UP_START, NULL, "acquiring CHILD_SA on kernel request");
+		SIG_CHD(UP_FAILED, NULL, "acquiring CHILD_SA {reqid %d} failed: "
 			"CHILD_SA not found", reqid);
 		return FAILED;
 	}
@@ -1204,7 +1258,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	host_t *me, *other;
 	status_t status;
 	
-	SIG(CHILD_ROUTE_START, "routing CHILD_SA");
+	SIG_CHD(ROUTE_START, NULL, "routing CHILD_SA");
 	
 	/* check if not already routed*/
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
@@ -1214,7 +1268,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 			streq(child_sa->get_name(child_sa), child_cfg->get_name(child_cfg)))
 		{
 			iterator->destroy(iterator);
-			SIG(CHILD_ROUTE_FAILED, "CHILD_SA with such a config already routed");
+			SIG_CHD(ROUTE_FAILED, child_sa, "CHILD_SA with such a config already routed");
 			return FAILED;
 		}
 	}
@@ -1224,7 +1278,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	{
 		case IKE_DELETING:
 		case IKE_REKEYING:
-			SIG(CHILD_ROUTE_FAILED,
+			SIG_CHD(ROUTE_FAILED, NULL, 
 				"unable to route CHILD_SA, as its IKE_SA gets deleted");
 			return FAILED;
 		case IKE_CREATED:
@@ -1253,17 +1307,17 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, me);
 	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, other);
 	status = child_sa->add_policies(child_sa, my_ts, other_ts,
-									child_cfg->get_mode(child_cfg));
+									child_cfg->get_mode(child_cfg), PROTO_NONE);
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 	if (status == SUCCESS)
 	{
 		this->child_sas->insert_last(this->child_sas, child_sa);
-		SIG(CHILD_ROUTE_SUCCESS, "CHILD_SA routed");
+		SIG_CHD(ROUTE_SUCCESS, child_sa, "CHILD_SA routed");
 	}
 	else
 	{
-		SIG(CHILD_ROUTE_FAILED, "routing CHILD_SA failed");
+		SIG_CHD(ROUTE_FAILED, child_sa, "routing CHILD_SA failed");
 	}
 	return status;
 }
@@ -1277,7 +1331,7 @@ static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 	child_sa_t *child_sa;
 	bool found = FALSE;
 	
-	SIG(CHILD_UNROUTE_START, "unrouting CHILD_SA");
+	SIG_CHD(UNROUTE_START, NULL, "unrouting CHILD_SA");
 	
 	/* find CHILD_SA in ROUTED state */
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
@@ -1287,7 +1341,7 @@ static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 			child_sa->get_reqid(child_sa) == reqid)
 		{
 			iterator->remove(iterator);
-			SIG(CHILD_UNROUTE_SUCCESS, "CHILD_SA unrouted");
+			SIG_CHD(UNROUTE_SUCCESS, child_sa, "CHILD_SA unrouted");
 			child_sa->destroy(child_sa);
 			found = TRUE;
 			break;
@@ -1297,7 +1351,7 @@ static status_t unroute(private_ike_sa_t *this, u_int32_t reqid)
 	
 	if (!found)
 	{
-		SIG(CHILD_UNROUTE_FAILED, "CHILD_SA to unroute not found");
+		SIG_CHD(UNROUTE_FAILED, NULL, "CHILD_SA to unroute not found");
 		return FAILED;
 	}
 	/* if we are not established, and we have no more routed childs, remove whole SA */
@@ -1397,13 +1451,15 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			charon->scheduler->schedule_job(charon->scheduler, job,
 											HALF_OPEN_IKE_SA_TIMEOUT);
 		}
-		
+		this->time.inbound = time(NULL);
 		/* check if message is trustworthy, and update host information */
 		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
 		{
-			update_hosts(this, me, other);
-			this->time.inbound = time(NULL);
+			if (!supports_extension(this, EXT_MOBIKE))
+			{	/* with MOBIKE, we do no implicit updates */
+				update_hosts(this, me, other);
+			}
 		}
 		status = this->task_manager->process_message(this->task_manager, message);
 		if (status != DESTROY_ME)
@@ -1525,6 +1581,23 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
 {
 	DESTROY_IF(this->other_id);
 	this->other_id = other;
+}
+
+/**
+ * Implementation of ike_sa_t.get_eap_identity.
+ */
+static identification_t* get_eap_identity(private_ike_sa_t *this)
+{
+	return this->eap_identity;
+}
+
+/**
+ * Implementation of ike_sa_t.set_eap_identity.
+ */
+static void set_eap_identity(private_ike_sa_t *this, identification_t *id)
+{
+	DESTROY_IF(this->eap_identity);
+	this->eap_identity = id;
 }
 
 /**
@@ -1866,10 +1939,10 @@ static status_t delete_(private_ike_sa_t *this)
 			this->task_manager->queue_task(this->task_manager, &ike_delete->task);
 			return this->task_manager->initiate(this->task_manager);
 		case IKE_CREATED:
-			SIG(IKE_DOWN_SUCCESS, "deleting unestablished IKE_SA");
+			SIG_IKE(DOWN_SUCCESS, "deleting unestablished IKE_SA");
 			break;
 		default:
-			SIG(IKE_DOWN_SUCCESS, "destroying IKE_SA in state %N "
+			SIG_IKE(DOWN_SUCCESS, "destroying IKE_SA in state %N "
 				"without notification", ike_sa_state_names, this->state);
 			break;
 	}
@@ -2073,19 +2146,19 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
 				this->keyingtry++;
 				if (tries == 0 || tries > this->keyingtry)
 				{
-					SIG(IKE_UP_FAILED, "peer not responding, trying again "
+					SIG_IKE(UP_FAILED, "peer not responding, trying again "
 						"(%d/%d) in background ", this->keyingtry + 1, tries);
 					reset(this);
 					return this->task_manager->initiate(this->task_manager);
 				}
-				SIG(IKE_UP_FAILED, "establishing IKE_SA failed, peer not responding");
+				SIG_IKE(UP_FAILED, "establishing IKE_SA failed, peer not responding");
 				break;
 			}
 			case IKE_DELETING:
-				SIG(IKE_DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
+				SIG_IKE(DOWN_FAILED, "proper IKE_SA delete failed, peer not responding");
 				break;
 			case IKE_REKEYING:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
+				SIG_IKE(REKEY_FAILED, "rekeying IKE_SA failed, peer not responding");
 				/* FALL */
 			default:
 				reestablish(this);
@@ -2101,24 +2174,29 @@ static status_t retransmit(private_ike_sa_t *this, u_int32_t message_id)
  */
 static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
 {
-	job_t *job;
 	u_int32_t reduction = this->peer_cfg->get_over_time(this->peer_cfg);
+	u_int32_t reauth_time = time(NULL) + lifetime - reduction;
 
-	this->time.reauth = time(NULL) + lifetime - reduction;
-	job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE);
-	
 	if (lifetime < reduction)
 	{
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, starting reauthentication",
 			 lifetime);
-		charon->processor->queue_job(charon->processor, job);
+		charon->processor->queue_job(charon->processor,
+		 			(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
+	}
+	else if (this->time.reauth == 0 || this->time.reauth > reauth_time) 
+	{
+		this->time.reauth = reauth_time;
+		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
+			 " in %ds", lifetime, lifetime - reduction);
+		charon->scheduler->schedule_job(charon->scheduler,
+					(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
+					(lifetime - reduction) * 1000);
 	}
 	else
 	{
-		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
-			 " in %ds", lifetime, lifetime - reduction);
-		charon->scheduler->schedule_job(charon->scheduler, job,
-								(lifetime - reduction) * 1000);
+		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, reauthentication already "
+			 "scheduled in %ds", lifetime, this->time.reauth - time(NULL));
 	}
 }
 
@@ -2127,7 +2205,7 @@ static void set_auth_lifetime(private_ike_sa_t *this, u_int32_t lifetime)
  */
 static status_t roam(private_ike_sa_t *this, bool address)
 {
-	host_t *me, *other;
+	host_t *src;
 	ike_mobike_t *mobike;
 	
 	switch (this->state)
@@ -2151,21 +2229,19 @@ static status_t roam(private_ike_sa_t *this, bool address)
 		return SUCCESS;
 	}
 	
-	/* get best address pair to use */
-	other = this->other_host;
-	me = charon->kernel_interface->get_source_addr(charon->kernel_interface,
-												   other);
-	
-	if (me)
+	/* keep existing path if possible */
+	src = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+											this->other_host, this->my_host);
+	if (src)
 	{
-		if (me->ip_equals(me, this->my_host) &&
-			other->ip_equals(other, this->other_host))
+		if (src->ip_equals(src, this->my_host))
 		{
-			DBG2(DBG_IKE, "keeping connection path %H - %H", this->other_host, me);
-			me->destroy(me);
+			DBG2(DBG_IKE, "keeping connection path %H - %H",
+				 src, this->other_host);
+			src->destroy(src);
 			return SUCCESS;
 		}
-		me->destroy(me);
+		src->destroy(src);
 	}
 	
 	/* update addresses with mobike, if supported ... */
@@ -2177,7 +2253,7 @@ static status_t roam(private_ike_sa_t *this, bool address)
 		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
 		return this->task_manager->initiate(this->task_manager);
 	}
-	DBG1(DBG_IKE, "reauthenticating IKE_SA due address change");
+	DBG1(DBG_IKE, "reauthenticating IKE_SA due to address change");
 	/* ... reauth if not */
 	return reauth(this);
 }
@@ -2453,11 +2529,13 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->server_reflexive_host);
 	chunk_free(&this->connect_id);
 #endif /* ME */
+	free(this->nat_detection_dest.ptr);
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
 	DESTROY_IF(this->my_id);
 	DESTROY_IF(this->other_id);
+	DESTROY_IF(this->eap_identity);
 	
 	DESTROY_IF(this->ike_cfg);
 	DESTROY_IF(this->peer_cfg);
@@ -2502,6 +2580,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
 	this->public.get_other_id = (identification_t* (*)(ike_sa_t*)) get_other_id;
 	this->public.set_other_id = (void (*)(ike_sa_t*,identification_t*)) set_other_id;
+	this->public.get_eap_identity = (identification_t* (*)(ike_sa_t*)) get_eap_identity;
+	this->public.set_eap_identity = (void (*)(ike_sa_t*,identification_t*)) set_eap_identity;
 	this->public.enable_extension = (void(*)(ike_sa_t*, ike_extension_t extension))enable_extension;
 	this->public.supports_extension = (bool(*)(ike_sa_t*, ike_extension_t extension))supports_extension;
 	this->public.set_condition = (void (*)(ike_sa_t*, ike_condition_t,bool)) set_condition;
@@ -2511,6 +2591,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.is_ike_initiator = (bool (*)(ike_sa_t*))is_ike_initiator;
 	this->public.create_additional_address_iterator = (iterator_t*(*)(ike_sa_t*))create_additional_address_iterator;
 	this->public.add_additional_address = (void(*)(ike_sa_t*, host_t *host))add_additional_address;
+	this->public.has_mapping_changed = (bool(*)(ike_sa_t*, chunk_t hash))has_mapping_changed;
 	this->public.retransmit = (status_t (*)(ike_sa_t *, u_int32_t)) retransmit;
 	this->public.delete = (status_t (*)(ike_sa_t*))delete_;
 	this->public.destroy = (void (*)(ike_sa_t*))destroy;
@@ -2560,6 +2641,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_host = host_create_from_string("0.0.0.0", IKEV2_UDP_PORT);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);
+	this->eap_identity = NULL;
 	this->extensions = 0;
 	this->conditions = 0;
 	this->selected_proposal = NULL;
@@ -2572,6 +2654,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->skp_build = chunk_empty;
  	this->child_prf = NULL;
 	this->state = IKE_CREATED;
+	this->keepalive_interval = lib->settings->get_time(lib->settings,
+									"charon.keep_alive", KEEPALIVE_INTERVAL);
 	this->time.inbound = this->time.outbound = time(NULL);
 	this->time.established = 0;
 	this->time.rekey = 0;
@@ -2587,6 +2671,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->other_virtual_ip = NULL;
 	this->dns_servers = linked_list_create();
 	this->additional_addresses = linked_list_create();
+	this->nat_detection_dest = chunk_empty;
 	this->pending_updates = 0;
 	this->keyingtry = 0;
 	this->ike_initiator = FALSE;

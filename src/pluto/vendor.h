@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: vendor.h 4016 2008-05-25 10:35:39Z andreas $
+ * RCSID $Id: vendor.h 4348 2008-09-18 00:42:22Z andreas $
  */
 
 #ifndef _VENDOR_H_
@@ -120,6 +120,10 @@ enum known_vendorid {
   VID_STRONGSWAN_4_2_1		=101,
   VID_STRONGSWAN_4_2_2		=102,
   VID_STRONGSWAN_4_2_3		=103,
+  VID_STRONGSWAN_4_2_4		=104,
+  VID_STRONGSWAN_4_2_5		=105,
+  VID_STRONGSWAN_4_2_6		=106,
+  VID_STRONGSWAN_4_2_7		=107,
 
   /* 101 - 200 : NAT-Traversal */
   VID_NATT_STENBERG_01		=151,

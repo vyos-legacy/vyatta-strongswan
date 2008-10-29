@@ -169,10 +169,12 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	DBG2(DBG_CFG, "conn %s", msg->add_conn.name);
 	pop_end(msg, "left", &msg->add_conn.me);
 	pop_end(msg, "right", &msg->add_conn.other);
+	pop_string(msg, &msg->add_conn.eap_identity);
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	pop_string(msg, &msg->add_conn.ikeme.mediated_by);
 	pop_string(msg, &msg->add_conn.ikeme.peerid);
+	DBG2(DBG_CFG, "  eap_identity=%s", msg->add_conn.eap_identity);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	DBG2(DBG_CFG, "  mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");
@@ -215,6 +217,20 @@ static void stroke_terminate(private_stroke_socket_t *this, stroke_msg_t *msg, F
 	DBG1(DBG_CFG, "received stroke: terminate '%s'", msg->terminate.name);
 
 	this->control->terminate(this->control, msg, out);
+}	
+
+/**
+ * terminate a connection by peers virtual IP
+ */
+static void stroke_terminate_srcip(private_stroke_socket_t *this,
+								   stroke_msg_t *msg, FILE *out)
+{
+	pop_string(msg, &msg->terminate_srcip.start);
+	pop_string(msg, &msg->terminate_srcip.end);
+	DBG1(DBG_CFG, "received stroke: terminate-srcip %s-%s",
+		 msg->terminate_srcip.start, msg->terminate_srcip.end);
+
+	this->control->terminate_srcip(this->control, msg, out);
 }
 
 /**
@@ -430,6 +446,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 		case STR_TERMINATE:
 			stroke_terminate(this, msg, out);
 			break;
+		case STR_TERMINATE_SRCIP:
+			stroke_terminate_srcip(this, msg, out);
+			break;
 		case STR_STATUS:
 			stroke_status(this, msg, out, FALSE);
 			break;
@@ -537,7 +556,7 @@ static bool open_socket(private_stroke_socket_t *this)
 			 strerror(errno));
 	}
 	
-	if (listen(this->socket, 0) < 0)
+	if (listen(this->socket, 10) < 0)
 	{
 		DBG1(DBG_CFG, "could not listen on stroke socket: %s", strerror(errno));
 		close(this->socket);

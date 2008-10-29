@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_identity_plugin.c 3491 2008-02-22 14:04:00Z martin $
+ * $Id: eap_identity_plugin.c 4276 2008-08-22 10:44:51Z martin $
  */
 
 #include "eap_identity_plugin.h"
@@ -27,6 +27,8 @@
 static void destroy(eap_identity_plugin_t *this)
 {
 	charon->eap->remove_method(charon->eap,
+							   (eap_constructor_t)eap_identity_create_server);
+	charon->eap->remove_method(charon->eap,
 							   (eap_constructor_t)eap_identity_create_peer);
 	free(this);
 }
@@ -40,6 +42,8 @@ plugin_t *plugin_create()
 	
 	this->plugin.destroy = (void(*)(plugin_t*))destroy;
 	
+	charon->eap->add_method(charon->eap, EAP_IDENTITY, 0, EAP_SERVER,
+							(eap_constructor_t)eap_identity_create_server);
 	charon->eap->add_method(charon->eap, EAP_IDENTITY, 0, EAP_PEER,
 							(eap_constructor_t)eap_identity_create_peer);
 	

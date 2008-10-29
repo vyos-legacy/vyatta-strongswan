@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: task_manager.c 3666 2008-03-26 18:40:19Z tobias $
+ * $Id: task_manager.c 4320 2008-09-02 14:02:40Z martin $
  */
 
 #include "task_manager.h"
@@ -159,22 +159,22 @@ static void flush(private_task_manager_t *this)
 		switch (task->get_type(task))
 		{
 			case IKE_AUTH:
-				SIG(IKE_UP_FAILED, "establishing IKE_SA failed");
+				SIG_IKE(UP_FAILED, "establishing IKE_SA failed");
 				break;
 			case IKE_DELETE:
-				SIG(IKE_DOWN_FAILED, "IKE_SA deleted");
+				SIG_IKE(DOWN_FAILED, "IKE_SA deleted");
 				break;
 			case IKE_REKEY:
-				SIG(IKE_REKEY_FAILED, "rekeying IKE_SA failed");
+				SIG_IKE(REKEY_FAILED, "rekeying IKE_SA failed");
 				break;
 			case CHILD_CREATE:
-				SIG(CHILD_UP_FAILED, "establishing CHILD_SA failed");
+				SIG_CHD(UP_FAILED, NULL, "establishing CHILD_SA failed");
 				break;
 			case CHILD_DELETE:
-				SIG(CHILD_DOWN_FAILED, "deleting CHILD_SA failed");
+				SIG_CHD(DOWN_FAILED, NULL, "deleting CHILD_SA failed");
 				break;
 			case CHILD_REKEY:
-				SIG(IKE_REKEY_FAILED, "rekeying CHILD_SA failed");
+				SIG_IKE(REKEY_FAILED, "rekeying CHILD_SA failed");
 				break;
 			default:
 				break;
@@ -775,6 +775,8 @@ static status_t process_request(private_task_manager_t *this,
 							case UNACCEPTABLE_ADDRESSES:
 							case UNEXPECTED_NAT_DETECTED:
 							case COOKIE2:
+							case NAT_DETECTION_SOURCE_IP:
+							case NAT_DETECTION_DESTINATION_IP:
 								task = (task_t*)ike_mobike_create(
 														this->ike_sa, FALSE);
 								break;

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_mobike.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ike_mobike.h 4368 2008-10-06 13:37:04Z martin $
  */
 
 /**
@@ -53,6 +53,11 @@ struct ike_mobike_t {
 	 * @param address		TRUE to include address list update
 	 */
 	void (*roam)(ike_mobike_t *this, bool address);
+	
+	/**
+	 * Use the task for a DPD check which detects changes in NAT mappings.
+	 */
+	void (*dpd)(ike_mobike_t *this);
 	
 	/**
 	 * Transmision hook, called by task manager.

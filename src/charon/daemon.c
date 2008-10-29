@@ -22,7 +22,6 @@
 #endif /* HAVE_DLADDR */
 
 #include <stdio.h>
-#include <linux/capability.h>
 #include <sys/prctl.h>
 #include <signal.h>
 #include <pthread.h>
@@ -38,6 +37,9 @@
 #ifdef HAVE_BACKTRACE
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
+#ifdef CAPABILITIES
+#include <sys/capability.h>
+#endif /* CAPABILITIES */
 
 #include "daemon.h"
 
@@ -45,14 +47,9 @@
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 
-/* on some distros, a capset definition is missing */
-#ifdef NO_CAPSET_DEFINED
-extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
-#endif /* NO_CAPSET_DEFINED */
-
 #ifdef INTEGRITY_TEST
 #include <fips/fips.h>
-#include <fips_signature.h>
+#include <fips/fips_signature.h>
 #endif /* INTEGRITY_TEST */
 
 typedef struct private_daemon_t private_daemon_t;
@@ -75,6 +72,13 @@ struct private_daemon_t {
 	 * The thread_id of main-thread.
 	 */
 	pthread_t main_thread_id;
+
+#ifdef CAPABILITIES
+	/**
+	 * capabilities to keep
+	 */
+	cap_t caps;
+#endif /* CAPABILITIES */
 };
 
 /**
@@ -95,7 +99,7 @@ static void dbg_bus(int level, char *fmt, ...)
 	va_list args;
 	
 	va_start(args, fmt);
-	charon->bus->vsignal(charon->bus, DBG_LIB, level, fmt, args);
+	charon->bus->vsignal(charon->bus, DBG_LIB, level, NULL, fmt, args);
 	va_end(args);
 }
 
@@ -183,11 +187,15 @@ static void destroy(private_daemon_t *this)
 	}
 	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
+#ifdef CAPABILITIES
+	cap_free(this->caps);
+#endif /* CAPABILITIES */
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
+	DESTROY_IF(this->public.sim);
 #ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
@@ -242,55 +250,37 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 /**
  * drop daemon capabilities
  */
-static void drop_capabilities(private_daemon_t *this, bool full)
-{
-	struct __user_cap_header_struct hdr;
-	struct __user_cap_data_struct data;
-	
-	/* CAP_NET_ADMIN is needed to use netlink */
-	u_int32_t keep = (1<<CAP_NET_ADMIN) | (1<<CAP_SYS_NICE);
-	
-	if (full)
-	{
-		if (setgid(charon->gid) != 0)
-		{
-			kill_daemon(this, "change to unprivileged group failed");	
-		}
-		if (setuid(charon->uid) != 0)
-		{
-			kill_daemon(this, "change to unprivileged user failed");	
-		}
-	}
-	else
-	{
-		/* CAP_NET_BIND_SERVICE to bind services below port 1024 */
-		keep |= (1<<CAP_NET_BIND_SERVICE);
-		/* CAP_NET_RAW to create RAW sockets */
-		keep |= (1<<CAP_NET_RAW);
-		/* CAP_DAC_READ_SEARCH to read ipsec.secrets */
-		keep |= (1<<CAP_DAC_READ_SEARCH);
-		/* CAP_CHOWN to change file permissions (socket permissions) */
-		keep |= (1<<CAP_CHOWN);
-		/* CAP_SETUID to call setuid()  */
-		keep |= (1<<CAP_SETUID);
-		/* CAP_SETGID to call setgid() */
-		keep |= (1<<CAP_SETGID);
-	}
+static void drop_capabilities(private_daemon_t *this)
+{	
+	prctl(PR_SET_KEEPCAPS, 1);
 
-	/* we use the old capset version for now. For systems with version 2
-	 * available, we specifiy version 1 excplicitly. */
-#ifdef _LINUX_CAPABILITY_VERSION_1
-	hdr.version = _LINUX_CAPABILITY_VERSION_1;
-#else
-	hdr.version = _LINUX_CAPABILITY_VERSION;
-#endif
-	hdr.pid = 0;
-	data.inheritable = data.effective = data.permitted = keep;
+	if (setgid(charon->gid) != 0)
+	{
+		kill_daemon(this, "change to unprivileged group failed");	
+	}
+	if (setuid(charon->uid) != 0)
+	{
+		kill_daemon(this, "change to unprivileged user failed");	
+	}
 	
-	if (capset(&hdr, &data))
+#ifdef CAPABILITIES
+	if (cap_set_proc(this->caps) != 0)
 	{
 		kill_daemon(this, "unable to drop daemon capabilities");
 	}
+#endif /* CAPABILITIES */
+}
+
+/**
+ * Implementation of daemon_t.keep_cap
+ */
+static void keep_cap(private_daemon_t *this, u_int cap)
+{
+#ifdef CAPABILITIES
+	cap_set_flag(this->caps, CAP_EFFECTIVE, 1, &cap, CAP_SET);
+	cap_set_flag(this->caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
+	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
+#endif /* CAPABILITIES */
 }
 
 /**
@@ -362,6 +352,25 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 
+	/* load secrets, ca certificates and crls */
+	this->public.processor = processor_create();
+	this->public.scheduler = scheduler_create();
+	this->public.credentials = credential_manager_create();
+	this->public.controller = controller_create();
+	this->public.eap = eap_manager_create();
+	this->public.sim = sim_manager_create();
+	this->public.backends = backend_manager_create();
+	this->public.attributes = attribute_manager_create();
+	this->public.kernel_interface = kernel_interface_create();
+	this->public.socket = socket_create();
+	
+	/* load plugins, further infrastructure may need it */
+	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
+		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
+	
+	/* create the kernel interfaces */
+	this->public.kernel_interface->create_interfaces(this->public.kernel_interface);
+	
 #ifdef INTEGRITY_TEST
 	DBG1(DBG_DMN, "integrity test of libstrongswan code");
 	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
@@ -375,21 +384,6 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	}
 #endif /* INTEGRITY_TEST */
 
-	/* load secrets, ca certificates and crls */
-	this->public.processor = processor_create();
-	this->public.scheduler = scheduler_create();
-	this->public.credentials = credential_manager_create();
-	this->public.controller = controller_create();
-	this->public.eap = eap_manager_create();
-	this->public.backends = backend_manager_create();
-	this->public.attributes = attribute_manager_create();
-	this->public.kernel_interface = kernel_interface_create();
-	this->public.socket = socket_create();
-	
-	/* load plugins, further infrastructure may need it */
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
-	
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)
 	{
@@ -472,6 +466,7 @@ private_daemon_t *daemon_create(void)
 		
 	/* assign methods */
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
+	this->public.keep_cap = (void(*)(daemon_t*, u_int cap))keep_cap;
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
@@ -486,6 +481,7 @@ private_daemon_t *daemon_create(void)
 	this->public.processor = NULL;
 	this->public.controller = NULL;
 	this->public.eap = NULL;
+	this->public.sim = NULL;
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;
@@ -498,6 +494,14 @@ private_daemon_t *daemon_create(void)
 	this->public.gid = 0;
 	
 	this->main_thread_id = pthread_self();
+#ifdef CAPABILITIES
+	this->caps = cap_init();
+	keep_cap(this, CAP_NET_ADMIN);
+	if (lib->leak_detective)
+	{
+		keep_cap(this, CAP_SYS_NICE);
+	}
+#endif /* CAPABILITIES */
 	
 	/* add handler for SEGV and ILL,
 	 * add handler for USR1 (cancellation).
@@ -566,10 +570,6 @@ int main(int argc, char *argv[])
 	charon = (daemon_t*)private_charon;
 	
 	lookup_uid_gid(private_charon);
-	
-	/* drop the capabilities we won't need for initialization */
-	prctl(PR_SET_KEEPCAPS, 1);
-	drop_capabilities(private_charon, FALSE);
 	
 	/* use CTRL loglevel for default */
 	for (signal = 0; signal < DBG_MAX; signal++)
@@ -646,8 +646,8 @@ int main(int argc, char *argv[])
 		fclose(pid_file);
 	}
 	
-	/* drop additional capabilites (bind & root) */
-	drop_capabilities(private_charon, TRUE);
+	/* drop the capabilities we won't need */
+	drop_capabilities(private_charon);
 	
 	/* start the engine, go multithreaded */
 	charon->processor->set_threads(charon->processor,

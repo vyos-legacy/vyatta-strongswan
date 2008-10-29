@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa.h 4086 2008-06-22 11:24:33Z andreas $
+ * $Id: ike_sa.h 4368 2008-10-06 13:37:04Z martin $
  */
 
 /**
@@ -330,6 +330,22 @@ struct ike_sa_t {
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
 	
 	/**
+	 * Get the peers EAP identity.
+	 *
+	 * The EAP identity is exchanged in a EAP-Identity exchange.
+	 * 
+	 * @return				identification, NULL if none set
+	 */
+	identification_t* (*get_eap_identity) (ike_sa_t *this);
+	
+	/**
+	 * Set the peer's EAP identity.
+	 * 
+	 * @param id			identification
+	 */
+	void (*set_eap_identity) (ike_sa_t *this, identification_t *id);
+	
+	/**
 	 * Get the config used to setup this IKE_SA.
 	 * 
 	 * @return				ike_config
@@ -389,6 +405,14 @@ struct ike_sa_t {
 	 * @return 				iterator over addresses
 	 */
 	iterator_t* (*create_additional_address_iterator)(ike_sa_t *this);
+	
+	/**
+	 * Check if mappings have changed on a NAT for our source address.
+	 *
+	 * @param hash			received DESTINATION_IP hash
+	 * @return				TRUE if mappings have changed
+	 */
+	bool (*has_mapping_changed)(ike_sa_t *this, chunk_t hash);
 	
 	/**
 	 * Enable an extension the peer supports.

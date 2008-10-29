@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: traffic_selector.c 3658 2008-03-26 10:06:45Z martin $
+ * $Id: traffic_selector.c 4199 2008-07-21 19:08:03Z andreas $
  */
 
 #include <arpa/inet.h>
@@ -195,21 +195,22 @@ static int print(FILE *stream, const struct printf_info *info,
 		memeq(this->from, from, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16) && 
 		memeq(this->to, to, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16))
 	{
-		return fprintf(stream, "dynamic/%d",
-					   this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
-	}
-	
-	if (this->type == TS_IPV4_ADDR_RANGE)
-	{
-		inet_ntop(AF_INET, &this->from4, addr_str, sizeof(addr_str));
+		written += fprintf(stream, "dynamic/%d",
+						   this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
 	}
 	else
 	{
-		inet_ntop(AF_INET6, &this->from6, addr_str, sizeof(addr_str));
+		if (this->type == TS_IPV4_ADDR_RANGE)
+		{
+			inet_ntop(AF_INET, &this->from4, addr_str, sizeof(addr_str));
+		}
+		else
+		{
+			inet_ntop(AF_INET6, &this->from6, addr_str, sizeof(addr_str));
+		}
+		mask = calc_netbits(this);
+		written += fprintf(stream, "%s/%d", addr_str, mask);
 	}
-	mask = calc_netbits(this);
-	
-	written += fprintf(stream, "%s/%d", addr_str, mask);
 	
 	/* check if we have protocol and/or port selectors */
 	has_proto = this->protocol != 0;

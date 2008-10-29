@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterstroke.c 4100 2008-06-24 13:36:10Z martin $
+ * RCSID $Id: starterstroke.c 4276 2008-08-22 10:44:51Z martin $
  */
 
 #include <sys/types.h>
@@ -227,6 +227,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	}
 	msg.add_conn.eap_type = conn->eap_type;
 	msg.add_conn.eap_vendor = conn->eap_vendor;
+	msg.add_conn.eap_identity = push_string(&msg, conn->eap_identity);
 	
 	if (conn->policy & POLICY_TUNNEL)
 	{

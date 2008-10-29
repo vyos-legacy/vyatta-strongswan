@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -39,11 +40,11 @@ struct dumm_t {
 	 * @param name		name of the guest
 	 * @param kernel	UML kernel to use for guest
 	 * @param master	mounted read only master filesystem
-	 * @param mem		amount of memory for guest, in MB
+	 * @param args		additional args to pass to kernel
 	 * @return			guest if started, NULL if failed
 	 */
 	guest_t* (*create_guest) (dumm_t *this, char *name, char *kernel, 
-							  char *master, int mem);
+							  char *master, char *args);
 	
 	/**
 	 * @brief Create an enumerator over all guests.
@@ -84,10 +85,10 @@ struct dumm_t {
 	/**
 	 * @brief Loads a template, create a new one if it does not exist.
 	 *
-	 * @param name		name of the template, NULL to close
+	 * @param name		dir to the template, NULL to close
 	 * @return			FALSE if load/create failed
 	 */
-	bool (*load_template)(dumm_t *this, char *name);
+	bool (*load_template)(dumm_t *this, char *dir);
 	
 	/**
 	 * @brief stop all guests and destroy the modeler

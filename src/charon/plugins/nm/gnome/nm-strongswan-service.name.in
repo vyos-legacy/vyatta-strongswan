@@ -1,0 +1,8 @@
+[VPN Connection]
+name=strongswan
+service=org.freedesktop.NetworkManager.strongswan
+program=@CHARON@
+
+[GNOME]
+auth-dialog=@LIBEXECDIR@/nm-strongswan-auth-dialog
+properties=libnm-strongswan-properties

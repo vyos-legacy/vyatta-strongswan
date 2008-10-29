@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokecharon.c 3928 2008-05-11 07:59:00Z andreas $
+ * RCSID $Id: invokecharon.c 4243 2008-08-01 10:35:59Z andreas $
  */
 
 #include <sys/types.h>
@@ -63,38 +63,46 @@ starter_charon_sigchild(pid_t pid)
 int
 starter_stop_charon (void)
 {
-    pid_t pid;
     int i;
+    pid_t pid = _charon_pid;
 
-    pid = _charon_pid;
     if (pid)
     {
 	_stop_requested = 1;
 
 	/* be more and more aggressive */
-	for (i = 0; i < 20 && (pid = _charon_pid) != 0; i++)
+	for (i = 0; i < 50 && (pid = _charon_pid) != 0; i++)
 	{
-		if (i == 0)
-			kill(pid, SIGINT);
-	    else if (i < 10)
-			kill(pid, SIGTERM);
-	    else if (i == 10)
+	    if (i == 0)
 	    {
-			kill(pid, SIGKILL);
-			plog("starter_stop_charon(): charon does not respond, sending KILL");
+		kill(pid, SIGINT);
+	    }
+	    else if (i < 40)
+	    {
+		kill(pid, SIGTERM);
+	    }
+	    else if (i == 40)
+	    {
+		kill(pid, SIGKILL);
+		plog("starter_stop_charon(): charon does not respond, sending KILL");
 	    }
 	    else
-			kill(pid, SIGKILL);
-	    usleep(200000);
+	    {
+		kill(pid, SIGKILL);
+	    }
+	    usleep(200000); /* sleep for 200 ms */
 	}
 	if (_charon_pid == 0)
+	{
+	    plog("charon stopped after %d ms", 200*i);
 	    return 0;
+	}
 	plog("starter_stop_charon(): can't stop charon !!!");
 	return -1;
     }
     else
     {
-	plog("stater_stop_charon(): charon is not started...");
+	plog("stater_stop_charon(): charon was not started...");
     }
     return -1;
 }
@@ -177,15 +185,13 @@ starter_start_charon (starter_config_t *cfg, bool no_fork)
 	default:
 	    /* father */
 		_charon_pid = pid;
-		for (i = 0; i < 50 && _charon_pid; i++)
+		for (i = 0; i < 500 && _charon_pid; i++)
 	    {
-		/* wait for charon */
+		/* wait for charon for a maximum of 500 x 20 ms = 10 s */
 		usleep(20000);
 		if (stat(CHARON_PID_FILE, &stb) == 0)
 		{
-		    DBG(DBG_CONTROL,
-			DBG_log("charon (%d) started", _charon_pid)
-		    )
+		    plog("charon (%d) started after %d ms", _charon_pid, 20*(i+1));
 		    return 0;
 		}
 	    }
@@ -195,12 +201,18 @@ starter_start_charon (starter_config_t *cfg, bool no_fork)
 		plog("charon too long to start... - kill kill");
 		for (i = 0; i < 20 && (pid = _charon_pid) != 0; i++)
 		{
-			if (i == 0)
+		    if (i == 0)
+		    {
 			kill(pid, SIGINT);
+		    }
 		    else if (i < 10)
+		    {
 			kill(pid, SIGTERM);
+		    }
 		    else
+		    {
 			kill(pid, SIGKILL);
+		    }
 		    usleep(20000);
 		}
 	    }

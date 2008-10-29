@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starter.c 3914 2008-05-08 10:58:04Z martin $
+ * RCSID $Id: starter.c 4140 2008-07-02 05:51:49Z andreas $
  */
 
 #include <sys/types.h>
@@ -452,7 +452,7 @@ int main (int argc, char **argv)
 	       );
 	    new_cfg = confread_load(CONFIG_FILE);
 
-	    if (new_cfg->err + new_cfg->non_fatal_err == 0)
+	    if (new_cfg && (new_cfg->err + new_cfg->non_fatal_err == 0))
 	    {
 		/* Switch to new config. New conn will be loaded below */
 		if (!starter_cmp_defaultroute(&new_cfg->defaultroute
@@ -546,7 +546,10 @@ int main (int argc, char **argv)
 	    else
 	    {
 		plog("can't reload config file due to errors -- keeping old one");
-		confread_free(new_cfg);
+		if (new_cfg)
+		{
+		    confread_free(new_cfg);
+		}
 	    }
 	    _action_ &= ~FLAG_ACTION_UPDATE;
 	    last_reload = time(NULL);

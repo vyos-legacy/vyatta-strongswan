@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: controller.h 3804 2008-04-14 11:37:46Z martin $
+ * $Id: controller.h 4192 2008-07-18 15:51:40Z martin $
  */
 
 /**
@@ -37,7 +37,8 @@
  * @return				FALSE to return from invoked function
  */
 typedef bool(*controller_cb_t)(void* param, signal_t signal, level_t level,
-							   ike_sa_t* ike_sa, char* format, va_list args);
+							   ike_sa_t* ike_sa, void *data,
+							   char* format, va_list args);
 
 /**
  * Empty callback function for controller_t functions.
@@ -46,7 +47,8 @@ typedef bool(*controller_cb_t)(void* param, signal_t signal, level_t level,
  * this function to the controllers methods.
  */
 bool controller_cb_empty(void *param, signal_t signal, level_t level,
-								ike_sa_t *ike_sa, char *format, va_list args);
+						 ike_sa_t *ike_sa, void *data,
+						 char *format, va_list args);
 
 typedef struct controller_t controller_t;
 

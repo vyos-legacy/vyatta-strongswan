@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_identity.h 3491 2008-02-22 14:04:00Z martin $
+ * $Id: eap_identity.h 4276 2008-08-22 10:44:51Z martin $
  */
 
 /**
@@ -37,6 +37,16 @@ struct eap_identity_t {
 	 */
 	eap_method_t eap_method_interface;
 };
+
+/**
+ * Creates the EAP method EAP Identity, acting as server.
+ *
+ * @param server	ID of the EAP server
+ * @param peer		ID of the EAP client
+ * @return			eap_identity_t object
+ */
+eap_identity_t *eap_identity_create_server(identification_t *server,
+										   identification_t *peer);
 
 /**
  * Creates the EAP method EAP Identity, acting as peer.

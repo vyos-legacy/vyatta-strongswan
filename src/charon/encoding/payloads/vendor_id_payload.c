@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: vendor_id_payload.c 3589 2008-03-13 14:14:44Z martin $
+ * $Id: vendor_id_payload.c 4120 2008-06-27 15:22:27Z andreas $
  */
 
 #include <stddef.h>
@@ -86,9 +86,8 @@ encoding_rule_t vendor_id_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
       ! Next Payload  !C!  RESERVED   !         Payload Length        !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-      ! Cert Encoding !                                               !
-      +-+-+-+-+-+-+-+-+                                               !
-      ~                       Certificate Data                        ~
+      +                                                               !
+      ~                            VID Data                           ~
       !                                                               !
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */

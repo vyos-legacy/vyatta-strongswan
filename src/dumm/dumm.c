@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -29,8 +30,6 @@
 
 #define PERME (S_IRWXU | S_IRWXG)
 #define GUEST_DIR "guests"
-#define TEMPLATE_DIR "templates"
-#define TEMPLATE_DIR_DIR "diff"
 
 typedef struct private_dumm_t private_dumm_t;
 
@@ -41,27 +40,23 @@ struct private_dumm_t {
 	char *dir;
 	/** directory of guests */
 	char *guest_dir;
-	/** directory of templates */
-	char *template_dir;
 	/** directory of loaded template */
 	char *template;
 	/** list of managed guests */
 	linked_list_t *guests;
 	/** list of managed bridges */
 	linked_list_t *bridges;
-	/** do not catch signals if we are destroying */
-	bool destroying;
 };
 
 /**
  * Implementation of dumm_t.create_guest.
  */
 static guest_t* create_guest(private_dumm_t *this, char *name, char *kernel, 
-							 char *master, int mem)
+							 char *master, char *args)
 {
 	guest_t *guest;
 	
-	guest = guest_create(this->guest_dir, name, kernel, master, mem);
+	guest = guest_create(this->guest_dir, name, kernel, master, args);
 	if (guest)
 	{
 		this->guests->insert_last(this->guests, guest);
@@ -153,45 +148,36 @@ static void clear_template(private_dumm_t *this)
 /**
  * Implementation of dumm_t.load_template.
  */
-static bool load_template(private_dumm_t *this, char *name)
+static bool load_template(private_dumm_t *this, char *dir)
 {
 	enumerator_t *enumerator;
 	guest_t *guest;
-	char dir[PATH_MAX];
-	size_t len;
 	
 	clear_template(this);
 	
-	if (name == NULL)
+	if (dir == NULL)
 	{
 		return TRUE;
 	}
-
-	free(this->template);
-	asprintf(&this->template, "%s/%s", this->template_dir, name);
-	len = snprintf(dir, sizeof(dir), "%s/%s", this->template, TEMPLATE_DIR_DIR);
-	if (len < 0 || len >= sizeof(dir))
+	if (strlen(dir) > PATH_MAX)
 	{
+		DBG1("template directory string '%s' is too long", dir);
 		return FALSE;
 	}
 	
+	this->template = strdup(dir);
 	if (access(this->template, F_OK) != 0)
 	{	/* does not exist, create template */
-		if (mkdir(this->template, PERME) != 0)
+		if (!mkdir_p(this->template, PERME))
 		{
 			DBG1("creating template directory '%s' failed: %m", this->template);
-			return FALSE;
-		}
-		if (mkdir(dir, PERME) != 0)
-		{
-			DBG1("creating template overlay directory '%s' failed: %m", dir);
 			return FALSE;
 		}
 	}
 	enumerator = this->guests->create_enumerator(this->guests);
 	while (enumerator->enumerate(enumerator, (void**)&guest))
 	{
-		if (!guest->load_template(guest, dir))
+		if (!guest->load_template(guest, this->template))
 		{
 			enumerator->destroy(enumerator);
 			clear_template(this);
@@ -219,10 +205,12 @@ static void destroy(private_dumm_t *this)
 	}
 	enumerator->destroy(enumerator);
 	
-	this->destroying = TRUE;
-	this->guests->destroy_offset(this->guests, offsetof(guest_t, destroy));
+	while (this->guests->remove_last(this->guests, (void**)&guest) == SUCCESS)
+	{
+		guest->destroy(guest);
+	}
+	this->guests->destroy(this->guests);
 	free(this->guest_dir);
-	free(this->template_dir);
 	free(this->template);
 	free(this->dir);
 	free(this);
@@ -270,7 +258,7 @@ dumm_t *dumm_create(char *dir)
 	char cwd[PATH_MAX];
 	private_dumm_t *this = malloc_thing(private_dumm_t);
 	
-	this->public.create_guest = (guest_t*(*)(dumm_t*,char*,char*,char*,int))create_guest;
+	this->public.create_guest = (guest_t*(*)(dumm_t*,char*,char*,char*,char*))create_guest;
 	this->public.create_guest_enumerator = (enumerator_t*(*)(dumm_t*))create_guest_enumerator;
 	this->public.delete_guest = (void(*)(dumm_t*,guest_t*))delete_guest;
 	this->public.create_bridge = (bridge_t*(*)(dumm_t*, char *name))create_bridge;
@@ -278,8 +266,6 @@ dumm_t *dumm_create(char *dir)
 	this->public.delete_bridge = (void(*)(dumm_t*,bridge_t*))delete_bridge;
 	this->public.load_template = (bool(*)(dumm_t*, char *name))load_template;
 	this->public.destroy = (void(*)(dumm_t*))destroy;
-	
-	this->destroying = FALSE;
 	
 	if (dir && *dir == '/')
 	{
@@ -303,7 +289,6 @@ dumm_t *dumm_create(char *dir)
 	}
 	this->template = NULL;
 	asprintf(&this->guest_dir, "%s/%s", this->dir, GUEST_DIR);
-	asprintf(&this->template_dir, "%s/%s", this->dir, TEMPLATE_DIR);
 	this->guests = linked_list_create();
 	this->bridges = linked_list_create();
 	
@@ -313,13 +298,7 @@ dumm_t *dumm_create(char *dir)
 		destroy(this);
 		return NULL;
 	}
-	if (mkdir(this->template_dir, PERME) < 0 && errno != EEXIST)
-	{
-		DBG1("creating template directory '%s' failed: %m", this->template_dir);
-		destroy(this);
-		return NULL;
-	}
-	
+		
 	load_guests(this);
 	return &this->public;
 }

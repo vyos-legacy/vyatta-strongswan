@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_me.c 3806 2008-04-15 05:56:35Z martin $
+ * $Id: ike_me.c 4355 2008-09-25 07:56:58Z tobias $
  */
  
 #include "ike_me.h"
@@ -128,7 +128,7 @@ static void add_endpoints_to_message(message_t *message, linked_list_t *endpoint
  */
 static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	host_t *addr, *host;
 	u_int16_t port;
 	
@@ -136,9 +136,9 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 	host = this->ike_sa->get_my_host(this->ike_sa);
 	port = host->get_port(host);
 	
-	iterator = charon->kernel_interface->create_address_iterator(
-												charon->kernel_interface);
-	while (iterator->iterate(iterator, (void**)&addr))
+	enumerator = charon->kernel_interface->create_address_enumerator(
+										charon->kernel_interface, FALSE, FALSE);
+	while (enumerator->enumerate(enumerator, (void**)&addr))
 	{
 		host = addr->clone(addr);
 		host->set_port(host, port);
@@ -148,7 +148,7 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 		
 		host->destroy(host);
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	host = this->ike_sa->get_server_reflexive_host(this->ike_sa);
 	if (host)
@@ -461,7 +461,8 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 				this->ike_sa->set_server_reflexive_host(this->ike_sa, endpoint->clone(endpoint));
 			}
 			/* FIXME: what if it failed? e.g. AUTH failure */
-			SIG(CHILD_UP_SUCCESS, "established mediation connection without CHILD_SA successfully");
+			SIG_CHD(UP_SUCCESS, NULL, "established mediation connection "
+					"without CHILD_SA successfully");
 			
 			break;
 		}
@@ -641,7 +642,8 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 			/* FIXME: we actually must delete any existing IKE_SAs with the same remote id */
 			this->ike_sa->act_as_mediation_server(this->ike_sa);
 			
-			SIG(CHILD_UP_SUCCESS, "established mediation connection without CHILD_SA successfully");
+			SIG_CHD(UP_SUCCESS, NULL, "established mediation connection "
+					"without CHILD_SA successfully");
 			
 			break;
 		}

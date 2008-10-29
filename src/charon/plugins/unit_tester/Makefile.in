@@ -53,7 +53,8 @@ libstrongswan_unit_tester_la_LIBADD =
 am_libstrongswan_unit_tester_la_OBJECTS = unit_tester.lo \
 	test_enumerator.lo test_auth_info.lo test_fips_prf.lo \
 	test_curl.lo test_mysql.lo test_sqlite.lo test_mutex.lo \
-	test_rsa_gen.lo test_med_db.lo test_aes.lo test_chunk.lo
+	test_rsa_gen.lo test_med_db.lo test_aes.lo test_chunk.lo \
+	test_pool.lo test_agent.lo
 libstrongswan_unit_tester_la_OBJECTS =  \
 	$(am_libstrongswan_unit_tester_la_OBJECTS)
 libstrongswan_unit_tester_la_LINK = $(LIBTOOL) --tag=CC \
@@ -192,6 +193,8 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+nm_CFLAGS = @nm_CFLAGS@
+nm_LIBS = @nm_LIBS@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
@@ -214,7 +217,7 @@ xml_LIBS = @xml_LIBS@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 AM_CFLAGS = -rdynamic
 plugin_LTLIBRARIES = libstrongswan-unit-tester.la
-libstrongswan_unit_tester_la_SOURCES = unit_tester.c unit_tester.h \
+libstrongswan_unit_tester_la_SOURCES = unit_tester.c unit_tester.h tests.h \
   tests/test_enumerator.c \
   tests/test_auth_info.c \
   tests/test_fips_prf.c \
@@ -225,7 +228,9 @@ libstrongswan_unit_tester_la_SOURCES = unit_tester.c unit_tester.h \
   tests/test_rsa_gen.c \
   tests/test_med_db.c \
   tests/test_aes.c \
-  tests/test_chunk.c
+  tests/test_chunk.c \
+  tests/test_pool.c \
+  tests/test_agent.c
 
 libstrongswan_unit_tester_la_LDFLAGS = -module
 all: all-am
@@ -298,6 +303,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_aes.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_agent.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_auth_info.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_chunk.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_curl.Plo@am__quote@
@@ -306,6 +312,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_med_db.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_mutex.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_mysql.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_pool.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_rsa_gen.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_sqlite.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unit_tester.Plo@am__quote@
@@ -407,6 +414,20 @@ test_chunk.lo: tests/test_chunk.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tests/test_chunk.c' object='test_chunk.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_chunk.lo `test -f 'tests/test_chunk.c' || echo '$(srcdir)/'`tests/test_chunk.c
+
+test_pool.lo: tests/test_pool.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_pool.lo -MD -MP -MF $(DEPDIR)/test_pool.Tpo -c -o test_pool.lo `test -f 'tests/test_pool.c' || echo '$(srcdir)/'`tests/test_pool.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/test_pool.Tpo $(DEPDIR)/test_pool.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tests/test_pool.c' object='test_pool.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_pool.lo `test -f 'tests/test_pool.c' || echo '$(srcdir)/'`tests/test_pool.c
+
+test_agent.lo: tests/test_agent.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT test_agent.lo -MD -MP -MF $(DEPDIR)/test_agent.Tpo -c -o test_agent.lo `test -f 'tests/test_agent.c' || echo '$(srcdir)/'`tests/test_agent.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/test_agent.Tpo $(DEPDIR)/test_agent.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tests/test_agent.c' object='test_agent.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o test_agent.lo `test -f 'tests/test_agent.c' || echo '$(srcdir)/'`tests/test_agent.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
