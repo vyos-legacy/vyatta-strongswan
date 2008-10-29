@@ -20,7 +20,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: openac.c 3967 2008-05-16 08:52:32Z martin $
+ * RCSID $Id: openac.c 4345 2008-09-17 08:10:48Z martin $
  */
 
 #include <stdio.h>
@@ -103,6 +103,10 @@ static chunk_t mpz_to_chunk(mpz_t number)
 
 	chunk.len = 1 + mpz_sizeinbase(number, 2)/BITS_PER_BYTE;
 	chunk.ptr = mpz_export(NULL, NULL, 1, chunk.len, 1, 0, number);
+	if (chunk.ptr == NULL)
+	{
+		chunk.len = 0;
+	}
 	return chunk;
 }
 
@@ -191,6 +195,7 @@ static private_key_t* private_key_create_from_file(char *path, chunk_t *secret)
 	}
 	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 							 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+	free(chunk.ptr);
 	if (key == NULL)
 	{
 		DBG1("  could not parse loaded private key file '%s'", path);
@@ -527,14 +532,15 @@ int main(int argc, char **argv)
 
 		attr_cert = lib->creds->create(lib->creds,
 							CRED_CERTIFICATE, CERT_X509_AC,
-							BUILD_CERT, userCert->get_ref(userCert),
+							BUILD_CERT, userCert,
 							BUILD_NOT_BEFORE_TIME, notBefore,
 							BUILD_NOT_AFTER_TIME, notAfter,
 							BUILD_SERIAL, serial,
 							BUILD_IETF_GROUP_ATTR, groups,
-							BUILD_SIGNING_CERT, signerCert->get_ref(signerCert),
-							BUILD_SIGNING_KEY, signerKey->get_ref(signerKey),
+							BUILD_SIGNING_CERT, signerCert,
+							BUILD_SIGNING_KEY, signerKey,
 							BUILD_END);
+		free(serial.ptr);
 		if (!attr_cert)
 		{
 			goto end;

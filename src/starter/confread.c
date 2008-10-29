@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.c 4051 2008-06-10 09:08:27Z tobias $
+ * RCSID $Id: confread.c 4269 2008-08-21 12:10:07Z martin $
  */
 
 #include <stddef.h>
@@ -588,6 +588,10 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			{
 				conn->eap_type = 4;
 			}
+			else if (streq(kw->value, "gtc"))
+			{
+				conn->eap_type = 6;
+			}
 			else
 			{
 				conn->eap_type = atoi(kw->value);
@@ -931,8 +935,9 @@ confread_load(const char *file)
 	/* load IPSec configuration file  */
 	cfgp = parser_load_conf(file);
 	if (!cfgp)
+	{
 		return NULL;
-
+	}
 	cfg = (starter_config_t *)alloc_thing(starter_config_t, "starter_config_t");
 
 	/* set default values */

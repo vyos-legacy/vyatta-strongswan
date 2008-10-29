@@ -60,6 +60,7 @@ ipsec_PROGRAMS = pluto$(EXEEXT) _pluto_adns$(EXEEXT)
 
 # This compile option activates smartcard support
 @USE_SMARTCARD_TRUE@am__append_9 = -DSMARTCARD
+@USE_CAPABILITIES_TRUE@am__append_10 = -lcap
 subdir = src/pluto
 DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in TODO
@@ -102,7 +103,7 @@ pluto_OBJECTS = $(am_pluto_OBJECTS)
 am__DEPENDENCIES_1 =
 pluto_DEPENDENCIES = oid.o $(LIBFREESWANDIR)/libfreeswan.a \
 	$(LIBCRYPTODIR)/libcrypto.a $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -239,6 +240,8 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+nm_CFLAGS = @nm_CFLAGS@
+nm_LIBS = @nm_LIBS@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
@@ -339,7 +342,7 @@ AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" \
 	$(am__append_8) $(am__append_9)
 pluto_LDADD = oid.o $(LIBFREESWANDIR)/libfreeswan.a \
 	$(LIBCRYPTODIR)/libcrypto.a -lgmp -lresolv -lpthread -ldl \
-	$(am__append_5) $(am__append_7)
+	$(am__append_5) $(am__append_7) $(am__append_10)
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv -ldl

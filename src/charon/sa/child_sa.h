@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: child_sa.h 3920 2008-05-08 16:19:11Z tobias $
+ * $Id: child_sa.h 4358 2008-09-25 13:56:23Z tobias $
  */
 
 /**
@@ -114,10 +114,22 @@ struct child_sa_t {
 	 * FALSE to get those we use for sending packets.
 	 *
 	 * @param inbound	TRUE to get inbound SPI, FALSE for outbound.
-	 * @return 			spi of the CHILD SA
+	 * @return 			SPI of the CHILD SA
 	 */
 	u_int32_t (*get_spi) (child_sa_t *this, bool inbound);
 	
+	/**
+	 * Get the CPI of this CHILD_SA.
+	 * 
+	 * Set the boolean parameter inbound to TRUE to
+	 * get the CPI for which we receive packets, use
+	 * FALSE to get those we use for sending packets.
+	 *
+	 * @param inbound	TRUE to get inbound CPI, FALSE for outbound.
+	 * @return 			CPI of the CHILD SA
+	 */
+	u_int16_t (*get_cpi) (child_sa_t *this, bool inbound);
+
 	/**
 	 * Get the protocol which this CHILD_SA uses to protect traffic.
 	 *
@@ -138,7 +150,7 @@ struct child_sa_t {
 	 * @param use_out	time when last traffic was seen going out
 	 * @param use_fwd	time when last traffic was getting forwarded
 	 */
-	void (*get_stats)(child_sa_t *this, mode_t *mode,
+	void (*get_stats)(child_sa_t *this, ipsec_mode_t *mode,
 					  encryption_algorithm_t *encr, size_t *encr_len,
 					  integrity_algorithm_t *int_algo, size_t *int_len,
 					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
@@ -165,7 +177,7 @@ struct child_sa_t {
 	 * @param prf_plus	key material to use for key derivation
 	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*add)(child_sa_t *this, proposal_t *proposal, mode_t mode,
+	status_t (*add)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
 					prf_plus_t *prf_plus);
 	
 	/**
@@ -178,7 +190,7 @@ struct child_sa_t {
 	 * @param prf_plus	key material to use for key derivation
 	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*update)(child_sa_t *this, proposal_t *proposal, mode_t mode,
+	status_t (*update)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
 					   prf_plus_t *prf_plus);
 
 	/**
@@ -203,10 +215,12 @@ struct child_sa_t {
 	 * @param my_ts		traffic selectors for local site
 	 * @param other_ts	traffic selectors for remote site
 	 * @param mode		mode for the SA: tunnel/transport
+	 * @param proto		protocol for policy, ESP/AH
 	 * @return			SUCCESS or FAILED
 	 */	
 	status_t (*add_policies)(child_sa_t *this, linked_list_t *my_ts_list,
-							 linked_list_t *other_ts_list, mode_t mode);
+							 linked_list_t *other_ts_list, ipsec_mode_t mode,
+							 protocol_id_t proto);
 	
 	/**
 	 * Get the traffic selectors of added policies of local host.
@@ -268,7 +282,7 @@ struct child_sa_t {
 	 * 
 	 * @return			allocated CPI
 	 */
-	u_int16_t (*get_my_cpi) (child_sa_t *this);
+	u_int16_t (*allocate_cpi) (child_sa_t *this);
 	
 	/**
 	 * Destroys a child_sa.

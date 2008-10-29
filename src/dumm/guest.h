@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,10 +20,10 @@
 #include <library.h>
 #include <utils/enumerator.h>
 
-#include "iface.h"
-
 typedef enum guest_state_t guest_state_t;
 typedef struct guest_t guest_t;
+
+#include "iface.h"
 
 /**
  * @brief State of a guest (started, stopped, ...)
@@ -107,9 +108,8 @@ struct guest_t {
 	 * @brief Kill the guest.
 	 *
 	 * @param idle		idle function to call while waiting to termination
-	 * @return			TRUE if guest was running and killed
 	 */
-	bool (*stop) (guest_t *this, idle_function_t idle);
+	void (*stop) (guest_t *this, idle_function_t idle);
 	
 	/**
 	 * @brief Create a new interface in the current scenario.
@@ -140,7 +140,35 @@ struct guest_t {
 	 * @return			FALSE if failed
 	 */
 	bool (*load_template)(guest_t *this, char *parent);
-
+	
+	/**
+	 * Execute a command in the guest.
+	 *
+	 * @param cb		callback to call for each read block
+	 * @param data		data to pass to callback
+	 * @param cmd		command to execute
+	 * @param ...		printf style argument list for cmd
+	 * @return			return value
+	 */
+	int (*exec)(guest_t *this, void(*cb)(void*,char*,size_t), void *data,
+				char *cmd, ...);
+	
+	/**
+	 * Execute a command in the guest and return the output by lines or as combined
+	 * string.
+	 * 
+	 * @note This function does not work with binary output (i.e. containing 0 bytes).
+	 * 
+	 * @param cb		callback to call for each line or for the complete output
+	 * @param lines		TRUE if the callback should be called for each line (instead of for the combined output)
+	 * @param data		data to pass to callback
+	 * @param cmd		command to execute
+	 * @param ...		printf style argument list for cmd
+	 * @return			return value
+	 */
+	int (*exec_str)(guest_t *this, void(*cb)(void*,char*), bool lines,
+				void *data, char *cmd, ...);
+	
 	/**
 	 * @brief Called whenever a SIGCHILD for the guests PID is received.
 	 */
@@ -159,10 +187,11 @@ struct guest_t {
  * @param name		name of the guest to create
  * @param kernel	kernel this guest uses
  * @param master	read-only master filesystem for guest
+ * @param args		additional args to pass to kernel
  * @param mem		amount of memory to give the guest
  */
 guest_t *guest_create(char *parent, char *name, char *kernel,
-					  char *master, int mem);
+					  char *master, char *args);
 
 /**
  * @brief Load a guest created with guest_create().

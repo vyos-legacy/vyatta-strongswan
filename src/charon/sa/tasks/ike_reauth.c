@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_reauth.c 3793 2008-04-11 08:14:48Z martin $
+ * $Id: ike_reauth.c 4211 2008-07-23 18:46:34Z andreas $
  */
 
 #include "ike_reauth.h"
@@ -65,7 +65,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	
 	/* process delete response first */
 	this->ike_delete->task.process(&this->ike_delete->task, message);
-	
+	SIG_IKE(DOWN_SUCCESS, "IKE_SA deleted");
+
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	
 	/* reauthenticate only if we have children */

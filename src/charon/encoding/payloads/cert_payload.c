@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: cert_payload.c 3852 2008-04-18 21:27:08Z andreas $
+ * $Id: cert_payload.c 4317 2008-09-02 11:00:13Z martin $
  */
 
 #include <stddef.h>
@@ -229,7 +229,7 @@ static certificate_t *get_cert(private_cert_payload_t *this)
 		return NULL;
 	}
 	return lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_BLOB_ASN1_DER, chunk_clone(this->data),
+							  BUILD_BLOB_ASN1_DER, this->data,
 							  BUILD_END);
 }
 

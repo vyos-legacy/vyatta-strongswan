@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_interface.h 3920 2008-05-08 16:19:11Z tobias $
+ * $Id: kernel_interface.h 4386 2008-10-08 08:23:46Z martin $
  */
 
 /**
@@ -26,45 +26,37 @@
 #ifndef KERNEL_INTERFACE_H_
 #define KERNEL_INTERFACE_H_
 
-typedef enum policy_dir_t policy_dir_t;
 typedef struct kernel_interface_t kernel_interface_t;
 
 #include <utils/host.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 
+#include <kernel/kernel_ipsec.h>
+#include <kernel/kernel_net.h>
 
 /**
- * Direction of a policy. These are equal to those
- * defined in xfrm.h, but we want to stay implementation
- * neutral here.
+ * Constructor function for ipsec kernel interface
  */
-enum policy_dir_t {
-	/** Policy for inbound traffic */
-	POLICY_IN = 0,
-	/** Policy for outbound traffic */
-	POLICY_OUT = 1,
-	/** Policy for forwarded traffic */
-	POLICY_FWD = 2,
-};
+typedef kernel_ipsec_t* (*kernel_ipsec_constructor_t)(void);
 
 /**
- * Interface to the kernel.
+ * Constructor function for network kernel interface
+ */
+typedef kernel_net_t* (*kernel_net_constructor_t)(void);
+
+/**
+ * Manager and wrapper for different kernel interfaces.
  * 
  * The kernel interface handles the communication with the kernel
- * for SA and policy management. It allows setup of these, and provides 
- * further the handling of kernel events.
- * Policy information are cached in the interface. This is necessary to do
- * reference counting. The Linux kernel does not allow the same policy
- * installed twice, but we need this as CHILD_SA exist multiple times
- * when rekeying. Thats why we do reference counting of policies.
+ * for SA and policy management and interface and IP address management.
  */
 struct kernel_interface_t {
 
 	/**
 	 * Get a SPI from the kernel.
 	 *
-	 * @warning get_spi() implicitely creates an SA with
+	 * @warning get_spi() implicitly creates an SA with
 	 * the allocated SPI, therefore the replace flag
 	 * in add_sa() must be set when installing this SA.
 	 * 
@@ -107,7 +99,7 @@ struct kernel_interface_t {
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @param reqid			unique ID for this SA
 	 * @param expire_soft	lifetime in seconds before rekeying
-	 * @param expire_hard	lieftime in seconds before delete
+	 * @param expire_hard	lifetime in seconds before delete
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
 	 * @param enc_size		key length of encryption algorithm, if dynamic
 	 * @param int_alg		Algorithm to use for integrity protection
@@ -125,7 +117,7 @@ struct kernel_interface_t {
 						u_int64_t expire_soft, u_int64_t expire_hard,
 					    u_int16_t enc_alg, u_int16_t enc_size,
 					    u_int16_t int_alg, u_int16_t int_size,
-						prf_plus_t *prf_plus, mode_t mode,
+						prf_plus_t *prf_plus, ipsec_mode_t mode,
 						u_int16_t ipcomp, bool encap,
 						bool update);
 	
@@ -167,7 +159,7 @@ struct kernel_interface_t {
 						  protocol_id_t protocol, u_int32_t *use_time);
 	
 	/**
-	 * Delete a previusly installed SA from the SAD.
+	 * Delete a previously installed SA from the SAD.
 	 * 
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
@@ -189,7 +181,7 @@ struct kernel_interface_t {
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
 	 * @param protocol		protocol to use to protect traffic (AH/ESP)
-	 * @param reqid			uniqe ID of an SA to use to enforce policy
+	 * @param reqid			unique ID of an SA to use to enforce policy
 	 * @param high_prio		if TRUE, uses a higher priority than any with FALSE
 	 * @param mode			mode of SA (tunnel, transport)
 	 * @param ipcomp		the IPComp transform used
@@ -200,7 +192,7 @@ struct kernel_interface_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool high_prio, mode_t mode,
+							u_int32_t reqid, bool high_prio, ipsec_mode_t mode,
 							u_int16_t ipcomp);
 	
 	/**
@@ -243,11 +235,26 @@ struct kernel_interface_t {
 	 *
 	 * Does a route lookup to get the source address used to reach dest.
 	 * The returned host is allocated and must be destroyed.
+	 * An optional src address can be used to check if a route is available
+	 * for given source to dest.
 	 *
 	 * @param dest			target destination address
+	 * @param src			source address to check, or NULL
 	 * @return				outgoing source address, NULL if unreachable
 	 */
-	host_t* (*get_source_addr)(kernel_interface_t *this, host_t *dest);
+	host_t* (*get_source_addr)(kernel_interface_t *this,
+							   host_t *dest, host_t *src);
+	
+	/**
+	 * Get the next hop for a destination.
+	 *
+	 * Does a route lookup to get the next hop used to reach dest.
+	 * The returned host is allocated and must be destroyed.
+	 *
+	 * @param dest			target destination address
+	 * @return				next hop address, NULL if unreachable
+	 */
+	host_t* (*get_nexthop)(kernel_interface_t *this, host_t *dest);
 	
 	/**
 	 * Get the interface name of a local address.
@@ -258,15 +265,18 @@ struct kernel_interface_t {
 	char* (*get_interface) (kernel_interface_t *this, host_t *host);
 	
 	/**
-	 * Creates an iterator over all local addresses.
-	 *
+	 * Creates an enumerator over all local addresses.
+	 * 
 	 * This function blocks an internal cached address list until the
-	 * iterator gets destroyed.
-	 * These hosts are read-only, do not modify or free.
-	 *
-	 * @return 				iterator over host_t's
+	 * enumerator gets destroyed.
+	 * The hosts are read-only, do not modify of free.
+	 * 
+	 * @param include_down_ifaces	TRUE to enumerate addresses from down interfaces
+	 * @param include_virtual_ips	TRUE to enumerate virtual ip addresses
+	 * @return						enumerator over host_t's
 	 */
-	iterator_t *(*create_address_iterator) (kernel_interface_t *this);
+	enumerator_t *(*create_address_enumerator) (kernel_interface_t *this,
+						bool include_down_ifaces, bool include_virtual_ips);
 	
 	/**
 	 * Add a virtual IP to an interface.
@@ -294,9 +304,73 @@ struct kernel_interface_t {
 	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip);
 	
 	/**
-	 * Destroys a kernel_interface object.
+	 * Add a route.
+	 * 
+	 * @param dst_net		destination net
+	 * @param prefixlen		destination net prefix length
+	 * @param gateway		gateway for this route
+	 * @param src_ip		sourc ip of the route
+	 * @param if_name		name of the interface the route is bound to
+	 * @return				SUCCESS if operation completed
+	 * 						ALREADY_DONE if the route already exists
 	 */
-	void (*destroy) (kernel_interface_t *kernel_interface);
+	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net, u_int8_t prefixlen,
+								host_t *gateway, host_t *src_ip, char *if_name);
+	
+	/**
+	 * Delete a route.
+	 * 
+	 * @param dst_net		destination net
+	 * @param prefixlen		destination net prefix length
+	 * @param gateway		gateway for this route
+	 * @param src_ip		sourc ip of the route
+	 * @param if_name		name of the interface the route is bound to
+	 * @return				SUCCESS if operation completed
+	 */
+	status_t (*del_route) (kernel_interface_t *this, chunk_t dst_net, u_int8_t prefixlen,
+								host_t *gateway, host_t *src_ip, char *if_name);
+	
+	/**
+	 * manager methods
+	 */
+	
+	/**
+	 * Register an ipsec kernel interface constructor on the manager.
+	 *
+	 * @param create			constructor to register
+	 */
+	void (*add_ipsec_interface)(kernel_interface_t *this, kernel_ipsec_constructor_t create);
+	
+	/**
+	 * Unregister an ipsec kernel interface constructor.
+	 *
+	 * @param create			constructor to unregister
+	 */
+	void (*remove_ipsec_interface)(kernel_interface_t *this, kernel_ipsec_constructor_t create);
+	
+	/**
+	 * Register a network kernel interface constructor on the manager.
+	 *
+	 * @param create			constructor to register
+	 */
+	void (*add_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
+	
+	/**
+	 * Unregister a network kernel interface constructor.
+	 *
+	 * @param create			constructor to unregister
+	 */
+	void (*remove_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
+	
+	/**
+	 * Create the kernel interfaces classes.
+	 */
+	void (*create_interfaces)(kernel_interface_t *this);
+	
+	/**
+	 * Destroys a kernel_interface_manager_t object.
+	 */
+	void (*destroy) (kernel_interface_t *this);
 };
 
 /**
@@ -304,4 +378,4 @@ struct kernel_interface_t {
  */
 kernel_interface_t *kernel_interface_create(void);
 
-#endif /*KERNEL_INTERFACE_H_ @} */
+#endif /* KERNEL_INTERFACE_H_ @} */

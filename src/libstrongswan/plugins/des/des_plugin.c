@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: des_plugin.c 3488 2008-02-21 15:10:02Z martin $
+ * $Id: des_plugin.c 4309 2008-08-28 11:07:57Z martin $
  */
 
 #include "des_plugin.h"
@@ -52,9 +52,9 @@ plugin_t *plugin_create()
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
-							 (crypter_constructor_t)des_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
+							 (crypter_constructor_t)des_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
 							 (crypter_constructor_t)des_crypter_create);
 	
 	return &this->public.plugin;

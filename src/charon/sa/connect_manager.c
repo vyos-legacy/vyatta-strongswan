@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: connect_manager.c 3792 2008-04-10 12:51:04Z tobias $
+ * $Id: connect_manager.c 4192 2008-07-18 15:51:40Z martin $
  */
 
 #include "connect_manager.h"
@@ -1160,7 +1160,7 @@ static job_requeue_t initiate_mediated(initiate_data_t *data)
 			ike_sa_t *sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, waiting_sa);
 			if (sa->initiate_mediated(sa, pair->local, pair->remote, checklist->connect_id) != SUCCESS)
 			{
-				SIG(IKE_UP_FAILED, "establishing the mediated connection failed");
+				SIG_IKE(UP_FAILED, "establishing the mediated connection failed");
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, sa);
 			}
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, sa);

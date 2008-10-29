@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_sim_plugin.h 3491 2008-02-22 14:04:00Z martin $
+ * $Id: eap_sim_plugin.h 4406 2008-10-10 08:36:01Z martin $
  */
 
 /**
@@ -31,7 +31,7 @@
 typedef struct eap_sim_plugin_t eap_sim_plugin_t;
 
 /**
- * EAP-sim plugin
+ * EAP-SIM plugin.
  */
 struct eap_sim_plugin_t {
 

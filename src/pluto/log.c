@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: log.c 4024 2008-05-29 07:49:47Z andreas $
+ * RCSID $Id: log.c 4246 2008-08-03 18:01:21Z andreas $
  */
 
 #include <stdio.h>
@@ -95,8 +95,8 @@ void
 close_peerlog(void)
 {
     /* exit if the queue has not been initialized */
-    if (TAILQ_LAST(&perpeer_list, perpeer) == NULL)
-       return;
+    if (perpeer_list.tqh_first == NULL)
+      return;
 
     /* end of queue is given by pointer to "HEAD" */
     while (TAILQ_LAST(&perpeer_list, perpeer) != (void *)&perpeer_list)

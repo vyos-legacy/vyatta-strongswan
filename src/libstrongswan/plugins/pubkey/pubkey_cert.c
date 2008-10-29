@@ -19,6 +19,11 @@
 
 #include <debug.h>
 
+/**
+ * defined in pubkey_public_key.c
+ */
+extern public_key_t *pubkey_public_key_load(chunk_t blob);
+
 typedef struct private_pubkey_cert_t private_pubkey_cert_t;
 
 /**
@@ -60,7 +65,7 @@ static certificate_type_t get_type(private_pubkey_cert_t *this)
  */
 static identification_t* get_subject(private_pubkey_cert_t *this)
 {
-	return this->key->get_id(this->key, ID_PUBKEY_SHA1);
+	return this->key->get_id(this->key, ID_PUBKEY_INFO_SHA1);
 }
 
 /**
@@ -109,7 +114,7 @@ static bool equals(private_pubkey_cert_t *this, certificate_t *other)
 	{
 		return FALSE;
 	}
-	return other->has_subject(other, this->key->get_id(this->key, ID_PUBKEY_SHA1));
+	return other->has_subject(other, this->key->get_id(this->key, ID_PUBKEY_INFO_SHA1));
 }
 
 /**
@@ -211,6 +216,13 @@ static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 	return &this->public;
 }
 
+static pubkey_cert_t *pubkey_cert_create_from_chunk(chunk_t blob)
+{
+	public_key_t *key = pubkey_public_key_load(chunk_clone(blob));
+
+	return (key)? pubkey_cert_create(key) : NULL;
+}
+
 typedef struct private_builder_t private_builder_t;
 /**
  * Builder implementation for key loading
@@ -238,27 +250,35 @@ static pubkey_cert_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	va_list args;
+	if (!this->key)
+	{
+		va_list args;
 	
+		switch (part)
+		{
+			case BUILD_BLOB_ASN1_DER:
+			{
+				va_start(args, part);
+				this->key = pubkey_cert_create_from_chunk(va_arg(args, chunk_t));
+				va_end(args);
+				return;
+			}
+			case BUILD_PUBLIC_KEY:
+			{
+				va_start(args, part);
+				this->key = pubkey_cert_create(va_arg(args, public_key_t*));
+				va_end(args);
+				return;
+			}
+			default:
+				break;
+		}
+	}
 	if (this->key)
 	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
+		destroy((private_pubkey_cert_t*)this->key);
 	}
-	
-	switch (part)
-	{
-		case BUILD_PUBLIC_KEY:
-		{
-			va_start(args, part);
-			this->key = pubkey_cert_create(va_arg(args, public_key_t*));
-			va_end(args);
-			break;
-		}
-		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
-			break;
-	}
+	builder_cancel(&this->public);
 }
 
 /**

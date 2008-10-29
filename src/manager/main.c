@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: main.c 3967 2008-05-16 08:52:32Z martin $
+ * $Id: main.c 4333 2008-09-04 16:19:46Z andreas $
  */
 
 #include <dispatcher.h>
@@ -42,7 +42,7 @@ int main (int arc, char *argv[])
 	
 	socket = lib->settings->get_str(lib->settings, "manager.socket", NULL);
 	debug = lib->settings->get_bool(lib->settings, "manager.debug", FALSE);
-	timeout = lib->settings->get_int(lib->settings, "manager.timeout", 900);
+	timeout = lib->settings->get_time(lib->settings, "manager.timeout", 900);
 	threads = lib->settings->get_int(lib->settings, "manager.threads", 10);
 	database = lib->settings->get_str(lib->settings, "manager.database", NULL);
 	if (!database)

@@ -12,19 +12,19 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_method.c 3589 2008-03-13 14:14:44Z martin $
+ * $Id: eap_method.c 4269 2008-08-21 12:10:07Z martin $
  */
 
 #include "eap_method.h"
 
-ENUM_BEGIN(eap_type_names, EAP_IDENTITY, EAP_TOKEN_CARD,
+ENUM_BEGIN(eap_type_names, EAP_IDENTITY, EAP_GTC,
 	"EAP_IDENTITY",
 	"EAP_NOTIFICATION",
 	"EAP_NAK",
 	"EAP_MD5",
-	"EAP_ONE_TIME_PASSWORD",
-	"EAP_TOKEN_CARD");
-ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_TOKEN_CARD,
+	"EAP_OTP",
+	"EAP_GTC");
+ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_GTC,
 	"EAP_SIM");
 ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_SIM,
 	"EAP_AKA");

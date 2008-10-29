@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: credential_manager.c 3953 2008-05-14 06:49:31Z martin $
+ * $Id: credential_manager.c 4317 2008-09-02 11:00:13Z martin $
  */
 
 /* some clibs need it for rwlocks */
@@ -59,6 +59,11 @@ struct private_credential_manager_t {
 	 * trust relationship and certificate cache
 	 */
 	cert_cache_t *cache;
+	
+	/**
+	 * certificates queued for persistent caching
+	 */
+	linked_list_t *cache_queue;
 	
 	/**
 	 * read-write lock to sets list
@@ -270,7 +275,7 @@ static enumerator_t *create_private(credential_set_t *set, private_data_t *data)
 }
 
 /**
- * Implementation of credential_manager_t.get_private_by_keyid.
+ * Implementation of credential_manager_t.create_private_enumerator.
  */
 static enumerator_t* create_private_enumerator(
 									private_credential_manager_t *this,
@@ -407,14 +412,48 @@ static void cache_cert(private_credential_manager_t *this, certificate_t *cert)
 	credential_set_t *set;
 	enumerator_t *enumerator;
 	
-	pthread_rwlock_rdlock(&this->lock);
-	enumerator = this->sets->create_enumerator(this->sets);
-	while (enumerator->enumerate(enumerator, &set))
+	if (pthread_rwlock_trywrlock(&this->lock) == 0)
 	{
-		set->cache_cert(set, cert);
+		enumerator = this->sets->create_enumerator(this->sets);
+		while (enumerator->enumerate(enumerator, &set))
+		{
+			set->cache_cert(set, cert);
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
+	else
+	{	/* we can't cache now as other threads are active, queue for later */
+		pthread_rwlock_rdlock(&this->lock);
+		this->cache_queue->insert_last(this->cache_queue, cert->get_ref(cert));
+	}
 	pthread_rwlock_unlock(&this->lock);
+}
+
+/**
+ * Try to cache certificates queued for caching
+ */
+static void cache_queue(private_credential_manager_t *this)
+{
+	credential_set_t *set;
+	certificate_t *cert;
+	enumerator_t *enumerator;
+	
+	if (this->cache_queue->get_count(this->cache_queue) > 0 &&
+		pthread_rwlock_trywrlock(&this->lock) == 0)
+	{
+		while (this->cache_queue->remove_last(this->cache_queue,
+											  (void**)&cert) == SUCCESS)
+		{
+			enumerator = this->sets->create_enumerator(this->sets);
+			while (enumerator->enumerate(enumerator, &set))
+			{
+				set->cache_cert(set, cert);
+			}
+			enumerator->destroy(enumerator);
+			cert->destroy(cert);
+		}
+		pthread_rwlock_unlock(&this->lock);
+	}
 }
 
 /**
@@ -435,8 +474,8 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	/* TODO: requestor name, signature */
 	request = lib->creds->create(lib->creds,
 						CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
-						BUILD_CA_CERT, issuer->get_ref(issuer),
-						BUILD_CERT, subject->get_ref(subject), BUILD_END);
+						BUILD_CA_CERT, issuer,
+						BUILD_CERT, subject, BUILD_END);
 	if (!request)
 	{
 		DBG1(DBG_CFG, "generating ocsp request failed");
@@ -461,6 +500,7 @@ static certificate_t *fetch_ocsp(private_credential_manager_t *this, char *url,
 	response = lib->creds->create(lib->creds,
 								  CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE,
 								  BUILD_BLOB_ASN1_DER, receive, BUILD_END);
+	chunk_free(&receive);
 	if (!response)
 	{
 		DBG1(DBG_CFG, "parsing ocsp response failed");
@@ -1142,6 +1182,7 @@ static bool trusted_enumerate(trusted_enumerator_t *this,
 				verify_trust_chain(this->this, this->pretrusted, this->auth,
 								   TRUE, this->crl, this->ocsp))
 			{
+				this->auth->add_item(this->auth, AUTHZ_CA_CERT, this->pretrusted);
 				DBG1(DBG_CFG, "  using trusted certificate \"%D\"",
 					 this->pretrusted->get_subject(this->pretrusted));
 				*cert = this->pretrusted;
@@ -1262,6 +1303,9 @@ static void public_destroy(public_enumerator_t *this)
 		this->wrapper->destroy(this->wrapper);
 	}
 	pthread_rwlock_unlock(&this->this->lock);
+	
+	/* check for delayed certificate cache queue */
+	cache_queue(this->this);
 	free(this);
 }
 
@@ -1501,6 +1545,8 @@ static void remove_set(private_credential_manager_t *this, credential_set_t *set
  */
 static void destroy(private_credential_manager_t *this)
 {
+	cache_queue(this);
+	this->cache_queue->destroy(this->cache_queue);
 	this->sets->remove(this->sets, this->cache, NULL);
 	this->sets->destroy(this->sets);
 	pthread_key_delete(this->local_sets);
@@ -1532,6 +1578,7 @@ credential_manager_t *credential_manager_create()
 	this->sets = linked_list_create();
 	pthread_key_create(&this->local_sets, (void*)this->sets->destroy);
 	this->cache = cert_cache_create();
+	this->cache_queue = linked_list_create();
 	this->sets->insert_first(this->sets, this->cache);
 	pthread_rwlock_init(&this->lock, NULL);
 	

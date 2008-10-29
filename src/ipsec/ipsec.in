@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: ipsec.in 3390 2007-12-12 22:27:40Z andreas $
+# RCSID $Id: ipsec.in 4401 2008-10-10 06:59:03Z martin $
 
 # define a minimum PATH environment in case it is not set
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@"
@@ -116,22 +116,37 @@ down)
 	fi
 	exit "$rc"
 	;;
-listalgs|listpubkeys|\listcards|\rereadgroups)
+down-srcip)
+	shift
+	if [ "$#" -lt 1 ]
+	then
+	    echo "Usage: ipsec down-srcip <start> [<end>]"
+	    exit 2
+	fi
+	rc=7
+	if [ -e $IPSEC_CHARON_PID ]
+	then
+		$IPSEC_STROKE down-srcip $*
+		rc="$?"
+	fi
+	exit "$rc"
+	;;
+listcards|rereadgroups)
 	op="$1"
 	shift
 	if [ -e $IPSEC_PLUTO_PID ]
 	then
 		$IPSEC_WHACK "$@" "--$op"
-		exit "$?"
-	else
-		if [ -e $IPSEC_CHARON_PID ]
-		then
-			exit 3
-		else
-			exit 7
-		fi
+		rc="$?"
 	fi
+	if [ -e $IPSEC_CHARON_PID ] 
+	then 
+		exit 3 
+	else 
+		exit 7 
+	fi 
 	;;
+listalgs|\listpubkeys|\
 listcerts|listcacerts|listaacerts|\
 listacerts|listgroups|listocspcerts|\
 listcainfos|listcrls|listocsp|listall|\
@@ -168,7 +183,7 @@ reload)
 	if [ -e $IPSEC_STARTER_PID ]
 	then
 		echo "Reloading strongSwan IPsec configuration..." >&2
-		kill -s USR1 `cat $IPSEC_STARTER_PID` 2>/dev/null && rc=0
+		kill -USR1 `cat $IPSEC_STARTER_PID` 2>/dev/null && rc=0
 	else
 		echo "Reloading strongSwan IPsec failed: starter is not running" >&2
 	fi
@@ -228,6 +243,9 @@ secrets)
 	;;
 start)
 	shift
+	if [ -d /var/lock/subsys ]; then
+		touch /var/lock/subsys/ipsec
+	fi
 	exec $IPSEC_STARTER "$@"
 	;;
 status|statusall)
@@ -278,18 +296,21 @@ stop)
 			kill $spid 2>/dev/null
 			loop=5
 			while [ $loop -gt 0 ] ; do
-				kill -s 0 $spid 2>/dev/null || break
+				kill -0 $spid 2>/dev/null || break
 				sleep 1
 				loop=$(($loop - 1))
 			done
 			if [ $loop -eq 0 ]
 			then
-				kill -s KILL $spid 2>/dev/null
+				kill -KILL $spid 2>/dev/null
 				rm -f $IPSEC_STARTER_PID
 			fi
 		fi
 	else
 	    	echo "Stopping strongSwan IPsec failed: starter is not running" >&2
+	fi
+	if [ -d /var/lock/subsys ]; then
+		rm -f /var/lock/subsys/ipsec
 	fi
 	exit 0
 	;;
@@ -317,7 +338,7 @@ update)
 	if [ -e $IPSEC_STARTER_PID ]
 	then
 		echo "Updating strongSwan IPsec configuration..." >&2
-		kill -s HUP `cat $IPSEC_STARTER_PID`
+		kill -HUP `cat $IPSEC_STARTER_PID`
 		exit 0
 	else
 		echo "Updating strongSwan IPsec failed: starter is not running" >&2
@@ -325,9 +346,9 @@ update)
 	fi
 	;;
 version|--version)
-	echo "Linux $IPSEC_NAME $IPSEC_VERSION"
-	echo -e $IPSEC_DISTRO
-	echo "See \`ipsec --copyright' for copyright information."
+	printf "Linux $IPSEC_NAME $IPSEC_VERSION\n"
+	printf "$IPSEC_DISTRO\n"
+	printf "See 'ipsec --copyright' for copyright information.\n"
 	exit 0
 	;;
 --*)

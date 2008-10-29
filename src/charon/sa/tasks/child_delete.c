@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: child_delete.c 3802 2008-04-14 08:17:18Z martin $
+ * $Id: child_delete.c 4366 2008-10-03 16:01:14Z martin $
  */
 
 #include "child_delete.h"
@@ -44,6 +44,11 @@ struct private_child_delete_t {
 	bool initiator;
 	
 	/**
+ 	 * wheter to enforce delete action policy
+ 	 */
+ 	bool check_delete_action;
+	
+	/**
 	 * CHILD_SAs which get deleted
 	 */
 	linked_list_t *child_sas;
@@ -54,16 +59,17 @@ struct private_child_delete_t {
  */
 static void build_payloads(private_child_delete_t *this, message_t *message)
 {
-	iterator_t *iterator;
 	delete_payload_t *ah = NULL, *esp = NULL;
-	u_int32_t spi;
+	iterator_t *iterator;
 	child_sa_t *child_sa;
 	
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{	
-		spi = child_sa->get_spi(child_sa, TRUE);
-		switch (child_sa->get_protocol(child_sa))
+		protocol_id_t protocol = child_sa->get_protocol(child_sa);
+		u_int32_t spi = child_sa->get_spi(child_sa, TRUE);
+
+		switch (protocol)
 		{
 			case PROTO_ESP:
 				if (esp == NULL)
@@ -72,6 +78,8 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 					message->add_payload(message, (payload_t*)esp);
 				}
 				esp->add_spi(esp, spi);
+				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x", 
+							   protocol_id_names, protocol, ntohl(spi));
 				break;
 			case PROTO_AH:
 				if (ah == NULL)
@@ -80,6 +88,8 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 					message->add_payload(message, (payload_t*)ah);
 				}
 				ah->add_spi(ah, spi);
+				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x", 
+							   protocol_id_names, protocol, ntohl(spi));
 				break;
 			default:
 				break;
@@ -119,11 +129,11 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 													  *spi, FALSE);
 				if (child_sa == NULL)
 				{
-					DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, "
+					DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x, "
 						 "but no such SA", protocol_id_names, protocol, ntohl(*spi));
 					continue;
 				}
-				DBG2(DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x", 
+				DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x", 
 						protocol_id_names, protocol, ntohl(*spi));
 				
 				switch (child_sa->get_state(child_sa))
@@ -138,6 +148,11 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 							this->ike_sa->destroy_child_sa(this->ike_sa,
 														   protocol, *spi);
 							continue;
+						}
+					case CHILD_INSTALLED:
+						if (!this->initiator)
+						{	/* reestablish installed children if required */
+							this->check_delete_action = TRUE;
 						}
 					default:
 						break;
@@ -171,7 +186,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
-		if (!this->initiator)
+		if (this->check_delete_action)
 		{	/* enforce child_cfg policy if deleted passively */
 			switch (child_cfg->get_close_action(child_cfg))
 			{
@@ -207,9 +222,14 @@ static void log_children(private_child_delete_t *this)
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		SIG(CHILD_DOWN_START, "closing CHILD_SA %#R=== %#R",
-			child_sa->get_traffic_selectors(child_sa, TRUE),
-			child_sa->get_traffic_selectors(child_sa, FALSE));
+		SIG_CHD(DOWN_START, child_sa, "closing CHILD_SA %s{%d} "
+				"with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
+				child_sa->get_name(child_sa),
+				child_sa->get_reqid(child_sa),
+				ntohl(child_sa->get_spi(child_sa, TRUE)),
+				ntohl(child_sa->get_spi(child_sa, FALSE)),
+				child_sa->get_traffic_selectors(child_sa, TRUE),
+				child_sa->get_traffic_selectors(child_sa, FALSE));
 	}
 	iterator->destroy(iterator);
 }
@@ -234,7 +254,7 @@ static status_t process_i(private_child_delete_t *this, message_t *message)
 	this->child_sas = linked_list_create();
 	
 	process_payloads(this, message);
-	SIG(CHILD_DOWN_SUCCESS, "CHILD_SA closed");
+	SIG_CHD(DOWN_SUCCESS, NULL, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
 }
 
@@ -258,7 +278,7 @@ static status_t build_r(private_child_delete_t *this, message_t *message)
 	{
 		build_payloads(this, message);	
 	}
-	SIG(CHILD_DOWN_SUCCESS, "CHILD_SA closed");
+	SIG_CHD(DOWN_SUCCESS, NULL, "CHILD_SA closed");
 	return destroy_and_reestablish(this);
 }
 
@@ -285,6 +305,7 @@ static child_sa_t* get_child(private_child_delete_t *this)
  */
 static void migrate(private_child_delete_t *this, ike_sa_t *ike_sa)
 {
+	this->check_delete_action = FALSE;
 	this->ike_sa = ike_sa;
 	
 	this->child_sas->destroy(this->child_sas);
@@ -313,6 +334,7 @@ child_delete_t *child_delete_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 	this->public.task.destroy = (void(*)(task_t*))destroy;
 	
 	this->ike_sa = ike_sa;
+	this->check_delete_action = FALSE;
 	this->child_sas = linked_list_create();
 	
 	if (child_sa != NULL)

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: library.c 3750 2008-04-04 11:38:16Z martin $
+ * $Id: library.c 4311 2008-08-28 16:27:48Z martin $
  */
 
 #include "library.h"
@@ -85,6 +85,8 @@ void library_init(char *settings)
 	printf_hook_t *pfh;
 	private_library_t *this = malloc_thing(private_library_t);
 	lib = &this->public;
+	
+	lib->leak_detective = FALSE;
 	
 #ifdef LEAK_DETECTIVE
 	this->detective = leak_detective_create();

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: credential_set.h 3820 2008-04-17 11:22:37Z martin $
+ * $Id: credential_set.h 4229 2008-07-30 11:38:44Z martin $
  */
 
 /**
@@ -36,6 +36,13 @@ typedef struct credential_set_t credential_set_t;
  * Enumerators are used because queries might return multiple matches.
  * Filter parameters restrict enumeration over specific items only.
  * See credential_manager_t for an overview of the credential framework.
+ *
+ * A credential set enumerator may not block the credential set, i.e. multiple
+ * threads must be able to hold multiple enumerators, as the credential manager
+ * is higly parallelized. The best way to achieve this is by using shared
+ * read locks for the enumerators only. Otherwiese deadlocks will occur.
+ * The writing cache_cert() routine is called by the manager only if no
+ * enumerator is alive, so it is save to use a write lock there.
  */
 struct credential_set_t {
 	

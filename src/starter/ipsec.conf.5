@@ -1,5 +1,5 @@
 .TH IPSEC.CONF 5 "27 Jun 2007"
-.\" RCSID $Id: ipsec.conf.5 3934 2008-05-12 12:46:30Z andreas $
+.\" RCSID $Id: ipsec.conf.5 4360 2008-09-30 12:36:58Z martin $
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
@@ -366,6 +366,14 @@ in the form
 .B eap=7-12345
 ) can be used to specify vendor specific EAP types.
 .TP
+.B eap_identity
+defines the identity the client uses to reply to a EAP Identity request.
+If defined on the EAP server, the defined identity will be used as peer
+identity during EAP authentication. The special value 
+.B %identity
+uses the EAP Identity method to ask the client for a EAP identity. If not
+defined, the IKEv2 identity will be used as EAP identity.
+.TP
 .B esp
 ESP encryption/authentication algorithm to be used
 for the connection, e.g.
@@ -678,8 +686,8 @@ enables the IKEv2 MOBIKE protocol defined by RFC 4555. Accepted values are
 .BR no .
 If set to
 .BR no ,
-the IKEv2 charon daemon will not actively propose MOBIKE but will still
-accept and support the protocol as a responder.
+the IKEv2 charon daemon will not actively propose MOBIKE as initiator and
+ignore the MOBIKE_SUPPORTED notify as responder.
 .TP
 .B modeconfig
 defines which mode is used to assign a virtual IP.
@@ -705,6 +713,10 @@ IKEv2 always uses PFS for IKE_SA rekeying whereas for CHILD_SA rekeying
 PFS is enforced by defining a Diffie-Hellman modp group in the
 .B esp
 parameter.
+.TP
+.B pfsgroup 
+defines a Diffie-Hellman group for perfect forward secrecy in IKEv1 Quick Mode
+differing from the DH group used for IKEv1 Main Mode (IKEv1 only).
 .TP
 .B reauth
 whether rekeying of an IKE_SA should also reauthenticate the peer. In IKEv1,

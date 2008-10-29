@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: stroke.c 3875 2008-04-25 12:41:37Z martin $
+ * RCSID $Id: stroke.c 4384 2008-10-08 07:00:13Z andreas $
  */
 
 #include <stdlib.h>
@@ -158,6 +158,17 @@ static int terminate_connection(char *name)
 	return send_stroke_msg(&msg);
 }
 
+static int terminate_connection_srcip(char *start, char *end)
+{
+	stroke_msg_t msg;
+	
+	msg.type = STR_TERMINATE_SRCIP;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.terminate_srcip.start = push_string(&msg, start);
+	msg.terminate_srcip.end = push_string(&msg, end);
+	return send_stroke_msg(&msg);
+}
+
 static int route_connection(char *name)
 {
 	stroke_msg_t msg;
@@ -189,6 +200,7 @@ static int show_status(stroke_keyword_t kw, char *connection)
 }
 
 static int list_flags[] = {
+	LIST_PUBKEYS,
 	LIST_CERTS,
 	LIST_CACERTS,
 	LIST_OCSPCERTS,
@@ -198,6 +210,7 @@ static int list_flags[] = {
 	LIST_CAINFOS,
 	LIST_CRLS,
 	LIST_OCSP,
+	LIST_ALGS,
 	LIST_ALL
 };
 
@@ -284,6 +297,9 @@ static void exit_usage(char *error)
 	printf("  Terminate a connection:\n");
 	printf("    stroke down NAME\n");
 	printf("    where: NAME is a connection name added with \"stroke add\"\n");
+	printf("  Terminate a connection by remote srcip:\n");
+	printf("    stroke down-srcip START [END]\n");
+	printf("    where: START and optional END define the clients source IP\n");
 	printf("  Set loglevel for a logging type:\n");
 	printf("    stroke loglevel TYPE LEVEL\n");
 	printf("    where: TYPE is any|dmn|mgr|ike|chd|job|cfg|knl|net|enc|lib\n");
@@ -294,6 +310,8 @@ static void exit_usage(char *error)
 	printf("    stroke listcacerts|listocspcerts|listaacerts|listacerts\n");
 	printf("  Show list of end entity certificates, ca info records  and crls:\n");
 	printf("    stroke listcerts|listcainfos|listcrls|listall\n");
+	printf("  Show list of supported algorithms:\n");
+	printf("    stroke listalgs\n");
 	printf("  Reload authority and attribute certificates:\n");
 	printf("    stroke rereadcacerts|rereadocspcerts|rereadaacerts|rereadacerts\n");
 	printf("  Reload secrets and crls:\n");
@@ -354,6 +372,13 @@ int main(int argc, char *argv[])
 			}
 			res = terminate_connection(argv[2]);
 			break;
+		case STROKE_DOWN_SRCIP:
+			if (argc < 3)
+			{
+				exit_usage("\"down-srcip\" needs start and optional end address");
+			}
+			res = terminate_connection_srcip(argv[2], argc > 3 ? argv[3] : NULL);
+			break;
 		case STROKE_ROUTE:
 			if (argc < 3)
 			{
@@ -379,6 +404,7 @@ int main(int argc, char *argv[])
 		case STROKE_STATUSALL:
 			res = show_status(token->kw, argc > 2 ? argv[2] : NULL);
 			break;
+		case STROKE_LIST_PUBKEYS:
 		case STROKE_LIST_CERTS:
 		case STROKE_LIST_CACERTS:
 		case STROKE_LIST_OCSPCERTS:
@@ -387,6 +413,7 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_CAINFOS:
 		case STROKE_LIST_CRLS:
 		case STROKE_LIST_OCSP:
+		case STROKE_LIST_ALGS:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && strcmp(argv[2], "--utc") == 0);
 			break;

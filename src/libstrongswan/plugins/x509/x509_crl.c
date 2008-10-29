@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509_crl.c 4091 2008-06-22 17:41:07Z andreas $
+ * $Id: x509_crl.c 4317 2008-09-02 11:00:13Z martin $
  */
 
 #include "x509_crl.h"
@@ -693,30 +693,37 @@ static private_x509_crl_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	va_list args;
+	if (!this->crl)
+	{
+		va_list args;
+		chunk_t chunk;
 	
+		switch (part)
+		{
+			case BUILD_FROM_FILE:
+			{
+				va_start(args, part);
+				this->crl = create_from_file(va_arg(args, char*));
+				va_end(args);
+				return;
+			}
+			case BUILD_BLOB_ASN1_DER:
+			{
+				va_start(args, part);
+				chunk = va_arg(args, chunk_t);
+				this->crl = create_from_chunk(chunk_clone(chunk));
+				va_end(args);
+				return;
+			}
+			default:
+				break;
+		}
+	}
 	if (this->crl)
 	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
+		destroy(this->crl);
 	}
-	
-	va_start(args, part);
-	switch (part)
-	{
-		case BUILD_FROM_FILE:
-			this->crl = create_from_file(va_arg(args, char*));
-			break;
-		case BUILD_BLOB_ASN1_DER:
-		{
-			this->crl = create_from_chunk(va_arg(args, chunk_t));
-			break;
-		}
-		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
-			break;
-	}
-	va_end(args);
+	builder_cancel(&this->public);
 }
 
 /**

@@ -12,28 +12,29 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
- * RCSID $Id: copyright.c 3265 2007-10-08 19:52:55Z andreas $
+ * RCSID $Id: copyright.c 4181 2008-07-16 12:28:29Z andreas $
  */
 #include "internal.h"
 #include "freeswan.h"
 
 static const char *co[] = {
- "Copyright (C) 1999-2007  Henry Spencer, Richard Guy Briggs,",
+ "Copyright (C) 1999-2008  Henry Spencer, Richard Guy Briggs,",
  "    D. Hugh Redelmeier, Sandy Harris, Claudia Schmeing,",
  "    Michael Richardson, Angelos D. Keromytis, John Ioannidis,",
  "",
  "    Ken Bantoft, Stephen J. Bevan, JuanJo Ciarlante, Mathieu Lafon,",
  "    Stephane Laroche, Kai Martius, Stephan Scholz, Tuomo Soini, Herbert Xu,",
  "",
- "    Andreas Steffen, Martin Berner, Marco Bertossa, David Buechi,",
- "    Ueli Galizzi, Christoph Gysin, Andreas Hess, Patric Lichtsteiner,",
- "    Michael Meier, Andreas Schleiss, Ariane Seiler,",
- "    Mario Strasser, Lukas Suter, Roger Wegmann, Simon Zwahlen,",
+ "    Martin Berner, Marco Bertossa, David Buechi, Ueli Galizzi,",
+ "    Christoph Gysin, Andreas Hess, Patric Lichtsteiner, Michael Meier,",
+ "    Andreas Schleiss, Ariane Seiler, Mario Strasser, Lukas Suter,",
+ "    Roger Wegmann, Simon Zwahlen,",
  "    Zuercher Hochschule Winterthur (Switzerland).",
  "",
- "    Tobias Brunner, Andreas Eigenmann, Fabian Hartmann, Noah Heusser,",
- "    Jan Hutter, Daniel Roethlisberger, Joel Stillhart, Martin Willi,",
- "    Daniel Wydler, Andreas Steffen,",
+ "    Philip Boetschi, Tobias Brunner, Adrian Doerig, Andreas Eigenmann,",
+ "    Fabian Hartmann, Noah Heusser, Jan Hutter, Thomas Kallenberg,",
+ "    Daniel Roethlisberger, Joel Stillhart, Martin Willi, Daniel Wydler,",
+ "    Andreas Steffen,",
  "    Hochschule fuer Technik Rapperswil (Switzerland).",
  "",
  "This program is free software; you can redistribute it and/or modify it",

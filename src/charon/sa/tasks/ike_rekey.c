@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_rekey.c 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ike_rekey.c 4211 2008-07-23 18:46:34Z andreas $
  */
 
 #include "ike_rekey.h"
@@ -69,6 +69,7 @@ struct private_ike_rekey_t {
 static status_t build_i(private_ike_rekey_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
+	host_t *other_host;
 	
 	/* create new SA only on first try */
 	if (this->new_sa == NULL)
@@ -77,7 +78,9 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
 															TRUE);
 		
 		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		other_host = this->ike_sa->get_other_host(this->ike_sa);
 		this->new_sa->set_peer_cfg(this->new_sa, peer_cfg);
+		this->new_sa->set_other_host(this->new_sa, other_host->clone(other_host));
 		this->ike_init = ike_init_create(this->new_sa, TRUE, this->ike_sa);
 		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	}
@@ -87,7 +90,7 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
 }
 
 /**
- * Implementation of task_t.process for initiator
+ * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_rekey_t *this, message_t *message)
 {
@@ -149,6 +152,13 @@ static status_t build_r(private_ike_rekey_t *this, message_t *message)
 	
 	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
+	SIG_IKE(UP_SUCCESS, "IKE_SA %s[%d] established between %H[%D]...%H[%D]",
+		this->new_sa->get_name(this->new_sa),
+		this->new_sa->get_unique_id(this->new_sa),
+		this->ike_sa->get_my_host(this->ike_sa),
+		this->ike_sa->get_my_id(this->ike_sa),
+		this->ike_sa->get_other_host(this->ike_sa),
+		this->ike_sa->get_other_id(this->ike_sa));
 	
 	return SUCCESS;
 }
@@ -188,6 +198,14 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 	}
 
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
+	SIG_IKE(UP_SUCCESS, "IKE_SA %s[%d] established between %H[%D]...%H[%D]",
+		this->new_sa->get_name(this->new_sa),
+		this->new_sa->get_unique_id(this->new_sa),
+		this->ike_sa->get_my_host(this->ike_sa),
+		this->ike_sa->get_my_id(this->ike_sa),
+		this->ike_sa->get_other_host(this->ike_sa),
+		this->ike_sa->get_other_id(this->ike_sa));
+
 	to_delete = this->ike_sa->get_id(this->ike_sa);
 	
 	/* check for collisions */

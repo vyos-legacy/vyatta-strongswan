@@ -209,7 +209,7 @@ static peer_cfg_t *get_peer_cfg_by_name(private_stroke_config_t *this, char *nam
  */
 static identification_t *update_peerid(certificate_t *cert, identification_t *id)
 {
-	if (!cert->has_subject(cert, id))
+	if (id->get_type(id) == ID_ANY || !cert->has_subject(cert, id))
 	{
 		DBG1(DBG_CFG, "  peerid %D not confirmed by certificate, "
 			 "defaulting to subject DN", id);
@@ -335,7 +335,9 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
  * build a peer_cfg from a stroke msg
  */
 static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
-								  stroke_msg_t *msg, ike_cfg_t *ike_cfg)
+								  stroke_msg_t *msg, ike_cfg_t *ike_cfg,
+								  identification_t **my_issuer,
+								  identification_t **other_issuer)
 {
 	identification_t *me, *other, *peer_id = NULL;
 	peer_cfg_t *mediated_by = NULL;
@@ -420,6 +422,9 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		cert = this->cred->load_peer(this->cred, msg->add_conn.me.cert);
 		if (cert)
 		{
+			identification_t *issuer = cert->get_issuer(cert);
+
+			*my_issuer = issuer->clone(issuer); 
 			this->ca->check_for_hash_and_url(this->ca, cert);
 			me = update_peerid(cert, me);
 			cert->destroy(cert);
@@ -430,6 +435,9 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		cert = this->cred->load_peer(this->cred, msg->add_conn.other.cert);
 		if (cert)
 		{
+			identification_t *issuer = cert->get_issuer(cert);
+
+			*other_issuer = issuer->clone(issuer); 
 			other = update_peerid(cert, other);
 			cert->destroy(cert);
 		}
@@ -499,8 +507,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	 * uses to serve pool addresses. */
 	return peer_cfg_create(msg->add_conn.name,
 		msg->add_conn.ikev2 ? 2 : 1, ike_cfg, me, other,
-		msg->add_conn.me.sendcert, unique, msg->add_conn.auth_method,
-		msg->add_conn.eap_type,	msg->add_conn.eap_vendor,
+		msg->add_conn.me.sendcert, unique, 
 		msg->add_conn.rekey.tries, rekey, reauth, jitter, over,
 		msg->add_conn.mobike, msg->add_conn.dpd.delay,
 		vip, msg->add_conn.other.sourceip_size ?
@@ -512,18 +519,15 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
  * fill in auth_info from stroke message
  */
 static void build_auth_info(private_stroke_config_t *this,
-							stroke_msg_t *msg, auth_info_t *auth)
+							stroke_msg_t *msg, auth_info_t *auth,
+							identification_t *my_ca,
+							identification_t *other_ca)
 {
-	identification_t *my_ca = NULL, *other_ca = NULL;
+	identification_t *id;
 	bool my_ca_same = FALSE;
 	bool other_ca_same = FALSE;
 	cert_validation_t valid;
 
-	if (msg->add_conn.other.groups)
-	{
-		/* TODO: AC groups */
-	}
-	
 	switch (msg->add_conn.crl_policy)
 	{
 		case CRL_STRICT_YES:
@@ -540,6 +544,11 @@ static void build_auth_info(private_stroke_config_t *this,
 	
 	if (msg->add_conn.me.ca)
 	{
+		if (my_ca)
+		{
+			my_ca->destroy(my_ca);
+			my_ca = NULL;
+		}
 		if (streq(msg->add_conn.me.ca, "%same"))
 		{
 			my_ca_same = TRUE;
@@ -549,8 +558,14 @@ static void build_auth_info(private_stroke_config_t *this,
 			my_ca = identification_create_from_string(msg->add_conn.me.ca);
 		}
 	}
+
 	if (msg->add_conn.other.ca)
 	{
+		if (other_ca)
+		{
+			other_ca->destroy(other_ca);
+			other_ca = NULL;
+		}
 		if (streq(msg->add_conn.other.ca, "%same"))
 		{
 			other_ca_same = TRUE;
@@ -560,6 +575,7 @@ static void build_auth_info(private_stroke_config_t *this,
 			other_ca = identification_create_from_string(msg->add_conn.other.ca);
 		}
 	}
+
 	if (other_ca_same && my_ca)
 	{
 		other_ca = my_ca->clone(my_ca);
@@ -585,6 +601,7 @@ static void build_auth_info(private_stroke_config_t *this,
 		}
 		other_ca->destroy(other_ca);
 	}
+
 	if (my_ca)
 	{
 		DBG2(DBG_CFG, "  my ca:    %D", my_ca);
@@ -600,6 +617,66 @@ static void build_auth_info(private_stroke_config_t *this,
 			auth->add_item(auth, AUTHN_CA_CERT_NAME, my_ca);
 		}
 		my_ca->destroy(my_ca);
+	}
+	auth->add_item(auth, AUTHN_AUTH_CLASS, &msg->add_conn.auth_method);
+	if (msg->add_conn.eap_type)
+	{
+		auth->add_item(auth, AUTHN_EAP_TYPE, &msg->add_conn.eap_type);
+		if (msg->add_conn.eap_vendor)
+		{
+			auth->add_item(auth, AUTHN_EAP_VENDOR, &msg->add_conn.eap_vendor);
+		}
+	}
+
+	if (msg->add_conn.eap_identity)
+	{
+		if (streq(msg->add_conn.eap_identity, "%identity"))
+		{
+			id = identification_create_from_encoding(ID_ANY, chunk_empty);
+		}
+		else
+		{
+			id = identification_create_from_encoding(ID_EAP, chunk_create(
+										msg->add_conn.eap_identity,
+										strlen(msg->add_conn.eap_identity)));
+		}
+		auth->add_item(auth, AUTHN_EAP_IDENTITY, id);
+		id->destroy(id);
+	}
+
+	if (msg->add_conn.other.groups)
+	{
+		chunk_t line = { msg->add_conn.other.groups,
+						 strlen(msg->add_conn.other.groups) };
+
+		while (eat_whitespace(&line))
+		{
+			chunk_t group;
+
+			/* extract the next comma-separated group attribute */
+			if (!extract_token(&group, ',', &line))
+			{
+				group = line;
+				line.len = 0;
+			}
+
+			/* remove any trailing spaces */
+			while (group.len > 0 && *(group.ptr + group.len - 1) == ' ')
+			{
+				group.len--;
+			}
+
+			/* add the group attribute to the list */
+			if (group.len > 0)
+			{
+				identification_t *ac_group;
+
+				ac_group = identification_create_from_encoding(
+									ID_IETF_ATTR_STRING, group);
+				auth->add_item(auth, AUTHZ_AC_GROUP, ac_group);
+				ac_group->destroy(ac_group);	
+			}
+		}
 	}
 }
 
@@ -696,7 +773,7 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 				msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 				msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
-				msg->add_conn.mode, dpd, ACTION_NONE, msg->add_conn.ipcomp);
+				msg->add_conn.mode, dpd, dpd, msg->add_conn.ipcomp);
 	
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);
 	add_ts(this, &msg->add_conn.other, child_cfg, FALSE);
@@ -714,6 +791,7 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	ike_cfg_t *ike_cfg, *existing_ike;
 	peer_cfg_t *peer_cfg, *existing;
 	child_cfg_t *child_cfg;
+	identification_t *my_issuer = NULL, *other_issuer = NULL;
 	enumerator_t *enumerator;
 	bool use_existing = FALSE;
 
@@ -722,14 +800,15 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	{
 		return;
 	}
-	peer_cfg = build_peer_cfg(this, msg, ike_cfg);
+	peer_cfg = build_peer_cfg(this, msg, ike_cfg, &my_issuer, &other_issuer);
 	if (!peer_cfg)
 	{
 		ike_cfg->destroy(ike_cfg);
 		return;
 	}
 	
-	build_auth_info(this, msg, peer_cfg->get_auth(peer_cfg));
+	build_auth_info(this, msg, peer_cfg->get_auth(peer_cfg),
+					my_issuer, other_issuer);
 	enumerator = create_peer_cfg_enumerator(this, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &existing))
 	{

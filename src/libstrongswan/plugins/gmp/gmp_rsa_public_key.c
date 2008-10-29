@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: gmp_rsa_public_key.c 3988 2008-05-21 13:01:58Z martin $
+ * $Id: gmp_rsa_public_key.c 4345 2008-09-17 08:10:48Z martin $
  */
  
 #include <gmp.h>
@@ -93,11 +93,15 @@ static chunk_t rsaep(private_gmp_rsa_public_key_t *this, chunk_t data)
 	
 	mpz_powm(c, m, this->e, this->n);
 
-    encrypted.len = this->k;
-    encrypted.ptr = mpz_export(NULL, NULL, 1, encrypted.len, 1, 0, c);
+	encrypted.len = this->k;
+	encrypted.ptr = mpz_export(NULL, NULL, 1, encrypted.len, 1, 0, c);
+	if (encrypted.ptr == NULL)
+	{
+		encrypted.len = 0;
+	}
 	
 	mpz_clear(c);
-	mpz_clear(m);	
+	mpz_clear(m);
 	
 	return encrypted;
 }
@@ -541,27 +545,30 @@ static gmp_rsa_public_key_t *build(private_builder_t *this)
  */
 static void add(private_builder_t *this, builder_part_t part, ...)
 {
-	va_list args;
+	if (!this->key)
+	{
+		va_list args;
+		chunk_t chunk;
 	
+		switch (part)
+		{
+			case BUILD_BLOB_ASN1_DER:
+			{
+				va_start(args, part);
+				chunk = va_arg(args, chunk_t);
+				this->key = load(chunk_clone(chunk));
+				va_end(args);
+				return;
+			}
+			default:
+				break;
+		}
+	}
 	if (this->key)
 	{
-		DBG1("ignoring surplus build part %N", builder_part_names, part);
-		return;
+		destroy((private_gmp_rsa_public_key_t*)this->key);
 	}
-	
-	switch (part)
-	{
-		case BUILD_BLOB_ASN1_DER:
-		{
-			va_start(args, part);
-			this->key = load(va_arg(args, chunk_t));
-			va_end(args);
-			break;
-		}
-		default:
-			DBG1("ignoring unsupported build part %N", builder_part_names, part);
-			break;
-	}
+	builder_cancel(&this->public);
 }
 
 /**

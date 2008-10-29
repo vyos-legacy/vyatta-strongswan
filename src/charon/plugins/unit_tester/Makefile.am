@@ -5,7 +5,7 @@ AM_CFLAGS = -rdynamic
 
 plugin_LTLIBRARIES = libstrongswan-unit-tester.la
 
-libstrongswan_unit_tester_la_SOURCES = unit_tester.c unit_tester.h \
+libstrongswan_unit_tester_la_SOURCES = unit_tester.c unit_tester.h tests.h \
   tests/test_enumerator.c \
   tests/test_auth_info.c \
   tests/test_fips_prf.c \
@@ -16,6 +16,9 @@ libstrongswan_unit_tester_la_SOURCES = unit_tester.c unit_tester.h \
   tests/test_rsa_gen.c \
   tests/test_med_db.c \
   tests/test_aes.c \
-  tests/test_chunk.c
+  tests/test_chunk.c \
+  tests/test_pool.c \
+  tests/test_agent.c
+
 libstrongswan_unit_tester_la_LDFLAGS = -module
 

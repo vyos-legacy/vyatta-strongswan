@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: daemon.h 3964 2008-05-15 14:01:26Z martin $
+ * $Id: daemon.h 4406 2008-10-10 08:36:01Z martin $
  */
 
 /**
@@ -163,6 +163,7 @@ typedef struct daemon_t daemon_t;
 #include <config/attributes/attribute_manager.h>
 #include <credentials/credential_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
+#include <sa/authenticators/eap/sim_manager.h>
 
 #ifdef ME
 #include <sa/connect_manager.h>
@@ -280,6 +281,11 @@ struct daemon_t {
 	 */
 	eap_manager_t *eap;
 	
+	/**
+	 * SIM manager to maintain SIM cards/providers
+	 */
+	sim_manager_t *sim;
+	
 #ifdef ME
 	/**
 	 * Connect manager
@@ -301,6 +307,15 @@ struct daemon_t {
 	 * Group ID the daemon will use after initialization
 	 */
 	gid_t gid;
+	
+	/**
+	 * Do not drop a given capability after initialization.
+	 *
+	 * Some plugins might need additional capabilites. They tell the daemon
+	 * during plugin initialization which one they need, the daemon won't
+	 * drop these.
+	 */
+	void (*keep_cap)(daemon_t *this, u_int cap);
 	
 	/**
 	 * Shut down the daemon.

@@ -33,7 +33,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-ipsec_PROGRAMS = dumm$(EXEEXT) testing$(EXEEXT)
+ipsec_PROGRAMS = dumm$(EXEEXT) irdumm$(EXEEXT)
 subdir = src/dumm
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -62,9 +62,9 @@ am_dumm_OBJECTS = main.$(OBJEXT)
 dumm_OBJECTS = $(am_dumm_OBJECTS)
 am__DEPENDENCIES_1 =
 dumm_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am_testing_OBJECTS = testing.$(OBJEXT)
-testing_OBJECTS = $(am_testing_OBJECTS)
-testing_DEPENDENCIES =
+am_irdumm_OBJECTS = irdumm.$(OBJEXT)
+irdumm_OBJECTS = $(am_irdumm_OBJECTS)
+irdumm_DEPENDENCIES =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -77,9 +77,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libdumm_la_SOURCES) $(dumm_SOURCES) $(testing_SOURCES)
-DIST_SOURCES = $(libdumm_la_SOURCES) $(dumm_SOURCES) \
-	$(testing_SOURCES)
+SOURCES = $(libdumm_la_SOURCES) $(dumm_SOURCES) $(irdumm_SOURCES)
+DIST_SOURCES = $(libdumm_la_SOURCES) $(dumm_SOURCES) $(irdumm_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -198,6 +197,8 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+nm_CFLAGS = @nm_CFLAGS@
+nm_LIBS = @nm_LIBS@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
@@ -217,16 +218,23 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
+EXTRA_DIST = ext/dumm.c ext/extconf.rb ext/README \
+  ext/lib/dumm.rb ext/lib/dumm/guest.rb
+
 lib_LTLIBRARIES = libdumm.la
 libdumm_la_SOURCES = dumm.c dumm.h guest.c guest.h iface.c iface.h \
   bridge.c bridge.h mconsole.c mconsole.h cowfs.h cowfs.c
 
 dumm_SOURCES = main.c
-testing_SOURCES = testing.c
-libdumm_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lbridge -lfuse -lutil
+irdumm_SOURCES = irdumm.c
+libdumm_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
+  -lbridge -lfuse -lutil
+
 dumm_LDADD = -ldumm ${gtk_LIBS}
-testing_LDADD = -ldumm
-INCLUDES = -I$(top_srcdir)/src/libstrongswan ${gtk_CFLAGS}
+irdumm_LDADD = -ldumm -lruby1.8
+INCLUDES = -I$(top_srcdir)/src/libstrongswan ${gtk_CFLAGS} \
+  -I/usr/lib/ruby/1.8/i486-linux/
+
 AM_CFLAGS = -D_FILE_OFFSET_BITS=64
 all: all-am
 
@@ -321,9 +329,9 @@ clean-ipsecPROGRAMS:
 dumm$(EXEEXT): $(dumm_OBJECTS) $(dumm_DEPENDENCIES) 
 	@rm -f dumm$(EXEEXT)
 	$(LINK) $(dumm_OBJECTS) $(dumm_LDADD) $(LIBS)
-testing$(EXEEXT): $(testing_OBJECTS) $(testing_DEPENDENCIES) 
-	@rm -f testing$(EXEEXT)
-	$(LINK) $(testing_OBJECTS) $(testing_LDADD) $(LIBS)
+irdumm$(EXEEXT): $(irdumm_OBJECTS) $(irdumm_DEPENDENCIES) 
+	@rm -f irdumm$(EXEEXT)
+	$(LINK) $(irdumm_OBJECTS) $(irdumm_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -336,9 +344,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dumm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/guest.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iface.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/irdumm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mconsole.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testing.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

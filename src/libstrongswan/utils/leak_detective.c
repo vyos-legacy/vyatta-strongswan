@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: leak_detective.c 4044 2008-06-06 15:05:54Z martin $
+ * $Id: leak_detective.c 4311 2008-08-28 16:27:48Z martin $
  */
 
 #ifdef HAVE_DLADDR
@@ -262,6 +262,7 @@ char *whitelist[] = {
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
+	"dlclose",
 	/* mysql functions */
 	"mysql_init_character_set",
 	"init_client_errs",
@@ -277,6 +278,7 @@ char *whitelist[] = {
 	/* OpenSSL */
 	"RSA_new_method",
 	"DH_new_method",
+	"ENGINE_load_builtin_engines",
 };
 
 /**
@@ -558,6 +560,7 @@ leak_detective_t *leak_detective_create()
 	
 	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
+		lib->leak_detective = TRUE;
 		install_hooks();
 	}
 	return &this->public;

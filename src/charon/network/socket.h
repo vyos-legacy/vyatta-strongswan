@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: socket.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: socket.h 4355 2008-09-25 07:56:58Z tobias $
  */
 
 /**
@@ -50,7 +50,7 @@ typedef struct socket_t socket_t;
  * The first uses raw sockets to allow binding of other daemons (pluto) to
  * UDP/500. An installed "Linux socket filter" filters out all non-IKEv2 
  * traffic and handles just IKEv2 messages. An other daemon (pluto) must 
- * handle all traffic seperatly, e.g. ignore IKEv2 traffic, since charon 
+ * handle all traffic separately, e.g. ignore IKEv2 traffic, since charon 
  * handles that.
  * The other implementation uses normal sockets and is built if
  * --disable-pluto is given to the configure script.
@@ -91,7 +91,7 @@ struct socket_t {
 };
 
 /**
- * Create a socket_t, wich binds multiple sockets.
+ * Create a socket_t, which binds multiple sockets.
  *
  * @return  				socket_t object
  */

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_authenticator.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: eap_authenticator.h 4276 2008-08-22 10:44:51Z martin $
  */
 
 /**
@@ -29,7 +29,7 @@ typedef struct eap_authenticator_t eap_authenticator_t;
 #include <encoding/payloads/eap_payload.h>
 
 /**
- * Implementation of the authenticator_t interface using AUTH_EAP.
+ * Implementation of the authenticator_t interface using AUTH_CLASS_EAP.
  *
  * Authentication using EAP involves the most complex authenticator. It stays
  * alive over multiple ike_auth transactions and handles multiple EAP
@@ -137,7 +137,7 @@ struct eap_authenticator_t {
 };
 
 /**
- * Creates an authenticator for AUTH_EAP.
+ * Creates an authenticator for AUTH_CLASS_EAP.
  *
  * @param ike_sa		associated ike_sa
  * @return				eap_authenticator_t object

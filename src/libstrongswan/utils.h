@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -12,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: utils.h 3820 2008-04-17 11:22:37Z martin $
+ * $Id: utils.h 4305 2008-08-28 07:47:55Z tobias $
  */
 
 /**
@@ -90,6 +91,11 @@
 #define malloc_thing(thing) ((thing*)malloc(sizeof(thing)))
 
 /**
+ * Get the number of elements in an array
+ */
+#define countof(array) (sizeof(array)/sizeof(array[0]))
+
+/**
  * Assign a function as a class method
  */
 #define ASSIGN(method, function) (method = (typeof(method))function)
@@ -103,8 +109,12 @@
  * General purpose boolean type.
  */
 typedef int bool;
-#define FALSE 0
-#define TRUE  1
+#ifndef FALSE
+# define FALSE 0
+#endif /* FALSE */
+#ifndef TRUE
+# define TRUE  1
+#endif /* TRUE */
 
 typedef enum status_t status_t;
 
@@ -208,6 +218,15 @@ void *clalloc(void *pointer, size_t size);
  * Same as memcpy, but XORs src into dst instead of copy
  */
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
+
+/**
+ * Creates a directory and all required parent directories. 
+ *
+ * @param	path	path to the new directory
+ * @param	mode	permissions of the new directory/directories 
+ * @return			TRUE on success
+ */
+bool mkdir_p(const char *path, mode_t mode);
 
 /**
  * returns null

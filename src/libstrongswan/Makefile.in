@@ -14,7 +14,6 @@
 
 @SET_MAKE@
 
-
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkglibdir = $(libdir)/@PACKAGE@
@@ -53,9 +52,8 @@ host_triplet = @host@
 @USE_SQLITE_TRUE@am__append_18 = plugins/sqlite
 @USE_PADLOCK_TRUE@am__append_19 = plugins/padlock
 @USE_OPENSSL_TRUE@am__append_20 = plugins/openssl
-@USE_INTEGRITY_TEST_TRUE@noinst_PROGRAMS = fips_signer$(EXEEXT)
-@USE_INTEGRITY_TEST_TRUE@am__append_21 = fips_signature.h
-@USE_INTEGRITY_TEST_TRUE@am__append_22 = -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
+@USE_AGENT_TRUE@am__append_21 = plugins/agent
+@USE_INTEGRITY_TEST_TRUE@am__append_22 = fips
 subdir = src/libstrongswan
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -150,12 +148,6 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 @USE_INTEGRITY_TEST_TRUE@	plugin_loader.lo $(am__objects_1) \
 @USE_INTEGRITY_TEST_TRUE@	fips_canister_end.lo
 libstrongswan_la_OBJECTS = $(am_libstrongswan_la_OBJECTS)
-PROGRAMS = $(noinst_PROGRAMS)
-am__fips_signer_SOURCES_DIST = fips/fips_signer.c
-@USE_INTEGRITY_TEST_TRUE@am_fips_signer_OBJECTS =  \
-@USE_INTEGRITY_TEST_TRUE@	fips_signer.$(OBJEXT)
-fips_signer_OBJECTS = $(am_fips_signer_OBJECTS)
-@USE_INTEGRITY_TEST_TRUE@fips_signer_DEPENDENCIES = libstrongswan.la
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -168,9 +160,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libstrongswan_la_SOURCES) $(fips_signer_SOURCES)
-DIST_SOURCES = $(am__libstrongswan_la_SOURCES_DIST) \
-	$(am__fips_signer_SOURCES_DIST)
+SOURCES = $(libstrongswan_la_SOURCES)
+DIST_SOURCES = $(am__libstrongswan_la_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -186,7 +177,7 @@ DIST_SUBDIRS = . plugins/aes plugins/des plugins/md5 plugins/sha1 \
 	plugins/sha2 plugins/fips_prf plugins/gmp plugins/random \
 	plugins/hmac plugins/xcbc plugins/x509 plugins/pubkey \
 	plugins/curl plugins/ldap plugins/mysql plugins/sqlite \
-	plugins/padlock plugins/openssl
+	plugins/padlock plugins/openssl plugins/agent fips
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -303,6 +294,8 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
+nm_CFLAGS = @nm_CFLAGS@
+nm_LIBS = @nm_LIBS@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
 piddir = @piddir@
@@ -451,10 +444,9 @@ lib_LTLIBRARIES = libstrongswan.la
 libstrongswan_la_LIBADD = -lpthread -ldl
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
-	-DIPSEC_PLUGINDIR=\"${plugindir}\" $(am__append_1) \
-	$(am__append_22)
+	-DIPSEC_PLUGINDIR=\"${plugindir}\" $(am__append_1)
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl
-BUILT_SOURCES = asn1/oid.c asn1/oid.h $(am__append_21)
+BUILT_SOURCES = asn1/oid.c asn1/oid.h
 MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
 
 # build plugins with their own Makefile
@@ -464,10 +456,8 @@ SUBDIRS = . $(am__append_3) $(am__append_4) $(am__append_5) \
 	$(am__append_9) $(am__append_10) $(am__append_11) \
 	$(am__append_12) $(am__append_13) $(am__append_14) \
 	$(am__append_15) $(am__append_16) $(am__append_17) \
-	$(am__append_18) $(am__append_19) $(am__append_20)
-@USE_INTEGRITY_TEST_TRUE@fips_signer_SOURCES = fips/fips_signer.c
-@USE_INTEGRITY_TEST_TRUE@fips_signer_LDADD = libstrongswan.la
-@USE_INTEGRITY_TEST_TRUE@CLEANFILES = fips_signature.h fips_signer
+	$(am__append_18) $(am__append_19) $(am__append_20) \
+	$(am__append_21) $(am__append_22)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -532,16 +522,6 @@ clean-libLTLIBRARIES:
 libstrongswan.la: $(libstrongswan_la_OBJECTS) $(libstrongswan_la_DEPENDENCIES) 
 	$(LINK) -rpath $(libdir) $(libstrongswan_la_OBJECTS) $(libstrongswan_la_LIBADD) $(LIBS)
 
-clean-noinstPROGRAMS:
-	@list='$(noinst_PROGRAMS)'; for p in $$list; do \
-	  f=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
-	  echo " rm -f $$p $$f"; \
-	  rm -f $$p $$f ; \
-	done
-fips_signer$(EXEEXT): $(fips_signer_OBJECTS) $(fips_signer_DEPENDENCIES) 
-	@rm -f fips_signer$(EXEEXT)
-	$(LINK) $(fips_signer_OBJECTS) $(fips_signer_LDADD) $(LIBS)
-
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -566,7 +546,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips_canister_end.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips_canister_start.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips_signer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hasher.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/host.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/identification.Plo@am__quote@
@@ -866,20 +845,6 @@ fips_canister_end.lo: fips/fips_canister_end.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fips_canister_end.lo `test -f 'fips/fips_canister_end.c' || echo '$(srcdir)/'`fips/fips_canister_end.c
 
-fips_signer.o: fips/fips_signer.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fips_signer.o -MD -MP -MF $(DEPDIR)/fips_signer.Tpo -c -o fips_signer.o `test -f 'fips/fips_signer.c' || echo '$(srcdir)/'`fips/fips_signer.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/fips_signer.Tpo $(DEPDIR)/fips_signer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fips/fips_signer.c' object='fips_signer.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fips_signer.o `test -f 'fips/fips_signer.c' || echo '$(srcdir)/'`fips/fips_signer.c
-
-fips_signer.obj: fips/fips_signer.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fips_signer.obj -MD -MP -MF $(DEPDIR)/fips_signer.Tpo -c -o fips_signer.obj `if test -f 'fips/fips_signer.c'; then $(CYGPATH_W) 'fips/fips_signer.c'; else $(CYGPATH_W) '$(srcdir)/fips/fips_signer.c'; fi`
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/fips_signer.Tpo $(DEPDIR)/fips_signer.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fips/fips_signer.c' object='fips_signer.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fips_signer.obj `if test -f 'fips/fips_signer.c'; then $(CYGPATH_W) 'fips/fips_signer.c'; else $(CYGPATH_W) '$(srcdir)/fips/fips_signer.c'; fi`
-
 mostlyclean-libtool:
 	-rm -f *.lo
 
@@ -1062,7 +1027,7 @@ distdir: $(DISTFILES)
 check-am: all-am
 check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-recursive
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS)
+all-am: Makefile $(LTLIBRARIES)
 installdirs: installdirs-recursive
 installdirs-am:
 	for dir in "$(DESTDIR)$(libdir)"; do \
@@ -1086,7 +1051,6 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
-	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -1099,7 +1063,7 @@ maintainer-clean-generic:
 clean: clean-recursive
 
 clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
-	clean-noinstPROGRAMS mostlyclean-am
+	mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -rf ./$(DEPDIR)
@@ -1160,8 +1124,8 @@ uninstall-am: uninstall-libLTLIBRARIES
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
 	all all-am check check-am clean clean-generic \
-	clean-libLTLIBRARIES clean-libtool clean-noinstPROGRAMS ctags \
-	ctags-recursive distclean distclean-compile distclean-generic \
+	clean-libLTLIBRARIES clean-libtool ctags ctags-recursive \
+	distclean distclean-compile distclean-generic \
 	distclean-libtool distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
@@ -1180,9 +1144,6 @@ asn1/oid.c :	asn1/oid.txt asn1/oid.pl
 
 asn1/oid.h :	asn1/oid.txt asn1/oid.pl
 		cd asn1 && $(PERL) oid.pl
-
-@USE_INTEGRITY_TEST_TRUE@fips_signature.h : fips_signer
-@USE_INTEGRITY_TEST_TRUE@		   ./fips_signer
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

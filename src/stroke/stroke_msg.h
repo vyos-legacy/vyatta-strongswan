@@ -19,7 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: stroke_msg.h 3920 2008-05-08 16:19:11Z tobias $
+ * RCSID $Id: stroke_msg.h 4384 2008-10-08 07:00:13Z andreas $
  */
 
 #ifndef STROKE_MSG_H_
@@ -43,26 +43,30 @@ typedef enum list_flag_t list_flag_t;
 enum list_flag_t {
 	/** don't list anything */
 	LIST_NONE =			0x0000,
+	/** list all raw public keys */
+	LIST_PUBKEYS =		0x0001,
 	/** list all host/user certs */
-	LIST_CERTS =		0x0001,
+	LIST_CERTS =		0x0002,
 	/** list all ca certs */
-	LIST_CACERTS =		0x0002,
+	LIST_CACERTS =		0x0004,
 	/** list all ocsp signer certs */
-	LIST_OCSPCERTS =	0x0004,
+	LIST_OCSPCERTS =	0x0008,
 	/** list all aa certs */
-	LIST_AACERTS =		0x0008,
+	LIST_AACERTS =		0x0010,
 	/** list all attribute certs */
-	LIST_ACERTS =		0x0010,
+	LIST_ACERTS =		0x0020,
 	/** list all access control groups */
-	LIST_GROUPS =		0x0020,
+	LIST_GROUPS =		0x0040,
 	/** list all ca information records */
-	LIST_CAINFOS =		0x0040,
+	LIST_CAINFOS =		0x0080,
 	/** list all crls */
-	LIST_CRLS =			0x0080,
+	LIST_CRLS =			0x0100,
 	/** list all ocsp cache entries */
-	LIST_OCSP =			0x0100,
+	LIST_OCSP =			0x0200,
+	/** list all supported algorithms */
+	LIST_ALGS =			0x0400,
 	/** all list options */
-	LIST_ALL =			0x01FF,
+	LIST_ALL =			0x07FF,
 };
 
 typedef enum reread_flag_t reread_flag_t;
@@ -158,6 +162,8 @@ struct stroke_msg_t {
 		STR_DEL_CONN,
 		/* terminate connection */
 		STR_TERMINATE,
+		/* terminate connection by peers srcip/virtual ip */
+		STR_TERMINATE_SRCIP,
 		/* show connection status */
 		STR_STATUS,
 		/* show verbose connection status */
@@ -187,6 +193,12 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 		} initiate, route, unroute, terminate, status, del_conn, del_ca;
+		
+		/* data for STR_TERMINATE_SRCIP */
+		struct {
+			char *start;
+			char *end;
+		} terminate_srcip;
 
 		/* data for STR_ADD_CONN */
 		struct {
@@ -195,6 +207,7 @@ struct stroke_msg_t {
 			int auth_method;
 			u_int32_t eap_type;
 			u_int32_t eap_vendor;
+			char *eap_identity;
 			int mode;
 			int mobike;
 			int force_encap;

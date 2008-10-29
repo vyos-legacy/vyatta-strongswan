@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: build-umlrootfs 4035 2008-06-05 07:25:27Z andreas $
+# RCSID $Id: build-umlrootfs 4425 2008-10-13 22:54:09Z andreas $
 
 DIR=`dirname $0`
 
@@ -148,12 +148,18 @@ fi
 if [ "$USE_EAP_SIM" = "yes" ]
 then
     echo -n " --enable-eap-sim" >> $INSTALLSHELL
+    echo -n " --enable-eap-sim-file" >> $INSTALLSHELL
     fi
 
 if [ "$USE_EAP_MD5" = "yes" ]
 then
     echo -n " --enable-eap-md5" >> $INSTALLSHELL
     fi
+
+if [ "$USE_EAP_IDENTITY" = "yes" ]
+then
+    echo -n " --enable-eap-identity" >> $INSTALLSHELL
+fi
 
 if [ "$USE_SQL" = "yes" ]
 then
@@ -169,7 +175,12 @@ if [ "$USE_OPENSSL" = "yes" ]
 then
     echo -n " --enable-openssl" >> $INSTALLSHELL
 fi
-    
+
+if [ "$USE_KERNEL_PFKEY" = "yes" ]
+then
+    echo -n " --enable-kernel-pfkey" >> $INSTALLSHELL
+fi
+  
 if [ "$USE_INTEGRITY_TEST" = "yes" ]
 then
     echo -n " --enable-integrity-test" >> $INSTALLSHELL

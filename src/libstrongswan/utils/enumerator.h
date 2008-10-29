@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: enumerator.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: enumerator.h 4142 2008-07-02 08:09:07Z martin $
  */
  
 /**
@@ -96,6 +96,19 @@ enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item));
  * @return 			the directory enumerator, NULL on failure
  */
 enumerator_t* enumerator_create_directory(char *path);
+
+/**
+ * Create an enumerator over tokens of a string.
+ *
+ * Tokens are separated by one of the characters in sep and trimmed by the
+ * characters in trim.
+ *
+ * @param string	string to parse
+ * @param sep		separator characters
+ * @param trim		characters to trim from tokens
+ * @return			enumerator over char* tokens
+ */
+enumerator_t* enumerator_create_token(char *string, char *sep, char *trim);
 
 /**
  * Creates an enumerator which enumerates over enumerated enumerators :-).
