@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: vendor.c 4348 2008-09-18 00:42:22Z andreas $
+ * RCSID $Id: vendor.c 4426 2008-10-14 01:53:37Z andreas $
  */
 
 #include <stdlib.h>
@@ -206,7 +206,8 @@ static struct vid_struct _vid_tab[] = {
 	/*
 	 * strongSwan
 	 */
-	DEC_MD5_VID(STRONGSWAN,       "strongSwan 4.2.8")
+	DEC_MD5_VID(STRONGSWAN,       "strongSwan 4.2.9")
+	DEC_MD5_VID(STRONGSWAN_4_2_8, "strongSwan 4.2.8")
 	DEC_MD5_VID(STRONGSWAN_4_2_7, "strongSwan 4.2.7")
 	DEC_MD5_VID(STRONGSWAN_4_2_6, "strongSwan 4.2.6")
 	DEC_MD5_VID(STRONGSWAN_4_2_5, "strongSwan 4.2.5")

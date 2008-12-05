@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: args.c 4276 2008-08-22 10:44:51Z martin $
+ * RCSID $Id: args.c 4612 2008-11-11 06:37:37Z andreas $
  */
 
 #include <stddef.h>
@@ -199,6 +199,7 @@ static const token_info_t token_info[] =
     { ARG_MISC, 0, NULL  /* KW_TYPE */                                             },
     { ARG_MISC, 0, NULL  /* KW_PFS */                                              },
     { ARG_MISC, 0, NULL  /* KW_COMPRESS */                                         },
+    { ARG_ENUM, offsetof(starter_conn_t, install_policy), LST_bool                 },
     { ARG_MISC, 0, NULL  /* KW_AUTH */                                             },
     { ARG_MISC, 0, NULL  /* KW_AUTHBY */                                           },
     { ARG_MISC, 0, NULL  /* KW_EAP */                                              },

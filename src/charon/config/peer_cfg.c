@@ -14,14 +14,16 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: peer_cfg.c 4276 2008-08-22 10:44:51Z martin $
+ * $Id: peer_cfg.c 4612 2008-11-11 06:37:37Z andreas $
  */
 
 #include <string.h>
-#include <pthread.h>
 
 #include "peer_cfg.h"
 
+#include <daemon.h>
+
+#include <utils/mutex.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
@@ -77,7 +79,7 @@ struct private_peer_cfg_t {
 	/**
 	 * mutex to lock access to list of child_cfgs
 	 */
-	pthread_mutex_t mutex;
+	mutex_t *mutex;
 	
 	/**
 	 * id to use to identify us
@@ -197,9 +199,9 @@ static ike_cfg_t* get_ike_cfg(private_peer_cfg_t *this)
  */
 static void add_child_cfg(private_peer_cfg_t *this, child_cfg_t *child_cfg)
 {
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	this->child_cfgs->insert_last(this->child_cfgs, child_cfg);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -207,9 +209,9 @@ static void add_child_cfg(private_peer_cfg_t *this, child_cfg_t *child_cfg)
  */
 static void remove_child_cfg(private_peer_cfg_t *this, enumerator_t *enumerator)
 {
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	this->child_cfgs->remove_at(this->child_cfgs, enumerator);
-	pthread_mutex_unlock(&this->mutex);
+	this->mutex->unlock(this->mutex);
 }
 
 /**
@@ -219,25 +221,29 @@ static enumerator_t* create_child_cfg_enumerator(private_peer_cfg_t *this)
 {
 	enumerator_t *enumerator;
 
-	pthread_mutex_lock(&this->mutex);
+	this->mutex->lock(this->mutex);
 	enumerator = this->child_cfgs->create_enumerator(this->child_cfgs);
 	return enumerator_create_cleaner(enumerator,
-									 (void*)pthread_mutex_unlock, &this->mutex);
+									 (void*)this->mutex->unlock, this->mutex);
 }
 
 /**
  * Check if child_cfg contains traffic selectors
  */
-static bool contains_ts(child_cfg_t *child, bool mine, linked_list_t *ts,
+static int contains_ts(child_cfg_t *child, bool mine, linked_list_t *ts,
 						host_t *host)
 {
 	linked_list_t *selected;
-	bool contains = FALSE;
+	int prio;
 	
+	if (child->equal_traffic_selectors(child, mine, ts, host))
+	{
+		return 2;
+	}
 	selected = child->get_traffic_selectors(child, mine, ts, host);
-	contains = selected->get_count(selected);
+	prio = selected->get_count(selected) ? 1 : 0;
 	selected->destroy_offset(selected, offsetof(traffic_selector_t, destroy));
-	return contains;
+	return prio;
 }
 
 /**
@@ -250,18 +256,33 @@ static child_cfg_t* select_child_cfg(private_peer_cfg_t *this,
 {
 	child_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
-	
+	int best = 0;
+
+	DBG2(DBG_CFG, "looking for a child config for %#R=== %#R", my_ts, other_ts);	
 	enumerator = create_child_cfg_enumerator(this);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (contains_ts(current, TRUE, my_ts, my_host) &&
-			contains_ts(current, FALSE, other_ts, other_host))
+		int prio = contains_ts(current, TRUE, my_ts, my_host) +
+				   contains_ts(current, FALSE, other_ts, other_host);
+
+		if (prio)
 		{
-			found = current->get_ref(current);
-			break;
+			DBG2(DBG_CFG, "  candidate \"%s\" with prio %d",
+				 current->get_name(current), prio);
+			if (prio > best)
+			{
+				best = prio;
+				DESTROY_IF(found);
+				found = current->get_ref(current);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (found)
+	{
+		DBG2(DBG_CFG, "found matching child config \"%s\" with prio %d",
+			 found->get_name(found), best);
+	}
 	return found;
 }
 
@@ -480,6 +501,7 @@ static void destroy(private_peer_cfg_t *this)
 		DESTROY_IF(this->mediated_by);
 		DESTROY_IF(this->peer_id);
 #endif /* ME */
+		this->mutex->destroy(this->mutex);
 		free(this->name);
 		free(this->pool);
 		free(this);
@@ -536,7 +558,7 @@ peer_cfg_t *peer_cfg_create(char *name, u_int ike_version, ike_cfg_t *ike_cfg,
 	this->ike_version = ike_version;
 	this->ike_cfg = ike_cfg;
 	this->child_cfgs = linked_list_create();
-	pthread_mutex_init(&this->mutex, NULL);
+	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->my_id = my_id;
 	this->other_id = other_id;
 	this->cert_policy = cert_policy;

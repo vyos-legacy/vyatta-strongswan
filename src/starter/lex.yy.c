@@ -500,7 +500,7 @@ char *yytext;
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: parser.l 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: parser.l 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <string.h>
@@ -511,6 +511,7 @@ char *yytext;
 
 #define MAX_INCLUDE_DEPTH  20
 
+#define YY_NO_INPUT
 #define YY_NO_UNPUT
 extern void yyerror(const char *);
 extern int yylex (void);
@@ -617,7 +618,7 @@ int _parser_y_include (const char *filename)
     return 0;
 }
 
-#line 621 "lex.yy.c"
+#line 622 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -771,10 +772,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 134 "parser.l"
+#line 135 "parser.l"
 
 
-#line 778 "lex.yy.c"
+#line 779 "lex.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -859,7 +860,7 @@ do_action:	/* This label is used only to access EOF actions. */
 			goto yy_find_action;
 
 case YY_STATE_EOF(INITIAL):
-#line 136 "parser.l"
+#line 137 "parser.l"
 {
 	if (__parser_y_private.filename[__parser_y_private.stack_ptr]) {
 		free(__parser_y_private.filename[__parser_y_private.stack_ptr]);
@@ -879,23 +880,23 @@ case YY_STATE_EOF(INITIAL):
 	YY_BREAK
 case 1:
 YY_RULE_SETUP
-#line 153 "parser.l"
+#line 154 "parser.l"
 return FIRST_SPACES;
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 155 "parser.l"
+#line 156 "parser.l"
 /* ignore spaces in line */ ;
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 157 "parser.l"
+#line 158 "parser.l"
 return EQUAL;
 	YY_BREAK
 case 4:
 /* rule 4 can match eol */
 YY_RULE_SETUP
-#line 159 "parser.l"
+#line 160 "parser.l"
 {
 					__parser_y_private.line[__parser_y_private.stack_ptr]++;
 					return EOL;
@@ -903,37 +904,37 @@ YY_RULE_SETUP
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 164 "parser.l"
+#line 165 "parser.l"
 return CONFIG;
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 165 "parser.l"
+#line 166 "parser.l"
 return SETUP;
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 166 "parser.l"
+#line 167 "parser.l"
 return CONN;
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 167 "parser.l"
+#line 168 "parser.l"
 return CA;
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 168 "parser.l"
+#line 169 "parser.l"
 return INCLUDE;
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 169 "parser.l"
+#line 170 "parser.l"
 return FILE_VERSION;
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 171 "parser.l"
+#line 172 "parser.l"
 {
 					yylval.s = strdup(yytext);
 					return STRING;
@@ -941,7 +942,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 176 "parser.l"
+#line 177 "parser.l"
 {
 					yylval.s = strdup(yytext+1);
 					if (yylval.s) yylval.s[strlen(yylval.s)-1]='\0';
@@ -950,15 +951,15 @@ YY_RULE_SETUP
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 182 "parser.l"
+#line 183 "parser.l"
 yyerror(yytext);
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 184 "parser.l"
+#line 185 "parser.l"
 ECHO;
 	YY_BREAK
-#line 962 "lex.yy.c"
+#line 963 "lex.yy.c"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1920,7 +1921,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 184 "parser.l"
+#line 185 "parser.l"
 
 
 

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: proposal.c 4390 2008-10-08 12:57:11Z martin $
+ * $Id: proposal.c 4635 2008-11-12 08:27:48Z martin $
  */
 
 #include <string.h>

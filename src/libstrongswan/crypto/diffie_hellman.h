@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: diffie_hellman.h 4023 2008-05-29 06:55:03Z andreas $
+ * $Id: diffie_hellman.h 4566 2008-11-04 13:12:11Z martin $
  */
  
 /**
@@ -83,16 +83,6 @@ struct diffie_hellman_t {
 	 * @param value 	public value of partner
 	 */
 	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t value);
-	
-	/**
-	 * Gets the public value of partner.
-	 * 	
-	 * Space for returned chunk is allocated and must be freed by the caller.
-	 * 
-	 * @param value 	public value of partner is stored at this location
-	 * @return 			SUCCESS, FAILED if other public value not set
-	 */
-	status_t (*get_other_public_value) (diffie_hellman_t *this, chunk_t *value);
 	
 	/**
 	 * Gets the own public value to transmit.

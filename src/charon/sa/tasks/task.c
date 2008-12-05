@@ -13,11 +13,12 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: task.c 3666 2008-03-26 18:40:19Z tobias $
+ * $Id: task.c 4618 2008-11-11 09:22:00Z tobias $
  */
 
 #include "task.h"
 
+#ifdef ME
 ENUM(task_type_names, IKE_INIT, CHILD_REKEY,
 	"IKE_INIT",
 	"IKE_NATD",
@@ -31,11 +32,27 @@ ENUM(task_type_names, IKE_INIT, CHILD_REKEY,
 	"IKE_REAUTH",
 	"IKE_DELETE",
 	"IKE_DPD",
-#ifdef ME
 	"IKE_ME",
-#endif /* ME */
 	"CHILD_CREATE",
 	"CHILD_DELETE",
 	"CHILD_REKEY",
 );
-
+#else
+ENUM(task_type_names, IKE_INIT, CHILD_REKEY,
+	"IKE_INIT",
+	"IKE_NATD",
+	"IKE_MOBIKE",
+	"IKE_AUTHENTICATE",
+	"IKE_AUTH_LIFETIME",
+	"IKE_CERT_PRE",
+	"IKE_CERT_POST",
+	"IKE_CONFIG",
+	"IKE_REKEY",
+	"IKE_REAUTH",
+	"IKE_DELETE",
+	"IKE_DPD",
+	"CHILD_CREATE",
+	"CHILD_DELETE",
+	"CHILD_REKEY",
+);
+#endif /* ME */

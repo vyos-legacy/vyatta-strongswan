@@ -488,7 +488,7 @@ uninstall-am: uninstall-ipsecPROGRAMS
 
 
 stroke_keywords.c:	stroke_keywords.txt stroke_keywords.h
-		$(GPERF) -C -G -t < stroke_keywords.txt > stroke_keywords.c
+		$(GPERF) -C -G -t < $< > $@
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

@@ -47,7 +47,8 @@ ipsecPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(ipsec_PROGRAMS)
 am__copyright_OBJECTS = _copyright.$(OBJEXT)
 _copyright_OBJECTS = $(am__copyright_OBJECTS)
-_copyright_DEPENDENCIES = $(top_srcdir)/src/libfreeswan/libfreeswan.a
+_copyright_DEPENDENCIES =  \
+	$(top_builddir)/src/libfreeswan/libfreeswan.a
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -207,7 +208,7 @@ xml_LIBS = @xml_LIBS@
 _copyright_SOURCES = _copyright.c
 dist_man8_MANS = _copyright.8
 INCLUDES = -I$(top_srcdir)/src/libfreeswan
-_copyright_LDADD = $(top_srcdir)/src/libfreeswan/libfreeswan.a
+_copyright_LDADD = $(top_builddir)/src/libfreeswan/libfreeswan.a
 all: all-am
 
 .SUFFIXES:

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_ipsec.c 4358 2008-09-25 13:56:23Z tobias $
+ * $Id: kernel_ipsec.c 4430 2008-10-14 08:46:31Z tobias $
  */
 
 #include "kernel_ipsec.h"
@@ -24,3 +24,10 @@ ENUM(ipsec_mode_names, MODE_TRANSPORT, MODE_BEET,
 	"3",
 	"BEET",
 );
+
+ENUM(policy_dir_names, POLICY_IN, POLICY_FWD,
+	"in",
+	"out",
+	"fwd"
+);
+

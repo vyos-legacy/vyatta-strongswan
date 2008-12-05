@@ -34,7 +34,7 @@ G_DEFINE_TYPE(NMStrongswanPlugin, nm_strongswan_plugin, NM_TYPE_VPN_PLUGIN)
  * Private data of NMStrongswanPlugin
  */
 typedef struct {
-	bus_listener_t listener;
+	listener_t listener;
 	ike_sa_t *ike_sa;
 	NMVPNPlugin *plugin;
 	nm_creds_t *creds;
@@ -45,109 +45,88 @@ typedef struct {
 				NM_TYPE_STRONGSWAN_PLUGIN, NMStrongswanPluginPrivate))
 
 /**
- * convert a traffic selector address range to subnet and its mask.
- */
-static u_int ts2subnet(traffic_selector_t* ts, u_int8_t *mask)
-{
-	/* there is no way to do this cleanly, as the address range may
-	 * be anything else but a subnet. We use from_addr as subnet 
-	 * and try to calculate a usable subnet mask.
-	 */
-	int byte, bit, net;
-	bool found = FALSE;
-	chunk_t from, to;
-	size_t size = (ts->get_type(ts) == TS_IPV4_ADDR_RANGE) ? 4 : 16;
-	
-	from = ts->get_from_address(ts);
-	to = ts->get_to_address(ts);
-	
-	*mask = (size * 8);
-	/* go trough all bits of the addresses, beginning in the front.
-	 * as long as they are equal, the subnet gets larger
-	 */
-	for (byte = 0; byte < size; byte++)
-	{
-		for (bit = 7; bit >= 0; bit--)
-		{
-			if ((1<<bit & from.ptr[byte]) != (1<<bit & to.ptr[byte]))
-			{
-				*mask = ((7 - bit) + (byte * 8));
-				found = TRUE;
-				break;
-			}
-		}
-		if (found)
-		{
-			break;
-		}
-	}
-	net = *(u_int32_t*)from.ptr;
-	chunk_free(&from);
-	chunk_free(&to);
-	return net;
-}
-
-/**
  * signal IPv4 config to NM, set connection as established
  */
-static void signal_ipv4_config(NMVPNPlugin *plugin, child_sa_t *child_sa)
+static void signal_ipv4_config(NMVPNPlugin *plugin,
+							   ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
-	linked_list_t *list;
-	traffic_selector_t *ts = NULL;
-	enumerator_t *enumerator;
+	GValue *val;
+	GHashTable *config;
+	host_t *me, *other;
 	
-	list = child_sa->get_traffic_selectors(child_sa, FALSE);
-	enumerator = list->create_enumerator(list);
-	while (enumerator->enumerate(enumerator, &ts))
-	{
-		GValue *val;
-		GHashTable *config;
-		u_int8_t mask;
-		
-		config = g_hash_table_new(g_str_hash, g_str_equal);
-		
-		val = g_slice_new0(GValue);
-		g_value_init(val, G_TYPE_UINT);
-		g_value_set_uint(val, ts2subnet(ts, &mask));
-		g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS, val);
-		
-		val = g_slice_new0(GValue);
-		g_value_init(val, G_TYPE_UINT);
-		g_value_set_uint(val, mask);
-		g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_PREFIX, val);
-		
-		nm_vpn_plugin_set_ip4_config(plugin, config);
-	}
-	enumerator->destroy(enumerator);
+	config = g_hash_table_new(g_str_hash, g_str_equal);
+	me = ike_sa->get_my_host(ike_sa);
+	other = ike_sa->get_other_host(ike_sa);
+	
+	/* NM requires a tundev, but netkey does not use one. Passing an invalid
+	 * iface makes NM complain, but it accepts it without fiddling on eth0. */
+	val = g_slice_new0 (GValue);
+	g_value_init (val, G_TYPE_STRING);
+	g_value_set_string (val, "none");
+	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_TUNDEV, val);
+	
+	val = g_slice_new0(GValue);
+	g_value_init(val, G_TYPE_UINT);
+	g_value_set_uint(val, *(u_int32_t*)me->get_address(me).ptr);
+	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS, val);
+	
+	val = g_slice_new0(GValue);
+	g_value_init(val, G_TYPE_UINT);
+	g_value_set_uint(val, me->get_address(me).len * 8);
+	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_PREFIX, val);
+	
+	nm_vpn_plugin_set_ip4_config(plugin, config);
 }
 
 /**
- * Bus listen function to wait for SA establishing
+ * signal failure to NM, connecting failed
  */
-bool listen_bus(bus_listener_t *listener, signal_t signal, level_t level,
-				int thread, ike_sa_t *ike_sa, void *data, 
-				char* format, va_list args)
+static void signal_failure(NMVPNPlugin *plugin)
+{
+	/* TODO: NM does not handle this failure!? 
+	nm_vpn_plugin_failure(plugin, NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); */
+	nm_vpn_plugin_set_state(plugin, NM_VPN_SERVICE_STATE_STOPPED);
+}
+
+/**
+ * Implementation of listener_t.ike_state_change
+ */
+static bool ike_state_change(listener_t *listener, ike_sa_t *ike_sa,
+							 ike_sa_state_t state)
 {
 	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
 	
 	if (private->ike_sa == ike_sa)
 	{
-		switch (signal)
+		switch (state)
 		{
-			case CHD_UP_SUCCESS:
-				if (data)
-				{
-					signal_ipv4_config(private->plugin, (child_sa_t*)data);
-					return FALSE;
-				}
-				/* FALL */
-			case IKE_UP_FAILED:
-			case CHD_UP_FAILED:
-				/* TODO: NM does not handle this failure!? 
-				nm_vpn_plugin_failure(private->plugin,
-									  NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED); */
-				nm_vpn_plugin_set_state(private->plugin,
-										NM_VPN_SERVICE_STATE_STOPPED);
+			case IKE_DESTROYING:
+				signal_failure(private->plugin);
+				return FALSE;
+			default:
+				break;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Implementation of listener_t.child_state_change
+ */
+static bool child_state_change(listener_t *listener, ike_sa_t *ike_sa,
+							   child_sa_t *child_sa, child_sa_state_t state)
+{
+	NMStrongswanPluginPrivate *private = (NMStrongswanPluginPrivate*)listener;
+
+	if (private->ike_sa == ike_sa)
+	{
+		switch (state)
+		{
+			case CHILD_INSTALLED:
+				signal_ipv4_config(private->plugin, ike_sa, child_sa);
+				return FALSE;
+			case CHILD_DESTROYING:
+				signal_failure(private->plugin);
 				return FALSE;
 			default:
 				break;
@@ -462,8 +441,13 @@ static gboolean disconnect(NMVPNPlugin *plugin, GError **err)
  */
 static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 {
-	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->plugin = NM_VPN_PLUGIN(plugin);
-	NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->listener.signal = listen_bus;
+	NMStrongswanPluginPrivate *private;
+	
+	private = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
+	private->plugin = NM_VPN_PLUGIN(plugin);
+	memset(&private->listener.log, 0, sizeof(listener_t));
+	private->listener.ike_state_change = ike_state_change;
+	private->listener.child_state_change = child_state_change;
 }
 
 /**

@@ -52,6 +52,7 @@ processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 processing/jobs/callback_job.c processing/jobs/callback_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \
+processing/jobs/migrate_job.c processing/jobs/migrate_job.h \
 processing/jobs/process_message_job.c processing/jobs/process_message_job.h \
 processing/jobs/rekey_child_sa_job.c processing/jobs/rekey_child_sa_job.h \
 processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
@@ -74,6 +75,7 @@ sa/ike_sa.c sa/ike_sa.h \
 sa/ike_sa_id.c sa/ike_sa_id.h \
 sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/task_manager.c sa/task_manager.h \
+sa/keymat.c sa/keymat.h \
 sa/tasks/child_create.c sa/tasks/child_create.h \
 sa/tasks/child_delete.c sa/tasks/child_delete.h \
 sa/tasks/child_rekey.c sa/tasks/child_rekey.h \
@@ -144,6 +146,21 @@ endif
 SUBDIRS = . 
 PLUGINS = ${libstrongswan_plugins}
 
+if USE_LOAD_TESTS
+  SUBDIRS += plugins/load_tester
+  PLUGINS += load-tester
+endif
+
+if USE_KERNEL_PFKEY
+  SUBDIRS += plugins/kernel_pfkey
+  PLUGINS += kernel-pfkey
+endif
+
+if USE_KERNEL_KLIPS
+  SUBDIRS += plugins/kernel_klips
+  PLUGINS += kernel-klips
+endif
+
 if USE_KERNEL_NETLINK
   SUBDIRS += plugins/kernel_netlink
   PLUGINS += kernel-netlink
@@ -162,6 +179,11 @@ endif
 if USE_SQL
   SUBDIRS += plugins/sql
   PLUGINS += sql
+endif
+
+if USE_UPDOWN
+  SUBDIRS += plugins/updown
+  PLUGINS += updown
 endif
 
 if USE_EAP_IDENTITY

@@ -44,7 +44,7 @@ error "gperf generated tables don't work with this execution character set. Plea
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt 4276 2008-08-22 10:44:51Z martin $
+ * RCSID $Id: keywords.txt 4612 2008-11-11 06:37:37Z andreas $
  */
 
 #include <string.h>
@@ -56,7 +56,7 @@ struct kw_entry {
     kw_token_t token;
 };
 
-#define TOTAL_KEYWORDS 101
+#define TOTAL_KEYWORDS 102
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 17
 #define MIN_HASH_VALUE 6
@@ -239,7 +239,8 @@ static const struct kw_entry wordlist[] =
     {"pkcs11proxy",       KW_PKCS11PROXY},
     {""}, {""}, {""}, {""},
     {"charondebug",       KW_CHARONDEBUG},
-    {""}, {""},
+    {""},
+    {"installpolicy",     KW_INSTALLPOLICY},
     {"cachecrls",         KW_CACHECRLS},
     {""}, {""}, {""},
     {"packetdefault",     KW_PACKETDEFAULT},

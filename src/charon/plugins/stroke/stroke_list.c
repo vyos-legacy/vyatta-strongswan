@@ -17,6 +17,8 @@
 
 #include "stroke_list.h"
 
+#include <time.h>
+
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
@@ -79,25 +81,32 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 	
 	if (all)
 	{
-		char *ike_proposal = ike_sa->get_proposal(ike_sa);
-
+		proposal_t *ike_proposal;
+		
+		ike_proposal = ike_sa->get_proposal(ike_sa);
+		
 		fprintf(out, "%12s[%d]: IKE SPIs: %.16llx_i%s %.16llx_r%s",
 				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 				id->get_initiator_spi(id), id->is_initiator(id) ? "*" : "",
 				id->get_responder_spi(id), id->is_initiator(id) ? "" : "*");
-	
-
+		
+		
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
-			u_int32_t rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY_TIME);
-			u_int32_t reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH_TIME);
-
+			u_int32_t rekey, reauth, now;
+			
+			now = time(NULL);
+			rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY);
+			reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH);
+			
 			if (rekey)
 			{
+				rekey -= now;
 				fprintf(out, ", rekeying in %V", &rekey);
 			}
 			if (reauth)
 			{
+				reauth -= now;
 				fprintf(out, ", %N reauthentication in %V", auth_class_names,
 						get_auth_class(ike_sa->get_peer_cfg(ike_sa)), &reauth);
 			}
@@ -107,13 +116,16 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 			}
 		}
 		fprintf(out, "\n");
-
+		
 		if (ike_proposal)
 		{
+			char buf[BUF_LEN];
+			
+			snprintf(buf, BUF_LEN, "%P", ike_proposal);
 			fprintf(out, "%12s[%d]: IKE proposal: %s\n",
 					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
-					ike_proposal);
-		}		
+					buf+4);
+		}
 	}
 }
 
@@ -123,68 +135,67 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 {
 	u_int32_t rekey, now = time(NULL);
-	u_int32_t use_in, use_out, use_fwd;
-	encryption_algorithm_t encr_alg;
-	integrity_algorithm_t int_alg;
-	size_t encr_len, int_len;
-	ipsec_mode_t mode;
+	u_int32_t use_in, use_out;
+	proposal_t *proposal;
+	child_cfg_t *config = child_sa->get_config(child_sa);
 	
-	child_sa->get_stats(child_sa, &mode, &encr_alg, &encr_len,
-						&int_alg, &int_len, &rekey, &use_in, &use_out,
-						&use_fwd);
-	
-	fprintf(out, "%12s{%d}:  %N, %N", 
+	fprintf(out, "%12s{%d}:  %N, %N%s", 
 			child_sa->get_name(child_sa), child_sa->get_reqid(child_sa),
 			child_sa_state_names, child_sa->get_state(child_sa),
-			ipsec_mode_names, mode);
+			ipsec_mode_names, child_sa->get_mode(child_sa),
+			config->use_proxy_mode(config) ? "_PROXY" : "");
 	
 	if (child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		u_int16_t my_cpi    = child_sa->get_cpi(child_sa, TRUE);
-		u_int16_t other_cpi = child_sa->get_cpi(child_sa, FALSE);		
-
-		fprintf(out, ", %N SPIs: %.8x_i %.8x_o",
+		fprintf(out, ", %N%s SPIs: %.8x_i %.8x_o",
 				protocol_id_names, child_sa->get_protocol(child_sa),
+				child_sa->has_encap(child_sa) ? " in UDP" : "",
 				ntohl(child_sa->get_spi(child_sa, TRUE)),
 				ntohl(child_sa->get_spi(child_sa, FALSE)));
-
-		/* Is IPCOMP activated ? */
-		if (my_cpi && other_cpi)
+		
+		if (child_sa->get_ipcomp(child_sa) != IPCOMP_NONE)
 		{
 			fprintf(out, ", IPCOMP CPIs: %.4x_i %.4x_o",
-					ntohs(my_cpi), ntohs(other_cpi));
+					ntohs(child_sa->get_cpi(child_sa, TRUE)),
+					ntohs(child_sa->get_cpi(child_sa, FALSE)));
 		}
-
+		
 		if (all)
 		{
 			fprintf(out, "\n%12s{%d}:  ", child_sa->get_name(child_sa), 
 					child_sa->get_reqid(child_sa));
 			
-			
-			if (child_sa->get_protocol(child_sa) == PROTO_ESP)
+			proposal = child_sa->get_proposal(child_sa);
+			if (proposal)
 			{
-				fprintf(out, "%N", encryption_algorithm_names, encr_alg);
+				u_int16_t encr_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED;
+				u_int16_t encr_size = 0, int_size = 0;
 				
-				if (encr_len)
+				proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
+										&encr_alg, &encr_size);
+				proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
+										&int_alg, &int_size);
+				
+				if (encr_alg != ENCR_UNDEFINED)
 				{
-					fprintf(out, "-%d", encr_len);
+					fprintf(out, "%N", encryption_algorithm_names, encr_alg);
+					if (encr_size)
+					{
+						fprintf(out, "-%d", encr_size);
+					}
 				}
 				if (int_alg != AUTH_UNDEFINED)
 				{
-					fprintf(out, "/");
-				}
-			}
-			
-			if (int_alg != AUTH_UNDEFINED)
-			{
-				fprintf(out, "%N", integrity_algorithm_names, int_alg);
-				if (int_len)
-				{
-					fprintf(out, "-%d", int_len);
+					fprintf(out, "/%N", integrity_algorithm_names, int_alg);
+					if (int_size)
+					{
+						fprintf(out, "-%d", int_size);
+					}
 				}
 			}
 			fprintf(out, ", rekeying ");
 			
+			rekey = child_sa->get_lifetime(child_sa, FALSE);
 			if (rekey)
 			{
 				fprintf(out, "in %#V", &now, &rekey);
@@ -195,7 +206,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			}
 			
 			fprintf(out, ", last use: ");
-			use_in = max(use_in, use_fwd);
+			use_in = child_sa->get_usetime(child_sa, TRUE);
 			if (use_in)
 			{
 				fprintf(out, "%ds_i ", now - use_in);
@@ -204,6 +215,7 @@ static void log_child_sa(FILE *out, child_sa_t *child_sa, bool all)
 			{
 				fprintf(out, "no_i ");
 			}
+			use_out = child_sa->get_usetime(child_sa, FALSE);
 			if (use_out)
 			{
 				fprintf(out, "%ds_o ", now - use_out);

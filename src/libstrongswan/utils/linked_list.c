@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: linked_list.c 3841 2008-04-18 11:48:53Z tobias $
+ * $Id: linked_list.c 4580 2008-11-05 11:55:17Z martin $
  */
 
 #include <stdlib.h>
@@ -119,21 +119,6 @@ struct private_iterator_t {
 	 * Direction of iterator.
 	 */
 	bool forward;
-	
-	/**
-	 * Mutex to use to synchronize access
-	 */
-	pthread_mutex_t *mutex;
-	
-	/**
-	 * iteration hook
-	 */
-	iterator_hook_t *hook;
-	
-	/**
-	 * user parameter for iterator hook
-	 */
-	void *hook_param;
 };
 
 typedef struct private_enumerator_t private_enumerator_t;
@@ -208,75 +193,23 @@ static int get_list_count(private_iterator_t *this)
 }
 
 /**
- * default iterator hook which does nothing
- */
-static hook_result_t iterator_hook(void *param, void *in, void **out)
-{
-	*out = in;
-	return HOOK_NEXT;
-}
-
-/**
- * Implementation of iterator_t.set_iterator_hook.
- */
-static void set_iterator_hook(private_iterator_t *this, iterator_hook_t *hook,
-							  void* param)
-{
-	if (hook == NULL)
-	{
-		this->hook = iterator_hook;
-		this->hook_param = NULL;
-	}
-	else
-	{
-		this->hook = hook;
-		this->hook_param = param;
-	}
-}
-
-/**
  * Implementation of iterator_t.iterate.
  */
 static bool iterate(private_iterator_t *this, void** value)
 {
-	while (TRUE)
+	if (this->forward)
 	{
-		if (this->forward)
-		{
-			this->current = this->current ? this->current->next : this->list->first;
-		}
-		else
-		{
-			this->current = this->current ? this->current->previous : this->list->last;
-		}
-
-		if (this->current == NULL)
-		{
-			return FALSE;
-		}
-	
-		switch (this->hook(this->hook_param, this->current->value, value))
-		{
-			case HOOK_AGAIN:
-				/* rewind */
-				if (this->forward)
-				{
-					this->current = this->current->previous;
-				}
-				else
-				{
-					this->current = this->current->next;
-				}
-				break;
-			case HOOK_NEXT:
-				/* normal iteration */
-				break;
-			case HOOK_SKIP:
-				/* advance */
-				continue;
-		}
-		break;
+		this->current = this->current ? this->current->next : this->list->first;
 	}
+	else
+	{
+		this->current = this->current ? this->current->previous : this->list->last;
+	}
+	if (this->current == NULL)
+	{
+		return FALSE;
+	}
+	*value = this->current->value;
 	return TRUE;
 }
 
@@ -428,10 +361,6 @@ static void insert_after(private_iterator_t *iterator, void *item)
  */
 static void iterator_destroy(private_iterator_t *this)
 {
-	if (this->mutex)
-	{
-		pthread_mutex_unlock(this->mutex);
-	}
 	free(this);
 }
 
@@ -632,7 +561,8 @@ static status_t find_first(private_linked_list_t *this, linked_list_match_t matc
 	
 	while (current)
 	{
-		if (match(current->value, d1, d2, d3, d4, d5))
+		if ((match && match(current->value, d1, d2, d3, d4, d5)) ||
+			(!match && item && current->value == *item))
 		{
 			if (item != NULL)
 			{
@@ -655,7 +585,8 @@ static status_t find_last(private_linked_list_t *this, linked_list_match_t match
 	
 	while (current)
 	{
-		if (match(current->value, d1, d2, d3, d4, d5))
+		if ((match && match(current->value, d1, d2, d3, d4, d5)) ||
+			(!match && item && current->value == *item))
 		{
 			if (item != NULL)
 			{
@@ -793,7 +724,6 @@ static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forw
 	
 	this->public.get_count = (int (*) (iterator_t*)) get_list_count;
 	this->public.iterate = (bool (*) (iterator_t*, void **value)) iterate;
-	this->public.set_iterator_hook = (void(*)(iterator_t*, iterator_hook_t*, void*))set_iterator_hook;
 	this->public.insert_before = (void (*) (iterator_t*, void *item)) insert_before;
 	this->public.insert_after = (void (*) (iterator_t*, void *item)) insert_after;
 	this->public.replace = (status_t (*) (iterator_t*, void **, void *)) replace;
@@ -804,22 +734,6 @@ static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forw
 	this->forward = forward;
 	this->current = NULL;
 	this->list = linked_list;
-	this->mutex = NULL;
-	this->hook = iterator_hook;
-	
-	return &this->public;
-}
-
-/**
- * Implementation of linked_list_t.create_iterator_locked.
- */
-static iterator_t *create_iterator_locked(private_linked_list_t *linked_list,
-										  pthread_mutex_t *mutex)
-{
-	private_iterator_t *this = (private_iterator_t*)create_iterator(linked_list, TRUE);
-	this->mutex = mutex;
-	
-	pthread_mutex_lock(mutex);
 	
 	return &this->public;
 }
@@ -833,7 +747,6 @@ linked_list_t *linked_list_create()
 
 	this->public.get_count = (int (*) (linked_list_t *)) get_count;
 	this->public.create_iterator = (iterator_t * (*) (linked_list_t *,bool))create_iterator;
-	this->public.create_iterator_locked = (iterator_t * (*) (linked_list_t *,pthread_mutex_t*))create_iterator_locked;
 	this->public.create_enumerator = (enumerator_t*(*)(linked_list_t*))create_enumerator;
 	this->public.get_first = (status_t (*) (linked_list_t *, void **item))get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *, void **item))get_last;

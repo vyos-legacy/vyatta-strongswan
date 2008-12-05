@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -12,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: openssl_diffie_hellman.c 3896 2008-04-29 15:42:34Z tobias $
+ * $Id: openssl_diffie_hellman.c 4639 2008-11-12 15:09:24Z martin $
  */
 
 #include <openssl/dh.h>
@@ -38,23 +39,28 @@ struct modulus_entry_t {
 	BIGNUM *(*get_prime)(BIGNUM *bn);
 	
 	/* 
+	 * Optimum length of exponent in bits.
+	 */	
+	long opt_exponent_len;
+	
+	/* 
 	 * Generator value.
 	 */	
 	u_int16_t generator;
 };
 
 /**
- * All supported modulus values.
+ * All supported modulus values - optimum exponent size according to RFC 3526.
  */
 static modulus_entry_t modulus_entries[] = {
-	{MODP_768_BIT,  get_rfc2409_prime_768,  2},
-	{MODP_1024_BIT, get_rfc2409_prime_1024, 2},
-	{MODP_1536_BIT, get_rfc3526_prime_1536, 2},
-	{MODP_2048_BIT, get_rfc3526_prime_2048, 2},
-	{MODP_3072_BIT, get_rfc3526_prime_3072, 2},
-	{MODP_4096_BIT, get_rfc3526_prime_4096, 2},
-	{MODP_6144_BIT, get_rfc3526_prime_6144, 2},
-	{MODP_8192_BIT, get_rfc3526_prime_8192, 2},
+	{MODP_768_BIT,  get_rfc2409_prime_768,  256, 2},
+	{MODP_1024_BIT, get_rfc2409_prime_1024, 256, 2},
+	{MODP_1536_BIT, get_rfc3526_prime_1536, 256, 2},
+	{MODP_2048_BIT, get_rfc3526_prime_2048, 384, 2},
+	{MODP_3072_BIT, get_rfc3526_prime_3072, 384, 2},
+	{MODP_4096_BIT, get_rfc3526_prime_4096, 512, 2},
+	{MODP_6144_BIT, get_rfc3526_prime_6144, 512, 2},
+	{MODP_8192_BIT, get_rfc3526_prime_8192, 512, 2},
 };
 
 typedef struct private_openssl_diffie_hellman_t private_openssl_diffie_hellman_t;
@@ -87,7 +93,7 @@ struct private_openssl_diffie_hellman_t {
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-
+	
 	/**
 	 * True if shared secret is computed
 	 */
@@ -95,68 +101,57 @@ struct private_openssl_diffie_hellman_t {
 };
 
 /**
- * Convert a BIGNUM to a chunk
- */
-static void bn2chunk(BIGNUM *bn, chunk_t *chunk)
-{
-	chunk->len = BN_num_bytes(bn);
-	chunk->ptr = malloc(chunk->len);
-	BN_bn2bin(bn, chunk->ptr);
-}
-
-/**
- * Implementation of openssl_diffie_hellman_t.set_other_public_value.
- */
-static void set_other_public_value(private_openssl_diffie_hellman_t *this, chunk_t value)
-{
-	int len;
-	BN_bin2bn(value.ptr, value.len, this->pub_key);
-
-	len = DH_size(this->dh);
-	chunk_free(&this->shared_secret);
-	this->shared_secret = chunk_alloc(len);
-	
-	if (DH_compute_key(this->shared_secret.ptr, this->pub_key, this->dh) < 0) {
-    	DBG1("DH shared secret computation failed");
-    	return;
-    }
-	
-    this->computed = TRUE;
-}
-
-/**
- * Implementation of openssl_diffie_hellman_t.get_other_public_value.
- */
-static status_t get_other_public_value(private_openssl_diffie_hellman_t *this, 
-									   chunk_t *value)
-{
-	if (!this->computed)
-	{
-		return FAILED;
-	}
-	bn2chunk(this->pub_key, value);
-	return SUCCESS;
-}
-
-/**
  * Implementation of openssl_diffie_hellman_t.get_my_public_value.
  */
-static void get_my_public_value(private_openssl_diffie_hellman_t *this,chunk_t *value)
+static void get_my_public_value(private_openssl_diffie_hellman_t *this,
+								chunk_t *value)
 {
-	bn2chunk(this->dh->pub_key, value);
+	*value = chunk_alloc(DH_size(this->dh));
+	memset(value->ptr, 0, value->len);
+	BN_bn2bin(this->dh->pub_key,
+			  value->ptr + value->len - BN_num_bytes(this->dh->pub_key));
 }
 
 /**
  * Implementation of openssl_diffie_hellman_t.get_shared_secret.
  */
-static status_t get_shared_secret(private_openssl_diffie_hellman_t *this, chunk_t *secret)
+static status_t get_shared_secret(private_openssl_diffie_hellman_t *this,
+								  chunk_t *secret)
 {
 	if (!this->computed)
 	{
 		return FAILED;
 	}
-	*secret = chunk_clone(this->shared_secret);
+	/* shared secret should requires a len according the DH group */
+	*secret = chunk_alloc(DH_size(this->dh));
+	memset(secret->ptr, 0, secret->len);
+	memcpy(secret->ptr + secret->len - this->shared_secret.len, 
+		   this->shared_secret.ptr, this->shared_secret.len);
+
 	return SUCCESS;
+}
+
+
+/**
+ * Implementation of openssl_diffie_hellman_t.set_other_public_value.
+ */
+static void set_other_public_value(private_openssl_diffie_hellman_t *this,
+								   chunk_t value)
+{
+	int len;
+	
+	BN_bin2bn(value.ptr, value.len, this->pub_key);
+	chunk_clear(&this->shared_secret);
+	this->shared_secret.ptr = malloc(DH_size(this->dh));
+	memset(this->shared_secret.ptr, 0xFF, this->shared_secret.len);
+	len = DH_compute_key(this->shared_secret.ptr, this->pub_key, this->dh);
+	if (len < 0)
+	{
+		DBG1("DH shared secret computation failed");
+		return;
+	}
+	this->shared_secret.len = len;
+	this->computed = TRUE;
 }
 
 /**
@@ -173,6 +168,11 @@ static diffie_hellman_group_t get_dh_group(private_openssl_diffie_hellman_t *thi
 static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 {
 	int i;
+	bool ansi_x9_42;
+	
+	ansi_x9_42 = lib->settings->get_bool(lib->settings,
+										 "charon.dh_exponent_ansi_x9_42", TRUE);
+	
 	for (i = 0; i < (sizeof(modulus_entries) / sizeof(modulus_entry_t)); i++)
 	{
 		if (modulus_entries[i].group == this->group)
@@ -180,6 +180,10 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 			this->dh->p = modulus_entries[i].get_prime(NULL);
 			this->dh->g = BN_new();
 			BN_set_word(this->dh->g, modulus_entries[i].generator);
+			if (!ansi_x9_42)
+			{
+				this->dh->length = modulus_entries[i].opt_exponent_len;
+			}
 			return SUCCESS;
 		}
 	}
@@ -193,7 +197,7 @@ static void destroy(private_openssl_diffie_hellman_t *this)
 {
 	BN_clear_free(this->pub_key);
 	DH_free(this->dh);
-	chunk_free(&this->shared_secret);
+	chunk_clear(&this->shared_secret);
 	free(this);
 }
 
@@ -206,7 +210,6 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 	
 	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
 	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
-	this->public.dh.get_other_public_value = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_other_public_value;
 	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
 	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
 	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
@@ -220,7 +223,6 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 	
 	this->group = group;
 	this->computed = FALSE;
-	
 	this->pub_key = BN_new();
 	this->shared_secret = chunk_empty;
 	
@@ -237,6 +239,7 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(diffie_hellman_group_t g
 		destroy(this);
 		return NULL;
 	}
+	DBG2("size of DH secret exponent: %d bits", BN_num_bits(this->dh->priv_key));
 	
 	return &this->public;
 }

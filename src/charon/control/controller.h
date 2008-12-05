@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: controller.h 4192 2008-07-18 15:51:40Z martin $
+ * $Id: controller.h 4624 2008-11-11 13:11:44Z tobias $
  */
 
 /**
@@ -29,26 +29,24 @@
  * callback to log things triggered by controller.
  *
  * @param param			echoed parameter supplied when function invoked
- * @param signal		type of signal
+ * @param group			debugging group
  * @param level			verbosity level if log
  * @param ike_sa		associated IKE_SA, if any
  * @param format		printf like format string
  * @param args			list of arguments to use for format
  * @return				FALSE to return from invoked function
  */
-typedef bool(*controller_cb_t)(void* param, signal_t signal, level_t level,
-							   ike_sa_t* ike_sa, void *data,
-							   char* format, va_list args);
+typedef bool(*controller_cb_t)(void* param, debug_t group, level_t level,
+							   ike_sa_t* ike_sa, char* format, va_list args);
 
 /**
  * Empty callback function for controller_t functions.
  *
- * If you wan't to do a syncrhonous call, but don't need a callback, pass
+ * If you want to do a synchronous call, but don't need a callback, pass
  * this function to the controllers methods.
  */
-bool controller_cb_empty(void *param, signal_t signal, level_t level,
-						 ike_sa_t *ike_sa, void *data,
-						 char *format, va_list args);
+bool controller_cb_empty(void *param, debug_t group, level_t level,
+						 ike_sa_t *ike_sa, char *format, va_list args);
 
 typedef struct controller_t controller_t;
 
@@ -59,7 +57,7 @@ typedef struct controller_t controller_t;
  * evaluate the result of the operation by listening on the bus.
  *
  * Passing NULL as callback to the managers function calls them asynchronously.
- * If a callback is specified, they are called synchronoulsy. There is a default
+ * If a callback is specified, they are called synchronously. There is a default
  * callback "controller_cb_empty" if you wan't to call a function
  * synchronously, but don't need a callback.
  */
@@ -78,7 +76,7 @@ struct controller_t {
 	/**
 	 * Initiate a CHILD_SA, and if required, an IKE_SA.
 	 *
-	 * The inititate() function is synchronous and thus blocks until the
+	 * The initiate() function is synchronous and thus blocks until the
 	 * IKE_SA is established or failed. Because of this, the initiate() function
 	 * contains a thread cancellation point.
 	 *

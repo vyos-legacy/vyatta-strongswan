@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: traffic_selector.h 3658 2008-03-26 10:06:45Z martin $
+ * $Id: traffic_selector.h 4643 2008-11-12 22:57:46Z andreas $
  */
 
 /**
@@ -92,7 +92,7 @@ struct traffic_selector_t {
 	/**
 	 * Get starting address of this ts as a chunk.
 	 *
-	 * Chunk is in network order gets allocated.
+	 * Chunk is in network order and points to internal data.
 	 *
 	 * @return			chunk containing the address
 	 */
@@ -101,7 +101,7 @@ struct traffic_selector_t {
 	/**
 	 * Get ending address of this ts as a chunk.
 	 *
-	 * Chunk is in network order gets allocated.
+	 * Chunk is in network order and points to internal data.
 	 *
 	 * @return			chunk containing the address
 	 */
@@ -155,6 +155,13 @@ struct traffic_selector_t {
 	bool (*is_host) (traffic_selector_t *this, host_t* host);
 	
 	/**
+	 * Check if a traffic selector has been created by create_dynamic().
+	 *
+	 * @return			TRUE if TS is dynamic
+	 */
+	bool (*is_dynamic)(traffic_selector_t *this);
+	
+	/**
 	 * Update the address of a traffic selector.
 	 *
 	 * Update the address range of a traffic selector, if it is
@@ -168,7 +175,7 @@ struct traffic_selector_t {
 	 * Compare two traffic selectors for equality.
 	 * 
 	 * @param other		ts to compare with this
-	 * @return 			pointer to a string.
+	 * @return 			TRUE if equal, FALSE otherwise
 	 */
 	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
 	
@@ -189,6 +196,17 @@ struct traffic_selector_t {
 	 * @param host		the host to check
 	 */
 	bool (*includes) (traffic_selector_t *this, host_t *host);
+	
+	/**
+	 * Convert a traffic selector address range to a subnet
+	 * and its net mask.
+	 * If from and to ports of this traffic selector are equal,
+	 * the port of the returned host_t is set to that port.
+	 * 
+	 * @param net		converted subnet (has to be freed)
+	 * @param mask		converted net mask
+	 */
+	void (*to_subnet) (traffic_selector_t *this, host_t **net, u_int8_t *mask);
 	
 	/**
 	 * Destroys the ts object
@@ -225,7 +243,7 @@ traffic_selector_t *traffic_selector_create_from_string(
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
  * @param from_address	start of address range, network order
  * @param from_port		port number, host order
- * @param to_address	end of address range as string, network
+ * @param to_address	end of address range, network order
  * @param to_port		port number, host order
  * @return				traffic_selector_t object
  */

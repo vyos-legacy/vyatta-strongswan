@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: socket.h 4355 2008-09-25 07:56:58Z tobias $
+ * $Id: socket.h 4647 2008-11-13 07:48:27Z martin $
  */
 
 /**
@@ -30,15 +30,13 @@ typedef struct socket_t socket_t;
 #include <library.h>
 #include <network/packet.h>
 #include <utils/host.h>
-#include <utils/linked_list.h>
+#include <utils/enumerator.h>
 
 /**
  * Maximum size of a packet.
  *
- * 3000 Bytes should be sufficient, see IKEv2 RFC. However, we currently
- * do not support HASH_AND_URL certificates, so we require to transmit
- * the full certificates. To run our multi-CA test with 2 intermediate CAs,
- * 5000 bytes is sufficient.
+ * 3000 Bytes should be sufficient, see IKEv2 RFC. However, to run our
+ * multi-CA test with 2 intermediate CAs, we increase that to 5000 bytes.
  */
 #define MAX_PACKET 5000
 
@@ -73,9 +71,8 @@ struct socket_t {
 	/**
 	 * Send a packet.
 	 * 
-	 * Sends a packet to the net using destination from the packet.
-	 * Packet is sent using default routing mechanisms, thus the 
-	 * source address in packet is ignored.
+	 * Sends a packet to the net using source and destination addresses of
+	 * the packet.
 	 * 
 	 * @param packet		packet_t to send
 	 * @return 				
@@ -83,6 +80,13 @@ struct socket_t {
 	 * 						- FAILED when unable to send
 	 */
 	status_t (*send) (socket_t *this, packet_t *packet);
+	
+	/**
+	 * Enumerate all underlying socket file descriptors.
+	 * 
+	 * @return				enumerator over (int fd, int family, int port)
+	 */
+	enumerator_t *(*create_enumerator) (socket_t *this);
 	
 	/**
 	 * Destroy socket.

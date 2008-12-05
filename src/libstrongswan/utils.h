@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: utils.h 4305 2008-08-28 07:47:55Z tobias $
+ * $Id: utils.h 4632 2008-11-11 18:37:19Z martin $
  */
 
 /**
@@ -94,6 +94,11 @@
  * Get the number of elements in an array
  */
 #define countof(array) (sizeof(array)/sizeof(array[0]))
+
+/**
+ * Ignore result of functions tagged with warn_unused_result attributes
+ */
+#define ignore_result(call) { if(call); }
 
 /**
  * Assign a function as a class method

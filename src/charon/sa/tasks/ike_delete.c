@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_delete.c 4211 2008-07-23 18:46:34Z andreas $
+ * $Id: ike_delete.c 4458 2008-10-17 03:44:06Z andreas $
  */
 
 #include "ike_delete.h"
@@ -56,21 +56,21 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
 {
 	delete_payload_t *delete_payload;
 
-	SIG_IKE(DOWN_START, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
-			this->ike_sa->get_name(this->ike_sa),
-			this->ike_sa->get_unique_id(this->ike_sa),
-			this->ike_sa->get_my_host(this->ike_sa),
-			this->ike_sa->get_my_id(this->ike_sa),
-			this->ike_sa->get_other_host(this->ike_sa),
-			this->ike_sa->get_other_id(this->ike_sa));
+	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_my_host(this->ike_sa),
+		 this->ike_sa->get_my_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa),
+		 this->ike_sa->get_other_id(this->ike_sa));
 
 	delete_payload = delete_payload_create(PROTO_IKE);
 	message->add_payload(message, (payload_t*)delete_payload);
 	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 
 	DBG1(DBG_IKE, "sending DELETE for IKE_SA %s[%d]",
-			this->ike_sa->get_name(this->ike_sa),
-			this->ike_sa->get_unique_id(this->ike_sa));
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa));
 
 	return NEED_MORE;
 }
@@ -80,6 +80,7 @@ static status_t build_i(private_ike_delete_t *this, message_t *message)
  */
 static status_t process_i(private_ike_delete_t *this, message_t *message)
 {
+	DBG0(DBG_IKE, "IKE_SA deleted");
 	/* completed, delete IKE_SA by returning FAILED */
 	return FAILED;
 }
@@ -92,15 +93,15 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
 	/* we don't even scan the payloads, as the message wouldn't have
 	 * come so far without being correct */
 	DBG1(DBG_IKE, "received DELETE for IKE_SA %s[%d]",
-			this->ike_sa->get_name(this->ike_sa),
-			this->ike_sa->get_unique_id(this->ike_sa));
-	SIG_IKE(DOWN_START, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
-			this->ike_sa->get_name(this->ike_sa),
-			this->ike_sa->get_unique_id(this->ike_sa),
-			this->ike_sa->get_my_host(this->ike_sa),
-			this->ike_sa->get_my_id(this->ike_sa),
-			this->ike_sa->get_other_host(this->ike_sa),
-			this->ike_sa->get_other_id(this->ike_sa));
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa));
+	DBG0(DBG_IKE, "deleting IKE_SA %s[%d] between %H[%D]...%H[%D]",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_my_host(this->ike_sa),
+		 this->ike_sa->get_my_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa),
+		 this->ike_sa->get_other_id(this->ike_sa));
 
 	switch (this->ike_sa->get_state(this->ike_sa))
 	{
@@ -123,7 +124,7 @@ static status_t process_r(private_ike_delete_t *this, message_t *message)
  */
 static status_t build_r(private_ike_delete_t *this, message_t *message)
 {
-	SIG_IKE(DOWN_SUCCESS, "IKE_SA deleted");
+	DBG0(DBG_IKE, "IKE_SA deleted");
 
 	if (this->simultaneous)
 	{

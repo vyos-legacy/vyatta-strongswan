@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa.h 4368 2008-10-06 13:37:04Z martin $
+ * $Id: ike_sa.h 4640 2008-11-12 16:07:17Z martin $
  */
 
 /**
@@ -38,9 +38,7 @@ typedef struct ike_sa_t ike_sa_t;
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <sa/tasks/task.h>
-#include <crypto/prfs/prf.h>
-#include <crypto/crypters/crypter.h>
-#include <crypto/signers/signer.h>
+#include <sa/keymat.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
 #include <credentials/auth_info.h>
@@ -110,32 +108,41 @@ enum ike_condition_t {
 	 * Faking NAT to enforce UDP encapsulation
 	 */
 	COND_NAT_FAKE = (1<<3),
-
+	
 	/**
 	 * peer has ben authenticated using EAP
 	 */
 	COND_EAP_AUTHENTICATED = (1<<4),
-
+	
 	/**
 	 * received a certificate request from the peer
 	 */
 	COND_CERTREQ_SEEN = (1<<5),
+	
+	/**
+	 * Local peer is the "original" IKE initiator. Unaffected from rekeying.
+	 */
+	COND_ORIGINAL_INITIATOR = (1<<6),
 };
 
 /**
- * Information and statistics to query from an SA
+ * Timing information and statistics to query from an SA
  */
 enum statistic_t {
+	/** Timestamp of SA establishement */
+	STAT_ESTABLISHED = 0,
+	/** Timestamp of scheudled rekeying */
+	STAT_REKEY,
+	/** Timestamp of scheudled reauthentication */
+	STAT_REAUTH,
+	/** Timestamp of scheudled delete */
+	STAT_DELETE,
+	/** Timestamp of last inbound IKE packet */
+	STAT_INBOUND,
+	/** Timestamp of last outbound IKE packet */
+	STAT_OUTBOUND,
 	
-	/**
-	 * Relative time for scheduled rekeying
-	 */
-	STAT_REKEY_TIME,
-	
-	/**
-	 * Relative time for scheduled reauthentication
-	 */
-	STAT_REAUTH_TIME,
+	STAT_MAX
 };
 
 /**
@@ -201,6 +208,11 @@ enum ike_sa_state_t {
 	 * IKE_SA is in progress of deletion
 	 */
 	IKE_DELETING,
+	
+	/**
+	 * IKE_SA object gets destroyed
+	 */
+	IKE_DESTROYING,
 };
 
 /**
@@ -388,6 +400,20 @@ struct ike_sa_t {
 	auth_info_t* (*get_other_auth)(ike_sa_t *this);
 	
 	/**
+	 * Get the selected proposal of this IKE_SA.
+	 *
+	 * @return				selected proposal
+	 */
+	proposal_t* (*get_proposal)(ike_sa_t *this);
+	
+	/**
+	 * Set the proposal selected for this IKE_SA.
+	 *
+	 * @param				selected proposal
+	 */
+	void (*set_proposal)(ike_sa_t *this, proposal_t *proposal);
+	
+	/**
 	 * Add an additional address for the peer.
 	 *
 	 * In MOBIKE, a peer may transmit additional addresses where it is
@@ -462,13 +488,6 @@ struct ike_sa_t {
 	 */
 	void (*set_pending_updates)(ike_sa_t *this, u_int32_t updates);
 	
-	/**
-	 * Check if we are the original initiator of this IKE_SA (rekeying does not
-	 * change this flag).
-	 */
-	bool (*is_ike_initiator)(ike_sa_t *this);
-	
-
 #ifdef ME
 	/**
 	 * Activate mediation server functionality for this IKE_SA.
@@ -705,70 +724,13 @@ struct ike_sa_t {
 	 * was sent.
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
-
+	
 	/**
-	 * Derive all keys and create the transforms for IKE communication.
+	 * Get the keying material of this IKE_SA.
 	 *
-	 * Keys are derived using the diffie hellman secret, nonces and internal
-	 * stored SPIs.
-	 * Key derivation differs when an IKE_SA is set up to replace an
-	 * existing IKE_SA (rekeying). The SK_d key from the old IKE_SA
-	 * is included in the derivation process.
-	 *
-	 * @param proposal		proposal which contains algorithms to use
-	 * @param secret		secret derived from DH exchange, gets freed
-	 * @param nonce_i		initiators nonce
-	 * @param nonce_r		responders nonce
-	 * @param initiator		TRUE if initiator, FALSE otherwise
-	 * @param child_prf		PRF with SK_d key when rekeying, NULL otherwise
-	 * @param old_prf		general purpose PRF of old SA when rekeying
+	 * @return				per IKE_SA keymat instance
 	 */
-	status_t (*derive_keys)(ike_sa_t *this, proposal_t* proposal, chunk_t secret,
-							chunk_t nonce_i, chunk_t nonce_r,
-							bool initiator, prf_t *child_prf, prf_t *old_prf);
-	
-	/**
-	 * Get the selected IKE proposal string
-	 *
-	 * @return				string describing the selected IKE proposal
-	 */
-	char* (*get_proposal)(ike_sa_t *this);			
-
-	/**
-	 * Set the selected IKE proposal string for status information purposes
-	 * (the "%P" printf format handler is used)
-     *
-	 * @param proposal		string describing the selected IKE proposal
-	 */
-	void (*set_proposal)(ike_sa_t *this, char *proposal);			
-
-	/**
-	 * Get a multi purpose prf for the negotiated PRF function.
-	 * 
-	 * @return				pointer to prf_t object
-	 */
-	prf_t *(*get_prf) (ike_sa_t *this);
-	
-	/**
-	 * Get the prf-object, which is used to derive keys for child SAs.
-	 * 
-	 * @return				pointer to prf_t object
-	 */
-	prf_t *(*get_child_prf) (ike_sa_t *this);
-	
-	/**
-	 * Get the key to build outgoing authentication data.
-	 * 
-	 * @return				pointer to prf_t object
-	 */
-	chunk_t (*get_skp_build) (ike_sa_t *this);
-	
-	/**
-	 * Get the key to verify incoming authentication data.
-	 * 
-	 * @return				pointer to prf_t object
-	 */
-	chunk_t (*get_skp_verify) (ike_sa_t *this);
+	keymat_t* (*get_keymat)(ike_sa_t *this);
 	
 	/**
 	 * Associates a child SA to this IKE SA
@@ -900,6 +862,17 @@ struct ike_sa_t {
 	 */
 	void (*add_dns_server) (ike_sa_t *this, host_t *dns);
 	
+	/**
+	 * Set local and remote host addresses to be used for IKE.
+	 *
+	 * These addresses are communicated via the KMADDRESS field of a MIGRATE
+	 * message sent via the NETLINK or PF _KEY kernel socket interface.
+	 *
+	 * @param local			local kmaddress
+	 * @param remote		remote kmaddress
+	 */
+	void (*set_kmaddress) (ike_sa_t *this, host_t *local, host_t *remote);
+
 	/**
 	 * Inherit all attributes of other to this after rekeying.
 	 *

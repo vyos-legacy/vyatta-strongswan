@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: smp.c 4358 2008-09-25 13:56:23Z tobias $
+ * $Id: smp.c 4446 2008-10-15 12:24:44Z martin $
  */
 
 #include <stdlib.h>
@@ -181,19 +181,13 @@ static void write_childend(xmlTextWriterPtr writer, child_sa_t *child, bool loca
  */
 static void write_child(xmlTextWriterPtr writer, child_sa_t *child)
 {
-	ipsec_mode_t mode;
-	encryption_algorithm_t encr;
-	integrity_algorithm_t int_algo;
-	size_t encr_len, int_len;
-	u_int32_t rekey, use_in, use_out, use_fwd;
 	child_cfg_t *config;
 	
 	config = child->get_config(child);
-	child->get_stats(child, &mode, &encr, &encr_len, &int_algo, &int_len,
-					 &rekey, &use_in, &use_out, &use_fwd);
 
 	xmlTextWriterStartElement(writer, "childsa");
-	xmlTextWriterWriteFormatElement(writer, "reqid", "%d", child->get_reqid(child));
+	xmlTextWriterWriteFormatElement(writer, "reqid", "%d",
+									child->get_reqid(child));
 	xmlTextWriterWriteFormatElement(writer, "childconfig", "%s", 
 									config->get_name(config));
 	xmlTextWriterStartElement(writer, "local");
@@ -359,15 +353,15 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 /**
  * callback which logs to a XML writer
  */
-static bool xml_callback(xmlTextWriterPtr writer, signal_t signal, level_t level,
-						 ike_sa_t* ike_sa, void *data, char* format, va_list args)
+static bool xml_callback(xmlTextWriterPtr writer, debug_t group, level_t level,
+						 ike_sa_t* ike_sa, char* format, va_list args)
 {
 	if (level <= 1)
 	{
 		/* <item> */
 		xmlTextWriterStartElement(writer, "item");
 		xmlTextWriterWriteFormatAttribute(writer, "level", "%d", level);
-		xmlTextWriterWriteFormatAttribute(writer, "source", "%N", signal_names, signal);
+		xmlTextWriterWriteFormatAttribute(writer, "source", "%N", debug_names, group);
 		xmlTextWriterWriteFormatAttribute(writer, "thread", "%u", pthread_self());
 		xmlTextWriterWriteVFormatString(writer, format, args);
 		xmlTextWriterEndElement(writer);

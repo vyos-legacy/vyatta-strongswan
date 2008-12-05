@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.c 3839 2008-04-18 11:25:37Z andreas $
+ * RCSID $Id: constants.c 4612 2008-11-11 06:37:37Z andreas $
  */
 
 /*
@@ -517,6 +517,8 @@ const char *const sa_policy_bit_names[] = {
 	"DONTREAUTH",
 	"BEET",
 	"MOBIKE",
+	"ECDSA",
+	"PROXY",
 	NULL
     };
 
