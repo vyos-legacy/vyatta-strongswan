@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: parser.l 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: parser.l 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <string.h>
@@ -23,6 +23,7 @@
 
 #define MAX_INCLUDE_DEPTH  20
 
+#define YY_NO_INPUT
 #define YY_NO_UNPUT
 extern void yyerror(const char *);
 extern int yylex (void);

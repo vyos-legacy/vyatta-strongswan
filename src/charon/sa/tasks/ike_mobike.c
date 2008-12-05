@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_mobike.c 4394 2008-10-09 08:25:11Z martin $
+ * $Id: ike_mobike.c 4618 2008-11-11 09:22:00Z tobias $
  */
 
 #include "ike_mobike.h"
@@ -251,10 +251,16 @@ static void update_children(private_ike_mobike_t *this)
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		child_sa->update_hosts(child_sa,
-						this->ike_sa->get_my_host(this->ike_sa), 
-						this->ike_sa->get_other_host(this->ike_sa),
-						this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
+		if (child_sa->update_hosts(child_sa,
+				this->ike_sa->get_my_host(this->ike_sa), 
+				this->ike_sa->get_other_host(this->ike_sa),
+				this->ike_sa->get_virtual_ip(this->ike_sa, TRUE),
+				this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
+		{
+			this->ike_sa->rekey_child_sa(this->ike_sa,
+					child_sa->get_protocol(child_sa),
+					child_sa->get_spi(child_sa, TRUE));
+		}
 	}
 	iterator->destroy(iterator);
 }

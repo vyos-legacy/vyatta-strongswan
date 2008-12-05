@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: crypter.h 3971 2008-05-16 13:27:21Z tobias $
+ * $Id: crypter.h 4532 2008-10-30 13:21:21Z martin $
  */
  
 /**

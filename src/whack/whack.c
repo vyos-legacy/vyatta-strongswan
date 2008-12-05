@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: whack.c 3264 2007-10-08 19:49:56Z andreas $
+ * RCSID $Id: whack.c 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <stdio.h>
@@ -1868,7 +1868,7 @@ main(int argc, char **argv)
 		    }
 
 		    le++;	/* include NL in line */
-		    write(1, ls, le - ls);
+		    ignore_result(write(1, ls, le - ls));
 
 		    /* figure out prefix number
 		     * and how it should affect our exit status

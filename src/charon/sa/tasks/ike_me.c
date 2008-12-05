@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_me.c 4355 2008-09-25 07:56:58Z tobias $
+ * $Id: ike_me.c 4640 2008-11-12 16:07:17Z martin $
  */
  
 #include "ike_me.h"
@@ -461,8 +461,7 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 				this->ike_sa->set_server_reflexive_host(this->ike_sa, endpoint->clone(endpoint));
 			}
 			/* FIXME: what if it failed? e.g. AUTH failure */
-			SIG_CHD(UP_SUCCESS, NULL, "established mediation connection "
-					"without CHILD_SA successfully");
+			DBG1(DBG_IKE, "established mediation connection successfully");
 			
 			break;
 		}
@@ -642,8 +641,7 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 			/* FIXME: we actually must delete any existing IKE_SAs with the same remote id */
 			this->ike_sa->act_as_mediation_server(this->ike_sa);
 			
-			SIG_CHD(UP_SUCCESS, NULL, "established mediation connection "
-					"without CHILD_SA successfully");
+			DBG1(DBG_IKE, "established mediation connection successfully");
 			
 			break;
 		}
@@ -787,7 +785,7 @@ ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator)
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
 	
-	if (ike_sa->is_ike_initiator(ike_sa))
+	if (ike_sa->has_condition(ike_sa, COND_ORIGINAL_INITIATOR))
 	{
 		if (initiator)
 		{

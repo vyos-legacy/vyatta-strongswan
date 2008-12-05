@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -12,15 +13,18 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: openssl_plugin.c 4309 2008-08-28 11:07:57Z martin $
+ * $Id: openssl_plugin.c 4583 2008-11-05 12:37:37Z martin $
  */
 
 #include <openssl/evp.h>
 #include <openssl/engine.h>
+#include <openssl/crypto.h>
+#include <pthread.h>
 
 #include "openssl_plugin.h"
 
 #include <library.h>
+#include <utils/mutex.h>
 #include "openssl_crypter.h"
 #include "openssl_hasher.h"
 #include "openssl_diffie_hellman.h"
@@ -42,6 +46,120 @@ struct private_openssl_plugin_t {
 	 */
 	openssl_plugin_t public;
 };
+
+/**
+ * Array of static mutexs, with CRYPTO_num_locks() mutex
+ */
+static mutex_t **mutex = NULL;
+
+/**
+ * Locking callback for static locks
+ */
+static void locking_function(int mode, int type, const char *file, int line)
+{
+	if (mutex)
+	{
+		if (mode & CRYPTO_LOCK)
+		{
+			mutex[type]->lock(mutex[type]);
+		}
+		else
+		{
+			mutex[type]->unlock(mutex[type]);
+		}
+	}
+}
+
+/**
+ * Implementation of dynlock
+ */
+struct CRYPTO_dynlock_value {
+	mutex_t *mutex;
+};
+
+/**
+ * Callback to create a dynamic lock
+ */
+static struct CRYPTO_dynlock_value *create_function(const char *file, int line)
+{
+	struct CRYPTO_dynlock_value *lock;
+	
+	lock = malloc_thing(struct CRYPTO_dynlock_value);
+	lock->mutex = mutex_create(MUTEX_DEFAULT);
+	return lock;
+}
+
+/**
+ * Callback to (un-)lock a dynamic lock
+ */
+static void lock_function(int mode, struct CRYPTO_dynlock_value *lock,
+						  const char *file, int line)
+{
+	if (mode & CRYPTO_LOCK)
+	{
+		lock->mutex->lock(lock->mutex);
+	}
+	else
+	{
+		lock->mutex->unlock(lock->mutex);
+	}
+}
+
+/**
+ * Callback to destroy a dynamic lock
+ */
+static void destroy_function(struct CRYPTO_dynlock_value *lock,
+							 const char *file, int line)
+{
+	lock->mutex->destroy(lock->mutex);
+	free(lock);
+}
+
+/**
+ * Thread-ID callback function
+ */
+static unsigned long id_function(void)
+{
+	return pthread_self();
+}
+
+/**
+ * initialize OpenSSL for multi-threaded use
+ */
+static void threading_init()
+{
+	int i, num_locks;
+
+	CRYPTO_set_id_callback(id_function);
+ 	CRYPTO_set_locking_callback(locking_function);
+	
+	CRYPTO_set_dynlock_create_callback(create_function);
+	CRYPTO_set_dynlock_lock_callback(lock_function);
+	CRYPTO_set_dynlock_destroy_callback(destroy_function);
+	
+	num_locks = CRYPTO_num_locks();
+	mutex = malloc(sizeof(mutex_t*) * num_locks);
+	for (i = 0; i < num_locks; i++)
+	{
+		mutex[i] = mutex_create(MUTEX_DEFAULT);
+	}
+}
+
+/**
+ * cleanup OpenSSL threading locks
+ */
+static void threading_cleanup()
+{
+	int i, num_locks;
+	
+	num_locks = CRYPTO_num_locks();
+	for (i = 0; i < num_locks; i++)
+	{
+		mutex[i]->destroy(mutex[i]);
+	}
+	free(mutex);
+	mutex = NULL;
+}
 
 /**
  * Implementation of openssl_plugin_t.destroy
@@ -68,6 +186,8 @@ static void destroy(private_openssl_plugin_t *this)
 	ENGINE_cleanup();
 	EVP_cleanup();
 	
+	threading_cleanup();
+	
 	free(this);
 }
 
@@ -79,6 +199,8 @@ plugin_t *plugin_create()
 	private_openssl_plugin_t *this = malloc_thing(private_openssl_plugin_t);
 	
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	
+	threading_init();
 	
 	OpenSSL_add_all_algorithms();
 	

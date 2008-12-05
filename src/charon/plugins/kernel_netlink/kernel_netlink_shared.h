@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_netlink_shared.h 4350 2008-09-18 15:16:43Z tobias $
+ * $Id: kernel_netlink_shared.h 4660 2008-11-14 14:23:11Z martin $
  */
 
 #ifndef KERNEL_NETLINK_SHARED_H_
@@ -20,7 +20,15 @@
 
 #include <library.h>
 
-#define NETLINK_BUFFER_SIZE 1024
+#include <linux/rtnetlink.h>
+
+/**
+ * General purpose netlink buffer.
+ *
+ * 1024 byte is currently sufficient for all operations. Some platform
+ * require an enforced aligment to four bytes (e.g. ARM).
+ */
+typedef u_char netlink_buf_t[1024] __attribute__((aligned(RTA_ALIGNTO)));
 
 typedef struct netlink_socket_t netlink_socket_t;
 

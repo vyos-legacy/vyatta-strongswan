@@ -33,10 +33,10 @@ enum state_t {
 	STATE_ERROR = 5
 };
 
-typedef enum mode_t mode_t;
+typedef enum print_t print_t;
 
 enum print_t {
-    MODE_ANY	= 0,
+	MODE_ANY	= 0,
 	MODE_ADD	= 1,
 	MODE_DEL	= 2
 };
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	/* threads 1..5 and 9 are always busy */
 	for (th = 1; th <= THREADS; th++)
 	{
-		state[th] = (th <= 5 || th == 9 )? STATE_BUSY : STATE_IDLE;
+		state[th] = (th <= 7 && th != 3)? STATE_BUSY : STATE_IDLE;
 	}
   
 	/* open the log file */

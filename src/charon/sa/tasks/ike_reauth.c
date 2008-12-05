@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2007 Martin Willi
+ * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_reauth.c 4211 2008-07-23 18:46:34Z andreas $
+ * $Id: ike_reauth.c 4495 2008-10-28 16:07:06Z martin $
  */
 
 #include "ike_reauth.h"
@@ -65,7 +65,6 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	
 	/* process delete response first */
 	this->ike_delete->task.process(&this->ike_delete->task, message);
-	SIG_IKE(DOWN_SUCCESS, "IKE_SA deleted");
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	
@@ -105,6 +104,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 		{
 			charon->ike_sa_manager->checkin_and_destroy(
 								charon->ike_sa_manager, new);
+			/* set threads active IKE_SA after checkin */
+			charon->bus->set_sa(charon->bus, this->ike_sa);
 			DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
 			return FAILED;
 		}
@@ -132,6 +133,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 					iterator->destroy(iterator);
 					charon->ike_sa_manager->checkin_and_destroy(
 										charon->ike_sa_manager, new);
+					/* set threads active IKE_SA after checkin */
+					charon->bus->set_sa(charon->bus, this->ike_sa);
 					DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
 					return FAILED;
 				}
@@ -141,6 +144,8 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	}
 	iterator->destroy(iterator);
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
+	/* set threads active IKE_SA after checkin */
+	charon->bus->set_sa(charon->bus, this->ike_sa);
 	
 	/* we always return failed to delete the obsolete IKE_SA */
 	return FAILED;

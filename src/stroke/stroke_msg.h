@@ -19,7 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: stroke_msg.h 4384 2008-10-08 07:00:13Z andreas $
+ * RCSID $Id: stroke_msg.h 4614 2008-11-11 07:28:52Z andreas $
  */
 
 #ifndef STROKE_MSG_H_
@@ -212,6 +212,9 @@ struct stroke_msg_t {
 			int mobike;
 			int force_encap;
 			int ipcomp;
+			int proxy_mode;
+			int install_policy;
+
 			crl_policy_t crl_policy;
 			int unique;
 			struct {

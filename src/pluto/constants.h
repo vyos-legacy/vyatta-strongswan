@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: constants.h 4051 2008-06-10 09:08:27Z tobias $
+ * RCSID $Id: constants.h 4612 2008-11-11 06:37:37Z andreas $
  */
 
 #ifndef _CONSTANTS_H
@@ -279,7 +279,7 @@ extern const char sparse_end[];
 	"4009438B 481C6CD7 889A002E D5EE382B C9190DA6 FC026E47" \
 	"9558E447 5677E9AA 9E3050E2 765694DF C81F56E8 80B96E71" \
 	"60C980DD 98EDD3DF FFFFFFFF FFFFFFFF"
-#define LOCALSECRETSIZE		(256 / BITS_PER_BYTE)
+#define LOCALSECRETSIZE		(512 / BITS_PER_BYTE)
 
 /* limits on nonce sizes.  See RFC2409 "The internet key exchange (IKE)" 5 */
 #define MINIMUM_NONCE_SIZE	8	/* bytes */
@@ -877,7 +877,8 @@ extern const char *prettypolicy(lset_t policy);
 #define POLICY_BEET		LELEM(22)	/* bound end2end tunnel, IKEv2 */
 #define POLICY_MOBIKE		LELEM(23)	/* enable MOBIKE for IKEv2  */
 #define POLICY_FORCE_ENCAP	LELEM(24)	/* force UDP encapsulation (IKEv2)  */
-#define POLICY_ECDSASIG	LELEM(25)   /* ecdsa signature (IKEv2) */
+#define POLICY_ECDSASIG		LELEM(25)	/* ECDSA signature (IKEv2) */
+#define POLICY_PROXY		LELEM(26)	/* proxy transport mode (MIPv6) */
 
 /* Any IPsec policy?  If not, a connection description
  * is only for ISAKMP SA, not IPSEC SA.  (A pun, I admit.)

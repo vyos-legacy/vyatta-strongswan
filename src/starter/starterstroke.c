@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starterstroke.c 4276 2008-08-22 10:44:51Z martin $
+ * RCSID $Id: starterstroke.c 4614 2008-11-11 07:28:52Z andreas $
  */
 
 #include <sys/types.h>
@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <linux/xfrm.h>
 
 #include <freeswan.h>
 
@@ -36,6 +37,9 @@
 #include "starterstroke.h"
 #include "confread.h"
 #include "files.h"
+
+#define IPV4_LEN	 4
+#define IPV6_LEN	16
 
 /**
  * Authentication methods, must be the same as in charons authenticator.h
@@ -126,7 +130,11 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 		case AF_INET:
 		{
 			struct sockaddr_in* sin = (struct sockaddr_in*)addr;
-			if (inet_ntop(AF_INET, &sin->sin_addr, buffer, len))
+			u_int8_t zeroes[IPV4_LEN];
+
+			memset(zeroes, 0, IPV4_LEN);
+			if (memcmp(zeroes, &(sin->sin_addr.s_addr), IPV4_LEN) &&
+				inet_ntop(AF_INET, &sin->sin_addr, buffer, len))
 			{
 				return;
 			}
@@ -135,7 +143,11 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 		case AF_INET6:
 		{
 			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)addr;
-			if (inet_ntop(AF_INET6, &sin6->sin6_addr, buffer, len))
+			u_int8_t zeroes[IPV6_LEN];
+
+			memset(zeroes, 0, IPV6_LEN);
+			if (memcmp(zeroes, &(sin6->sin6_addr.s6_addr), IPV6_LEN) &&
+				inet_ntop(AF_INET6, &sin6->sin6_addr, buffer, len))
 			{
 				return;
 			}
@@ -144,8 +156,8 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 		default:
 			break;
 	}
-	/* failed */
-	snprintf(buffer, len, "0.0.0.0");
+	/* default */
+	snprintf(buffer, len, "%%any");
 }
 
 
@@ -231,17 +243,22 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	
 	if (conn->policy & POLICY_TUNNEL)
 	{
-		msg.add_conn.mode = 1; /* XFRM_MODE_TRANSPORT */
+		msg.add_conn.mode = XFRM_MODE_TUNNEL;
 	}
 	else if (conn->policy & POLICY_BEET)
 	{
-		msg.add_conn.mode = 4; /* XFRM_MODE_BEET */
+		msg.add_conn.mode = XFRM_MODE_BEET;
 	}
+	else if (conn->policy & POLICY_PROXY)
+	{
+		msg.add_conn.mode = XFRM_MODE_TRANSPORT;
+		msg.add_conn.proxy_mode = TRUE;
+	} 
 	else
 	{
-		msg.add_conn.mode = 0; /* XFRM_MODE_TUNNEL */
+		msg.add_conn.mode = XFRM_MODE_TRANSPORT;
 	}
- 
+
 	if (!(conn->policy & POLICY_DONT_REKEY))
 	{
 		msg.add_conn.rekey.reauth = (conn->policy & POLICY_DONT_REAUTH) == LEMPTY;
@@ -254,6 +271,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.mobike = conn->policy & POLICY_MOBIKE;
 	msg.add_conn.force_encap = conn->policy & POLICY_FORCE_ENCAP;
 	msg.add_conn.ipcomp = conn->policy & POLICY_COMPRESS;
+	msg.add_conn.install_policy = conn->install_policy;
 	msg.add_conn.crl_policy = cfg->setup.strictcrlpolicy;
 	msg.add_conn.unique = cfg->setup.uniqueids;
 	msg.add_conn.algorithms.ike = push_string(&msg, conn->ike);

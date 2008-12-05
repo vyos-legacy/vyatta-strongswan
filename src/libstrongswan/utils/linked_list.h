@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007-2008 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: linked_list.h 3841 2008-04-18 11:48:53Z tobias $
+ * $Id: linked_list.h 4576 2008-11-05 08:32:38Z martin $
  */
  
 /**
@@ -27,12 +27,9 @@
 
 typedef struct linked_list_t linked_list_t;
 
-#include <pthread.h>
-
 #include <library.h>
 #include <utils/iterator.h>
 #include <utils/enumerator.h>
-
 
 /**
  * Method to match elements in a linked list (used in find_* functions)
@@ -81,18 +78,6 @@ struct linked_list_t {
 	iterator_t *(*create_iterator) (linked_list_t *this, bool forward);
 	
 	/**
-	 * Creates a iterator, locking a mutex.
-	 *
-	 * The supplied mutex is acquired immediately, and released
-	 * when the iterator gets destroyed.
-	 * 
-	 * @param mutex 	mutex to use for exclusive access
-	 * @return			new iterator_t object
-	 */
-	iterator_t *(*create_iterator_locked) (linked_list_t *this,
-										   pthread_mutex_t *mutex);
-	
-	/**
 	 * Create an enumerator over the list.
 	 *
 	 * The enumerator is a "lightweight" iterator. It only has two methods
@@ -130,7 +115,7 @@ struct linked_list_t {
 	 * If a compare function is given, it is called for each item, where
 	 * the first parameter is the current list item and the second parameter
 	 * is the supplied item parameter.
-	 * If compare is NULL, compare is is done by pointer.
+	 * If compare is NULL, compare is done by pointer.
 	 *
 	 * @param item		item to remove/pass to comparator
 	 * @param compare	compare function, or NULL
@@ -179,10 +164,12 @@ struct linked_list_t {
 	 * If the supplied function returns TRUE this function returns SUCCESS, and
 	 * the current object is returned in the third parameter, otherwise,
 	 * the next item is checked.
+	 *
+	 * If match is NULL, *item and the current object are compared.
 	 * 
 	 * @warning Only use pointers as user supplied data.
 	 *
-	 * @param match			comparison function to call on each object
+	 * @param match			comparison function to call on each object, or NULL
 	 * @param item			the list item, if found
 	 * @param ...			user data to supply to match function (limited to 5 arguments)
 	 * @return				SUCCESS if found, NOT_FOUND otherwise
@@ -198,9 +185,11 @@ struct linked_list_t {
 	 * the current object is returned in the third parameter, otherwise,
 	 * the next item is checked.
 	 * 
+	 * If match is NULL, *item and the current object are compared.
+	 * 
 	 * @warning Only use pointers as user supplied data.
 	 *
-	 * @param match			comparison function to call on each object
+	 * @param match			comparison function to call on each object, or NULL
 	 * @param item			the list item, if found
 	 * @param ...			user data to supply to match function (limited to 5 arguments)
 	 * @return				SUCCESS if found, NOT_FOUND otherwise

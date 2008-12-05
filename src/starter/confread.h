@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.h 4276 2008-08-22 10:44:51Z martin $
+ * RCSID $Id: confread.h 4612 2008-11-11 06:37:37Z andreas $
  */
 
 #ifndef _IPSEC_CONFREAD_H_
@@ -114,7 +114,7 @@ struct starter_conn {
 	unsigned long	sa_rekey_fuzz;
 	sa_family_t	addr_family;
 	sa_family_t	tunnel_addr_family;
-	
+	bool		install_policy;
 	starter_end_t	left, right;
 
 	unsigned long	id;

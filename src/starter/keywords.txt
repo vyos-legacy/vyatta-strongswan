@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.txt 4276 2008-08-22 10:44:51Z martin $
+ * RCSID $Id: keywords.txt 4612 2008-11-11 06:37:37Z andreas $
  */
 
 #include <string.h>
@@ -61,6 +61,7 @@ keyexchange,       KW_KEYEXCHANGE
 type,              KW_TYPE
 pfs,               KW_PFS
 compress,          KW_COMPRESS
+installpolicy,     KW_INSTALLPOLICY
 auth,              KW_AUTH
 authby,            KW_AUTHBY
 keylife,           KW_KEYLIFE

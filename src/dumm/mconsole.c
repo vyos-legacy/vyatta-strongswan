@@ -201,13 +201,13 @@ static bool del_iface(private_mconsole_t *this, char *guest)
 static int exec(private_mconsole_t *this, void(*cb)(void*,char*,size_t),
 				void *data, char *cmd)
 {
-	return request(this, cb, data, "exec %s", cmd);
+	return request(this, cb, data, "%s", cmd);
 }
 
 /**
  * Poll until guest is ready
  */
-static bool wait_bootup(private_mconsole_t *this)
+static void wait_bootup(private_mconsole_t *this)
 {
 	/* wait for init process to appear */
 	while (request(this, ignore, NULL, "exec ps -p 1 > /dev/null"))
@@ -247,7 +247,7 @@ static bool wait_for_notify(private_mconsole_t *this, char *nsock)
 	}
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, nsock, sizeof(addr));
+	strncpy(addr.sun_path, nsock, sizeof(addr.sun_path));
 	if (bind(this->notify, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
 		DBG1("binding mconsole notify socket to '%s' failed: %m", nsock);
@@ -306,7 +306,7 @@ static bool setup_console(private_mconsole_t *this)
 	}
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	snprintf(&addr.sun_path[1], sizeof(addr.sun_path), "%5d-%d",
+	snprintf(&addr.sun_path[1], sizeof(addr.sun_path)-1, "%5d-%d",
 			 getpid(), this->console);
 	if (bind(this->console, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
@@ -346,11 +346,7 @@ mconsole_t *mconsole_create(char *notify, void(*idle)(void))
 	}
 	unlink(notify);
 	
-	if (!wait_bootup(this))
-	{
-		destroy(this);
-		return NULL;
-	}
+	wait_bootup(this);
 	
 	return &this->public;
 }

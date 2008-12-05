@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: openssl_rsa_private_key.c 4317 2008-09-02 11:00:13Z martin $
+ * $Id: openssl_rsa_private_key.c 4564 2008-11-04 13:01:36Z martin $
  */
 
 #include "openssl_rsa_private_key.h"
@@ -74,9 +74,11 @@ openssl_rsa_public_key_t *openssl_rsa_public_key_create_from_n_e(BIGNUM *n, BIGN
  * Build an EMPSA PKCS1 signature described in PKCS#1
  */
 static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
-									   int type, chunk_t data, chunk_t *signature)
+									   int type, chunk_t data, chunk_t *out)
 {
 	bool success = FALSE;
+	u_char *sig = NULL;
+	u_int len;
 	const EVP_MD *hasher = EVP_get_digestbynid(type);
 	if (!hasher)
 	{
@@ -105,14 +107,17 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 		goto error;
 	}
 	
-	*signature = chunk_alloc(RSA_size(this->rsa));
-	
-	if (!EVP_SignFinal(ctx, signature->ptr, &signature->len, key))
+	sig = malloc(EVP_PKEY_size(key));
+	if (EVP_SignFinal(ctx, sig, &len, key))
 	{
-		goto error;
+		out->ptr = sig;
+		out->len = len;
+		success = TRUE;
 	}
-	
-	success = TRUE;
+	else
+	{
+		free(sig);
+	}
 	
 error:
 	if (key)

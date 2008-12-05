@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.h 4276 2008-08-22 10:44:51Z martin $
+ * RCSID $Id: keywords.h 4612 2008-11-11 06:37:37Z andreas $
  */
 
 #ifndef _KEYWORDS_H_
@@ -68,6 +68,7 @@ typedef enum {
     KW_TYPE,
     KW_PFS,
     KW_COMPRESS,
+	KW_INSTALLPOLICY,
     KW_AUTH,
     KW_AUTHBY,
     KW_EAP,

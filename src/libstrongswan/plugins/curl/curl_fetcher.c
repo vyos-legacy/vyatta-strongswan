@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: curl_fetcher.c 3529 2008-03-05 15:26:24Z martin $
+ * $Id: curl_fetcher.c 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <curl/curl.h>
@@ -123,7 +123,7 @@ static bool set_option(private_curl_fetcher_t *this, fetcher_option_t option, ..
 		case FETCH_REQUEST_DATA:
 		{
 			chunk_t data = va_arg(args, chunk_t);
-			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, data.ptr);
+			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, (char*)data.ptr);
 			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, data.len);
 			return TRUE;
 		}

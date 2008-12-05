@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  *
- * RCSID $Id: freeswan.h 3265 2007-10-08 19:52:55Z andreas $
+ * RCSID $Id: freeswan.h 4632 2008-11-11 18:37:19Z martin $
  */
 #define	_FREESWAN_H	/* seen it, no need to see it again */
 
@@ -446,6 +446,7 @@ bitstomask(
 /* option pickup from files (userland only because of use of FILE) */
 const char *optionsfrom(const char *filename, int *argcp, char ***argvp,
 						int optind, FILE *errorreport);
+#define ignore_result(call) { if (call); }
 #endif
 
 /*

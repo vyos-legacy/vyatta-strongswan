@@ -50,6 +50,7 @@ utils/linked_list.c utils/linked_list.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
 utils/mutex.c utils/mutex.h \
+utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
 libstrongswan_la_LIBADD = -lpthread -ldl
@@ -63,6 +64,10 @@ if USE_LEAK_DETECTIVE
   libstrongswan_la_SOURCES += utils/leak_detective.c utils/leak_detective.h
 endif
 
+if USE_LOCK_PROFILER
+  AM_CFLAGS += -DLOCK_PROFILER
+endif
+
 if USE_INTEGRITY_TEST
   libstrongswan_la_SOURCES += \
   fips/fips_canister_end.c
@@ -72,11 +77,11 @@ EXTRA_DIST = asn1/oid.txt asn1/oid.pl
 BUILT_SOURCES = asn1/oid.c asn1/oid.h
 MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
 
-asn1/oid.c :	asn1/oid.txt asn1/oid.pl
-		cd asn1 && $(PERL) oid.pl
+asn1/oid.c :	asn1/oid.pl asn1/oid.txt
+		(cd `dirname $<` && $(PERL) `basename $<`)
 
-asn1/oid.h :	asn1/oid.txt asn1/oid.pl
-		cd asn1 && $(PERL) oid.pl
+asn1/oid.h :	asn1/oid.pl asn1/oid.txt
+		(cd `dirname $<` && $(PERL) `basename $<`)
 
 
 # build plugins with their own Makefile

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ac.c 3686 2008-03-28 11:48:14Z martin $
+ * RCSID $Id: ac.c 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <stdlib.h>
@@ -860,7 +860,7 @@ load_acerts(void)
 	}
     }
     /* restore directory path */
-    chdir(save_dir);
+    ignore_result(chdir(save_dir));
 }
 
 /*

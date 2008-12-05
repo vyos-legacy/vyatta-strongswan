@@ -12,16 +12,14 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: fetcher_manager.c 3630 2008-03-20 11:27:55Z martin $
+ * $Id: fetcher_manager.c 4591 2008-11-05 16:12:54Z martin $
  */
-
-#define _GNU_SOURCE
 
 #include "fetcher_manager.h"
 
 #include <debug.h>
-#include <utils/linked_list.h>
 #include <utils/mutex.h>
+#include <utils/linked_list.h>
 
 typedef struct private_fetcher_manager_t private_fetcher_manager_t;
 
@@ -43,7 +41,7 @@ struct private_fetcher_manager_t {
 	/**
 	 * read write lock to list
 	 */
-	pthread_rwlock_t lock;
+	rwlock_t *lock;
 };
 
 typedef struct {
@@ -73,7 +71,7 @@ static status_t fetch(private_fetcher_manager_t *this,
 	entry_t *entry;
 	bool capable = FALSE;
 	
-	pthread_rwlock_rdlock(&this->lock);
+	this->lock->read_lock(this->lock);
 	enumerator = this->fetchers->create_enumerator(this->fetchers);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -131,7 +129,7 @@ static status_t fetch(private_fetcher_manager_t *this,
 		break;
 	}
 	enumerator->destroy(enumerator);
-	pthread_rwlock_unlock(&this->lock);
+	this->lock->unlock(this->lock);
 	if (!capable)
 	{
 		DBG1("unable to fetch from %s, no capable fetcher found", url);
@@ -150,9 +148,9 @@ static void add_fetcher(private_fetcher_manager_t *this,
 	entry->url = strdup(url);
 	entry->create = create;
 
-	pthread_rwlock_wrlock(&this->lock);
+	this->lock->write_lock(this->lock);
 	this->fetchers->insert_last(this->fetchers, entry);
-	pthread_rwlock_unlock(&this->lock);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -164,7 +162,7 @@ static void remove_fetcher(private_fetcher_manager_t *this,
 	enumerator_t *enumerator;
 	entry_t *entry;
 	
-	pthread_rwlock_wrlock(&this->lock);
+	this->lock->write_lock(this->lock);
 	enumerator = this->fetchers->create_enumerator(this->fetchers);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -175,7 +173,7 @@ static void remove_fetcher(private_fetcher_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	pthread_rwlock_unlock(&this->lock);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -184,7 +182,7 @@ static void remove_fetcher(private_fetcher_manager_t *this,
 static void destroy(private_fetcher_manager_t *this)
 {
 	this->fetchers->destroy_function(this->fetchers, (void*)entry_destroy);
-	pthread_rwlock_destroy(&this->lock);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -201,7 +199,7 @@ fetcher_manager_t *fetcher_manager_create()
 	this->public.destroy = (void(*)(fetcher_manager_t*))destroy;
 	
 	this->fetchers = linked_list_create();
-	pthread_rwlock_init(&this->lock, NULL);
+	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	return &this->public;
 }

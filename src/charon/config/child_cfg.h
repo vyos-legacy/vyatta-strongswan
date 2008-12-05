@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: child_cfg.h 4358 2008-09-25 13:56:23Z tobias $
+ * $Id: child_cfg.h 4611 2008-11-11 06:29:25Z andreas $
  */
 
 /**
@@ -154,6 +154,17 @@ struct child_cfg_t {
 											host_t *host);
 
 	/**
+	 * Checks [single] traffic selectors for equality 
+	 *
+	 * @param local			TRUE for TS on local side, FALSE for remote
+	 * @param ts			list with single traffic selector to compare with
+	 * @param host			address to use for narrowing "dynamic" TS', or NULL
+	 * @return				TRUE if TS are equal, FALSE otherwise
+	 */ 
+	bool (*equal_traffic_selectors)(child_cfg_t *this, bool local,
+								   linked_list_t *ts_list, host_t *host);
+
+	/**
 	 * Get the updown script to run for the CHILD_SA.
 	 * 
 	 * @return				path to updown script
@@ -219,6 +230,31 @@ struct child_cfg_t {
 	 * 						FALSE, otherwise
 	 */
 	bool (*use_ipcomp)(child_cfg_t *this);
+
+	/**
+	 * Sets two options needed for Mobile IPv6 interoperability
+	 * 
+	 * @proxy_mode			use IPsec transport proxy mode (default FALSE)
+	 * @install_policy		install IPsec kernel policies (default TRUE)
+	 */
+	void (*set_mipv6_options)(child_cfg_t *this, bool proxy_mod,
+												 bool install_policy);
+
+	/**
+	 * Check whether IPsec transport SA should be set up in proxy mode
+	 * 
+	 * @return				TRUE, if proxy mode should be used
+	 * 						FALSE, otherwise
+	 */
+	bool (*use_proxy_mode)(child_cfg_t *this);
+	
+	/**
+	 * Check whether IPsec policies should be installed in the kernel
+	 * 
+	 * @return				TRUE, if IPsec kernel policies should be installed
+	 * 						FALSE, otherwise
+	 */
+	bool (*install_policy)(child_cfg_t *this);
 	
 	/**
 	 * Increase the reference count.
@@ -261,7 +297,6 @@ struct child_cfg_t {
 child_cfg_t *child_cfg_create(char *name, u_int32_t lifetime,
 							  u_int32_t rekeytime, u_int32_t jitter,
 							  char *updown, bool hostaccess, ipsec_mode_t mode,
-							  action_t dpd_action, action_t close_action,
-							  bool ipcomp);
+							  action_t dpd_action, action_t close_action, bool ipcomp);
 
 #endif /* CHILD_CFG_H_ @} */

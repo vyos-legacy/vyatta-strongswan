@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: starter.c 4140 2008-07-02 05:51:49Z andreas $
+ * RCSID $Id: starter.c 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <sys/types.h>
@@ -42,6 +42,7 @@
 #include "invokepluto.h"
 #include "invokecharon.h"
 #include "netkey.h"
+#include "klips.h"
 #include "cmp.h"
 #include "interfaces.h"
 
@@ -179,7 +180,7 @@ static void generate_selfcert()
 #endif
 	    setegid(gid);
 	    seteuid(uid);
-	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
+	    ignore_result(system("ipsec scepclient --out pkcs1 --out cert-self --quiet"));
 	    seteuid(0);
 	    setegid(0);
 
@@ -194,7 +195,7 @@ static void generate_selfcert()
 		fprintf(f, ": RSA myKey.der\n");
 		fclose(f);
 	    }
-	    chown(SECRETS_FILE, uid, gid);
+	    ignore_result(chown(SECRETS_FILE, uid, gid));
 	    umask(oldmask);
 	}
 }
@@ -324,7 +325,11 @@ int main (int argc, char **argv)
     if (!starter_netkey_init())
     {
 	plog("no netkey IPSec stack detected");
-	exit(LSB_RC_FAILURE);
+	if (!starter_klips_init())
+	{
+	    plog("no KLIPS IPSec stack detected");
+	    exit(LSB_RC_FAILURE);
+	}
     }
 
     last_reload = time(NULL);

@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: files.h 3267 2007-10-08 19:57:54Z andreas $
+ * RCSID $Id: files.h 4618 2008-11-11 09:22:00Z tobias $
  */
 
 #ifndef _STARTER_FILES_H_
@@ -19,7 +19,8 @@
 
 #define STARTER_PID_FILE IPSEC_PIDDIR "/starter.pid"
 
-#define PROC_NETKEY	"/proc/net/pfkey"
+#define PROC_NETKEY		"/proc/net/pfkey"
+#define PROC_KLIPS		"/proc/net/pf_key"
 #define PROC_MODULES	"/proc/modules"
 
 #define CONFIG_FILE     IPSEC_CONFDIR "/ipsec.conf"

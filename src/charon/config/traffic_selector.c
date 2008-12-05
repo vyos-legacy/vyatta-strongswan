@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: traffic_selector.c 4199 2008-07-21 19:08:03Z andreas $
+ * $Id: traffic_selector.c 4639 2008-11-12 15:09:24Z martin $
  */
 
 #include <arpa/inet.h>
@@ -134,8 +134,9 @@ static u_int8_t calc_netbits(private_traffic_selector_t *this)
 	int byte, bit;
 	size_t size = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
 	
-	/* go trough all bits of the addresses, begging in the front. 
-	 * As longer as they equal, the subnet gets larger */
+	/* go trough all bits of the addresses, beginning in the front.
+	 * as long as they are equal, the subnet gets larger
+	 */
 	for (byte = 0; byte < size; byte++)
 	{
 		for (bit = 7; bit >= 0; bit--)
@@ -405,26 +406,15 @@ static bool equals(private_traffic_selector_t *this, private_traffic_selector_t 
  */
 static chunk_t get_from_address(private_traffic_selector_t *this)
 {
-	chunk_t from = chunk_empty;
-	
 	switch (this->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-		{
-			from.len = sizeof(this->from4);
-			from.ptr = malloc(from.len);
-			memcpy(from.ptr, this->from4, from.len);
-			break;
-		}
+			return chunk_create(this->from, sizeof(this->from4));
 		case TS_IPV6_ADDR_RANGE:
-		{
-			from.len = sizeof(this->from6);
-			from.ptr = malloc(from.len);
-			memcpy(from.ptr, this->from6, from.len);
-			break;
-		}
+			return chunk_create(this->from, sizeof(this->from6));
+		default:
+			return chunk_empty;
 	}
-	return from;
 }
 	
 /**
@@ -432,26 +422,15 @@ static chunk_t get_from_address(private_traffic_selector_t *this)
  */
 static chunk_t get_to_address(private_traffic_selector_t *this)
 {
-	chunk_t to = chunk_empty;
-	
 	switch (this->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
-		{
-			to.len = sizeof(this->to4);
-			to.ptr = malloc(to.len);
-			memcpy(to.ptr, this->to4, to.len);
-			break;
-		}
+			return chunk_create(this->to, sizeof(this->to4));
 		case TS_IPV6_ADDR_RANGE:
-		{
-			to.len = sizeof(this->to6);
-			to.ptr = malloc(to.len);
-			memcpy(to.ptr, this->to6, to.len);
-			break;
-		}
+			return chunk_create(this->to, sizeof(this->to6));
+		default:
+			return chunk_empty;
 	}
-	return to;
 }
 	
 /**
@@ -525,6 +504,14 @@ static bool is_host(private_traffic_selector_t *this, host_t *host)
 }
 
 /**
+ * Implementation of traffic_selector_t.is_dynamic
+ */
+static bool is_dynamic(private_traffic_selector_t *this)
+{
+	return this->dynamic;
+}
+
+/**
  * Implements traffic_selector_t.set_address.
  */
 static void set_address(private_traffic_selector_t *this, host_t *host)
@@ -580,6 +567,60 @@ static bool includes(private_traffic_selector_t *this, host_t *host)
 	}
 
 	return FALSE;	
+}
+
+/**
+ * Implements traffic_selector_t.to_subnet.
+ */
+static void to_subnet(private_traffic_selector_t *this, host_t **net, u_int8_t *mask)
+{
+	/* there is no way to do this cleanly, as the address range may
+	 * be anything else but a subnet. We use from_addr as subnet 
+	 * and try to calculate a usable subnet mask.
+	 */
+	int family, byte;
+	u_int16_t port = 0;
+	chunk_t net_chunk;
+	
+	*mask = calc_netbits(this);
+	
+	switch (this->type)
+	{
+		case TS_IPV4_ADDR_RANGE:
+		{
+			family = AF_INET;
+			net_chunk.len = sizeof(this->from4);
+			break;
+		}
+		case TS_IPV6_ADDR_RANGE:
+		{
+			family = AF_INET6;
+			net_chunk.len = sizeof(this->from6);
+			break;
+		}
+		default:
+		{
+			/* unreachable */
+			return;
+		}
+	}
+	
+	net_chunk.ptr = malloc(net_chunk.len);
+	memcpy(net_chunk.ptr, this->from, net_chunk.len);
+	
+	for (byte = net_chunk.len - 1; byte >= (*mask / 8); --byte)
+	{
+		int shift = (byte + 1) * 8 - *mask;
+		net_chunk.ptr[byte] = net_chunk.ptr[byte] & (0xFF << shift);
+	}
+	
+	if (this->to_port == this->from_port)
+	{
+		port = this->to_port;
+	}
+	
+	*net = host_create_from_chunk(family, net_chunk, port);	
+	chunk_free(&net_chunk);
 }
 
 /**
@@ -814,9 +855,11 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol,
 	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
 	this->public.is_host = (bool(*)(traffic_selector_t*,host_t*))is_host;
+	this->public.is_dynamic = (bool(*)(traffic_selector_t*))is_dynamic;
 	this->public.is_contained_in = (bool(*)(traffic_selector_t*,traffic_selector_t*))is_contained_in;
 	this->public.includes = (bool(*)(traffic_selector_t*,host_t*))includes;
 	this->public.set_address = (void(*)(traffic_selector_t*,host_t*))set_address;
+	this->public.to_subnet = (void(*)(traffic_selector_t*,host_t**,u_int8_t*))to_subnet;
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone_;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
 	

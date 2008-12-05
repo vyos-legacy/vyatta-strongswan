@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: prf_plus.c 3589 2008-03-13 14:14:44Z martin $
+ * $Id: prf_plus.c 4524 2008-10-29 14:12:54Z martin $
  */
 
 #include <string.h>
@@ -96,9 +96,16 @@ static void get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
  */	
 static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chunk)
 {
-	chunk->ptr = malloc(length);
-	chunk->len = length;
-	this->public.get_bytes(&(this->public), length, chunk->ptr);
+	if (length)
+	{
+		chunk->ptr = malloc(length);
+		chunk->len = length;
+		get_bytes(this, length, chunk->ptr);
+	}
+	else
+	{
+		*chunk = chunk_empty;
+	}
 }
 
 /**

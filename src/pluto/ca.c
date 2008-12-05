@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ca.c 3252 2007-10-06 21:24:50Z andreas $
+ * RCSID $Id: ca.c 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <stdlib.h>
@@ -295,7 +295,7 @@ load_authcerts(const char *type, const char *path, u_char auth_flags)
 	}
     }
     /* restore directory path */
-    chdir(save_dir);
+    ignore_result(chdir(save_dir));
 }
 
 /*

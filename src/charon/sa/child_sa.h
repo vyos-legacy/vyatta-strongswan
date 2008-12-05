@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: child_sa.h 4358 2008-09-25 13:56:23Z tobias $
+ * $Id: child_sa.h 4618 2008-11-11 09:22:00Z tobias $
  */
 
 /**
@@ -50,9 +50,19 @@ enum child_sa_state_t {
 	CHILD_ROUTED,
 	
 	/**
+	 * Installing an in-use CHILD_SA
+	 */
+	CHILD_INSTALLING,
+	
+	/**
 	 * Installed an in-use CHILD_SA
 	 */
 	CHILD_INSTALLED,
+	
+	/**
+	 * While updating hosts, in update_hosts()
+	 */
+	CHILD_UPDATING,
 	
 	/**
 	 * CHILD_SA which is rekeying
@@ -63,6 +73,11 @@ enum child_sa_state_t {
 	 * CHILD_SA in progress of delete
 	 */
 	CHILD_DELETING,
+	
+	/**
+	 * CHILD_SA object gets destroyed
+	 */
+	CHILD_DESTROYING,
 };
 
 /**
@@ -138,23 +153,41 @@ struct child_sa_t {
 	protocol_id_t (*get_protocol) (child_sa_t *this);
 	
 	/**
-	 * Get info and statistics about this CHILD_SA.
+	 * Get the IPsec mode of this CHILD_SA.
 	 *
-	 * @param mode		mode this IKE_SA uses
-	 * @param encr_algo	encryption algorithm used by this CHILD_SA.
-	 * @param encr_len	key length of the algorithm, if any
-	 * @param int_algo	integrity algorithm used by this CHILD_SA
-	 * @param int_len	key length of the algorithm, if any
-	 * @param rekey		time when rekeying is scheduled
-	 * @param use_in	time when last traffic was seen coming in
-	 * @param use_out	time when last traffic was seen going out
-	 * @param use_fwd	time when last traffic was getting forwarded
+	 * @return			TUNNEL | TRANSPORT | BEET
 	 */
-	void (*get_stats)(child_sa_t *this, ipsec_mode_t *mode,
-					  encryption_algorithm_t *encr, size_t *encr_len,
-					  integrity_algorithm_t *int_algo, size_t *int_len,
-					  u_int32_t *rekey, u_int32_t *use_in, u_int32_t *use_out,
-					  u_int32_t *use_fwd);
+	ipsec_mode_t (*get_mode)(child_sa_t *this);
+	
+	/**
+	 * Get the used IPComp algorithm.
+	 *
+	 * @return			IPComp compression algorithm.
+	 */
+	ipcomp_transform_t (*get_ipcomp)(child_sa_t *this);
+	
+	/**
+	 * Check if this CHILD_SA uses UDP encapsulation.
+	 *
+	 * @return			TRUE if SA encapsulates ESP packets
+	 */
+	bool (*has_encap)(child_sa_t *this);
+	
+	/**
+	 * Get the lifetime of the CHILD_SA.
+	 *
+	 * @param hard		TRUE for hard lifetime, FALSE for soft (rekey) lifetime
+	 * @return			lifetime in seconds
+	 */
+	u_int32_t (*get_lifetime)(child_sa_t *this, bool hard);
+	
+	/**
+	 * Get last use time of the CHILD_SA.
+	 *
+	 * @param inbound	TRUE for inbound traffic, FALSE for outbound
+	 * @return			time of last use in seconds
+	 */
+	u_int32_t (*get_usetime)(child_sa_t *this, bool inbound);
 	
 	/**
 	 * Allocate SPIs for given proposals.
@@ -174,12 +207,15 @@ struct child_sa_t {
 	 *
 	 * @param proposal	proposal for which SPIs are allocated
 	 * @param mode		mode for the CHILD_SA
-	 * @param prf_plus	key material to use for key derivation
+	 * @param integ_in	integrity key for inbound traffic
+	 * @param integ_out	integrity key for outbound traffic
+	 * @param encr_in	encryption key for inbound traffic
+	 * @param enc_out	encryption key for outbound traffic
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*add)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
-					prf_plus_t *prf_plus);
-	
+					chunk_t integ_in, chunk_t integ_out,
+					chunk_t encr_in, chunk_t encr_out);
 	/**
 	 * Install the kernel SAs for a proposal, after SPIs have been allocated.
 	 *
@@ -187,12 +223,22 @@ struct child_sa_t {
 	 *
 	 * @param proposal	proposal for which SPIs are allocated
 	 * @param mode		mode for the CHILD_SA
-	 * @param prf_plus	key material to use for key derivation
+	 * @param integ_in	integrity key for inbound traffic
+	 * @param integ_out	integrity key for outbound traffic
+	 * @param encr_in	encryption key for inbound traffic
+	 * @param enc_out	encryption key for outbound traffic
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*update)(child_sa_t *this, proposal_t *proposal, ipsec_mode_t mode,
-					   prf_plus_t *prf_plus);
-
+					   chunk_t integ_in, chunk_t integ_out,
+					   chunk_t encr_in, chunk_t encr_out);
+	/**
+	 * Get the selected proposal passed to add()/update().
+	 *
+	 * @return			selected proposal
+	 */
+	proposal_t* (*get_proposal)(child_sa_t *this);
+	
 	/**
 	 * Update the hosts in the kernel SAs and policies.
 	 *
@@ -200,11 +246,12 @@ struct child_sa_t {
 	 *
 	 * @param me		the new local host
 	 * @param other		the new remote host
+	 * @param vip		virtual IP, if any
 	 * @param			TRUE to use UDP encapsulation for NAT traversal
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*update_hosts)(child_sa_t *this, host_t *me, host_t *other,
-							 bool encap);
+							 host_t *vip, bool encap);
 	
 	/**
 	 * Install the policies using some traffic selectors.
@@ -231,13 +278,11 @@ struct child_sa_t {
 	linked_list_t* (*get_traffic_selectors) (child_sa_t *this, bool local);
 	
 	/**
-	 * Get the time of this child_sa_t's last use (i.e. last use of any of its policies)
-	 * 
-	 * @param inbound	query for in- or outbound usage
-	 * @param use_time	the time
-	 * @return			SUCCESS or FAILED
-	 */	
-	status_t (*get_use_time) (child_sa_t *this, bool inbound, time_t *use_time);
+	 * Create an enumerator over installed policies.
+	 *
+	 * @return			enumerator over pairs of traffic selectors.
+	 */
+	enumerator_t* (*create_policy_enumerator)(child_sa_t *this);
 	
 	/**
 	 * Get the state of the CHILD_SA.
@@ -259,23 +304,13 @@ struct child_sa_t {
 	child_cfg_t* (*get_config) (child_sa_t *this);
 	
 	/**
-	 * Set the virtual IP used received from IRAS.
-	 *
-	 * To allow proper setup of firewall rules, the virtual IP is required
-	 * for filtering.
-	 *
-	 * @param ip		own virtual IP
-	 */
-	void (*set_virtual_ip) (child_sa_t *this, host_t *ip);
-	
-	/**
 	 * Activate IPComp by setting the transform ID and CPI values.
 	 * 
 	 * @param ipcomp	the IPComp transform to use
 	 * @param other_cpi	other Compression Parameter Index
 	 */
 	void (*activate_ipcomp) (child_sa_t *this, ipcomp_transform_t ipcomp,
-						u_int16_t other_cpi);
+							 u_int16_t other_cpi);
 	
 	/**
 	 * Returns the Compression Parameter Index (CPI) allocated from the kernel.
@@ -293,17 +328,16 @@ struct child_sa_t {
 /**
  * Constructor to create a new child_sa_t.
  *
- * @param me			own address
- * @param other			remote address
- * @param my_id			id of own peer
- * @param other_id		id of remote peer
- * @param config		config to use for this CHILD_SA
- * @param reqid			reqid of old CHILD_SA when rekeying, 0 otherwise
- * @param encap			TRUE to enable UDP encapsulation (NAT traversal)
- * @return				child_sa_t object
+ * @param me				own address
+ * @param other				remote address
+ * @param my_id				id of own peer
+ * @param other_id			id of remote peer
+ * @param config			config to use for this CHILD_SA
+ * @param reqid				reqid of old CHILD_SA when rekeying, 0 otherwise
+ * @param encap				TRUE to enable UDP encapsulation (NAT traversal)
+ * @return					child_sa_t object
  */
-child_sa_t * child_sa_create(host_t *me, host_t *other,
-							 identification_t *my_id, identification_t* other_id,
-							 child_cfg_t *config, u_int32_t reqid, bool encap);
+child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
+							 u_int32_t reqid, bool encap);
 
 #endif /*CHILD_SA_H_ @} */

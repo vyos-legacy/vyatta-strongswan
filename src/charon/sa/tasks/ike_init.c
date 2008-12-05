@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2005-2007 Martin Willi
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_init.c 4206 2008-07-22 17:10:10Z andreas $
+ * $Id: ike_init.c 4531 2008-10-30 12:58:54Z martin $
  */
 
 #include "ike_init.h"
@@ -64,9 +64,14 @@ struct private_ike_init_t {
 	diffie_hellman_group_t dh_group;
 	
 	/**
-	 * Diffie hellman object used to generate public DH value.
+	 * diffie hellman key exchange
 	 */
 	diffie_hellman_t *dh;
+	
+	/**
+	 * Keymat derivation (from IKE_SA)
+	 */
+	keymat_t *keymat;
 	
 	/**
 	 * nonce chosen by us
@@ -192,7 +197,8 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 				if (!this->initiator)
 				{
-					this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
+					this->dh = this->keymat->create_dh(this->keymat,
+													   this->dh_group);
 				}
 				if (this->dh)
 				{
@@ -230,26 +236,26 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	SIG_IKE(UP_START, "initiating IKE_SA %s[%d] to %H",
-		this->ike_sa->get_name(this->ike_sa),
-		this->ike_sa->get_unique_id(this->ike_sa),
-		this->ike_sa->get_other_host(this->ike_sa));
+	DBG0(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
+		 this->ike_sa->get_name(this->ike_sa),
+		 this->ike_sa->get_unique_id(this->ike_sa),
+		 this->ike_sa->get_other_host(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	
 	if (this->retry++ >= MAX_RETRIES)
 	{
-		SIG_IKE(UP_FAILED, "giving up after %d retries", MAX_RETRIES);
+		DBG1(DBG_IKE, "giving up after %d retries", MAX_RETRIES);
 		return FAILED;
 	}
-
+	
 	/* if the DH group is set via use_dh_group(), we already have a DH object */
 	if (!this->dh)
 	{
 		this->dh_group = this->config->get_dh_group(this->config);
-		this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
-		if (this->dh == NULL)
+		this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
+		if (!this->dh)
 		{
-			SIG_IKE(UP_FAILED, "configured DH group %N not supported",
+			DBG1(DBG_IKE, "configured DH group %N not supported",
 				diffie_hellman_group_names, this->dh_group);
 			return FAILED;
 		}
@@ -261,7 +267,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 		rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 		if (!rng)
 		{
-			SIG_IKE(UP_FAILED, "error generating nonce");
+			DBG1(DBG_IKE, "error generating nonce");
 			return FAILED;
 		}
 		rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
@@ -296,8 +302,7 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 	rng_t *rng;
 	
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
-	SIG_IKE(UP_START, "%H is initiating an IKE_SA",
-		message->get_source(message));
+	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
@@ -369,30 +374,30 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
  */
 static status_t build_r(private_ike_init_t *this, message_t *message)
 {
-	chunk_t secret;
-	status_t status;
-
+	keymat_t *old_keymat = NULL;
+	ike_sa_id_t *id;
+	
 	/* check if we have everything we need */
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
-		SIG_IKE(UP_FAILED, "received proposals inacceptable");
+		DBG1(DBG_IKE, "received proposals inacceptable");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
+	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 	
 	if (this->dh == NULL ||
-		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
-		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
+		!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
 		u_int16_t group;
 		
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
 		{
-			SIG_CHD(UP_FAILED, NULL, "DH group %N inacceptable, requesting %N",
-				diffie_hellman_group_names, this->dh_group,
-				diffie_hellman_group_names, group);
+			DBG1(DBG_IKE, "DH group %N inacceptable, requesting %N",
+				 diffie_hellman_group_names, this->dh_group,
+				 diffie_hellman_group_names, group);
 			this->dh_group = group;
 			group = htons(group);
 			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
@@ -400,49 +405,28 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		}
 		else
 		{
-			SIG_IKE(UP_FAILED, "no acceptable proposal found");
+			DBG1(DBG_IKE, "no acceptable proposal found");
 		}
 		return FAILED;
 	}
 	
+	id = this->ike_sa->get_id(this->ike_sa);
 	if (this->old_sa)
-	{
-		ike_sa_id_t *id;
-		prf_t *prf, *child_prf;
-				
-		/* Apply SPI if we are rekeying */
-		id = this->ike_sa->get_id(this->ike_sa);
+	{	/* rekeying: Apply SPI, include keymat from old SA in key derivation */
 		id->set_initiator_spi(id, this->proposal->get_spi(this->proposal));
-	
-		/* setup crypto keys for the rekeyed SA */
-		prf = this->old_sa->get_prf(this->old_sa);
-		child_prf = this->old_sa->get_child_prf(this->old_sa);
-		status = this->ike_sa->derive_keys(this->ike_sa, this->proposal, secret, 
-										   this->other_nonce, this->my_nonce,
-										   FALSE, child_prf, prf);
+		old_keymat = this->old_sa->get_keymat(this->old_sa);
 	}
-	else
+	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
+							this->other_nonce, this->my_nonce, id, old_keymat))
 	{
-		/* setup crypto keys */
-		status =  this->ike_sa->derive_keys(this->ike_sa, this->proposal, secret, 
-										    this->other_nonce, this->my_nonce,
-										    FALSE, NULL, NULL);
-	}
-	if (status != SUCCESS)
-	{
-		SIG_IKE(UP_FAILED, "key derivation failed");
+		DBG1(DBG_IKE, "key derivation failed");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-
-	/* Keep the selected IKE proposal for status information purposes */
-	{
-		char buf[BUF_LEN];
-
-		snprintf(buf, BUF_LEN, "%P", this->proposal);
-		this->ike_sa->set_proposal(this->ike_sa, buf+4);
-	}
-
+	
+	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
+						  this->other_nonce, this->my_nonce, this->old_sa);
+	
 	build_payloads(this, message);
 	return SUCCESS;
 }
@@ -452,8 +436,8 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
  */
 static status_t process_i(private_ike_init_t *this, message_t *message)
 {
-	chunk_t secret;
-	status_t status;
+	keymat_t *old_keymat = NULL;
+	ike_sa_id_t *id;
 	iterator_t *iterator;
 	payload_t *payload;
 
@@ -505,7 +489,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 				{
 					if (type < 16383)
 					{
-						SIG_IKE(UP_FAILED, "received %N notify error",
+						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
 						iterator->destroy(iterator);
 						return FAILED;	
@@ -525,55 +509,34 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
-		SIG_IKE(UP_FAILED, "peer's proposal selection invalid");
+		DBG1(DBG_IKE, "peers proposal selection invalid");
 		return FAILED;
 	}
+	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 	
 	if (this->dh == NULL ||
-		!this->proposal->has_dh_group(this->proposal, this->dh_group) ||
-		this->dh->get_shared_secret(this->dh, &secret) != SUCCESS)
+		!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
-		SIG_IKE(UP_FAILED, "peer's DH group selection invalid");
+		DBG1(DBG_IKE, "peer DH group selection invalid");
 		return FAILED;
 	}
 	
-	/* Apply SPI if we are rekeying */
+	id = this->ike_sa->get_id(this->ike_sa);
 	if (this->old_sa)
-	{
-		ike_sa_id_t *id;
-		prf_t *prf, *child_prf;
-		
-		id = this->ike_sa->get_id(this->ike_sa);
+	{	/* rekeying: Apply SPI, include keymat from old SA in key derivation */
 		id->set_responder_spi(id, this->proposal->get_spi(this->proposal));
-		
-		/* setup crypto keys for the rekeyed SA */
-		prf = this->old_sa->get_prf(this->old_sa);
-		child_prf = this->old_sa->get_child_prf(this->old_sa);
-		status = this->ike_sa->derive_keys(this->ike_sa, this->proposal, secret, 
-										    this->my_nonce, this->other_nonce,
-										    TRUE, child_prf, prf);
+		old_keymat = this->old_sa->get_keymat(this->old_sa);
 	}
-	else
+	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
+							this->my_nonce, this->other_nonce, id, old_keymat))
 	{
-		/* setup crypto keys for a new SA */
-		status = this->ike_sa->derive_keys(this->ike_sa, this->proposal, secret, 
-										   this->my_nonce, this->other_nonce,
-										   TRUE, NULL, NULL);
-	}
-	if (status != SUCCESS)
-	{
-		SIG_IKE(UP_FAILED, "key derivation failed");
+		DBG1(DBG_IKE, "key derivation failed");
 		return FAILED;
 	}
-
-	/* Keep the selected IKE proposal for status information purposes */
-	{
-		char buf[BUF_LEN];
-
-		snprintf(buf, BUF_LEN, "%P", this->proposal);
-		this->ike_sa->set_proposal(this->ike_sa, buf+4);
-	}
-
+	
+	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh,
+						  this->my_nonce, this->other_nonce, this->old_sa);
+	
 	return SUCCESS;
 }
 
@@ -607,12 +570,12 @@ static chunk_t get_lower_nonce(private_ike_init_t *this)
 static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 {
 	DESTROY_IF(this->proposal);
-	DESTROY_IF(this->dh);
 	chunk_free(&this->other_nonce);
 	
 	this->ike_sa = ike_sa;
 	this->proposal = NULL;
-	this->dh = lib->crypto->create_dh(lib->crypto, this->dh_group);
+	DESTROY_IF(this->dh);
+	this->dh = this->keymat->create_dh(this->keymat, this->dh_group);
 }
 
 /**
@@ -620,8 +583,8 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
  */
 static void destroy(private_ike_init_t *this)
 {
-	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->dh);
+	DESTROY_IF(this->proposal);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	chunk_free(&this->cookie);
@@ -654,6 +617,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 	this->initiator = initiator;
 	this->dh_group = MODP_NONE;
 	this->dh = NULL;
+	this->keymat = ike_sa->get_keymat(ike_sa);
 	this->my_nonce = chunk_empty;
 	this->other_nonce = chunk_empty;
 	this->cookie = chunk_empty;

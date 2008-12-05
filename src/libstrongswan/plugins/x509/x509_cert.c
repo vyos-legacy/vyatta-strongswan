@@ -17,7 +17,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509_cert.c 4317 2008-09-02 11:00:13Z martin $
+ * $Id: x509_cert.c 4576 2008-11-05 08:32:38Z martin $
  */
 
 #define _GNU_SOURCE
@@ -25,6 +25,7 @@
 #include "x509_cert.h"
 
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>

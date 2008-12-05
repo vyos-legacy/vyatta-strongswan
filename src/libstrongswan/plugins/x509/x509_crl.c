@@ -12,13 +12,15 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509_crl.c 4317 2008-09-02 11:00:13Z martin $
+ * $Id: x509_crl.c 4576 2008-11-05 08:32:38Z martin $
  */
 
 #include "x509_crl.h"
 
 typedef struct private_x509_crl_t private_x509_crl_t;
 typedef struct revoked_t revoked_t;
+
+#include <time.h>
 
 #include <debug.h>
 #include <library.h>

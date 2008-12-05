@@ -16,11 +16,6 @@
  * for more details.
  */
 
-#ifdef HAVE_DLADDR
-# define _GNU_SOURCE
-# include <dlfcn.h>
-#endif /* HAVE_DLADDR */
-
 #include <stdio.h>
 #include <sys/prctl.h>
 #include <signal.h>
@@ -34,9 +29,6 @@
 #include <errno.h>
 #include <pwd.h>
 #include <grp.h>
-#ifdef HAVE_BACKTRACE
-# include <execinfo.h>
-#endif /* HAVE_BACKTRACE */
 #ifdef CAPABILITIES
 #include <sys/capability.h>
 #endif /* CAPABILITIES */
@@ -44,6 +36,7 @@
 #include "daemon.h"
 
 #include <library.h>
+#include <utils/backtrace.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 
@@ -99,7 +92,7 @@ static void dbg_bus(int level, char *fmt, ...)
 	va_list args;
 	
 	va_start(args, fmt);
-	charon->bus->vsignal(charon->bus, DBG_LIB, level, NULL, fmt, args);
+	charon->bus->vlog(charon->bus, DBG_LIB, level, fmt, args);
 	va_end(args);
 }
 
@@ -212,9 +205,10 @@ static void destroy(private_daemon_t *this)
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_stderr;
 	DESTROY_IF(this->public.bus);
-	DESTROY_IF(this->public.outlog);
-	DESTROY_IF(this->public.syslog);
-	DESTROY_IF(this->public.authlog);
+	this->public.file_loggers->destroy_offset(this->public.file_loggers,
+											offsetof(file_logger_t, destroy));
+	this->public.sys_loggers->destroy_offset(this->public.sys_loggers,
+											offsetof(sys_logger_t, destroy));
 	free(this);
 }
 
@@ -317,38 +311,151 @@ static void lookup_uid_gid(private_daemon_t *this)
 }
 
 /**
+ * Log loaded plugins
+ */
+static void print_plugins()
+{
+	char buf[512], *plugin;
+	int len = 0;
+	enumerator_t *enumerator;
+	
+	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
+	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
+	{
+		len += snprintf(&buf[len], sizeof(buf)-len, "%s ", plugin);
+	}
+	enumerator->destroy(enumerator);
+	DBG1(DBG_DMN, "loaded plugins: %s", buf);
+}
+
+/**
+ * Initialize logging
+ */
+static void initialize_loggers(private_daemon_t *this, bool use_stderr,
+							   level_t levels[])
+{
+	sys_logger_t *sys_logger;
+	file_logger_t *file_logger;
+	enumerator_t *enumerator;
+	char *facility, *filename;
+	int loggers_defined = 0;
+	debug_t group;
+	level_t  def;
+	bool append;
+	FILE *file;
+	
+	/* setup sysloggers */
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+														  "charon.syslog");
+	while (enumerator->enumerate(enumerator, &facility))
+	{
+		loggers_defined++;
+		if (streq(facility, "daemon"))
+		{
+			sys_logger = sys_logger_create(LOG_DAEMON);
+		}
+		else if (streq(facility, "auth"))
+		{
+			sys_logger = sys_logger_create(LOG_AUTHPRIV);
+		}
+		else
+		{
+			continue;
+		}
+		def = lib->settings->get_int(lib->settings,
+									 "charon.syslog.%s.default", 1, facility);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			sys_logger->set_level(sys_logger, group,
+				lib->settings->get_int(lib->settings,
+									   "charon.syslog.%s.%N", def,
+									   facility, debug_lower_names, group));
+		}
+		this->public.sys_loggers->insert_last(this->public.sys_loggers,
+											  sys_logger);
+		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
+	}
+	enumerator->destroy(enumerator);
+	
+	/* and file loggers */
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+														  "charon.filelog");
+	while (enumerator->enumerate(enumerator, &filename))
+	{
+		loggers_defined++;
+		if (streq(filename, "stderr"))
+		{
+			file = stderr;
+		}
+		else if (streq(filename, "stdout"))
+		{
+			file = stdout;
+		}
+		else
+		{
+			append = lib->settings->get_bool(lib->settings,
+									"charon.filelog.%s.append", TRUE, filename);
+			file = fopen(filename, append ? "a" : "w");
+			if (file == NULL)
+			{
+				DBG1(DBG_DMN, "opening file %s for logging failed: %s",
+					 filename, strerror(errno));
+				continue;
+			}
+		}
+		file_logger = file_logger_create(file);
+		def = lib->settings->get_int(lib->settings,
+									 "charon.filelog.%s.default", 1, filename);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			file_logger->set_level(file_logger, group,
+				lib->settings->get_int(lib->settings,
+									   "charon.filelog.%s.%N", def,
+									   filename, debug_lower_names, group));
+		}
+		this->public.file_loggers->insert_last(this->public.file_loggers,
+											   file_logger);
+		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
+	
+	}
+	enumerator->destroy(enumerator);
+	
+	/* setup legacy style default loggers provided via command-line */
+	if (!loggers_defined)
+	{
+		file_logger = file_logger_create(stdout);
+		sys_logger = sys_logger_create(LOG_DAEMON);
+		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
+		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
+		this->public.file_loggers->insert_last(this->public.file_loggers,
+											   file_logger);
+		this->public.sys_loggers->insert_last(this->public.sys_loggers,
+											  sys_logger);
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			sys_logger->set_level(sys_logger, group, levels[group]);
+			if (use_stderr)
+			{
+				file_logger->set_level(file_logger, group, levels[group]);
+			}
+		}
+	}
+}
+
+/**
  * Initialize the daemon
  */
 static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 {
-	signal_t signal;
-	
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
 	
 	/* setup bus and it's listeners first to enable log output */
 	this->public.bus = bus_create();
-	this->public.outlog = file_logger_create(stdout);
-	this->public.syslog = sys_logger_create(LOG_DAEMON);
-	this->public.authlog = sys_logger_create(LOG_AUTHPRIV);
-	this->public.bus->add_listener(this->public.bus, &this->public.syslog->listener);
-	this->public.bus->add_listener(this->public.bus, &this->public.outlog->listener);
-	this->public.bus->add_listener(this->public.bus, &this->public.authlog->listener);
-	this->public.authlog->set_level(this->public.authlog, SIG_ANY, LEVEL_AUDIT);
 	/* set up hook to log dbg message in library via charons message bus */
 	dbg = dbg_bus;
 	
-	/* apply loglevels */
-	for (signal = 0; signal < DBG_MAX; signal++)
-	{
-		this->public.syslog->set_level(this->public.syslog,
-									   signal, levels[signal]);
-		if (!syslog)
-		{
-			this->public.outlog->set_level(this->public.outlog,
-										   signal, levels[signal]);
-		}
-	}
+	initialize_loggers(this, !syslog, levels);
 	
 	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 
@@ -367,6 +474,8 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
+	
+	print_plugins();
 	
 	/* create the kernel interfaces */
 	this->public.kernel_interface->create_interfaces(this->public.kernel_interface);
@@ -413,45 +522,13 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
  */
 static void segv_handler(int signal)
 {
-#ifdef HAVE_BACKTRACE
-	void *array[20];
-	size_t size;
-	char **strings;
-	size_t i;
-
-	size = backtrace(array, 20);
-	strings = backtrace_symbols(array, size);
-
-	DBG1(DBG_JOB, "thread %u received %s. Dumping %d frames from stack:",
-		 pthread_self(), signal == SIGSEGV ? "SIGSEGV" : "SIGILL", size);
-
-	for (i = 0; i < size; i++)
-	{
-#ifdef HAVE_DLADDR
-		Dl_info info;
-		
-		if (dladdr(array[i], &info))
-		{
-			void *ptr = array[i];
-			if (strstr(info.dli_fname, ".so"))
-			{
-				ptr = (void*)(array[i] - info.dli_fbase);
-			}
-			DBG1(DBG_DMN, "    %s [%p]", info.dli_fname, ptr);
-		}
-		else
-		{
-#endif /* HAVE_DLADDR */
-			DBG1(DBG_DMN, "    %s", strings[i]);
-#ifdef HAVE_DLADDR
-		}
-#endif /* HAVE_DLADDR */
-	}
-	free (strings);
-#else /* !HAVE_BACKTRACE */
-	DBG1(DBG_DMN, "thread %u received %s",
-		 pthread_self(), signal == SIGSEGV ? "SIGSEGV" : "SIGILL");
-#endif /* HAVE_BACKTRACE */
+	backtrace_t *backtrace;
+	
+	DBG1(DBG_DMN, "thread %u received %d", pthread_self(), signal);
+	backtrace = backtrace_create(2);
+	backtrace->log(backtrace, stderr);
+	backtrace->destroy(backtrace);
+	
 	DBG1(DBG_DMN, "killing ourself, received critical signal");
 	raise(SIGKILL);
 }
@@ -483,9 +560,8 @@ private_daemon_t *daemon_create(void)
 	this->public.eap = NULL;
 	this->public.sim = NULL;
 	this->public.bus = NULL;
-	this->public.outlog = NULL;
-	this->public.syslog = NULL;
-	this->public.authlog = NULL;
+	this->public.file_loggers = linked_list_create();
+	this->public.sys_loggers = linked_list_create();
 #ifdef ME
 	this->public.connect_manager = NULL;
 	this->public.mediation_manager = NULL;
@@ -514,6 +590,7 @@ private_daemon_t *daemon_create(void)
 	sigaddset(&action.sa_mask, SIGHUP);
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
+	sigaction(SIGBUS, &action, NULL);
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
 	
@@ -555,7 +632,7 @@ int main(int argc, char *argv[])
 	FILE *pid_file;
 	struct stat stb;
 	level_t levels[DBG_MAX];
-	int signal;
+	int group;
 	
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_stderr;
@@ -572,9 +649,9 @@ int main(int argc, char *argv[])
 	lookup_uid_gid(private_charon);
 	
 	/* use CTRL loglevel for default */
-	for (signal = 0; signal < DBG_MAX; signal++)
+	for (group = 0; group < DBG_MAX; group++)
 	{
-		levels[signal] = LEVEL_CTRL;
+		levels[group] = LEVEL_CTRL;
 	}
 	
 	/* handle arguments */
@@ -585,16 +662,16 @@ int main(int argc, char *argv[])
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
 			/* TODO: handle "debug-all" */
-			{ "debug-dmn", required_argument, &signal, DBG_DMN },
-			{ "debug-mgr", required_argument, &signal, DBG_MGR },
-			{ "debug-ike", required_argument, &signal, DBG_IKE },
-			{ "debug-chd", required_argument, &signal, DBG_CHD },
-			{ "debug-job", required_argument, &signal, DBG_JOB },
-			{ "debug-cfg", required_argument, &signal, DBG_CFG },
-			{ "debug-knl", required_argument, &signal, DBG_KNL },
-			{ "debug-net", required_argument, &signal, DBG_NET },
-			{ "debug-enc", required_argument, &signal, DBG_ENC },
-			{ "debug-lib", required_argument, &signal, DBG_LIB },
+			{ "debug-dmn", required_argument, &group, DBG_DMN },
+			{ "debug-mgr", required_argument, &group, DBG_MGR },
+			{ "debug-ike", required_argument, &group, DBG_IKE },
+			{ "debug-chd", required_argument, &group, DBG_CHD },
+			{ "debug-job", required_argument, &group, DBG_JOB },
+			{ "debug-cfg", required_argument, &group, DBG_CFG },
+			{ "debug-knl", required_argument, &group, DBG_KNL },
+			{ "debug-net", required_argument, &group, DBG_NET },
+			{ "debug-enc", required_argument, &group, DBG_ENC },
+			{ "debug-lib", required_argument, &group, DBG_LIB },
 			{ 0,0,0,0 }
 		};
 		
@@ -613,8 +690,8 @@ int main(int argc, char *argv[])
 				use_syslog = TRUE;
 				continue;
 			case 0:
-				/* option is in signal */
-				levels[signal] = atoi(optarg);
+				/* option is in group */
+				levels[group] = atoi(optarg);
 				continue;
 			default:
 				usage("");
@@ -642,7 +719,7 @@ int main(int argc, char *argv[])
 	if (pid_file)
 	{
 		fprintf(pid_file, "%d\n", getpid());
-		fchown(fileno(pid_file), charon->uid, charon->gid);
+		ignore_result(fchown(fileno(pid_file), charon->uid, charon->gid));
 		fclose(pid_file);
 	}
 	

@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: daemon.h 4406 2008-10-10 08:36:01Z martin $
+ * $Id: daemon.h 4622 2008-11-11 10:52:37Z martin $
  */
 
 /**
@@ -217,7 +217,7 @@ struct daemon_t {
 	backend_manager_t *backends;
 	
 	/**
-	 * Manager IKEv2 cfg payload attributes
+	 * Manager for IKEv2 cfg payload attributes
 	 */
 	attribute_manager_t *attributes;
 	
@@ -252,19 +252,14 @@ struct daemon_t {
 	bus_t *bus;
 	
 	/**
-	 * A bus listener logging to stdout
+	 * A list of installed file_logger_t's
 	 */
-	file_logger_t *outlog;
+	linked_list_t *file_loggers;
 	
 	/**
-	 * A bus listener logging to syslog
+	 * A list of installed sys_logger_t's
 	 */
-	sys_logger_t *syslog;
-	
-	/**
-	 * A bus listener logging most important events
-	 */
-	sys_logger_t *authlog;
+	linked_list_t *sys_loggers;
 	
 	/**
 	 * Kernel Interface to communicate with kernel

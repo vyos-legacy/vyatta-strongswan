@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: traffic_selector_substructure.c 3589 2008-03-13 14:14:44Z martin $
+ * $Id: traffic_selector_substructure.c 4639 2008-11-12 15:09:24Z martin $
  */
 
 #include "traffic_selector_substructure.h"
@@ -269,8 +269,8 @@ traffic_selector_substructure_t *traffic_selector_substructure_create_from_traff
 	this->ip_protocol_id = traffic_selector->get_protocol(traffic_selector);
 	this->start_port = traffic_selector->get_from_port(traffic_selector);
 	this->end_port = traffic_selector->get_to_port(traffic_selector);
-	this->starting_address = traffic_selector->get_from_address(traffic_selector);
-	this->ending_address = traffic_selector->get_to_address(traffic_selector);
+	this->starting_address = chunk_clone(traffic_selector->get_from_address(traffic_selector));
+	this->ending_address = chunk_clone(traffic_selector->get_to_address(traffic_selector));
 	
 	compute_length(this);
 	

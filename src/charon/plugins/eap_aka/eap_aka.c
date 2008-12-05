@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_aka.c 4276 2008-08-22 10:44:51Z martin $
+ * $Id: eap_aka.c 4628 2008-11-11 15:19:13Z martin $
  */
 
 
@@ -35,6 +35,7 @@
  *   - server_initiate_challenge() - Initiation of AKA-Challenge
  */
 
+#include <limits.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/time.h>

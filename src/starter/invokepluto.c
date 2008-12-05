@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokepluto.c 3942 2008-05-13 07:37:08Z martin $
+ * RCSID $Id: invokepluto.c 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <sys/types.h>
@@ -215,7 +215,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork)
 	_stop_requested = 0;
 
 	if (cfg->setup.prepluto)
-	    system(cfg->setup.prepluto);
+	    ignore_result(system(cfg->setup.prepluto));
 
 	pid = fork();
 	switch (pid)
@@ -258,7 +258,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork)
 			DBG_log("pluto (%d) started", _pluto_pid)
 		    )
 		    if (cfg->setup.postpluto)
-			system(cfg->setup.postpluto);
+			ignore_result(system(cfg->setup.postpluto));
 		    return 0;
 		}
 	    }

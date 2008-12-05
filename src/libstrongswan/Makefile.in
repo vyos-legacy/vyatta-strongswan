@@ -34,26 +34,27 @@ build_triplet = @build@
 host_triplet = @host@
 @USE_LEAK_DETECTIVE_TRUE@am__append_1 = -DLEAK_DETECTIVE
 @USE_LEAK_DETECTIVE_TRUE@am__append_2 = utils/leak_detective.c utils/leak_detective.h
-@USE_AES_TRUE@am__append_3 = plugins/aes
-@USE_DES_TRUE@am__append_4 = plugins/des
-@USE_MD5_TRUE@am__append_5 = plugins/md5
-@USE_SHA1_TRUE@am__append_6 = plugins/sha1
-@USE_SHA2_TRUE@am__append_7 = plugins/sha2
-@USE_FIPS_PRF_TRUE@am__append_8 = plugins/fips_prf
-@USE_GMP_TRUE@am__append_9 = plugins/gmp
-@USE_RANDOM_TRUE@am__append_10 = plugins/random
-@USE_HMAC_TRUE@am__append_11 = plugins/hmac
-@USE_XCBC_TRUE@am__append_12 = plugins/xcbc
-@USE_X509_TRUE@am__append_13 = plugins/x509
-@USE_PUBKEY_TRUE@am__append_14 = plugins/pubkey
-@USE_CURL_TRUE@am__append_15 = plugins/curl
-@USE_LDAP_TRUE@am__append_16 = plugins/ldap
-@USE_MYSQL_TRUE@am__append_17 = plugins/mysql
-@USE_SQLITE_TRUE@am__append_18 = plugins/sqlite
-@USE_PADLOCK_TRUE@am__append_19 = plugins/padlock
-@USE_OPENSSL_TRUE@am__append_20 = plugins/openssl
-@USE_AGENT_TRUE@am__append_21 = plugins/agent
-@USE_INTEGRITY_TEST_TRUE@am__append_22 = fips
+@USE_LOCK_PROFILER_TRUE@am__append_3 = -DLOCK_PROFILER
+@USE_AES_TRUE@am__append_4 = plugins/aes
+@USE_DES_TRUE@am__append_5 = plugins/des
+@USE_MD5_TRUE@am__append_6 = plugins/md5
+@USE_SHA1_TRUE@am__append_7 = plugins/sha1
+@USE_SHA2_TRUE@am__append_8 = plugins/sha2
+@USE_FIPS_PRF_TRUE@am__append_9 = plugins/fips_prf
+@USE_GMP_TRUE@am__append_10 = plugins/gmp
+@USE_RANDOM_TRUE@am__append_11 = plugins/random
+@USE_HMAC_TRUE@am__append_12 = plugins/hmac
+@USE_XCBC_TRUE@am__append_13 = plugins/xcbc
+@USE_X509_TRUE@am__append_14 = plugins/x509
+@USE_PUBKEY_TRUE@am__append_15 = plugins/pubkey
+@USE_CURL_TRUE@am__append_16 = plugins/curl
+@USE_LDAP_TRUE@am__append_17 = plugins/ldap
+@USE_MYSQL_TRUE@am__append_18 = plugins/mysql
+@USE_SQLITE_TRUE@am__append_19 = plugins/sqlite
+@USE_PADLOCK_TRUE@am__append_20 = plugins/padlock
+@USE_OPENSSL_TRUE@am__append_21 = plugins/openssl
+@USE_AGENT_TRUE@am__append_22 = plugins/agent
+@USE_INTEGRITY_TEST_TRUE@am__append_23 = fips
 subdir = src/libstrongswan
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -105,7 +106,8 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 	utils/iterator.h utils/lexparser.c utils/lexparser.h \
 	utils/linked_list.c utils/linked_list.h utils/enumerator.c \
 	utils/enumerator.h utils/optionsfrom.c utils/optionsfrom.h \
-	utils/mutex.c utils/mutex.h plugins/plugin_loader.c \
+	utils/mutex.c utils/mutex.h utils/backtrace.c \
+	utils/backtrace.h plugins/plugin_loader.c \
 	plugins/plugin_loader.h plugins/plugin.h \
 	utils/leak_detective.c utils/leak_detective.h \
 	fips/fips_canister_start.c fips/fips.c fips/fips.h \
@@ -126,7 +128,7 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 @USE_INTEGRITY_TEST_FALSE@	database_factory.lo utils.lo host.lo \
 @USE_INTEGRITY_TEST_FALSE@	identification.lo lexparser.lo \
 @USE_INTEGRITY_TEST_FALSE@	linked_list.lo enumerator.lo \
-@USE_INTEGRITY_TEST_FALSE@	optionsfrom.lo mutex.lo \
+@USE_INTEGRITY_TEST_FALSE@	optionsfrom.lo mutex.lo backtrace.lo \
 @USE_INTEGRITY_TEST_FALSE@	plugin_loader.lo $(am__objects_1)
 @USE_INTEGRITY_TEST_TRUE@am_libstrongswan_la_OBJECTS =  \
 @USE_INTEGRITY_TEST_TRUE@	fips_canister_start.lo fips.lo \
@@ -144,7 +146,7 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 @USE_INTEGRITY_TEST_TRUE@	database_factory.lo utils.lo host.lo \
 @USE_INTEGRITY_TEST_TRUE@	identification.lo lexparser.lo \
 @USE_INTEGRITY_TEST_TRUE@	linked_list.lo enumerator.lo \
-@USE_INTEGRITY_TEST_TRUE@	optionsfrom.lo mutex.lo \
+@USE_INTEGRITY_TEST_TRUE@	optionsfrom.lo mutex.lo backtrace.lo \
 @USE_INTEGRITY_TEST_TRUE@	plugin_loader.lo $(am__objects_1) \
 @USE_INTEGRITY_TEST_TRUE@	fips_canister_end.lo
 libstrongswan_la_OBJECTS = $(am_libstrongswan_la_OBJECTS)
@@ -375,7 +377,8 @@ lib_LTLIBRARIES = libstrongswan.la
 @USE_INTEGRITY_TEST_FALSE@	utils/enumerator.h \
 @USE_INTEGRITY_TEST_FALSE@	utils/optionsfrom.c \
 @USE_INTEGRITY_TEST_FALSE@	utils/optionsfrom.h utils/mutex.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/mutex.h \
+@USE_INTEGRITY_TEST_FALSE@	utils/mutex.h utils/backtrace.c \
+@USE_INTEGRITY_TEST_FALSE@	utils/backtrace.h \
 @USE_INTEGRITY_TEST_FALSE@	plugins/plugin_loader.c \
 @USE_INTEGRITY_TEST_FALSE@	plugins/plugin_loader.h \
 @USE_INTEGRITY_TEST_FALSE@	plugins/plugin.h $(am__append_2)
@@ -437,27 +440,30 @@ lib_LTLIBRARIES = libstrongswan.la
 @USE_INTEGRITY_TEST_TRUE@	utils/enumerator.c utils/enumerator.h \
 @USE_INTEGRITY_TEST_TRUE@	utils/optionsfrom.c \
 @USE_INTEGRITY_TEST_TRUE@	utils/optionsfrom.h utils/mutex.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/mutex.h plugins/plugin_loader.c \
+@USE_INTEGRITY_TEST_TRUE@	utils/mutex.h utils/backtrace.c \
+@USE_INTEGRITY_TEST_TRUE@	utils/backtrace.h \
+@USE_INTEGRITY_TEST_TRUE@	plugins/plugin_loader.c \
 @USE_INTEGRITY_TEST_TRUE@	plugins/plugin_loader.h \
 @USE_INTEGRITY_TEST_TRUE@	plugins/plugin.h $(am__append_2) \
 @USE_INTEGRITY_TEST_TRUE@	fips/fips_canister_end.c
 libstrongswan_la_LIBADD = -lpthread -ldl
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
-	-DIPSEC_PLUGINDIR=\"${plugindir}\" $(am__append_1)
+	-DIPSEC_PLUGINDIR=\"${plugindir}\" $(am__append_1) \
+	$(am__append_3)
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl
 BUILT_SOURCES = asn1/oid.c asn1/oid.h
 MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
 
 # build plugins with their own Makefile
 #######################################
-SUBDIRS = . $(am__append_3) $(am__append_4) $(am__append_5) \
-	$(am__append_6) $(am__append_7) $(am__append_8) \
-	$(am__append_9) $(am__append_10) $(am__append_11) \
-	$(am__append_12) $(am__append_13) $(am__append_14) \
-	$(am__append_15) $(am__append_16) $(am__append_17) \
-	$(am__append_18) $(am__append_19) $(am__append_20) \
-	$(am__append_21) $(am__append_22)
+SUBDIRS = . $(am__append_4) $(am__append_5) $(am__append_6) \
+	$(am__append_7) $(am__append_8) $(am__append_9) \
+	$(am__append_10) $(am__append_11) $(am__append_12) \
+	$(am__append_13) $(am__append_14) $(am__append_15) \
+	$(am__append_16) $(am__append_17) $(am__append_18) \
+	$(am__append_19) $(am__append_20) $(am__append_21) \
+	$(am__append_22) $(am__append_23)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -530,6 +536,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asn1.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asn1_parser.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/backtrace.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/builder.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/certificate.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/chunk.Plo@am__quote@
@@ -809,6 +816,13 @@ mutex.lo: utils/mutex.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/mutex.c' object='mutex.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mutex.lo `test -f 'utils/mutex.c' || echo '$(srcdir)/'`utils/mutex.c
+
+backtrace.lo: utils/backtrace.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT backtrace.lo -MD -MP -MF $(DEPDIR)/backtrace.Tpo -c -o backtrace.lo `test -f 'utils/backtrace.c' || echo '$(srcdir)/'`utils/backtrace.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/backtrace.Tpo $(DEPDIR)/backtrace.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/backtrace.c' object='backtrace.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o backtrace.lo `test -f 'utils/backtrace.c' || echo '$(srcdir)/'`utils/backtrace.c
 
 plugin_loader.lo: plugins/plugin_loader.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT plugin_loader.lo -MD -MP -MF $(DEPDIR)/plugin_loader.Tpo -c -o plugin_loader.lo `test -f 'plugins/plugin_loader.c' || echo '$(srcdir)/'`plugins/plugin_loader.c
@@ -1139,11 +1153,11 @@ uninstall-am: uninstall-libLTLIBRARIES
 	uninstall-libLTLIBRARIES
 
 
-asn1/oid.c :	asn1/oid.txt asn1/oid.pl
-		cd asn1 && $(PERL) oid.pl
+asn1/oid.c :	asn1/oid.pl asn1/oid.txt
+		(cd `dirname $<` && $(PERL) `basename $<`)
 
-asn1/oid.h :	asn1/oid.txt asn1/oid.pl
-		cd asn1 && $(PERL) oid.pl
+asn1/oid.h :	asn1/oid.pl asn1/oid.txt
+		(cd `dirname $<` && $(PERL) `basename $<`)
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:
