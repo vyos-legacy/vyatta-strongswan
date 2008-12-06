@@ -1,14 +1,13 @@
-strongswan (4.2.9-1) UNRELEASED; urgency=low
+strongswan (4.2.9-1) unstable; urgency=low
 
-  * (NOT RELEASED YET) New upstream release
+  * New upstream release, fixes a MOBIKE issue.
+    Closes: #507542: strongswan: endless loop
+  * Explicitly enable compilation with libcurl for CRL fetching
+    Closes: #497756: strongswan: not compiled with curl support; crl 
+                     fetching not available
+  * Enable compilation with SSH agent support.
 
- -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Fri, 05 Dec 2008 17:21:42 +0100
-
-strongswan (4.2.8-1) UNRELEASED; urgency=low
-
-  * (NOT RELEASED YET) New upstream release
-
- -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Wed, 29 Oct 2008 12:23:37 +0100
+ -- Rene Mayrhofer <rmayr@debian.org>  Fri, 05 Dec 2008 17:21:42 +0100
 
 strongswan (4.2.4-5) unstable; urgency=high
 

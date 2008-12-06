@@ -12,12 +12,12 @@ export DEB_BUILD_HARDENING=1
 
 CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
-		--enable-http --enable-ldap \
+		--enable-http --enable-ldap --enable-curl \
 		--enable-nonblocking --enable-thread \
 		--enable-smartcard --enable-cisco-quirks \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-mediation \
-		--enable-openssl \
+		--enable-openssl --enable-agent \
 		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
 		--disable-md5 --disable-sha1 --disable-sha2
 	# Could enable --enable-nat-transport, but this is actually insecure,
