@@ -16,8 +16,9 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-nonblocking --enable-thread \
 		--enable-smartcard --enable-cisco-quirks \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
-		--enable-mediation \
+		--enable-mediation --enable-medsrv --enable-medcli \
 		--enable-openssl --enable-agent \
+		--enable-kernel-klips \
 		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
 		--disable-md5 --disable-sha1 --disable-sha2
 	# Could enable --enable-nat-transport, but this is actually insecure,
