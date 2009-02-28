@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: diffie_hellman.c 4023 2008-05-29 06:55:03Z andreas $
+ * $Id: diffie_hellman.c 4685 2008-11-22 16:14:55Z martin $
  */
 
 #include "diffie_hellman.h"
@@ -36,5 +36,7 @@ ENUM_NEXT(diffie_hellman_group_names, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
 ENUM_NEXT(diffie_hellman_group_names, ECP_192_BIT, ECP_224_BIT, ECP_521_BIT,
 	"ECP_192_BIT",
 	"ECP_224_BIT");
-ENUM_END(diffie_hellman_group_names, ECP_224_BIT);
+ENUM_NEXT(diffie_hellman_group_names, MODP_NULL, MODP_NULL, ECP_224_BIT,
+	"MODP_NULL");
+ENUM_END(diffie_hellman_group_names, MODP_NULL);
 

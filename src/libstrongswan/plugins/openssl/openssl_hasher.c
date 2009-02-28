@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: openssl_hasher.c 3898 2008-04-30 09:23:13Z tobias $
+ * $Id: openssl_hasher.c 4879 2009-02-18 19:41:33Z tobias $
  */
 
 #include "openssl_hasher.h"
@@ -69,7 +69,8 @@ static openssl_algorithm_t integrity_algs[] = {
 	{HASH_SHA1,		"sha1"},
 	{HASH_SHA256,	"sha256"},
 	{HASH_SHA384,	"sha384"},
-	{HASH_SHA512, 	"sha512"},
+	{HASH_SHA512,	"sha512"},
+	{HASH_MD4,		"md4"},
 	{END_OF_LIST, 	NULL},
 };
 

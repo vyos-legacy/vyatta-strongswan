@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: processor.c 4579 2008-11-05 11:29:56Z martin $
+ * $Id: processor.c 4802 2008-12-12 15:57:12Z martin $
  */
  
 #include <stdlib.h>
@@ -84,7 +84,9 @@ static void restart(private_processor_t *this)
 {
 	pthread_t thread;
 	
-	if (pthread_create(&thread, NULL, (void*)process_jobs, this) != 0)
+	/* respawn thread if required */
+	if (this->desired_threads == 0 ||
+		pthread_create(&thread, NULL, (void*)process_jobs, this) != 0)
 	{
 		this->mutex->lock(this->mutex);
 		this->total_threads--;

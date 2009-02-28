@@ -44,7 +44,7 @@ error "gperf generated tables don't work with this execution character set. Plea
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: stroke_keywords.txt 4384 2008-10-08 07:00:13Z andreas $
+ * RCSID $Id: stroke_keywords.txt 4783 2008-12-10 13:00:02Z martin $
  */
 
 #include <string.h>
@@ -56,12 +56,12 @@ struct stroke_token {
     stroke_keyword_t kw;
 };
 
-#define TOTAL_KEYWORDS 31
+#define TOTAL_KEYWORDS 32
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 15
 #define MIN_HASH_VALUE 3
-#define MAX_HASH_VALUE 48
-/* maximum key range = 46, duplicates = 0 */
+#define MAX_HASH_VALUE 65
+/* maximum key range = 63, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -77,32 +77,32 @@ hash (str, len)
 {
   static const unsigned char asso_values[] =
     {
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49,  0, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49,  0,  0,  5,
-      28,  0, 49, 10, 49, 20, 49, 49,  0, 49,
-      49, 20,  0, 49, 10, 10,  0, 10, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-      49, 49, 49, 49, 49, 49
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66,  0, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66,  0,  0,  5,
+      45,  0, 66, 10, 66, 15, 66, 66,  0, 66,
+      66, 20,  0, 66, 10, 10,  0, 10, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+      66, 66, 66, 66, 66, 66
     };
   register int hval = len;
 
@@ -129,7 +129,8 @@ static const struct stroke_token wordlist[] =
   {
     {""}, {""}, {""},
     {"add",             STROKE_ADD},
-    {""}, {""}, {""},
+    {""}, {""},
+    {"leases",          STROKE_LEASES},
     {"listall",         STROKE_LIST_ALL},
     {"loglevel",        STROKE_LOGLEVEL},
     {""},
@@ -145,8 +146,8 @@ static const struct stroke_token wordlist[] =
     {"rereadall",       STROKE_REREAD_ALL},
     {""},
     {"listcacerts",     STROKE_LIST_CACERTS},
-    {"rereadacerts",    STROKE_REREAD_ACERTS,},
-    {"rereadaacerts",   STROKE_REREAD_AACERTS,},
+    {"rereadacerts",    STROKE_REREAD_ACERTS},
+    {"rereadaacerts",   STROKE_REREAD_AACERTS},
     {"listcerts",       STROKE_LIST_CERTS},
     {"rereadcrls",      STROKE_REREAD_CRLS},
     {"status",          STROKE_STATUS},
@@ -154,13 +155,10 @@ static const struct stroke_token wordlist[] =
     {"rereadcacerts",   STROKE_REREAD_CACERTS},
     {"statusall",       STROKE_STATUSALL},
     {""},
-    {"del",             STROKE_DEL},
-    {"down",            STROKE_DOWN},
-    {"rereadsecrets",   STROKE_REREAD_SECRETS},
-    {"delete",          STROKE_DELETE},
-    {""},
     {"listcainfos",     STROKE_LIST_CAINFOS},
     {""},
+    {"rereadsecrets",   STROKE_REREAD_SECRETS},
+    {""}, {""}, {""}, {""},
     {"listocsp",        STROKE_LIST_OCSP},
     {""},
     {"listgroups",      STROKE_LIST_GROUPS},
@@ -169,6 +167,12 @@ static const struct stroke_token wordlist[] =
     {""},
     {"rereadocspcerts", STROKE_REREAD_OCSPCERTS},
     {""}, {""},
+    {"del",             STROKE_DEL},
+    {"down",            STROKE_DOWN},
+    {""},
+    {"delete",          STROKE_DELETE},
+    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {""}, {""}, {""}, {""},
     {"down-srcip",      STROKE_DOWN_SRCIP}
   };
 

@@ -20,11 +20,13 @@
 #include "load_tester_creds.h"
 #include "load_tester_ipsec.h"
 #include "load_tester_listener.h"
+#include "load_tester_diffie_hellman.h"
 
 #include <unistd.h>
 
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
+#include <utils/mutex.h>
 
 typedef struct private_load_tester_plugin_t private_load_tester_plugin_t;
 
@@ -59,14 +61,29 @@ struct private_load_tester_plugin_t {
 	int iterations;
 	
 	/**
-	 * number of threads
+	 * number desired initiator threads
 	 */
 	int initiators;
+	
+	/**
+	 * currenly running initiators
+	 */
+	int running;
 	
 	/**
 	 * delay between initiations, in ms
 	 */
 	int delay;
+	
+	/**
+	 * mutex to lock running field
+	 */
+	mutex_t *mutex;
+	
+	/**
+	 * condvar to wait for initiators
+	 */
+	condvar_t *condvar;
 };
 
 /**
@@ -74,48 +91,56 @@ struct private_load_tester_plugin_t {
  */
 static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 {
-	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg = NULL;;
-	enumerator_t *enumerator;
 	int i, s = 0, ms = 0;
 	
+	this->mutex->lock(this->mutex);
+	if (!this->running)
+	{
+		this->running = this->initiators;
+	}
+	this->mutex->unlock(this->mutex);
 	if (this->delay)
 	{
 		s = this->delay / 1000;
 		ms = this->delay % 1000;
 	}
-	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
-													  "load-test");
-	if (peer_cfg)
+	
+	for (i = 0; this->iterations == 0 || i < this->iterations; i++)
 	{
-		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
-		if (enumerator->enumerate(enumerator, &child_cfg))
+		peer_cfg_t *peer_cfg;
+		child_cfg_t *child_cfg = NULL;
+		enumerator_t *enumerator;
+	
+		peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+														  "load-test");
+		if (!peer_cfg)
 		{
-			child_cfg->get_ref(child_cfg);
+			break;
+		}
+		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+		if (!enumerator->enumerate(enumerator, &child_cfg))
+		{
+			enumerator->destroy(enumerator);
+			break;
 		}
 		enumerator->destroy(enumerator);
 		
-		if (child_cfg)
-		{
-			for (i = 0; this->iterations == 0 || i < this->iterations; i++)
-			{
-				charon->controller->initiate(charon->controller,
-					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
+		charon->controller->initiate(charon->controller,
+					peer_cfg, child_cfg->get_ref(child_cfg),
 					NULL, NULL);
-				
-				if (s)
-				{
-					sleep(s);
-				}
-				if (ms)
-				{
-					usleep(ms * 1000);
-				}
-			}
-			child_cfg->destroy(child_cfg);
+		if (s)
+		{
+			sleep(s);
 		}
-		peer_cfg->destroy(peer_cfg);
+		if (ms)
+		{
+			usleep(ms * 1000);
+		}
 	}
+	this->mutex->lock(this->mutex);
+	this->running--;
+	this->mutex->unlock(this->mutex);
+	this->condvar->signal(this->condvar);
 	return JOB_REQUEUE_NONE;
 }
 
@@ -124,6 +149,13 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
  */
 static void destroy(private_load_tester_plugin_t *this)
 {
+	this->iterations = -1;
+	this->mutex->lock(this->mutex);
+	while (this->running)
+	{
+		this->condvar->wait(this->condvar, this->mutex);
+	}
+	this->mutex->unlock(this->mutex);
 	charon->kernel_interface->remove_ipsec_interface(charon->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
@@ -132,6 +164,10 @@ static void destroy(private_load_tester_plugin_t *this)
 	this->config->destroy(this->config);
 	this->creds->destroy(this->creds);
 	this->listener->destroy(this->listener);
+	lib->crypto->remove_dh(lib->crypto,
+						(dh_constructor_t)load_tester_diffie_hellman_create);
+	this->mutex->destroy(this->mutex);
+	this->condvar->destroy(this->condvar);
 	free(this);
 }
 
@@ -140,30 +176,50 @@ static void destroy(private_load_tester_plugin_t *this)
  */
 plugin_t *plugin_create()
 {
-	private_load_tester_plugin_t *this = malloc_thing(private_load_tester_plugin_t);
-	int i;
+	private_load_tester_plugin_t *this;
+	u_int i, shutdown_on = 0;
 	
+	if (!lib->settings->get_bool(lib->settings,
+								 "charon.plugins.load_tester.enable", FALSE))
+	{
+		DBG1(DBG_CFG, "disabling load-tester plugin, not configured");
+		return NULL;
+	}
+	
+	this = malloc_thing(private_load_tester_plugin_t);
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 	
+	lib->crypto->add_dh(lib->crypto, MODP_NULL, 
+						(dh_constructor_t)load_tester_diffie_hellman_create);
+	
+	this->delay = lib->settings->get_int(lib->settings,
+					"charon.plugins.load_tester.delay", 0);
+	this->iterations = lib->settings->get_int(lib->settings,
+					"charon.plugins.load_tester.iterations", 1);
+	this->initiators = lib->settings->get_int(lib->settings,
+					"charon.plugins.load_tester.initiators", 0);
+	if (lib->settings->get_bool(lib->settings,
+					"charon.plugins.load_tester.shutdown_when_complete", 0))
+	{
+		shutdown_on = this->iterations * this->initiators;
+	}
+	
+	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_DEFAULT);
 	this->config = load_tester_config_create();
 	this->creds = load_tester_creds_create();
-	this->listener = load_tester_listener_create();
+	this->listener = load_tester_listener_create(shutdown_on);
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	charon->credentials->add_set(charon->credentials, &this->creds->credential_set);
 	charon->bus->add_listener(charon->bus, &this->listener->listener);
 	
 	if (lib->settings->get_bool(lib->settings,
-								"charon.plugins.load_tester.fake_kernel", FALSE))
+					"charon.plugins.load_tester.fake_kernel", FALSE))
 	{
 		charon->kernel_interface->add_ipsec_interface(charon->kernel_interface, 
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	}
-	this->delay = lib->settings->get_int(lib->settings,
-								"charon.plugins.load_tester.delay", 0);
-	this->iterations = lib->settings->get_int(lib->settings,
-								"charon.plugins.load_tester.iterations", 1);
-	this->initiators = lib->settings->get_int(lib->settings,
-								"charon.plugins.load_tester.initiators", 0);
+	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{
 		charon->processor->queue_job(charon->processor, 

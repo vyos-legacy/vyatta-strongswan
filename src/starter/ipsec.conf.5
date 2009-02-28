@@ -1,5 +1,5 @@
 .TH IPSEC.CONF 5 "27 Jun 2007"
-.\" RCSID $Id: ipsec.conf.5 4645 2008-11-13 06:29:53Z andreas $
+.\" RCSID $Id: ipsec.conf.5 4890 2009-02-19 22:12:04Z andreas $
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
@@ -356,9 +356,13 @@ selected. Acceptable values are
 .B aka
 for EAP-AKA,
 .B sim
-for EAP-SIM and
+for EAP-SIM,
+.B gtc
+for EAP-GTC,
 .B md5
-for EAP-MD5.
+for EAP-MD5, and
+.B mschapv2
+for EAP-MS-CHAPv2.
 Additionally, IANA assigned EAP method numbers are accepted, or a definition
 in the form
 .B eap=type-vendor
@@ -1008,6 +1012,7 @@ Accepted values are
 and
 .B no
 (the default).
+Used by IKEv1 only, NAT traversal always being active in IKEv2.
 .TP
 .B nocrsend
 no certificate request payloads will be sent.
@@ -1016,7 +1021,6 @@ Accepted values are
 and
 .B no
 (the default).
-Used by IKEv1 only, NAT traversal always being active in IKEv2.
 .TP
 .B pkcs11initargs
 non-standard argument string for PKCS#11 C_Initialize() function;

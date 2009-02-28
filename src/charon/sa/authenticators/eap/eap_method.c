@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_method.c 4269 2008-08-21 12:10:07Z martin $
+ * $Id: eap_method.c 4882 2009-02-18 19:57:15Z tobias $
  */
 
 #include "eap_method.h"
@@ -28,7 +28,9 @@ ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_GTC,
 	"EAP_SIM");
 ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_SIM,
 	"EAP_AKA");
-ENUM_NEXT(eap_type_names, EAP_EXPANDED, EAP_EXPERIMENTAL, EAP_AKA,
+ENUM_NEXT(eap_type_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
+	"EAP_MSCHAPV2");
+ENUM_NEXT(eap_type_names, EAP_EXPANDED, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
 	"EAP_EXPANDED",
 	"EAP_EXPERIMENTAL");
 ENUM_END(eap_type_names, EAP_EXPERIMENTAL);

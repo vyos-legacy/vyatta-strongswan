@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: host.c 4639 2008-11-12 15:09:24Z martin $
+ * $Id: host.c 4856 2009-02-05 22:13:48Z andreas $
  */
 
 #define _GNU_SOURCE
@@ -452,6 +452,10 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	if (streq(string, "%any"))
 	{
 		return host_create_any(af ? af : AF_INET);
+	}
+	if (streq(string, "%any6"))
+	{
+		return host_create_any(af ? af : AF_INET6);
 	}
 	else if (strchr(string, ':'))
 	{

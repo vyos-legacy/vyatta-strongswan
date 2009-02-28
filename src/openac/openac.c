@@ -20,7 +20,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: openac.c 4345 2008-09-17 08:10:48Z martin $
+ * RCSID $Id: openac.c 4749 2008-12-04 04:34:49Z andreas $
  */
 
 #include <stdio.h>
@@ -540,7 +540,6 @@ int main(int argc, char **argv)
 							BUILD_SIGNING_CERT, signerCert,
 							BUILD_SIGNING_KEY, signerKey,
 							BUILD_END);
-		free(serial.ptr);
 		if (!attr_cert)
 		{
 			goto end;

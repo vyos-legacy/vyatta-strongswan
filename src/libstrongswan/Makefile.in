@@ -37,24 +37,25 @@ host_triplet = @host@
 @USE_LOCK_PROFILER_TRUE@am__append_3 = -DLOCK_PROFILER
 @USE_AES_TRUE@am__append_4 = plugins/aes
 @USE_DES_TRUE@am__append_5 = plugins/des
-@USE_MD5_TRUE@am__append_6 = plugins/md5
-@USE_SHA1_TRUE@am__append_7 = plugins/sha1
-@USE_SHA2_TRUE@am__append_8 = plugins/sha2
-@USE_FIPS_PRF_TRUE@am__append_9 = plugins/fips_prf
-@USE_GMP_TRUE@am__append_10 = plugins/gmp
-@USE_RANDOM_TRUE@am__append_11 = plugins/random
-@USE_HMAC_TRUE@am__append_12 = plugins/hmac
-@USE_XCBC_TRUE@am__append_13 = plugins/xcbc
-@USE_X509_TRUE@am__append_14 = plugins/x509
-@USE_PUBKEY_TRUE@am__append_15 = plugins/pubkey
-@USE_CURL_TRUE@am__append_16 = plugins/curl
-@USE_LDAP_TRUE@am__append_17 = plugins/ldap
-@USE_MYSQL_TRUE@am__append_18 = plugins/mysql
-@USE_SQLITE_TRUE@am__append_19 = plugins/sqlite
-@USE_PADLOCK_TRUE@am__append_20 = plugins/padlock
-@USE_OPENSSL_TRUE@am__append_21 = plugins/openssl
-@USE_AGENT_TRUE@am__append_22 = plugins/agent
-@USE_INTEGRITY_TEST_TRUE@am__append_23 = fips
+@USE_MD4_TRUE@am__append_6 = plugins/md4
+@USE_MD5_TRUE@am__append_7 = plugins/md5
+@USE_SHA1_TRUE@am__append_8 = plugins/sha1
+@USE_SHA2_TRUE@am__append_9 = plugins/sha2
+@USE_FIPS_PRF_TRUE@am__append_10 = plugins/fips_prf
+@USE_GMP_TRUE@am__append_11 = plugins/gmp
+@USE_RANDOM_TRUE@am__append_12 = plugins/random
+@USE_HMAC_TRUE@am__append_13 = plugins/hmac
+@USE_XCBC_TRUE@am__append_14 = plugins/xcbc
+@USE_X509_TRUE@am__append_15 = plugins/x509
+@USE_PUBKEY_TRUE@am__append_16 = plugins/pubkey
+@USE_CURL_TRUE@am__append_17 = plugins/curl
+@USE_LDAP_TRUE@am__append_18 = plugins/ldap
+@USE_MYSQL_TRUE@am__append_19 = plugins/mysql
+@USE_SQLITE_TRUE@am__append_20 = plugins/sqlite
+@USE_PADLOCK_TRUE@am__append_21 = plugins/padlock
+@USE_OPENSSL_TRUE@am__append_22 = plugins/openssl
+@USE_AGENT_TRUE@am__append_23 = plugins/agent
+@USE_INTEGRITY_TEST_TRUE@am__append_24 = fips
 subdir = src/libstrongswan
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -104,12 +105,12 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 	database/database_factory.c utils.h utils.c utils/host.c \
 	utils/host.h utils/identification.c utils/identification.h \
 	utils/iterator.h utils/lexparser.c utils/lexparser.h \
-	utils/linked_list.c utils/linked_list.h utils/enumerator.c \
-	utils/enumerator.h utils/optionsfrom.c utils/optionsfrom.h \
-	utils/mutex.c utils/mutex.h utils/backtrace.c \
-	utils/backtrace.h plugins/plugin_loader.c \
-	plugins/plugin_loader.h plugins/plugin.h \
-	utils/leak_detective.c utils/leak_detective.h \
+	utils/linked_list.c utils/linked_list.h utils/hashtable.c \
+	utils/hashtable.h utils/enumerator.c utils/enumerator.h \
+	utils/optionsfrom.c utils/optionsfrom.h utils/mutex.c \
+	utils/mutex.h utils/backtrace.c utils/backtrace.h \
+	plugins/plugin_loader.c plugins/plugin_loader.h \
+	plugins/plugin.h utils/leak_detective.c utils/leak_detective.h \
 	fips/fips_canister_start.c fips/fips.c fips/fips.h \
 	fips/fips_canister_end.c
 @USE_LEAK_DETECTIVE_TRUE@am__objects_1 = leak_detective.lo
@@ -127,8 +128,9 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 @USE_INTEGRITY_TEST_FALSE@	fetcher_manager.lo \
 @USE_INTEGRITY_TEST_FALSE@	database_factory.lo utils.lo host.lo \
 @USE_INTEGRITY_TEST_FALSE@	identification.lo lexparser.lo \
-@USE_INTEGRITY_TEST_FALSE@	linked_list.lo enumerator.lo \
-@USE_INTEGRITY_TEST_FALSE@	optionsfrom.lo mutex.lo backtrace.lo \
+@USE_INTEGRITY_TEST_FALSE@	linked_list.lo hashtable.lo \
+@USE_INTEGRITY_TEST_FALSE@	enumerator.lo optionsfrom.lo \
+@USE_INTEGRITY_TEST_FALSE@	mutex.lo backtrace.lo \
 @USE_INTEGRITY_TEST_FALSE@	plugin_loader.lo $(am__objects_1)
 @USE_INTEGRITY_TEST_TRUE@am_libstrongswan_la_OBJECTS =  \
 @USE_INTEGRITY_TEST_TRUE@	fips_canister_start.lo fips.lo \
@@ -145,10 +147,10 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 @USE_INTEGRITY_TEST_TRUE@	fetcher_manager.lo \
 @USE_INTEGRITY_TEST_TRUE@	database_factory.lo utils.lo host.lo \
 @USE_INTEGRITY_TEST_TRUE@	identification.lo lexparser.lo \
-@USE_INTEGRITY_TEST_TRUE@	linked_list.lo enumerator.lo \
-@USE_INTEGRITY_TEST_TRUE@	optionsfrom.lo mutex.lo backtrace.lo \
-@USE_INTEGRITY_TEST_TRUE@	plugin_loader.lo $(am__objects_1) \
-@USE_INTEGRITY_TEST_TRUE@	fips_canister_end.lo
+@USE_INTEGRITY_TEST_TRUE@	linked_list.lo hashtable.lo \
+@USE_INTEGRITY_TEST_TRUE@	enumerator.lo optionsfrom.lo mutex.lo \
+@USE_INTEGRITY_TEST_TRUE@	backtrace.lo plugin_loader.lo \
+@USE_INTEGRITY_TEST_TRUE@	$(am__objects_1) fips_canister_end.lo
 libstrongswan_la_OBJECTS = $(am_libstrongswan_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -175,11 +177,12 @@ RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = . plugins/aes plugins/des plugins/md5 plugins/sha1 \
-	plugins/sha2 plugins/fips_prf plugins/gmp plugins/random \
-	plugins/hmac plugins/xcbc plugins/x509 plugins/pubkey \
-	plugins/curl plugins/ldap plugins/mysql plugins/sqlite \
-	plugins/padlock plugins/openssl plugins/agent fips
+DIST_SUBDIRS = . plugins/aes plugins/des plugins/md4 plugins/md5 \
+	plugins/sha1 plugins/sha2 plugins/fips_prf plugins/gmp \
+	plugins/random plugins/hmac plugins/xcbc plugins/x509 \
+	plugins/pubkey plugins/curl plugins/ldap plugins/mysql \
+	plugins/sqlite plugins/padlock plugins/openssl plugins/agent \
+	fips
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -193,22 +196,17 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
-CXX = @CXX@
-CXXCPP = @CXXCPP@
-CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
-ECHO = @ECHO@
+DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
-F77 = @F77@
-FFLAGS = @FFLAGS@
+FGREP = @FGREP@
 GPERF = @GPERF@
 GREP = @GREP@
 INSTALL = @INSTALL@
@@ -218,6 +216,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 IPSEC_ROUTING_TABLE = @IPSEC_ROUTING_TABLE@
 IPSEC_ROUTING_TABLE_PRIO = @IPSEC_ROUTING_TABLE_PRIO@
+LD = @LD@
 LDFLAGS = @LDFLAGS@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
@@ -226,12 +225,16 @@ LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LINUX_HEADERS = @LINUX_HEADERS@
+LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
+NM = @NM@
 NMEDIT = @NMEDIT@
 OBJEXT = @OBJEXT@
+OTOOL = @OTOOL@
+OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
@@ -254,8 +257,7 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
-ac_ct_CXX = @ac_ct_CXX@
-ac_ct_F77 = @ac_ct_F77@
+ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -294,6 +296,7 @@ libstrongswan_plugins = @libstrongswan_plugins@
 linuxdir = @linuxdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
+lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 nm_CFLAGS = @nm_CFLAGS@
@@ -373,6 +376,7 @@ lib_LTLIBRARIES = libstrongswan.la
 @USE_INTEGRITY_TEST_FALSE@	utils/lexparser.h \
 @USE_INTEGRITY_TEST_FALSE@	utils/linked_list.c \
 @USE_INTEGRITY_TEST_FALSE@	utils/linked_list.h \
+@USE_INTEGRITY_TEST_FALSE@	utils/hashtable.c utils/hashtable.h \
 @USE_INTEGRITY_TEST_FALSE@	utils/enumerator.c \
 @USE_INTEGRITY_TEST_FALSE@	utils/enumerator.h \
 @USE_INTEGRITY_TEST_FALSE@	utils/optionsfrom.c \
@@ -436,8 +440,9 @@ lib_LTLIBRARIES = libstrongswan.la
 @USE_INTEGRITY_TEST_TRUE@	utils/identification.h \
 @USE_INTEGRITY_TEST_TRUE@	utils/iterator.h utils/lexparser.c \
 @USE_INTEGRITY_TEST_TRUE@	utils/lexparser.h utils/linked_list.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/linked_list.h \
-@USE_INTEGRITY_TEST_TRUE@	utils/enumerator.c utils/enumerator.h \
+@USE_INTEGRITY_TEST_TRUE@	utils/linked_list.h utils/hashtable.c \
+@USE_INTEGRITY_TEST_TRUE@	utils/hashtable.h utils/enumerator.c \
+@USE_INTEGRITY_TEST_TRUE@	utils/enumerator.h \
 @USE_INTEGRITY_TEST_TRUE@	utils/optionsfrom.c \
 @USE_INTEGRITY_TEST_TRUE@	utils/optionsfrom.h utils/mutex.c \
 @USE_INTEGRITY_TEST_TRUE@	utils/mutex.h utils/backtrace.c \
@@ -463,7 +468,7 @@ SUBDIRS = . $(am__append_4) $(am__append_5) $(am__append_6) \
 	$(am__append_13) $(am__append_14) $(am__append_15) \
 	$(am__append_16) $(am__append_17) $(am__append_18) \
 	$(am__append_19) $(am__append_20) $(am__append_21) \
-	$(am__append_22) $(am__append_23)
+	$(am__append_22) $(am__append_23) $(am__append_24)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -554,6 +559,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips_canister_end.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips_canister_start.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hasher.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hashtable.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/host.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/identification.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/leak_detective.Plo@am__quote@
@@ -795,6 +801,13 @@ linked_list.lo: utils/linked_list.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/linked_list.c' object='linked_list.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o linked_list.lo `test -f 'utils/linked_list.c' || echo '$(srcdir)/'`utils/linked_list.c
+
+hashtable.lo: utils/hashtable.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT hashtable.lo -MD -MP -MF $(DEPDIR)/hashtable.Tpo -c -o hashtable.lo `test -f 'utils/hashtable.c' || echo '$(srcdir)/'`utils/hashtable.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/hashtable.Tpo $(DEPDIR)/hashtable.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/hashtable.c' object='hashtable.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o hashtable.lo `test -f 'utils/hashtable.c' || echo '$(srcdir)/'`utils/hashtable.c
 
 enumerator.lo: utils/enumerator.c
 @am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enumerator.lo -MD -MP -MF $(DEPDIR)/enumerator.Tpo -c -o enumerator.lo `test -f 'utils/enumerator.c' || echo '$(srcdir)/'`utils/enumerator.c

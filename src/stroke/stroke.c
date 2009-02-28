@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: stroke.c 4384 2008-10-08 07:00:13Z andreas $
+ * RCSID $Id: stroke.c 4783 2008-12-10 13:00:02Z martin $
  */
 
 #include <stdlib.h>
@@ -259,6 +259,18 @@ static int purge(stroke_keyword_t kw)
 	return send_stroke_msg(&msg);
 }
 
+static int leases(stroke_keyword_t kw, char *pool, char *address)
+{
+
+	stroke_msg_t msg;
+	
+	msg.type = STR_LEASES;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.leases.pool = push_string(&msg, pool);
+	msg.leases.address = push_string(&msg, address);
+	return send_stroke_msg(&msg);
+}
+
 static int set_loglevel(char *type, u_int level)
 {
 	stroke_msg_t msg;
@@ -318,6 +330,8 @@ static void exit_usage(char *error)
 	printf("    stroke rereadsecrets|rereadcrls|rereadall\n");
 	printf("  Purge ocsp cache entries:\n");
 	printf("    stroke purgeocsp\n");
+	printf("  Show leases of a pool:\n");
+	printf("    stroke leases [POOL [ADDRESS]]\n");
 	exit_error(error);
 }
 
@@ -428,6 +442,10 @@ int main(int argc, char *argv[])
 			break;
 		case STROKE_PURGE_OCSP:
 			res = purge(token->kw);
+			break;
+		case STROKE_LEASES:
+			res = leases(token->kw, argc > 2 ? argv[2] : NULL,
+						 argc > 3 ? argv[3] : NULL);
 			break;
 		default:
 			exit_usage(NULL);

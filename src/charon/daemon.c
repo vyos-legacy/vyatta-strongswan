@@ -60,11 +60,6 @@ struct private_daemon_t {
 	 * Signal set used for signal handling.
 	 */
 	sigset_t signal_set;
-	
-	/** 
-	 * The thread_id of main-thread.
-	 */
-	pthread_t main_thread_id;
 
 #ifdef CAPABILITIES
 	/**
@@ -226,7 +221,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	{
 		fprintf(stderr, "killing daemon: %s\n", reason);
 	}
-	if (this->main_thread_id == pthread_self())
+	if (this->public.main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
 		unlink(PID_FILE);
@@ -235,7 +230,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	else
 	{
 		DBG1(DBG_DMN, "sending SIGTERM to ourself");
-		raise(SIGTERM);
+		pthread_kill(this->public.main_thread_id, SIGTERM);
 		/* thread must die, since he produced a ciritcal failure and can't continue */
 		pthread_exit(NULL);
 	}
@@ -303,7 +298,7 @@ static void lookup_uid_gid(private_daemon_t *this)
 		if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) != 0 ||
 			grp == NULL)
 		{
-			kill_daemon(this, "reslvoing group '"IPSEC_GROUP"' failed");
+			kill_daemon(this, "resolving group '"IPSEC_GROUP"' failed");
 		}
 		charon->gid = grp->gr_gid;
 	}
@@ -420,15 +415,17 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	}
 	enumerator->destroy(enumerator);
 	
-	/* setup legacy style default loggers provided via command-line */
+	/* set up legacy style default loggers provided via command-line */
 	if (!loggers_defined)
 	{
+		/* set up default stdout file_logger */
 		file_logger = file_logger_create(stdout);
-		sys_logger = sys_logger_create(LOG_DAEMON);
 		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.file_loggers->insert_last(this->public.file_loggers,
 											   file_logger);
+		/* set up default daemon sys_logger */
+		sys_logger = sys_logger_create(LOG_DAEMON);
+		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.sys_loggers->insert_last(this->public.sys_loggers,
 											  sys_logger);
 		for (group = 0; group < DBG_MAX; group++)
@@ -439,6 +436,13 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 				file_logger->set_level(file_logger, group, levels[group]);
 			}
 		}
+		
+		/* set up default auth sys_logger */
+		sys_logger = sys_logger_create(LOG_AUTHPRIV);
+		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
+		this->public.sys_loggers->insert_last(this->public.sys_loggers,
+											  sys_logger);
+		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
 	}
 }
 
@@ -569,7 +573,7 @@ private_daemon_t *daemon_create(void)
 	this->public.uid = 0;
 	this->public.gid = 0;
 	
-	this->main_thread_id = pthread_self();
+	this->public.main_thread_id = pthread_self();
 #ifdef CAPABILITIES
 	this->caps = cap_init();
 	keep_cap(this, CAP_NET_ADMIN);

@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa.c 4652 2008-11-14 08:38:53Z martin $
+ * $Id: ike_sa.c 4808 2008-12-16 15:48:36Z martin $
  */
 
 #include <sys/time.h>
@@ -66,6 +66,7 @@ ENUM(ike_sa_state_names, IKE_CREATED, IKE_DESTROYING,
 	"CREATED",
 	"CONNECTING",
 	"ESTABLISHED",
+	"PASSIVE",
 	"REKEYING",
 	"DELETING",
 	"DESTROYING",
@@ -410,6 +411,21 @@ static void set_proposal(private_ike_sa_t *this, proposal_t *proposal)
 }
 
 /**
+ * Implementation of ike_sa_t.set_message_id
+ */
+static void set_message_id(private_ike_sa_t *this, bool initiate, u_int32_t mid)
+{
+	if (initiate)
+	{
+		this->task_manager->reset(this->task_manager, mid, UINT_MAX);
+	}
+	else
+	{
+		this->task_manager->reset(this->task_manager, UINT_MAX, mid);
+	}
+}
+
+/**
  * Implementation of ike_sa_t.send_keepalive
  */
 static void send_keepalive(private_ike_sa_t *this)
@@ -621,7 +637,8 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 	{
 		case IKE_ESTABLISHED:
 		{
-			if (this->state == IKE_CONNECTING)
+			if (this->state == IKE_CONNECTING ||
+				this->state == IKE_PASSIVE)
 			{
 				job_t *job;
 				u_int32_t t;
@@ -708,7 +725,7 @@ static void reset(private_ike_sa_t *this)
 	
 	set_state(this, IKE_CREATED);
 	
-	this->task_manager->reset(this->task_manager);
+	this->task_manager->reset(this->task_manager, 0, 0);
 }
 
 /**
@@ -874,7 +891,7 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 		while (iterator->iterate(iterator, (void**)&child_sa))
 		{
-			if (child_sa->update_hosts(child_sa, this->my_host,
+			if (child_sa->update(child_sa, this->my_host,
 						this->other_host, this->my_virtual_ip,
 						has_condition(this, COND_NAT_ANY)) == NOT_SUPPORTED)
 			{
@@ -1199,11 +1216,17 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	iterator_t *iterator;
 	child_sa_t *current, *child_sa = NULL;
 	
-	if (this->state == IKE_DELETING)
+	switch (this->state)
 	{
-		DBG1(DBG_IKE, "acquiring CHILD_SA {reqid %d} failed: "
-			 "IKE_SA is deleting", reqid);
-		return FAILED;
+		case IKE_DELETING:
+			DBG1(DBG_IKE, "acquiring CHILD_SA {reqid %d} failed: "
+				 "IKE_SA is deleting", reqid);
+			return FAILED;
+		case IKE_PASSIVE:
+			/* do not process acquires if passive */
+			return FAILED;
+		default:
+			break;
 	}
 	
 	/* find CHILD_SA */
@@ -1265,6 +1288,7 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 		case IKE_CREATED:
 		case IKE_CONNECTING:
 		case IKE_ESTABLISHED:
+		case IKE_PASSIVE:
 		default:
 			break;
 	}
@@ -1288,8 +1312,8 @@ static status_t route(private_ike_sa_t *this, child_cfg_t *child_cfg)
 	my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, me);
 	other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, other);
 
-	status = child_sa->add_policies(child_sa, my_ts, other_ts,
-							child_cfg->get_mode(child_cfg),	PROTO_NONE);
+	child_sa->set_mode(child_sa, child_cfg->get_mode(child_cfg));
+	status = child_sa->add_policies(child_sa, my_ts, other_ts);
 
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
@@ -1353,6 +1377,11 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	status_t status;
 	bool is_request;
 	
+	if (this->state == IKE_PASSIVE)
+	{	/* do not handle messages in passive state */
+		return FAILED;
+	}
+	
 	is_request = message->get_request(message);
 	
 	status = message->parse_body(message,
@@ -1366,7 +1395,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			switch (status)
 			{
 				case NOT_SUPPORTED:
-					DBG1(DBG_IKE, "ciritcal unknown payloads found");
+					DBG1(DBG_IKE, "critical unknown payloads found");
 					if (is_request)
 					{
 						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
@@ -1449,6 +1478,14 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		status = this->task_manager->process_message(this->task_manager, message);
 		if (status != DESTROY_ME)
 		{
+			if (message->get_exchange_type(message) == IKE_AUTH &&
+				this->state == IKE_ESTABLISHED)
+			{
+				/* purge auth items if SA is up, as they contain certs
+				 * and other memory wasting elements */
+				this->my_auth->purge(this->my_auth);
+				this->other_auth->purge(this->other_auth);
+			}
 			return status;
 		}
 		/* if IKE_SA gets closed for any reasons, reroute routed children */
@@ -1594,37 +1631,27 @@ static iterator_t* create_child_sa_iterator(private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.rekey_child_sa.
  */
-static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
+							   u_int32_t spi)
 {
-	child_sa_t *child_sa;
 	child_rekey_t *child_rekey;
 	
-	child_sa = get_child_sa(this, protocol, spi, TRUE);
-	if (child_sa)
-	{
-		child_rekey = child_rekey_create(&this->public, child_sa);
-		this->task_manager->queue_task(this->task_manager, &child_rekey->task);
-		return this->task_manager->initiate(this->task_manager);
-	}
-	return FAILED;
+	child_rekey = child_rekey_create(&this->public, protocol, spi);
+	this->task_manager->queue_task(this->task_manager, &child_rekey->task);
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
  * Implementation of ike_sa_t.delete_child_sa.
  */
-static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
+								u_int32_t spi)
 {
-	child_sa_t *child_sa;
 	child_delete_t *child_delete;
 	
-	child_sa = get_child_sa(this, protocol, spi, TRUE);
-	if (child_sa)
-	{
-		child_delete = child_delete_create(&this->public, child_sa);
-		this->task_manager->queue_task(this->task_manager, &child_delete->task);
-		return this->task_manager->initiate(this->task_manager);
-	}
-	return FAILED;
+	child_delete = child_delete_create(&this->public, protocol, spi);
+	this->task_manager->queue_task(this->task_manager, &child_delete->task);
+	return this->task_manager->initiate(this->task_manager);
 }
 
 /**
@@ -1669,6 +1696,8 @@ static status_t delete_(private_ike_sa_t *this)
 			return this->task_manager->initiate(this->task_manager);
 		case IKE_CREATED:
 			DBG1(DBG_IKE, "deleting unestablished IKE_SA");
+			break;
+		case IKE_PASSIVE:
 			break;
 		default:
 			DBG1(DBG_IKE, "destroying IKE_SA in state %N "
@@ -1943,6 +1972,7 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	{
 		case IKE_CREATED:
 		case IKE_DELETING:
+		case IKE_PASSIVE:
 			return SUCCESS;
 		default:
 			break;
@@ -2239,7 +2269,7 @@ static void destroy(private_ike_sa_t *this)
 		{
 			charon->attributes->release_address(charon->attributes,
 									this->peer_cfg->get_pool(this->peer_cfg),
-									this->other_virtual_ip);
+									this->other_virtual_ip, this->other_id);
 		}
 		this->other_virtual_ip->destroy(this->other_virtual_ip);
 	}
@@ -2308,6 +2338,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_my_host = (void (*)(ike_sa_t*,host_t*)) set_my_host;
 	this->public.get_other_host = (host_t* (*)(ike_sa_t*)) get_other_host;
 	this->public.set_other_host = (void (*)(ike_sa_t*,host_t*)) set_other_host;
+	this->public.set_message_id = (void(*)(ike_sa_t*, bool inbound, u_int32_t mid))set_message_id;
 	this->public.update_hosts = (void(*)(ike_sa_t*, host_t *me, host_t *other))update_hosts;
 	this->public.get_my_id = (identification_t* (*)(ike_sa_t*)) get_my_id;
 	this->public.set_my_id = (void (*)(ike_sa_t*,identification_t*)) set_my_id;
@@ -2365,6 +2396,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();
 	this->my_host = host_create_any(AF_INET);
+	this->my_host->set_port(this->my_host, IKEV2_UDP_PORT);
 	this->other_host = host_create_any(AF_INET);
 	this->my_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 	this->other_id = identification_create_from_encoding(ID_ANY, chunk_empty);

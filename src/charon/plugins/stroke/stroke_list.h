@@ -23,6 +23,8 @@
 #ifndef STROKE_LIST_H_
 #define STROKE_LIST_H_
 
+#include "stroke_attribute.h"
+
 #include <stroke_msg.h>
 #include <library.h>
 
@@ -51,14 +53,24 @@ struct stroke_list_t {
 	void (*status)(stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all);
 	
 	/**
-     * Destroy a stroke_list instance.
-     */
-    void (*destroy)(stroke_list_t *this);
+	 * Log pool leases to stroke console.
+	 *
+	 * @param msg		stroke message
+	 * @param out		stroke console stream
+	 */
+	void (*leases)(stroke_list_t *this, stroke_msg_t *msg, FILE *out);
+	
+	/**
+	 * Destroy a stroke_list instance.
+	 */
+	void (*destroy)(stroke_list_t *this);
 };
 
 /**
  * Create a stroke_list instance.
+ *
+ * @param attribute		strokes attribute provider
  */
-stroke_list_t *stroke_list_create();
+stroke_list_t *stroke_list_create(stroke_attribute_t *attribute);
 
 #endif /* STROKE_LIST_H_ @}*/

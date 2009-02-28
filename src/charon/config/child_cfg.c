@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: child_cfg.c 4611 2008-11-11 06:29:25Z andreas $
+ * $Id: child_cfg.c 4862 2009-02-11 16:41:37Z andreas $
  */
 
 #include "child_cfg.h"
@@ -301,7 +301,7 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 				else
 				{
 					DBG2(DBG_CFG, " config: %R, received: %R => no match",
-						 ts1, ts2, selected);
+						 ts1, ts2);
 				}
 			}
 			e2->destroy(e2);

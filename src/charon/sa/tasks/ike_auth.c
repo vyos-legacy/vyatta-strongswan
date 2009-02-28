@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details
  *
- * $Id: ike_auth.c 4463 2008-10-20 11:38:16Z martin $
+ * $Id: ike_auth.c 4858 2009-02-10 17:21:44Z martin $
  */
 
 #include "ike_auth.h"
@@ -86,70 +86,6 @@ struct private_ike_auth_t {
 	 */
 	bool peer_authenticated;
 };
-
-/**
- * check uniqueness and delete duplicates
- */
-static bool check_uniqueness(private_ike_auth_t *this)
-{
-	ike_sa_t *duplicate;
-	unique_policy_t policy;
-	status_t status = SUCCESS;
-	peer_cfg_t *peer_cfg;
-	bool cancel = FALSE;
-	
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	policy = peer_cfg->get_unique_policy(peer_cfg);
-	if (policy == UNIQUE_NO)
-	{
-		return FALSE;
-	}
-	duplicate = charon->ike_sa_manager->checkout_duplicate(
-										charon->ike_sa_manager, this->ike_sa);
-	if (duplicate)
-	{
-		peer_cfg = duplicate->get_peer_cfg(duplicate);
-		if (peer_cfg &&
-			peer_cfg->equals(peer_cfg, this->ike_sa->get_peer_cfg(this->ike_sa)))
-		{
-			switch (duplicate->get_state(duplicate))
-			{
-				case IKE_ESTABLISHED:
-				case IKE_REKEYING:
-					switch (policy)
-					{
-						case UNIQUE_REPLACE:
-							DBG1(DBG_IKE, "deleting duplicate IKE_SA due "
-								 "uniqueness policy");
-							status = duplicate->delete(duplicate);
-							break;
-						case UNIQUE_KEEP:
-							DBG1(DBG_IKE, "cancelling IKE_SA setup due "
-								 "uniqueness policy");
-							cancel = TRUE;
-							break;
-						default:
-							break;
-					}
-					break;
-				default:
-					break;
-			}
-		}
-		if (status == DESTROY_ME)
-		{
-			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
-														duplicate);
-		}
-		else
-		{
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, duplicate);
-		}
-	}
-	/* set threads active IKE_SA after checkin */
-	charon->bus->set_sa(charon->bus, this->ike_sa);
-	return cancel;
-}
 
 /**
  * get the authentication class of a config
@@ -399,6 +335,12 @@ static status_t build_auth_eap(private_ike_auth_t *this, message_t *message)
 {
 	authenticator_t *auth;
 	auth_payload_t *auth_payload;
+	
+	if (!this->initiator && !this->peer_authenticated)
+	{
+		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
+		return FAILED;
+	}
 	
 	auth = (authenticator_t*)this->eap_auth;
 	if (auth->build(auth, this->my_packet->get_data(this->my_packet),
@@ -681,8 +623,10 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		return FAILED;
 	}
 	
-	if (check_uniqueness(this))
+	if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
+												 this->ike_sa))
 	{
+		DBG1(DBG_IKE, "cancelling IKE_SA setup due uniqueness policy");
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
 		return FAILED;
 	}

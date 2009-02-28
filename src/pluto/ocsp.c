@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ocsp.c 3253 2007-10-06 21:39:00Z andreas $
+ * RCSID $Id: ocsp.c 4827 2009-01-09 01:36:13Z andreas $
  */
 
 #include <unistd.h>
@@ -58,6 +58,7 @@ static const char *const response_status_names[] = {
     "malformed request",
     "internal error",
     "try later",
+    "status #4",
     "signature required",
     "unauthorized"
 };

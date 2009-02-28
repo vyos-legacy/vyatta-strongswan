@@ -17,7 +17,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_netlink_ipsec.c 4662 2008-11-16 21:19:58Z andreas $
+ * $Id: kernel_netlink_ipsec.c 4831 2009-01-09 09:37:13Z andreas $
  */
 
 #include <sys/types.h>
@@ -39,7 +39,7 @@
 
 #include <daemon.h>
 #include <utils/mutex.h>
-#include <utils/linked_list.h>
+#include <utils/hashtable.h>
 #include <processing/jobs/callback_job.h>
 #include <processing/jobs/acquire_job.h>
 #include <processing/jobs/migrate_job.h>
@@ -56,6 +56,11 @@
 #ifndef IP_IPSEC_POLICY
 #define IP_IPSEC_POLICY 16
 #endif
+
+/* missing on uclibc */
+#ifndef IPV6_IPSEC_POLICY
+#define IPV6_IPSEC_POLICY 34
+#endif /*IPV6_IPSEC_POLICY*/
 
 /** default priority of installed policies */
 #define PRIO_LOW 3000
@@ -92,12 +97,38 @@ struct kernel_algorithm_t {
 	 * Identifier specified in IKEv2
 	 */
 	int ikev2;
-	
+		
 	/**
 	 * Name of the algorithm in linux crypto API
 	 */
 	char *name;
 };
+
+ENUM(xfrm_msg_names, XFRM_MSG_NEWSA, XFRM_MSG_MAPPING,
+	"XFRM_MSG_NEWSA",
+	"XFRM_MSG_DELSA",
+	"XFRM_MSG_GETSA",
+	"XFRM_MSG_NEWPOLICY",
+	"XFRM_MSG_DELPOLICY",
+	"XFRM_MSG_GETPOLICY",
+	"XFRM_MSG_ALLOCSPI",
+	"XFRM_MSG_ACQUIRE",
+	"XFRM_MSG_EXPIRE",
+	"XFRM_MSG_UPDPOLICY",
+	"XFRM_MSG_UPDSA",
+	"XFRM_MSG_POLEXPIRE",
+	"XFRM_MSG_FLUSHSA",
+	"XFRM_MSG_FLUSHPOLICY",
+	"XFRM_MSG_NEWAE",
+	"XFRM_MSG_GETAE",
+	"XFRM_MSG_REPORT",
+	"XFRM_MSG_MIGRATE",
+	"XFRM_MSG_NEWSADINFO",
+	"XFRM_MSG_GETSADINFO",
+	"XFRM_MSG_NEWSPDINFO",
+	"XFRM_MSG_GETSPDINFO",
+	"XFRM_MSG_MAPPING"
+);
 
 ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_KMADDRESS,
 	"XFRMA_UNSPEC",
@@ -245,6 +276,24 @@ struct policy_entry_t {
 	u_int refcount;
 };
 
+/**
+ * Hash function for policy_entry_t objects
+ */
+static u_int policy_hash(policy_entry_t *key)
+{
+	chunk_t chunk = chunk_create((void*)&key->sel, sizeof(struct xfrm_selector));
+	return chunk_hash(chunk);
+}
+
+/**
+ * Equality function for policy_entry_t objects
+ */
+static bool policy_equals(policy_entry_t *key, policy_entry_t *other_key)
+{
+	return memeq(&key->sel, &other_key->sel, sizeof(struct xfrm_selector)) &&
+		   key->direction == other_key->direction;
+}
+
 typedef struct private_kernel_netlink_ipsec_t private_kernel_netlink_ipsec_t;
 
 /**
@@ -262,9 +311,9 @@ struct private_kernel_netlink_ipsec_t {
 	mutex_t *mutex;
 	
 	/**
-	 * List of installed policies (policy_entry_t)
+	 * Hash table of installed policies (policy_entry_t)
 	 */
-	linked_list_t *policies;
+	hashtable_t *policies;
 		 
 	/**
 	 * job receiving netlink events
@@ -418,51 +467,48 @@ static struct xfrm_selector ts2selector(traffic_selector_t *src,
  */
 static traffic_selector_t* selector2ts(struct xfrm_selector *sel, bool src)
 {
-	int family;
-	chunk_t addr;
+	u_char *addr;
 	u_int8_t prefixlen;
-	u_int16_t port, port_mask;
-	host_t *host;
-	traffic_selector_t *ts;
-
+	u_int16_t port = 0;
+	host_t *host = NULL;
+	
 	if (src)
 	{
-		addr.ptr = (u_char*)&sel->saddr;
+		addr = (u_char*)&sel->saddr;
 		prefixlen = sel->prefixlen_s;
-		port = sel->sport;
-		port_mask = sel->sport_mask;
-	}
-    else
-	{
-		addr.ptr = (u_char*)&sel->daddr;
-		prefixlen = sel->prefixlen_d;
-		port = sel->dport;
-		port_mask = sel->dport_mask;
-	}
-
-	/* The Linux 2.6 kernel does not set the selector's family field,
-     * so as a kludge we additionally test the prefix length. 
-	 */
-	if (sel->family == AF_INET || sel->prefixlen_s == 32)
-	{
-		family = AF_INET;
-		addr.len = 4;
-	}
-	else if (sel->family == AF_INET6 || sel->prefixlen_s == 128)
-	{
-		family = AF_INET6;
-		addr.len = 16;
+		if (sel->sport_mask)
+		{
+			port = htons(sel->sport);
+		}
 	}
 	else
 	{
-		return NULL;
+		addr = (u_char*)&sel->daddr;
+		prefixlen = sel->prefixlen_d;
+		if (sel->dport_mask)
+		{
+			port = htons(sel->dport);
+		}
 	}
-	host = host_create_from_chunk(family, addr, 0);
-	port = (port_mask == 0) ? 0 : ntohs(port); 
-
-	ts = traffic_selector_create_from_subnet(host, prefixlen, sel->proto, port);
-	host->destroy(host); 		
-	return ts;
+	
+	/* The Linux 2.6 kernel does not set the selector's family field,
+	 * so as a kludge we additionally test the prefix length. 
+	 */
+	if (sel->family == AF_INET || sel->prefixlen_s == 32)
+	{
+		host = host_create_from_chunk(AF_INET, chunk_create(addr, 4), 0);
+	}
+	else if (sel->family == AF_INET6 || sel->prefixlen_s == 128)
+	{
+		host = host_create_from_chunk(AF_INET6, chunk_create(addr, 16), 0);
+	}
+	
+	if (host)
+	{
+		return traffic_selector_create_from_subnet(host, prefixlen,
+												   sel->proto, port);
+	}
+	return NULL;
 }
 
 /**
@@ -1064,7 +1110,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		 * the IPsec checks it marks them "checksum ok" so OA isn't needed. */
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
-	
+
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x", ntohl(spi));
@@ -1370,7 +1416,7 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 		
 		rta = XFRM_RTA_NEXT(rta);
 	}
-	
+
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
@@ -1394,7 +1440,6 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 						   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
 						   bool routed)
 {
-	iterator_t *iterator;
 	policy_entry_t *current, *policy;
 	bool found = FALSE;
 	netlink_buf_t request;
@@ -1409,27 +1454,21 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	
 	/* find the policy, which matches EXACTLY */
 	this->mutex->lock(this->mutex);
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&current))
+	current = this->policies->get(this->policies, policy);
+	if (current)
 	{
-		if (memeq(&current->sel, &policy->sel, sizeof(struct xfrm_selector)) &&
-			policy->direction == current->direction)
-		{
-			/* use existing policy */
-			current->refcount++;
-			DBG2(DBG_KNL, "policy %R === %R %N already exists, increasing "
-						  "refcount", src_ts, dst_ts,
-						   policy_dir_names, direction);
-			free(policy);
-			policy = current;
-			found = TRUE;
-			break;
-		}
+		/* use existing policy */
+		current->refcount++;
+		DBG2(DBG_KNL, "policy %R === %R %N already exists, increasing "
+					  "refcount", src_ts, dst_ts,
+					   policy_dir_names, direction);
+		free(policy);
+		policy = current;
+		found = TRUE;
 	}
-	iterator->destroy(iterator);
-	if (!found)
+	else
 	{	/* apply the new one, if we have no such policy */
-		this->policies->insert_last(this->policies, policy);
+		this->policies->put(this->policies, policy, policy);
 		policy->refcount = 1;
 	}
 	
@@ -1657,7 +1696,6 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
-	enumerator_t *enumerator;
 	
 	DBG2(DBG_KNL, "deleting policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
@@ -1669,28 +1707,21 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
 	
 	/* find the policy */
 	this->mutex->lock(this->mutex);
-	enumerator = this->policies->create_enumerator(this->policies);
-	while (enumerator->enumerate(enumerator, &current))
+	current = this->policies->get(this->policies, &policy);
+	if (current)
 	{
-		if (memeq(&current->sel, &policy.sel, sizeof(struct xfrm_selector)) &&
-			policy.direction == current->direction)
+		to_delete = current;
+		if (--to_delete->refcount > 0)
 		{
-			to_delete = current;
-			if (--to_delete->refcount > 0)
-			{
-				/* is used by more SAs, keep in kernel */
-				DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
-				this->mutex->unlock(this->mutex);
-				enumerator->destroy(enumerator);
-				return SUCCESS;
-			}
-			/* remove if last reference */
-			this->policies->remove_at(this->policies, enumerator);
-			break;
+			/* is used by more SAs, keep in kernel */
+			DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
+			this->mutex->unlock(this->mutex);
+			return SUCCESS;
 		}
+		/* remove if last reference */
+		this->policies->remove(this->policies, to_delete);
 	}
 	this->mutex->unlock(this->mutex);
-	enumerator->destroy(enumerator);
 	if (!to_delete)
 	{
 		DBG1(DBG_KNL, "deleting policy %R === %R %N failed, not found", src_ts,
@@ -1739,9 +1770,18 @@ static status_t del_policy(private_kernel_netlink_ipsec_t *this,
  */
 static void destroy(private_kernel_netlink_ipsec_t *this)
 {
+	enumerator_t *enumerator;
+	policy_entry_t *policy;
+	
 	this->job->cancel(this->job);
 	close(this->socket_xfrm_events);
 	this->socket_xfrm->destroy(this->socket_xfrm);
+	enumerator = this->policies->create_enumerator(this->policies);
+	while (enumerator->enumerate(enumerator, &policy, &policy))
+	{
+		free(policy);
+	}
+	enumerator->destroy(enumerator);
 	this->policies->destroy(this->policies);
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -1832,7 +1872,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->public.interface.destroy = (void(*)(kernel_ipsec_t*)) destroy;
 
 	/* private members */
-	this->policies = linked_list_create();
+	this->policies = hashtable_create((hashtable_hash_t)policy_hash,
+									  (hashtable_equals_t)policy_equals, 32);
 	this->mutex = mutex_create(MUTEX_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings,
 					"charon.install_routes", TRUE);

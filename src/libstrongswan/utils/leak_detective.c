@@ -12,9 +12,11 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: leak_detective.c 4609 2008-11-10 16:44:27Z martin $
+ * $Id: leak_detective.c 4796 2008-12-12 09:10:52Z martin $
  */
 	
+#define _GNU_SOURCE
+#include <sched.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -160,6 +162,7 @@ char *whitelist[] = {
 	/* pthread stuff */
 	"pthread_create",
 	"pthread_setspecific",
+	"__pthread_setspecific",
 	/* glibc functions */
 	"mktime",
 	"__gmtime_r",
@@ -199,6 +202,7 @@ char *whitelist[] = {
 	"RSA_new_method",
 	"DH_new_method",
 	"ENGINE_load_builtin_engines",
+	"OPENSSL_config",
 };
 
 /**
@@ -471,6 +475,16 @@ leak_detective_t *leak_detective_create()
 	
 	if (getenv("LEAK_DETECTIVE_DISABLE") == NULL)
 	{
+		cpu_set_t mask;
+		
+		CPU_ZERO(&mask);
+		CPU_SET(0, &mask);
+		
+		if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0)
+		{
+			fprintf(stderr, "setting CPU affinity failed: %m");
+		}
+	
 		lib->leak_detective = TRUE;
 		install_hooks();
 	}

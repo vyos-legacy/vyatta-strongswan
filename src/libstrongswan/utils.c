@@ -13,17 +13,17 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: utils.c 4305 2008-08-28 07:47:55Z tobias $
+ * $Id: utils.c 4742 2008-12-03 09:45:58Z tobias $
  */
 
 #include "utils.h"
 
 #include <sys/stat.h>
 #include <string.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <time.h>
 
 #include <enum.h>
 #include <debug.h>
@@ -61,11 +61,36 @@ void *clalloc(void * pointer, size_t size)
  */
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n)
 {
-	size_t i;
-	for (i = 0; i < n; i++)
+	int i = 0, m;
+	
+	m = n - sizeof(long);
+	while (i < m)
+	{
+		*(long*)(dest + i) ^= *(long*)(src + i);
+		i += sizeof(long);
+	}
+	while (i < n)
 	{
 		dest[i] ^= src[i];
+		i++;
 	}
+}
+
+/**
+ * Described in header.
+ */
+void *memstr(const void *haystack, const char *needle, size_t n)
+{
+	unsigned const char *pos = haystack;
+	size_t l = strlen(needle);
+	for (; n >= l; ++pos, --n)
+	{
+		if (memeq(pos, needle, l))
+		{
+			return (void*)pos;
+		}
+	}
+	return NULL;
 }
 
 /**
@@ -129,19 +154,16 @@ void nop()
 {
 }
 
+#ifndef HAVE_GCC_ATOMIC_OPERATIONS
+#include <pthread.h>
+
 /**
- * We use a single mutex for all refcount variables. This
- * is not optimal for performance, but the critical section
- * is not that long...
- * TODO: Consider to include a mutex in each refcount_t variable.
+ * We use a single mutex for all refcount variables. 
  */
 static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * Described in header.
- * 
- * TODO: May be implemented with atomic CPU instructions
- * instead of a mutex.
+ * Increase refcount
  */
 void ref_get(refcount_t *ref)
 {
@@ -151,10 +173,7 @@ void ref_get(refcount_t *ref)
 }
 
 /**
- * Described in header.
- * 
- * TODO: May be implemented with atomic CPU instructions
- * instead of a mutex.
+ * Decrease refcount
  */
 bool ref_put(refcount_t *ref)
 {
@@ -165,6 +184,7 @@ bool ref_put(refcount_t *ref)
 	pthread_mutex_unlock(&ref_mutex);
 	return !more_refs;
 }
+#endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
 /**
  * output handler in printf() for time_t

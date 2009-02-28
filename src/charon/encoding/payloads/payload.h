@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: payload.h 3666 2008-03-26 18:40:19Z tobias $
+ * $Id: payload.h 4875 2009-02-17 17:14:15Z tobias $
  */
 
 /**
@@ -86,7 +86,7 @@ enum payload_type_t{
 	NONCE = 40,
 
 	/**
-	 * Notif paylaod (N).
+	 * Notify paylaod (N).
 	 */
 	NOTIFY = 41,
 

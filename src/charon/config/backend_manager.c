@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: backend_manager.c 4610 2008-11-11 06:19:37Z andreas $
+ * $Id: backend_manager.c 4758 2008-12-04 23:16:10Z andreas $
  */
 
 #include "backend_manager.h"
@@ -43,9 +43,9 @@ struct private_backend_manager_t {
 	linked_list_t *backends;
 	
 	/**
-	 * locking mutex
+	 * rwlock for backends
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 };
 
 /**
@@ -75,24 +75,6 @@ typedef struct {
 	identification_t *me;
 	identification_t *other;
 } peer_data_t;
-
-/**
- * destroy IKE enumerator data and unlock list
- */
-static void ike_enum_destroy(ike_data_t *data)
-{
-	data->this->mutex->unlock(data->this->mutex);
-	free(data);
-}
-
-/**
- * destroy PEER enumerator data and unlock list
- */
-static void peer_enum_destroy(peer_data_t *data)
-{
-	data->this->mutex->unlock(data->this->mutex);
-	free(data);
-}
 
 /**
  * inner enumerator constructor for IKE cfgs
@@ -177,14 +159,14 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 	
 	DBG2(DBG_CFG, "looking for an ike config for %H...%H", me, other);
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 						this->backends->create_enumerator(this->backends),
-						(void*)ike_enum_create, data, (void*)ike_enum_destroy);
+						(void*)ike_enum_create, data, (void*)free);
 	while (enumerator->enumerate(enumerator, (void**)&current))
 	{
 		match = get_match(current, me, other);
-
+		
 		if (match)
 		{
 			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d", 
@@ -200,7 +182,7 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	if (found)
 	{
 		DBG2(DBG_CFG, "found matching ike config: %s...%s with prio %d", 
@@ -212,11 +194,11 @@ static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
 
 static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(
 							this->backends->create_enumerator(this->backends),
-							(void*)peer_enum_create_all, this->mutex,
-							(void*)this->mutex->unlock);
+							(void*)peer_enum_create_all, this->lock,
+							(void*)this->lock->unlock);
 }
 
 /**
@@ -240,16 +222,16 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 	data->me = my_id;
 	data->other = other_id;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 						this->backends->create_enumerator(this->backends),
-						(void*)peer_enum_create, data, (void*)peer_enum_destroy);
+						(void*)peer_enum_create, data, (void*)free);
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		identification_t *my_cand, *other_cand;
 		id_match_t m1, m2, match_peer;
 		ike_cfg_match_t match_ike;
-
+		
 		my_cand = current->get_my_id(current);
 		other_cand = current->get_other_id(current);
 		
@@ -270,7 +252,8 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 			DBG2(DBG_CFG, "  candidate \"%s\": %D...%D with prio %d.%d",
 			 	 current->get_name(current), my_cand, other_cand,
 			 	 match_peer, match_ike);
-			if (match_peer >= best_peer && match_ike > best_ike)
+			if ((match_peer > best_peer && match_ike >= best_ike) ||
+				(match_peer >= best_peer && match_ike > best_ike))
 			{
 				DESTROY_IF(found);
 				found = current;
@@ -287,7 +270,7 @@ static peer_cfg_t *get_peer_cfg(private_backend_manager_t *this, host_t *me,
 			 found->get_other_id(found), best_peer, best_ike);
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return found;
 }
 
@@ -300,14 +283,14 @@ static peer_cfg_t *get_peer_cfg_by_name(private_backend_manager_t *this, char *n
 	peer_cfg_t *config = NULL;
 	enumerator_t *enumerator;
 	
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = this->backends->create_enumerator(this->backends);
 	while (config == NULL && enumerator->enumerate(enumerator, (void**)&backend))
 	{
 		config = backend->get_peer_cfg_by_name(backend, name);
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	return config;
 }
 
@@ -316,9 +299,9 @@ static peer_cfg_t *get_peer_cfg_by_name(private_backend_manager_t *this, char *n
  */
 static void remove_backend(private_backend_manager_t *this, backend_t *backend)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->backends->remove(this->backends, backend, NULL);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -326,9 +309,9 @@ static void remove_backend(private_backend_manager_t *this, backend_t *backend)
  */
 static void add_backend(private_backend_manager_t *this, backend_t *backend)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->backends->insert_last(this->backends, backend);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -337,7 +320,7 @@ static void add_backend(private_backend_manager_t *this, backend_t *backend)
 static void destroy(private_backend_manager_t *this)
 {
 	this->backends->destroy(this->backends);
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -357,7 +340,7 @@ backend_manager_t *backend_manager_create()
 	this->public.destroy = (void (*)(backend_manager_t*))destroy;
 	
 	this->backends = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	return &this->public;
 }

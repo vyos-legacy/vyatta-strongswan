@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: migrate_job.c 4662 2008-11-16 21:19:58Z andreas $
+ * $Id: migrate_job.c 4677 2008-11-19 15:31:27Z martin $
  */
 
 #include "migrate_job.h"
@@ -110,7 +110,7 @@ static void execute(private_migrate_job_t *this)
 		host->set_port(host, IKEV2_UDP_PORT);
 		ike_sa->set_other_host(ike_sa, host);
 
-		if (child_sa->update_hosts(child_sa, this->local, this->remote,
+		if (child_sa->update(child_sa, this->local, this->remote,
 				ike_sa->get_virtual_ip(ike_sa, TRUE),
 			 	ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
 		{

@@ -78,16 +78,18 @@ ipsec_PROGRAMS = charon$(EXEEXT)
 @USE_EAP_GTC_TRUE@am__append_32 = eapgtc
 @USE_EAP_AKA_TRUE@am__append_33 = plugins/eap_aka
 @USE_EAP_AKA_TRUE@am__append_34 = eapaka
-@USE_MEDSRV_TRUE@am__append_35 = plugins/medsrv
-@USE_MEDSRV_TRUE@am__append_36 = medsrv
-@USE_MEDCLI_TRUE@am__append_37 = plugins/medcli
-@USE_MEDCLI_TRUE@am__append_38 = medcli
-@USE_NM_TRUE@am__append_39 = plugins/nm
-@USE_NM_TRUE@am__append_40 = nm
-@USE_UCI_TRUE@am__append_41 = plugins/uci
-@USE_UCI_TRUE@am__append_42 = uci
-@USE_UNIT_TESTS_TRUE@am__append_43 = plugins/unit_tester
-@USE_UNIT_TESTS_TRUE@am__append_44 = unit-tester
+@USE_EAP_MSCHAPV2_TRUE@am__append_35 = plugins/eap_mschapv2
+@USE_EAP_MSCHAPV2_TRUE@am__append_36 = eapmschapv2
+@USE_MEDSRV_TRUE@am__append_37 = plugins/medsrv
+@USE_MEDSRV_TRUE@am__append_38 = medsrv
+@USE_MEDCLI_TRUE@am__append_39 = plugins/medcli
+@USE_MEDCLI_TRUE@am__append_40 = medcli
+@USE_NM_TRUE@am__append_41 = plugins/nm
+@USE_NM_TRUE@am__append_42 = nm
+@USE_UCI_TRUE@am__append_43 = plugins/uci
+@USE_UCI_TRUE@am__append_44 = uci
+@USE_UNIT_TESTS_TRUE@am__append_45 = plugins/unit_tester
+@USE_UNIT_TESTS_TRUE@am__append_46 = unit-tester
 subdir = src/charon
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -308,8 +310,9 @@ DIST_SUBDIRS = . plugins/load_tester plugins/kernel_pfkey \
 	plugins/kernel_klips plugins/kernel_netlink plugins/stroke \
 	plugins/smp plugins/sql plugins/updown plugins/eap_identity \
 	plugins/eap_sim plugins/eap_sim_file plugins/eap_md5 \
-	plugins/eap_gtc plugins/eap_aka plugins/medsrv plugins/medcli \
-	plugins/nm plugins/uci plugins/unit_tester
+	plugins/eap_gtc plugins/eap_aka plugins/eap_mschapv2 \
+	plugins/medsrv plugins/medcli plugins/nm plugins/uci \
+	plugins/unit_tester
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -323,22 +326,17 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
-CXX = @CXX@
-CXXCPP = @CXXCPP@
-CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DSYMUTIL = @DSYMUTIL@
-ECHO = @ECHO@
+DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
-F77 = @F77@
-FFLAGS = @FFLAGS@
+FGREP = @FGREP@
 GPERF = @GPERF@
 GREP = @GREP@
 INSTALL = @INSTALL@
@@ -348,6 +346,7 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 IPSEC_ROUTING_TABLE = @IPSEC_ROUTING_TABLE@
 IPSEC_ROUTING_TABLE_PRIO = @IPSEC_ROUTING_TABLE_PRIO@
+LD = @LD@
 LDFLAGS = @LDFLAGS@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
@@ -356,12 +355,16 @@ LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LINUX_HEADERS = @LINUX_HEADERS@
+LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
+NM = @NM@
 NMEDIT = @NMEDIT@
 OBJEXT = @OBJEXT@
+OTOOL = @OTOOL@
+OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
@@ -384,8 +387,7 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
-ac_ct_CXX = @ac_ct_CXX@
-ac_ct_F77 = @ac_ct_F77@
+ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -424,6 +426,7 @@ libstrongswan_plugins = @libstrongswan_plugins@
 linuxdir = @linuxdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
+lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 nm_CFLAGS = @nm_CFLAGS@
@@ -584,14 +587,14 @@ SUBDIRS = . $(am__append_7) $(am__append_9) $(am__append_11) \
 	$(am__append_25) $(am__append_27) $(am__append_29) \
 	$(am__append_31) $(am__append_33) $(am__append_35) \
 	$(am__append_37) $(am__append_39) $(am__append_41) \
-	$(am__append_43)
+	$(am__append_43) $(am__append_45)
 PLUGINS = ${libstrongswan_plugins} $(am__append_8) $(am__append_10) \
 	$(am__append_12) $(am__append_14) $(am__append_16) \
 	$(am__append_18) $(am__append_20) $(am__append_22) \
 	$(am__append_24) $(am__append_26) $(am__append_28) \
 	$(am__append_30) $(am__append_32) $(am__append_34) \
 	$(am__append_36) $(am__append_38) $(am__append_40) \
-	$(am__append_42) $(am__append_44)
+	$(am__append_42) $(am__append_44) $(am__append_46)
 all: all-recursive
 
 .SUFFIXES:

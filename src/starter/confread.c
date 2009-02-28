@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.c 4612 2008-11-11 06:37:37Z andreas $
+ * RCSID $Id: confread.c 4882 2009-02-18 19:57:15Z tobias $
  */
 
 #include <stddef.h>
@@ -620,6 +620,10 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			else if (streq(kw->value, "gtc"))
 			{
 				conn->eap_type = 6;
+			}
+			else if (streq(kw->value, "mschapv2"))
+			{
+				conn->eap_type = 26;
 			}
 			else
 			{

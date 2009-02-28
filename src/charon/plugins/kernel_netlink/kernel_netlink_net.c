@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_netlink_net.c 4660 2008-11-14 14:23:11Z martin $
+ * $Id: kernel_netlink_net.c 4671 2008-11-18 09:52:28Z martin $
  */
 
 #include <sys/socket.h>
@@ -707,7 +707,8 @@ static bool is_interface_up(private_kernel_netlink_net_t *this, int index)
 {
 	enumerator_t *ifaces;
 	iface_entry_t *iface;
-	bool up = FALSE;
+	/* default to TRUE for interface we do not monitor (e.g. lo) */
+	bool up = TRUE;
 	
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))

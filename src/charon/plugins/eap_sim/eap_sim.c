@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_sim.c 4406 2008-10-10 08:36:01Z martin $
+ * $Id: eap_sim.c 4755 2008-12-04 10:10:37Z martin $
  */
 
 #include "eap_sim.h"
@@ -1050,7 +1050,6 @@ static bool is_mutual(private_eap_sim_t *this)
  */
 static void destroy(private_eap_sim_t *this)
 {
-	this->peer->destroy(this->peer);
 	this->peer->destroy(this->peer);
 	DESTROY_IF(this->hasher);
 	DESTROY_IF(this->prf);

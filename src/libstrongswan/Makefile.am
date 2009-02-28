@@ -47,6 +47,7 @@ utils/identification.c utils/identification.h \
 utils/iterator.h \
 utils/lexparser.c utils/lexparser.h \
 utils/linked_list.c utils/linked_list.h \
+utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
 utils/mutex.c utils/mutex.h \
@@ -95,6 +96,10 @@ endif
 
 if USE_DES
   SUBDIRS += plugins/des
+endif
+
+if USE_MD4
+  SUBDIRS += plugins/md4
 endif
 
 if USE_MD5

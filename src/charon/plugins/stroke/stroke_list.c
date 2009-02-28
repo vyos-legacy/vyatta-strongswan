@@ -47,6 +47,11 @@ struct private_stroke_list_t {
 	 * timestamp of daemon start
 	 */
 	time_t uptime;
+	
+	/**
+	 * strokes attribute provider
+	 */
+	stroke_attribute_t *attribute;
 };
 
 /**
@@ -72,10 +77,21 @@ auth_class_t get_auth_class(peer_cfg_t *config)
 static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 {
 	ike_sa_id_t *id = ike_sa->get_id(ike_sa);
-
-	fprintf(out, "%12s[%d]: %N, %H[%D]...%H[%D]\n",
+	time_t now = time(NULL);
+	
+	fprintf(out, "%12s[%d]: %N",
 			ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
-			ike_sa_state_names, ike_sa->get_state(ike_sa),
+			ike_sa_state_names, ike_sa->get_state(ike_sa));
+	
+	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
+	{
+		time_t established;
+		
+		established = ike_sa->get_statistic(ike_sa, STAT_ESTABLISHED);
+		fprintf(out, " %#V ago", &now, &established);
+	}
+	
+	fprintf(out, ", %H[%D]...%H[%D]\n",
 			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
 			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
 	
@@ -93,22 +109,20 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 		
 		if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 		{
-			u_int32_t rekey, reauth, now;
+			time_t rekey, reauth;
 			
-			now = time(NULL);
 			rekey = ike_sa->get_statistic(ike_sa, STAT_REKEY);
 			reauth = ike_sa->get_statistic(ike_sa, STAT_REAUTH);
 			
 			if (rekey)
 			{
-				rekey -= now;
-				fprintf(out, ", rekeying in %V", &rekey);
+				fprintf(out, ", rekeying in %#V", &rekey, &now);
 			}
 			if (reauth)
 			{
-				reauth -= now;
-				fprintf(out, ", %N reauthentication in %V", auth_class_names,
-						get_auth_class(ike_sa->get_peer_cfg(ike_sa)), &reauth);
+				fprintf(out, ", %N reauthentication in %#V", auth_class_names,
+						get_auth_class(ike_sa->get_peer_cfg(ike_sa)),
+						&reauth, &now);
 			}
 			if (!rekey && !reauth)
 			{
@@ -248,11 +262,13 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 	if (all)
 	{
 		peer_cfg_t *peer_cfg;
-		char *plugin;
+		char *plugin, *pool;
 		host_t *host;
 		u_int32_t dpd;
 		time_t uptime = time(NULL) - this->uptime;
-
+		bool first = TRUE;
+		u_int size, online, offline;
+		
 		fprintf(out, "Performance:\n");
 		fprintf(out, "  uptime: %V, since %#T\n", &uptime, &this->uptime, FALSE);
 		fprintf(out, "  worker threads: %d idle of %d,",
@@ -270,6 +286,18 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 		enumerator->destroy(enumerator);
 		fprintf(out, "\n");
+		
+		enumerator = this->attribute->create_pool_enumerator(this->attribute);
+		while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
+		{
+			if (first)
+			{
+				first = FALSE;
+				fprintf(out, "Virtual IP pools (size/online/offline):\n");
+			}
+			fprintf(out, "  %s: %lu/%lu/%lu\n", pool, size, online, offline);
+		}
+		enumerator->destroy(enumerator);
 		
 		enumerator = charon->kernel_interface->create_address_enumerator(
 								charon->kernel_interface, FALSE, FALSE);
@@ -969,6 +997,77 @@ static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 }
 
 /**
+ * Print leases of a single pool
+ */
+static void pool_leases(private_stroke_list_t *this, FILE *out, char *pool,
+						host_t *address, u_int size, u_int online, u_int offline)
+{
+	enumerator_t *enumerator;
+	identification_t *id;
+	host_t *lease;
+	bool on;
+	int found = 0;
+	
+	fprintf(out, "Leases in pool '%s', usage: %lu/%lu, %lu online\n",
+			pool, online + offline, size, online);
+	enumerator = this->attribute->create_lease_enumerator(this->attribute, pool);
+	while (enumerator && enumerator->enumerate(enumerator, &id, &lease, &on))
+	{
+		if (!address || address->ip_equals(address, lease))
+		{
+			fprintf(out, "  %15H   %s   '%D'\n",
+					lease, on ? "online" : "offline", id);
+			found++;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!found)
+	{
+		fprintf(out, "  no matching leases found\n");
+	}
+}
+
+/**
+ * Implementation of stroke_list_t.leases
+ */
+static void leases(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
+{
+	enumerator_t *enumerator;
+	u_int size, offline, online;
+	host_t *address = NULL;
+	char *pool;
+	int found = 0;
+	
+	if (msg->leases.address)
+	{
+		address = host_create_from_string(msg->leases.address, 0);
+	}
+	
+	enumerator = this->attribute->create_pool_enumerator(this->attribute);
+	while (enumerator->enumerate(enumerator, &pool, &size, &online, &offline))
+	{
+		if (!msg->leases.pool || streq(msg->leases.pool, pool))
+		{
+			pool_leases(this, out, pool, address, size, online, offline);
+			found++;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!found)
+	{
+		if (msg->leases.pool)
+		{
+			fprintf(out, "pool '%s' not found\n", msg->leases.pool);
+		}
+		else
+		{
+			fprintf(out, "no pools found\n");
+		}
+	}
+	DESTROY_IF(address);
+}
+
+/**
  * Implementation of stroke_list_t.destroy
  */
 static void destroy(private_stroke_list_t *this)
@@ -979,15 +1078,17 @@ static void destroy(private_stroke_list_t *this)
 /*
  * see header file
  */
-stroke_list_t *stroke_list_create()
+stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 {
 	private_stroke_list_t *this = malloc_thing(private_stroke_list_t);
 	
 	this->public.list = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))list;
 	this->public.status = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out,bool))status;
+	this->public.leases = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))leases;
 	this->public.destroy = (void(*)(stroke_list_t*))destroy;
 	
 	this->uptime = time(NULL);
+	this->attribute = attribute;
 	
 	return &this->public;
 }

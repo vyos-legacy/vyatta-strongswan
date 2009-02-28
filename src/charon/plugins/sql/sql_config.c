@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: sql_config.c 4276 2008-08-22 10:44:51Z martin $
+ * $Id: sql_config.c 4860 2009-02-11 13:09:52Z martin $
  */
 
 #include <string.h>

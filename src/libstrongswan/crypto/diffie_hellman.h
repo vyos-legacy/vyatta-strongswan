@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: diffie_hellman.h 4566 2008-11-04 13:12:11Z martin $
+ * $Id: diffie_hellman.h 4685 2008-11-22 16:14:55Z martin $
  */
  
 /**
@@ -52,6 +52,8 @@ enum diffie_hellman_group_t {
 	ECP_521_BIT   = 21,
 	ECP_192_BIT   = 25,
 	ECP_224_BIT   = 26,
+	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
+	MODP_NULL = 1024,
 };
 
 /**

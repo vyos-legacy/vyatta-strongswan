@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: tests.h 4317 2008-09-02 11:00:13Z martin $
+ * $Id: tests.h 4815 2008-12-18 16:24:22Z martin $
  */
 
 /**
@@ -33,9 +33,11 @@ DEFINE_TEST("SQLite operations", test_sqlite, FALSE)
 DEFINE_TEST("mutex primitive", test_mutex, FALSE)
 DEFINE_TEST("RSA key generation", test_rsa_gen, FALSE)
 DEFINE_TEST("RSA subjectPublicKeyInfo loading", test_rsa_load_any, FALSE)
+DEFINE_TEST("X509 certificate", test_cert_x509, FALSE)
 DEFINE_TEST("Mediation database key fetch", test_med_db, FALSE)
 DEFINE_TEST("AES-128 encryption", test_aes128, FALSE)
 DEFINE_TEST("AES-XCBC", test_aes_xcbc, FALSE)
 DEFINE_TEST("Base64 converter", test_chunk_base64, FALSE)
 DEFINE_TEST("IP pool", test_pool, FALSE)
-DEFINE_TEST("SSH agent", test_agent, TRUE)
+DEFINE_TEST("SSH agent", test_agent, FALSE)
+DEFINE_TEST("RNG quality", test_rng, FALSE)

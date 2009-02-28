@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: openssl_crypter.c 4020 2008-05-28 12:20:38Z andreas $
+ * $Id: openssl_crypter.c 4879 2009-02-18 19:41:33Z tobias $
  */
 
 #include "openssl_crypter.h"
@@ -223,6 +223,9 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					free(this);
 					return NULL;
 			}
+			break;
+		case ENCR_DES_ECB:
+			this->cipher = EVP_des_ecb();
 			break;
 		default:
 		{

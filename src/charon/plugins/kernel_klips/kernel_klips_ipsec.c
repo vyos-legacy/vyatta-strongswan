@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_klips_ipsec.c 4631 2008-11-11 18:35:10Z martin $
+ * $Id: kernel_klips_ipsec.c 4793 2008-12-11 13:39:30Z tobias $
  */
 
 #include <sys/types.h>
@@ -853,7 +853,7 @@ static void host2ext(host_t *host, struct sadb_address *ext)
 }
 
 /**
- * add a host behind a sadb_address extension
+ * add a host to the given sadb_msg
  */
 static void add_addr_ext(struct sadb_msg *msg, host_t *host, u_int16_t type)
 {

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_mobike.c 4618 2008-11-11 09:22:00Z tobias $
+ * $Id: ike_mobike.c 4816 2008-12-19 14:34:40Z martin $
  */
 
 #include "ike_mobike.h"
@@ -24,6 +24,7 @@
 #include <encoding/payloads/notify_payload.h>
 
 #define COOKIE2_SIZE 16
+#define MAX_ADDITIONAL_ADDRS 8
 
 typedef struct private_ike_mobike_t private_ike_mobike_t;
 
@@ -191,8 +192,8 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 	enumerator_t *enumerator;
 	host_t *host, *me;
 	notify_type_t type;
-	bool additional = FALSE;
-
+	int added = 0;
+	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	enumerator = charon->kernel_interface->create_address_enumerator(
 										charon->kernel_interface, FALSE, FALSE);
@@ -214,9 +215,13 @@ static void build_address_list(private_ike_mobike_t *this, message_t *message)
 				continue;
 		}
 		message->add_notify(message, FALSE, type, host->get_address(host));
-		additional = TRUE;
+		if (++added >= MAX_ADDITIONAL_ADDRS)
+		{	/* limit number of notifys, some implementations do not like too
+			 * many of them (f.e. strongSwan ;-) */
+			break;
+		}
 	}
-	if (!additional)
+	if (!added)
 	{
 		message->add_notify(message, FALSE, NO_ADDITIONAL_ADDRESSES, chunk_empty);
 	}
@@ -251,7 +256,7 @@ static void update_children(private_ike_mobike_t *this)
 	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		if (child_sa->update_hosts(child_sa,
+		if (child_sa->update(child_sa,
 				this->ike_sa->get_my_host(this->ike_sa), 
 				this->ike_sa->get_other_host(this->ike_sa),
 				this->ike_sa->get_virtual_ip(this->ike_sa, TRUE),
@@ -516,6 +521,10 @@ static status_t process_i(private_ike_mobike_t *this, message_t *message)
 				/* start the update with the same task */
 				this->check = FALSE;
 				this->address = FALSE;
+				if (this->natd)
+				{
+					this->natd->task.destroy(&this->natd->task);
+				}
 				this->natd = ike_natd_create(this->ike_sa, this->initiator);
 				this->ike_sa->set_pending_updates(this->ike_sa, 1);
 				return NEED_MORE;
