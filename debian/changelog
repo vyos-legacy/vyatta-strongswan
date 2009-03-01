@@ -1,3 +1,9 @@
+strongswan (4.2.12-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 01 Mar 2009 10:46:08 +0000
+
 strongswan (4.2.9-1) unstable; urgency=low
 
   * New upstream release, fixes a MOBIKE issue.

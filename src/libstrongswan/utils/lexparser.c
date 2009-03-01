@@ -11,15 +11,10 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: lexparser.c 3872 2008-04-25 07:04:59Z andreas $
+ * $Id: lexparser.c 4877 2009-02-18 09:45:54Z martin $
  */
 
-/* memrchr is a GNU extension */
-#define _GNU_SOURCE
-#include <string.h>
-
 #include "lexparser.h"
-
 
 /**
  * eat whitespace
@@ -30,7 +25,7 @@ bool eat_whitespace(chunk_t *src)
 	{
 		src->ptr++;  src->len--;
 	}
-    return  src->len > 0 && *src->ptr != '#';
+	return  src->len > 0 && *src->ptr != '#';
 }
 
 /**
@@ -51,11 +46,11 @@ bool extract_token(chunk_t *token, const char termination, chunk_t *src)
 	if (termination == ' ')
 	{
 		u_char *eot_tab = memchr(src->ptr, '\t', src->len);
-
+		
 		/* check if a tab instead of a space terminates the token */
 		eot = ( eot_tab == NULL || (eot && eot < eot_tab) ) ? eot : eot_tab;
 	}
-
+	
 	/* initialize empty token */
 	*token = chunk_empty;
 	
@@ -76,16 +71,17 @@ bool extract_token(chunk_t *token, const char termination, chunk_t *src)
 }
 
 /**
- * extracts a token ending with the last occurrence of a given termination symbol
+ * extracts a token ending with the first occurrence of a given null-terminated string
  */
-bool extract_last_token(chunk_t *token, const char termination, chunk_t *src)
+bool extract_token_str(chunk_t *token, const char *termination, chunk_t *src)
 {
-	u_char *eot = memrchr(src->ptr, termination, src->len);
+	u_char *eot = memstr(src->ptr, termination, src->len);
+	size_t l = strlen(termination);
 	
 	/* initialize empty token */
 	*token = chunk_empty;
 	
-	if (eot == NULL) /* termination symbol not found */
+	if (eot == NULL) /* termination string not found */
 	{
 		return FALSE;
 	}
@@ -94,9 +90,9 @@ bool extract_last_token(chunk_t *token, const char termination, chunk_t *src)
 	token->ptr = src->ptr;
 	token->len = (u_int)(eot - src->ptr);
 	
-	/* advance src pointer after termination symbol */
-	src->ptr = eot + 1;
-	src->len -= (token->len + 1);
+	/* advance src pointer after termination string */
+	src->ptr = eot + l;
+	src->len -= (token->len + l);
 	
 	return TRUE;
 }

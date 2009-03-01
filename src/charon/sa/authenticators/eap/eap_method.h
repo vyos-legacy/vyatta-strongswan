@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_method.h 4276 2008-08-22 10:44:51Z martin $
+ * $Id: eap_method.h 4882 2009-02-18 19:57:15Z tobias $
  */
 
 /**
@@ -56,6 +56,7 @@ enum eap_type_t {
 	EAP_GTC = 6,
 	EAP_SIM = 18,
 	EAP_AKA = 23,
+	EAP_MSCHAPV2 = 26,
 	EAP_EXPANDED = 254,
 	EAP_EXPERIMENTAL = 255,
 };

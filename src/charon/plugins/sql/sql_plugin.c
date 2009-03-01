@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: sql_plugin.c 3826 2008-04-17 15:08:48Z martin $
+ * $Id: sql_plugin.c 4711 2008-11-27 14:33:41Z martin $
  */
 
 #include "sql_plugin.h"
@@ -68,6 +68,7 @@ static void destroy(private_sql_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	charon->credentials->remove_set(charon->credentials, &this->cred->set);
+	charon->attributes->remove_provider(charon->attributes, &this->attribute->provider);
 	charon->bus->remove_listener(charon->bus, &this->logger->listener);
 	this->config->destroy(this->config);
 	this->cred->destroy(this->cred);

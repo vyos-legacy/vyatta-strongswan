@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: child_delete.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: child_delete.h 4730 2008-12-01 18:38:28Z martin $
  */
 
 /**
@@ -52,9 +52,11 @@ struct child_delete_t {
  * Create a new child_delete task.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param child_sa		CHILD_SA to delete, or NULL as responder
+ * @param protocol		protocol of CHILD_SA to delete, PROTO_NONE as responder
+ * @param spi			inbound SPI of CHILD_SA to delete
  * @return				child_delete task to handle by the task_manager
  */
-child_delete_t *child_delete_create(ike_sa_t *ike_sa, child_sa_t *child_sa);
+child_delete_t *child_delete_create(ike_sa_t *ike_sa, protocol_id_t protocol,
+									u_int32_t spi);
 
 #endif /* CHILD_DELETE_H_ @} */

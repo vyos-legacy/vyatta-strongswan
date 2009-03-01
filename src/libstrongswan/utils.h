@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: utils.h 4632 2008-11-11 18:37:19Z martin $
+ * $Id: utils.h 4742 2008-12-03 09:45:58Z tobias $
  */
 
 /**
@@ -225,6 +225,12 @@ void *clalloc(void *pointer, size_t size);
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 
 /**
+ * A variant of strstr with the characteristics of memchr, where haystack is not
+ * a null-terminated string but simply a memory area of length n.
+ */
+void *memstr(const void *haystack, const char *needle, size_t n);
+
+/**
  * Creates a directory and all required parent directories. 
  *
  * @param	path	path to the new directory
@@ -248,6 +254,14 @@ void nop();
  */
 typedef volatile u_int refcount_t;
 
+
+#ifdef HAVE_GCC_ATOMIC_OPERATIONS
+
+#define ref_get(ref) {__sync_fetch_and_add(ref, 1); }
+#define ref_put(ref) (!__sync_sub_and_fetch(ref, 1))
+
+#else /* !HAVE_GCC_ATOMIC_OPERATIONS */
+
 /**
  * Get a new reference.
  *
@@ -267,6 +281,8 @@ void ref_get(refcount_t *ref);
  * @return		TRUE if no more references counted
  */
 bool ref_put(refcount_t *ref);
+
+#endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
 /**
  * Get printf hooks for time.

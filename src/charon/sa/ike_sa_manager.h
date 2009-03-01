@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -13,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa_manager.h 4624 2008-11-11 13:11:44Z tobias $
+ * $Id: ike_sa_manager.h 4811 2008-12-17 09:00:22Z martin $
  */
 
 /**
@@ -32,16 +33,11 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
 #include <config/peer_cfg.h>
 
 /**
- * The IKE_SA-Manager is responsible for managing all initiated and responded IKE_SA's.
+ * Manages and synchronizes access to all IKE_SAs.
  *
- * To avoid access from multiple threads, IKE_SAs must be checked out from
- * the manager, and checked in after usage. 
- * The manager also handles deletion of SAs.
- *
- * @todo checking of double-checkouts from the same threads would be nice.
- * This could be done by comparing thread-ids via pthread_self()...
- * 
- * @todo Managing of ike_sa_t objects in a hash table instead of linked list.
+ * To synchronize access to thread-unsave IKE_SAs, they are checked out for
+ * use and checked in afterwards. A checked out SA is exclusively accessible
+ * by the owning thread.
  */
 struct ike_sa_manager_t {
 	
@@ -57,7 +53,7 @@ struct ike_sa_manager_t {
 	
 	/**
 	 * Create and check out a new IKE_SA.
-	 * 
+	 *
 	 * @param initiator			TRUE for initiator, FALSE otherwise
 	 * @returns 				created and checked out IKE_SA
 	 */
@@ -103,12 +99,19 @@ struct ike_sa_manager_t {
 								 	 peer_cfg_t *peer_cfg);
 	
 	/**
-	 * Check out a duplicate if ike_sa to do uniqueness tests.
-	 *
-	 * @param ike_sa			ike_sa to get a duplicate from
-	 * @return					checked out duplicate
+	 * Check for duplicates of the given IKE_SA.
+	 * 
+	 * Measures are taken according to the uniqueness policy of the IKE_SA.
+	 * The return value indicates whether duplicates have been found and if
+	 * further measures should be taken (e.g. cancelling an IKE_AUTH exchange).
+	 * check_uniqueness() must be called before the IKE_SA is complete,
+	 * deadlocks occur otherwise.
+	 * 
+	 * @param ike_sa			ike_sa to check
+	 * @return					TRUE, if the given IKE_SA has duplicates and
+	 * 							should be deleted
 	 */
-	ike_sa_t* (*checkout_duplicate)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
+	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
 	
 	/**
 	 * Check out an IKE_SA a unique ID.
@@ -130,8 +133,8 @@ struct ike_sa_manager_t {
 	/**
 	 * Check out an IKE_SA by the policy/connection name.
 	 *
-	 * Check out the IKE_SA by the connections name or by a CHILD_SAs policy
-	 * name.
+	 * Check out the IKE_SA by the configuration name, either from the IKE- or
+	 * one of its CHILD_SAs.
 	 *
 	 * @param name				name of the connection/policy
 	 * @param child				TRUE to use policy name, FALSE to use conn name
@@ -145,8 +148,8 @@ struct ike_sa_manager_t {
 	/**
 	 * Create an enumerator over all stored IKE_SAs.
 	 *
-	 * The avoid synchronization issues, the enumerator locks access
-	 * to the manager exclusively, until it gets destroyed.
+	 * While enumerating an IKE_SA, it is temporarily checked out and
+	 * automatically checked in after the current enumeration step.
 	 *
 	 * @return					enumerator over all IKE_SAs.
 	 */
@@ -154,17 +157,13 @@ struct ike_sa_manager_t {
 	
 	/**
 	 * Checkin the SA after usage.
-	 * 
-	 * @warning the SA pointer MUST NOT be used after checkin! 
-	 * The SA must be checked out again!
-	 *  
+	 *
+	 * If the IKE_SA is not registered in the manager, a new entry is created.
+	 *
 	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @param ike_sa			checked out SA
-	 * @returns 				
-	 * 							- SUCCESS if checked in
-	 * 							- NOT_FOUND when not found (shouldn't happen!)
 	 */
-	status_t (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
+	void (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
 	 * Destroy a checked out SA.
@@ -177,11 +176,8 @@ struct ike_sa_manager_t {
 	 * risk that another thread can get the SA.
 	 *
 	 * @param ike_sa			SA to delete
-	 * @returns 				
-	 * 							- SUCCESS if found
-	 * 							- NOT_FOUND when no such SA is available
 	 */
-	status_t (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
+	void (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
 	 * Get the number of IKE_SAs which are in the connecting state.
@@ -214,7 +210,7 @@ struct ike_sa_manager_t {
 };
 
 /**
- * Create a manager.
+ * Create the IKE_SA manager.
  * 
  * @returns 	ike_sa_manager_t object, NULL if initialization fails
  */

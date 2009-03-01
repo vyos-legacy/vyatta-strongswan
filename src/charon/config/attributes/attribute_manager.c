@@ -38,9 +38,9 @@ struct private_attribute_manager_t {
 	linked_list_t *providers;
 	
 	/**
-	 * mutex to lock provider list
+	 * rwlock provider list
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 };
 
 /**
@@ -54,7 +54,7 @@ static host_t* acquire_address(private_attribute_manager_t *this,
 	attribute_provider_t *current;
 	host_t *host = NULL;
 
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
@@ -65,7 +65,7 @@ static host_t* acquire_address(private_attribute_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	
 	return host;
 }
@@ -74,22 +74,22 @@ static host_t* acquire_address(private_attribute_manager_t *this,
  * Implementation of attribute_manager_t.release_address.
  */
 static void release_address(private_attribute_manager_t *this,
-							char *pool, host_t *address)
+							char *pool, host_t *address, identification_t *id)
 {
 	enumerator_t *enumerator;
 	attribute_provider_t *current;
 
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->release_address(current, pool, address))
+		if (current->release_address(current, pool, address, id))
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -98,9 +98,9 @@ static void release_address(private_attribute_manager_t *this,
 static void add_provider(private_attribute_manager_t *this,
 						 attribute_provider_t *provider)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->providers->insert_last(this->providers, provider);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -109,9 +109,9 @@ static void add_provider(private_attribute_manager_t *this,
 static void remove_provider(private_attribute_manager_t *this,
 							attribute_provider_t *provider)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->providers->remove(this->providers, provider, NULL);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 /**
@@ -120,7 +120,7 @@ static void remove_provider(private_attribute_manager_t *this,
 static void destroy(private_attribute_manager_t *this)
 {
 	this->providers->destroy(this->providers);
-	this->mutex->destroy(this->mutex);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -132,13 +132,13 @@ attribute_manager_t *attribute_manager_create()
 	private_attribute_manager_t *this = malloc_thing(private_attribute_manager_t);
 	
 	this->public.acquire_address = (host_t*(*)(attribute_manager_t*, char*, identification_t*,auth_info_t*,host_t*))acquire_address;
-	this->public.release_address = (void(*)(attribute_manager_t*, char *, host_t*))release_address;
+	this->public.release_address = (void(*)(attribute_manager_t*, char *, host_t*, identification_t*))release_address;
 	this->public.add_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))add_provider;
 	this->public.remove_provider = (void(*)(attribute_manager_t*, attribute_provider_t *provider))remove_provider;
 	this->public.destroy = (void(*)(attribute_manager_t*))destroy;
 	
 	this->providers = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->lock = rwlock_create(RWLOCK_DEFAULT);
 	
 	return &this->public;
 }

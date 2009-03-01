@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_authenticator.c 4495 2008-10-28 16:07:06Z martin $
+ * $Id: eap_authenticator.c 4754 2008-12-04 10:09:21Z martin $
  */
 
 #include <string.h>
@@ -360,6 +360,7 @@ static status_t process_eap_identity(private_eap_authenticator_t *this,
 	}
 	/* restart EAP exchange, but with real method */
 	this->method->destroy(this->method);
+	this->method = NULL;
 	this->do_eap_identity = FALSE;
 	return initiate(this, this->type, this->vendor, out);
 }

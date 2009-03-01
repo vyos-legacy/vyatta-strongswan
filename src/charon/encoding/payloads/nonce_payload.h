@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: nonce_payload.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: nonce_payload.h 4819 2008-12-31 08:58:49Z martin $
  */
 
 /**
@@ -32,7 +32,7 @@ typedef struct nonce_payload_t nonce_payload_t;
 /**
  * Nonce size in bytes for nonces sending to other peer.
  */
-#define NONCE_SIZE 16
+#define NONCE_SIZE 32
 
 /**
  * Length of a nonce payload without a nonce in bytes.

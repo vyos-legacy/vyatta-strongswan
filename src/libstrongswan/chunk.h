@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -13,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: chunk.h 4276 2008-08-22 10:44:51Z martin $
+ * $Id: chunk.h 4841 2009-01-15 01:52:44Z andreas $
  */
 
 /**
@@ -50,7 +51,11 @@ extern chunk_t chunk_empty;
 /**
  * Create a new chunk pointing to "ptr" with length "len"
  */
-chunk_t chunk_create(u_char *ptr, size_t len);
+static inline chunk_t chunk_create(u_char *ptr, size_t len)
+{
+	chunk_t chunk = {ptr, len};
+	return chunk;
+}
 
 /**
  * Create a clone of a chunk pointing to "ptr"
@@ -135,12 +140,23 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf);
 /**
  * Free contents of a chunk
  */
-void chunk_free(chunk_t *chunk);
+static inline void chunk_free(chunk_t *chunk)
+{
+	free(chunk->ptr);
+	*chunk = chunk_empty;
+}
 
 /**
  * Overwrite the contents of a chunk and free it
  */
-void chunk_clear(chunk_t *chunk);
+static inline void chunk_clear(chunk_t *chunk)
+{
+	if (chunk->ptr)
+	{
+		memset(chunk->ptr, 0, chunk->len);
+		chunk_free(chunk);
+	}
+}
 
 /**
  * Initialize a chunk to point to buffer inspectable by sizeof()
@@ -185,7 +201,16 @@ void chunk_clear(chunk_t *chunk);
 /**
  * Skip n bytes in chunk (forward pointer, shorten length)
  */
-chunk_t chunk_skip(chunk_t chunk, size_t bytes);
+static inline chunk_t chunk_skip(chunk_t chunk, size_t bytes)
+{
+	if (chunk.len > bytes)
+	{
+		chunk.ptr += bytes;
+		chunk.len -= bytes;
+		return chunk;
+	}
+	return chunk_empty;
+}
 
 /**
  *  Compare two chunks, returns zero if a equals b
@@ -197,7 +222,22 @@ int chunk_compare(chunk_t a, chunk_t b);
  * Compare two chunks for equality,
  * NULL chunks are never equal.
  */
-bool chunk_equals(chunk_t a, chunk_t b);
+static inline bool chunk_equals(chunk_t a, chunk_t b)
+{
+	return a.ptr != NULL  && b.ptr != NULL &&
+			a.len == b.len && memeq(a.ptr, b.ptr, a.len);
+}
+
+/**
+ * Computes a 32 bit hash of the given chunk.
+ * Note: This hash is only intended for hash tables not for cryptographic purposes.
+ */
+u_int32_t chunk_hash(chunk_t chunk);
+
+/**
+ * Incremental version of chunk_hash. Use this to hash two or more chunks.
+ */
+u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
 
 /**
  * Get printf hooks for a chunk.

@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: asn1.c 4047 2008-06-10 07:36:44Z tobias $
+ * $Id: asn1.c 4776 2008-12-09 15:00:30Z martin $
  */
 
 #include <stdio.h>
@@ -348,8 +348,9 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type)
 	const char *format;
 	char buf[BUF_LEN];
 	chunk_t formatted_time;
-	struct tm *t = gmtime(time);
+	struct tm t;
 	
+	gmtime_r(time, &t);
 	if (type == ASN1_GENERALIZEDTIME)
 	{
 		format = "%04d%02d%02d%02d%02d%02dZ";
@@ -358,10 +359,10 @@ chunk_t asn1_from_time(const time_t *time, asn1_t type)
 	else /* ASN1_UTCTIME */
 	{
 		format = "%02d%02d%02d%02d%02d%02dZ";
-		offset = (t->tm_year < 100)? 0 : -100;
+		offset = (t.tm_year < 100)? 0 : -100;
 	}
-	snprintf(buf, BUF_LEN, format, t->tm_year + offset, 
-			 t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	snprintf(buf, BUF_LEN, format, t.tm_year + offset, 
+			 t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
 	formatted_time.ptr = buf;
 	formatted_time.len = strlen(buf);
 	return asn1_simple_object(type, formatted_time);

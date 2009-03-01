@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_netlink_shared.c 4579 2008-11-05 11:29:56Z martin $
+ * $Id: kernel_netlink_shared.c 4831 2009-01-09 09:37:13Z andreas $
  */
 
 #include <sys/socket.h>
@@ -46,12 +46,22 @@ struct private_netlink_socket_t {
 	 * current sequence number for netlink request
 	 */
 	int seq;
-	
+
+	/**
+	 * netlink socket protocol 
+	 */
+	int protocol;
+
 	/**
 	 * netlink socket 
 	 */
 	int socket;
 };
+
+/**
+ * Imported from kernel_netlink_ipsec.c
+ */
+extern enum_name_t *xfrm_msg_names;
 
 /**
  * Implementation of netlink_socket_t.send
@@ -73,6 +83,13 @@ static status_t netlink_send(private_netlink_socket_t *this, struct nlmsghdr *in
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = 0;
 	addr.nl_groups = 0;
+
+	if (this->protocol == NETLINK_XFRM)
+	{
+		chunk_t in_chunk = { (u_char*)in, in->nlmsg_len };
+
+		DBG3(DBG_KNL, "sending %N: %B", xfrm_msg_names, in->nlmsg_type, &in_chunk);
+	}
 
 	while (TRUE)
 	{
@@ -245,6 +262,7 @@ netlink_socket_t *netlink_socket_create(int protocol) {
 	memset(&addr, 0, sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	
+	this->protocol = protocol;
 	this->socket = socket(AF_NETLINK, SOCK_RAW, protocol);
 	if (this->socket <= 0)
 	{

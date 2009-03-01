@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: crypter.c 3971 2008-05-16 13:27:21Z tobias $
+ * $Id: crypter.c 4880 2009-02-18 19:45:46Z tobias $
  */
 
 #include "crypter.h"
@@ -41,5 +41,7 @@ ENUM_NEXT(encryption_algorithm_names, ENCR_AES_GCM_ICV8, ENCR_AES_GCM_ICV16, ENC
 	"AES_GCM_8",
 	"AES_GCM_12",
 	"AES_GCM_16");
-ENUM_END(encryption_algorithm_names, ENCR_AES_GCM_ICV16);
+ENUM_NEXT(encryption_algorithm_names, ENCR_DES_ECB, ENCR_DES_ECB, ENCR_AES_GCM_ICV16,
+	"DES_ECB");
+ENUM_END(encryption_algorithm_names, ENCR_DES_ECB);
 

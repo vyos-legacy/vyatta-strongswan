@@ -13,9 +13,10 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: openssl_plugin.c 4583 2008-11-05 12:37:37Z martin $
+ * $Id: openssl_plugin.c 4879 2009-02-18 19:41:33Z tobias $
  */
 
+#include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/engine.h>
 #include <openssl/crypto.h>
@@ -185,6 +186,7 @@ static void destroy(private_openssl_plugin_t *this)
 	
 	ENGINE_cleanup();
 	EVP_cleanup();
+	CONF_modules_free();
 	
 	threading_cleanup();
 	
@@ -202,6 +204,7 @@ plugin_t *plugin_create()
 	
 	threading_init();
 	
+	OPENSSL_config(NULL);
 	OpenSSL_add_all_algorithms();
 	
 	/* activate support for hardware accelerators */
@@ -223,6 +226,8 @@ plugin_t *plugin_create()
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
 					(crypter_constructor_t)openssl_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB,
+					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_NULL,
 					(crypter_constructor_t)openssl_crypter_create);
 	
@@ -230,6 +235,8 @@ plugin_t *plugin_create()
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD2,
+					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
 					(hasher_constructor_t)openssl_hasher_create);

@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: traffic_selector.c 4639 2008-11-12 15:09:24Z martin $
+ * $Id: traffic_selector.c 4860 2009-02-11 13:09:52Z martin $
  */
 
 #include <arpa/inet.h>
@@ -196,8 +196,7 @@ static int print(FILE *stream, const struct printf_info *info,
 		memeq(this->from, from, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16) && 
 		memeq(this->to, to, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16))
 	{
-		written += fprintf(stream, "dynamic/%d",
-						   this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
+		written += fprintf(stream, "dynamic");
 	}
 	else
 	{
@@ -521,9 +520,17 @@ static void set_address(private_traffic_selector_t *this, host_t *host)
 		this->type = host->get_family(host) == AF_INET ?
 				TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
 		
-		chunk_t from = host->get_address(host);
-		memcpy(this->from, from.ptr, from.len);
-		memcpy(this->to, from.ptr, from.len);
+		if (host->is_anyaddr(host))
+		{
+			memset(this->from6, 0x00, sizeof(this->from6));
+			memset(this->to6, 0xFF, sizeof(this->to6));
+		}
+		else
+		{
+			chunk_t from = host->get_address(host);
+			memcpy(this->from, from.ptr, from.len);
+			memcpy(this->to, from.ptr, from.len);
+		}
 	}
 }
 

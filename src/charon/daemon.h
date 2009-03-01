@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: daemon.h 4622 2008-11-11 10:52:37Z martin $
+ * $Id: daemon.h 4797 2008-12-12 09:13:06Z martin $
  */
 
 /**
@@ -302,6 +302,11 @@ struct daemon_t {
 	 * Group ID the daemon will use after initialization
 	 */
 	gid_t gid;
+	
+	/** 
+	 * The thread_id of main-thread.
+	 */
+	pthread_t main_thread_id;
 	
 	/**
 	 * Do not drop a given capability after initialization.

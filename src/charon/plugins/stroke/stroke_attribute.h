@@ -32,7 +32,7 @@ typedef struct stroke_attribute_t stroke_attribute_t;
  * Stroke IKEv2 cfg attribute provider
  */
 struct stroke_attribute_t {
-
+	
 	/**
 	 * Implements attribute provider interface
 	 */
@@ -54,9 +54,30 @@ struct stroke_attribute_t {
 	void (*del_pool)(stroke_attribute_t *this, stroke_msg_t *msg);
 	
 	/**
-     * Destroy a stroke_attribute instance.
-     */
-    void (*destroy)(stroke_attribute_t *this);
+	 * Create an enumerator over installed pools.
+	 *
+	 * Enumerator enumerates over 
+	 * char *pool, u_int size, u_int offline, u_int online.
+	 *
+	 * @return			enumerator
+	 */
+	enumerator_t* (*create_pool_enumerator)(stroke_attribute_t *this);
+	
+	/**
+	 * Create an enumerator over the leases of a pool.
+	 *
+	 * Enumerator enumerates over
+	 * identification_t *id, host_t *address, bool online
+	 *
+	 * @param pool		name of the pool to enumerate
+	 * @return 			enumerator, NULL if pool not found
+	 */
+	enumerator_t* (*create_lease_enumerator)(stroke_attribute_t *this,
+											 char *pool);
+	/**
+	 * Destroy a stroke_attribute instance.
+	 */
+	void (*destroy)(stroke_attribute_t *this);
 };
 
 /**

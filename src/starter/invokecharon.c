@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokecharon.c 4243 2008-08-01 10:35:59Z andreas $
+ * RCSID $Id: invokecharon.c 4833 2009-01-13 06:50:55Z andreas $
  */
 
 #include <sys/types.h>
@@ -127,10 +127,13 @@ starter_start_charon (starter_config_t *cfg, bool no_fork)
 	arg[argc++] = "--use-syslog";
     }
 
-    {   /* parse debug string */
-    	char *pos, *level, *buf_pos, type[4];
-	pos = cfg->setup.charondebug;
-	buf_pos = buffer;
+    /* parse debug string */
+    {
+	int level;
+	char type[4];
+	char *pos = cfg->setup.charondebug;
+	char *buf_pos = buffer;
+
 	while (pos && sscanf(pos, "%4s %d,", type, &level) == 2)
 	{
 	    snprintf(buf_pos, buffer + sizeof(buffer) - buf_pos, "--debug-%s", type);

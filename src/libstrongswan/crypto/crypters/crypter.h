@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: crypter.h 4532 2008-10-30 13:21:21Z martin $
+ * $Id: crypter.h 4886 2009-02-19 13:46:08Z tobias $
  */
  
 /**
@@ -51,7 +51,8 @@ enum encryption_algorithm_t {
     ENCR_AES_CCM_ICV16 = 16,
     ENCR_AES_GCM_ICV8 = 18,
     ENCR_AES_GCM_ICV12 = 19,
-    ENCR_AES_GCM_ICV16 = 20
+    ENCR_AES_GCM_ICV16 = 20,
+    ENCR_DES_ECB = 1025
 };
 
 /**

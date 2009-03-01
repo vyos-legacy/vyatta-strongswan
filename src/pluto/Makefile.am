@@ -68,8 +68,8 @@ rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 _pluto_adns_SOURCES = adns.c adns.h
 
 LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
-LIBFREESWANDIR=$(top_srcdir)/src/libfreeswan
-LIBCRYPTODIR=$(top_srcdir)/src/libcrypto
+LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
+LIBCRYPTODIR=$(top_builddir)/src/libcrypto
 
 
 INCLUDES = \
@@ -85,7 +85,7 @@ AM_CFLAGS = \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
--DPLUTO -DKLIPS -DDEBUG -DTHREADS
+-DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
 oid.o \
@@ -143,3 +143,6 @@ if USE_CAPABILITIES
   pluto_LDADD += -lcap
 endif
 
+if USE_THREADS
+  AM_CFLAGS += -DTHREADS
+endif

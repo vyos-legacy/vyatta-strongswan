@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: lexparser.h 3876 2008-04-26 09:24:14Z andreas $
+ * $Id: lexparser.h 4877 2009-02-18 09:45:54Z martin $
  */
  
 /**
@@ -37,14 +37,14 @@ bool eat_whitespace(chunk_t *src);
 bool match(const char *pattern, const chunk_t *ch);
 
 /**
- * Extracts a token ending with the first occurence a given termination symbol
+ * Extracts a token ending with the first occurrence of a given termination symbol
  */
 bool extract_token(chunk_t *token, const char termination, chunk_t *src);
 
 /**
- * Extracts a token ending with the last occurence a given termination symbol
+ * Extracts a token ending with the first occurrence of a given null-terminated string
  */
-bool extract_last_token(chunk_t *token, const char termination, chunk_t *src);
+bool extract_token_str(chunk_t *token, const char *termination, chunk_t *src);
 
 /**
  *  Fetches a new text line terminated by \n or \r\n

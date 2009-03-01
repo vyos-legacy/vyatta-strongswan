@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -13,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: chunk.c 4276 2008-08-22 10:44:51Z martin $
+ * $Id: chunk.c 4784 2008-12-10 13:43:51Z tobias $
  */
 
 #include <stdio.h>
@@ -26,19 +27,20 @@
 #include <debug.h>
 #include <printf_hook.h>
 
+/* required for chunk_hash */
+#undef get16bits
+#if (defined(__GNUC__) && defined(__i386__))
+#define get16bits(d) (*((const u_int16_t*)(d)))
+#endif
+#if !defined (get16bits)
+#define get16bits(d) ((((u_int32_t)(((const u_int8_t*)(d))[1])) << 8)\
+                      + (u_int32_t)(((const u_int8_t*)(d))[0]) )
+#endif
+
 /**
  * Empty chunk.
  */
 chunk_t chunk_empty = { NULL, 0 };
-
-/**
- * Described in header.
- */
-chunk_t chunk_create(u_char *ptr, size_t len)
-{
-	chunk_t chunk = {ptr, len};
-	return chunk;
-}
 
 /**
  * Described in header.
@@ -132,7 +134,7 @@ chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...)
 void chunk_split(chunk_t chunk, const char *mode, ...)
 {
 	va_list chunks;
-	size_t len;
+	u_int len;
 	chunk_t *ch;
 	
 	va_start(chunks, mode);
@@ -142,7 +144,7 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 		{
 			break;
 		}
-		len = va_arg(chunks, size_t);
+		len = va_arg(chunks, u_int);
 		ch = va_arg(chunks, chunk_t*);
 		/* a null chunk means skip len bytes */
 		if (ch == NULL)
@@ -251,7 +253,7 @@ static char hexdig_lower[] = "0123456789abcdef";
  */
 chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase)
 {
-	int i, len;;
+	int i, len;
 	char *hexdig = hexdig_lower;
 	
 	if (uppercase)
@@ -428,39 +430,6 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf)
 /**
  * Described in header.
  */
-void chunk_free(chunk_t *chunk)
-{
-	free(chunk->ptr);
-	chunk->ptr = NULL;
-	chunk->len = 0;
-}
-
-/**
- * Described in header.
- */
-void chunk_clear(chunk_t *chunk)
-{
-	memset(chunk->ptr, 0, chunk->len);
-	chunk_free(chunk);
-}
-
-/**
- * Described in header.
- */
-chunk_t chunk_skip(chunk_t chunk, size_t bytes)
-{
-	if (chunk.len > bytes)
-	{
-		chunk.ptr += bytes;
-		chunk.len -= bytes;
-		return chunk;
-	}
-	return chunk_empty;
-}
-
-/**
- * Described in header.
- */
 int chunk_compare(chunk_t a, chunk_t b)
 {
 	int compare_len = a.len - b.len;
@@ -475,11 +444,79 @@ int chunk_compare(chunk_t a, chunk_t b)
 
 /**
  * Described in header.
+ * 
+ * The implementation is based on Paul Hsieh's SuperFastHash:
+ * 	 http://www.azillionmonkeys.com/qed/hash.html
  */
-bool chunk_equals(chunk_t a, chunk_t b)
+u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 {
-	return a.ptr != NULL  && b.ptr != NULL &&
-			a.len == b.len && memeq(a.ptr, b.ptr, a.len);
+	u_char *data = chunk.ptr;
+	size_t len = chunk.len;
+	u_int32_t tmp;
+	int rem;
+	
+	if (!len || data == NULL)
+	{
+		return 0;
+	}
+	
+	rem = len & 3;
+	len >>= 2;
+	
+	/* Main loop */
+	for (; len > 0; --len)
+	{
+		hash += get16bits(data);
+		tmp   = (get16bits(data + 2) << 11) ^ hash;
+		hash  = (hash << 16) ^ tmp;
+		data += 2 * sizeof(u_int16_t);
+		hash += hash >> 11;
+	}
+	
+	/* Handle end cases */
+	switch (rem)
+	{
+		case 3:
+		{
+			hash += get16bits(data);
+			hash ^= hash << 16;
+			hash ^= data[sizeof(u_int16_t)] << 18;
+			hash += hash >> 11;
+			break;
+		}
+		case 2:
+		{
+			hash += get16bits(data);
+			hash ^= hash << 11;
+			hash += hash >> 17;
+			break;
+		}
+		case 1:
+		{
+			hash += *data;
+			hash ^= hash << 10;
+			hash += hash >> 1;
+			break;
+		}
+	}
+	
+	/* Force "avalanching" of final 127 bits */
+	hash ^= hash << 3;
+	hash += hash >> 5;
+	hash ^= hash << 4;
+	hash += hash >> 17;
+	hash ^= hash << 25;
+	hash += hash >> 6;
+	
+	return hash;
+}
+
+/**
+ * Described in header.
+ */
+u_int32_t chunk_hash(chunk_t chunk)
+{
+	return chunk_hash_inc(chunk, chunk.len);
 }
 
 /**

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: configuration_attribute.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: configuration_attribute.h 4844 2009-01-20 22:55:13Z andreas $
  */
 
 /**
@@ -53,7 +53,10 @@ enum configuration_attribute_type_t {
 	INTERNAL_IP6_DHCP = 12,
 	INTERNAL_IP4_SUBNET = 13,
 	SUPPORTED_ATTRIBUTES = 14,
-	INTERNAL_IP6_SUBNET = 15
+	INTERNAL_IP6_SUBNET = 15,
+	/* proprietary Microsoft attributes */
+	INTERNAL_IP4_SERVER = 23456,
+	INTERNAL_IP6_SERVER = 23457
 };
 
 /** 

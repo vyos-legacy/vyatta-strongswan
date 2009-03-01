@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: identification.c 4344 2008-09-17 02:17:01Z andreas $
+ * $Id: identification.c 4856 2009-02-05 22:13:48Z andreas $
  */
 
 #define _GNU_SOURCE
@@ -1046,6 +1046,7 @@ identification_t *identification_create_from_string(char *string)
 	else if (strchr(string, '@') == NULL)
 	{
 		if (streq(string, "%any")
+		||  streq(string, "%any6")
 		||	streq(string, "0.0.0.0")
 		||	streq(string, "*")
 		||	streq(string, "::")

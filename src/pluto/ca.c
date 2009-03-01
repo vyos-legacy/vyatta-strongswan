@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: ca.c 4632 2008-11-11 18:37:19Z martin $
+ * RCSID $Id: ca.c 4709 2008-11-27 10:20:25Z martin $
  */
 
 #include <stdlib.h>
@@ -33,6 +33,7 @@
 #include "certs.h"
 #include "whack.h"
 #include "fetch.h"
+#include "smartcard.h"
 
 /* chained list of X.509 authority certificates (ca, aa, and ocsp) */
 

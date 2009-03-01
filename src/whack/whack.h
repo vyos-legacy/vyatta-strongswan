@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: whack.h 3264 2007-10-08 19:49:56Z andreas $
+ * RCSID $Id: whack.h 4709 2008-11-27 10:20:25Z martin $
  */
 
 #ifndef _WHACK_H
@@ -19,7 +19,16 @@
 
 #include <freeswan.h>
 
-#include <smartcard.h>
+/* copy of smartcard operations, defined in smartcard.h */
+#ifndef SC_OP_T
+#define SC_OP_T
+typedef enum {
+    SC_OP_NONE =    0,
+    SC_OP_ENCRYPT = 1,
+    SC_OP_DECRYPT = 2,
+    SC_OP_SIGN =    3,
+} sc_op_t;
+#endif /* SC_OP_T */
 
 /* Since the message remains on one host, native representation is used.
  * Think of this as horizontal microcode: all selected operations are

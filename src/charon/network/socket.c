@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: socket.c 4646 2008-11-13 07:15:45Z martin $
+ * $Id: socket.c 4688 2008-11-24 08:22:05Z martin $
  */
 
 /* for struct in6_pktinfo */
@@ -58,11 +58,6 @@
 #ifndef IPV6_2292PKTINFO
 #define IPV6_2292PKTINFO 2
 #endif /*IPV6_2292PKTINFO*/
-
-/* missing on uclibc */
-#ifndef IPV6_IPSEC_POLICY
-#define IPV6_IPSEC_POLICY 34
-#endif /*IPV6_IPSEC_POLICY*/
 
 typedef struct private_socket_t private_socket_t;
 

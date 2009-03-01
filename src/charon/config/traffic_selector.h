@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: traffic_selector.h 4643 2008-11-12 22:57:46Z andreas $
+ * $Id: traffic_selector.h 4860 2009-02-11 13:09:52Z martin $
  */
 
 /**

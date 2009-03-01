@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa.h 4640 2008-11-12 16:07:17Z martin $
+ * $Id: ike_sa.h 4810 2008-12-16 17:21:28Z tobias $
  */
 
 /**
@@ -198,6 +198,11 @@ enum ike_sa_state_t {
 	 * IKE_SA is fully established
 	 */
 	IKE_ESTABLISHED,
+	
+	/**
+	 * IKE_SA is managed externally and does not process messages
+	 */
+	IKE_PASSIVE,
 	
 	/**
 	 * IKE_SA rekeying in progress
@@ -412,6 +417,17 @@ struct ike_sa_t {
 	 * @param				selected proposal
 	 */
 	void (*set_proposal)(ike_sa_t *this, proposal_t *proposal);
+	
+	/**
+	 * Set the message id of the IKE_SA.
+	 *
+	 * The IKE_SA stores two message IDs, one for initiating exchanges (send)
+	 * and one to respond to exchanges (expect).
+	 *
+	 * @param initiate		TRUE to set message ID for initiating
+	 * @param mid			message id to set
+	 */
+	void (*set_message_id)(ike_sa_t *this, bool initiate, u_int32_t mid);
 	
 	/**
 	 * Add an additional address for the peer.
@@ -641,9 +657,9 @@ struct ike_sa_t {
 	 * 
 	 * @return
 	 * 						- SUCCESS if deletion is initialized
-	 * 						- INVALID_STATE, if the IKE_SA is not in 
+	 * 						- DESTROY_ME, if the IKE_SA is not in 
 	 * 						  an established state and can not be
-	 * 						  delete (but destroyed).
+	 * 						  deleted (but destroyed).
 	 */
 	status_t (*delete) (ike_sa_t *this);
 	
