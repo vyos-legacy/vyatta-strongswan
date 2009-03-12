@@ -146,6 +146,11 @@ binary-common:
 	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
 	dh_makeshlibs
 	dh_installdeb
+ifeq ($(DH_OPTIONS), -a)
+	        # /etc/ipsec.{conf,secrets} are not conffiles (#515095)
+	egrep -v '^/etc/ipsec.(conf|secrets)' debian/openswan/DEBIAN/conffiles > debian/openswan/DEBIAN/conffiles.new
+	mv debian/openswan/DEBIAN/conffiles.new debian/openswan/DEBIAN/conffiles
+endif
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums

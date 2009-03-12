@@ -1,6 +1,11 @@
 strongswan (4.2.12-1) unstable; urgency=low
 
   * New upstream release
+  * Explicitly remove directories /etc/ipsec.d and /var/run/pluto on purge.
+  * No longer mark ipsec.conf and ipsec.secrets as conffiles, as they
+    are modified by postinst. Although I don't particularly like this
+    method of patching DEBIAN/conffiles, I don't have a better solution
+    right now. Thus take patch from Mathieu Parent.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 01 Mar 2009 10:46:08 +0000
 
