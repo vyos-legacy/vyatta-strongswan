@@ -20,7 +20,8 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-openssl --enable-agent \
 		--enable-kernel-klips \
 		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
-		--disable-md5 --disable-sha1 --disable-sha2
+		--disable-md5 --disable-sha1 --disable-sha2 \
+		--enable-nm
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!
 	# And for --enable-eap-sim we would need the library, which we don't
@@ -28,20 +29,18 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 
 DEB_BUILD_ARCH_CPU ?=$(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
 
+ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O2
+endif
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	MAKEFLAGS += -j$(NUMJOBS)
+endif
 # the padlock plugin only makes sense on i386 
-# but it actually doesn't do much, so no need to enable it
-#ifeq ($(DEB_BUILD_ARCH_CPU),i386)
-#  CONFIGUREARGS += --enable-padlock
-#endif
-
-
-configure: configure-stamp
-configure-stamp: patch
-	dh_testdir
-	# Add here commands to configure the package.
-	./configure $(CONFIGUREARGS)
-
-	touch configure-stamp
+# but it actually doesn't do much, so maybe we don't need it
+ifeq ($(DEB_BUILD_ARCH_CPU),i386)
+  CONFIGURE_ARGS += --enable-padlock
+endif
 
 patch:
 	dh_testdir
@@ -51,17 +50,17 @@ unpatch:
 	dpatch deapply-all
 
 build: build-stamp
-build-stamp: configure-stamp
-	$(MAKE)
-
-	touch build-stamp
+build-stamp: patch
+	dh_testdir
+	./configure $(CONFIGUREARGS)
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)"
 
 clean: unpatch
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp configure-stamp
+	rm -f build-stamp
 
-	-$(MAKE) clean
+	[ ! -f Makefile ] || $(MAKE) clean
 	#-$(MAKE) -C programs/fswcert/ clean
 	# after a make clean, no binaries _should_ be left, but ....
 	-find $(CURDIR) -name "*.o" | xargs --no-run-if-empty rm
@@ -140,17 +139,13 @@ binary-common:
 	dh_installinit --name=ipsec
 	dh_installdebconf
 	dh_installchangelogs NEWS
+	dh_installdocs README
 	dh_link
 	dh_strip
 	dh_compress
 	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
 	dh_makeshlibs
 	dh_installdeb
-ifeq ($(DH_OPTIONS), -a)
-	        # /etc/ipsec.{conf,secrets} are not conffiles (#515095)
-	egrep -v '^/etc/ipsec.(conf|secrets)' debian/openswan/DEBIAN/conffiles > debian/openswan/DEBIAN/conffiles.new
-	mv debian/openswan/DEBIAN/conffiles.new debian/openswan/DEBIAN/conffiles
-endif
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums

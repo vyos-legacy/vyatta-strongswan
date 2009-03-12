@@ -32,14 +32,6 @@ set -e
 CONF_FILE=/var/lib/strongswan/ipsec.conf.inc
 SECRETS_FILE=/var/lib/strongswan/ipsec.secrets.inc
 
-insert_private_key() {
-       	cat <<EOF >> $SECRETS_FILE
-: RSA	{
-$1
-	}
-EOF
-}
-
 insert_private_key_filename() {
 	if [ ! -e $SECRETS_FILE ] || ! grep -q ": RSA $1" $SECRETS_FILE; then
             echo ": RSA $1" >> $SECRETS_FILE
@@ -154,67 +146,45 @@ case "$1" in
 	if [ "$RET" = "true" ]; then
             repair_legacy_secrets
  	    # OK, ipsec.secrets should now be correct
-	    db_get strongswan/rsa_key_type
-	    if [ "$RET" = "plain" ]; then
-	        # a RSA keypair should be created - check if there is one already
-		if [ -e /etc/ipsec.secrets ] && egrep -q ": RSA[:space:]*" /etc/ipsec.secrets; then
-                    echo "Warning: there is already a RSA key in /etc/ipsec.secrets."
-                    echo "Creating an additional one."
-                fi
-		if [ -e $SECRETS_FILE ] && egrep -q ": RSA[:space:]*" $SECRETS_FILE; then
-                    echo "Warning: there is already a RSA key in $SECRETS_FILE."
-                    echo "Creating an additional one."
-                fi
-                # create a plain strongswan keypair
-      	        db_get strongswan/rsa_key_length
-                umask 077
-                keylength=$RET
-                privkey=`mktemp /tmp/ipsec-postinst.XXXXXX`
-                /usr/lib/ipsec/rsasigkey $keylength > $privkey
-		insert_private_key "`cat $privkey`"
-                rm $privkey
-		echo "Successfully created a plain strongSwan RSA keypair."
-	    else
-                # extract the key from a (newly created) x509 certificate
-		host=`hostname`
-		newkeyfile="/etc/ipsec.d/private/${host}Key.pem"
-       		newcertfile="/etc/ipsec.d/certs/${host}Cert.pem"
-                if [ -e $newcertfile -o -e $newkeyfile ]; then
-                    echo "Error: $newcertfile or $newkeyfile already exists."
-                    echo "Please remove them first an re-run dpkg-reconfigure to create a new keypair."
-                else
-     			# create a new certificate
-       			db_get strongswan/rsa_key_length
-       			keylength=$RET
-       			db_get strongswan/x509_self_signed
-       			selfsigned=$RET
-       			db_get strongswan/x509_country_code
-       			countrycode=$RET
-       			if [ -z "$countrycode" ]; then countrycode="."; fi
-       			db_get strongswan/x509_state_name
-       			statename=$RET
-       			if [ -z "$statename" ]; then statename="."; fi
-       			db_get strongswan/x509_locality_name
-       			localityname=$RET
-       			if [ -z "$localityname" ]; then localityname="."; fi
-       			db_get strongswan/x509_organization_name
-       			orgname=$RET
-       			if [ -z "$orgname" ]; then orgname="."; fi
-       			db_get strongswan/x509_organizational_unit
-       			orgunit=$RET
-       			if [ -z "$orgunit" ]; then orgunit="."; fi
-       			db_get strongswan/x509_common_name
-       			commonname=$RET
-       			if [ -z "$commonname" ]; then commonname="."; fi
-       			db_get strongswan/x509_email_address
-       			email=$RET
-       			if [ -z "$email" ]; then email="."; fi
-       			make_x509_cert $keylength 1500 "$newkeyfile" "$newcertfile" "$selfsigned" "$countrycode" "$statename" "$localityname" "$orgname" "$orgunit" "$commonname" "$email"
-       			chmod 0600 "$newkeyfile"
-       			umask 077
-       			insert_private_key_filename "$newkeyfile"
-       			echo "Successfully created x509 certificate."
-       		fi
+            # create a new keypair
+	    host=`hostname`
+	    newkeyfile="/etc/ipsec.d/private/${host}Key.pem"
+       	    newcertfile="/etc/ipsec.d/certs/${host}Cert.pem"
+            if [ -e $newcertfile -o -e $newkeyfile ]; then
+                echo "Error: $newcertfile or $newkeyfile already exists."
+                echo "Please remove them first an re-run dpkg-reconfigure to create a new keypair."
+            else
+     		# create a new certificate
+       		db_get strongswan/rsa_key_length
+       		keylength=$RET
+       		db_get strongswan/x509_self_signed
+       		selfsigned=$RET
+       		db_get strongswan/x509_country_code
+       		countrycode=$RET
+       		if [ -z "$countrycode" ]; then countrycode="."; fi
+       		db_get strongswan/x509_state_name
+       		statename=$RET
+       		if [ -z "$statename" ]; then statename="."; fi
+       		db_get strongswan/x509_locality_name
+       		localityname=$RET
+       		if [ -z "$localityname" ]; then localityname="."; fi
+       		db_get strongswan/x509_organization_name
+       		orgname=$RET
+       		if [ -z "$orgname" ]; then orgname="."; fi
+       		db_get strongswan/x509_organizational_unit
+       		orgunit=$RET
+       		if [ -z "$orgunit" ]; then orgunit="."; fi
+       		db_get strongswan/x509_common_name
+       		commonname=$RET
+       		if [ -z "$commonname" ]; then commonname="."; fi
+       		db_get strongswan/x509_email_address
+       		email=$RET
+       		if [ -z "$email" ]; then email="."; fi
+       		make_x509_cert $keylength 1500 "$newkeyfile" "$newcertfile" "$selfsigned" "$countrycode" "$statename" "$localityname" "$orgname" "$orgunit" "$commonname" "$email"
+       		chmod 0600 "$newkeyfile"
+       		umask 077
+       		insert_private_key_filename "$newkeyfile"
+       		echo "Successfully created x509 certificate."
        	    fi
         else
 	    db_get strongswan/existing_x509_certificate

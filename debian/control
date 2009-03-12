@@ -3,7 +3,8 @@ Section: net
 Priority: optional
 Maintainer: Rene Mayrhofer <rmayr@debian.org>
 Standards-Version: 3.8.0
-Build-Depends: debhelper (>= 4.1.16), libtool, libgmp3-dev, libssl-dev (>= 0.9.8-1), libcurl3-dev | libcurl2-dev, libopensc2-dev | libopensc1-dev | libopensc0-dev, libldap2-dev, libpam0g-dev, libkrb5-dev, bison, flex, dpatch, bzip2, po-debconf, hardening-wrapper, network-manager-dev, libfcgi-dev, clearsilver-dev, libxml2-dev, libsqlite3-dev
+Build-Depends: debhelper (>= 7.0.0), libtool, libgmp3-dev, libssl-dev (>= 0.9.8), libcurl4-openssl-dev | libcurl3-dev | libcurl2-dev, libopensc2-dev | libopensc1-dev | libopensc0-dev, libldap2-dev, libpam0g-dev, libkrb5-dev, bison, flex, dpatch, bzip2, po-debconf, hardening-wrapper, network-manager-dev, libfcgi-dev, clearsilver-dev, libxml2-dev, libsqlite3-dev, network-manager-dev (>= 0.7), libnm-glib-dev (>= 0.7)
+Homepage: http://www.strongswan.org
 
 Package: strongswan
 Architecture: any
@@ -14,28 +15,27 @@ Provides: ike-server
 Conflicts: freeswan (<< 2.04-12), openswan
 Replaces: openswan
 Description: IPSec utilities for strongSwan
- IPSec is Internet Protocol SECurity. It uses strong cryptography to provide
- both authentication and encryption services. Authentication ensures that
- packets are from the right sender and have not been altered in transit.
- Encryption prevents unauthorised reading of packet contents.
- .
- This version of strongSwan supports Opportunistic Encryption (OE) out of the
- box. OE enables you to set up IPSec tunnels to a site without
- co-ordinating with the site administrator, and without hand
- configuring each tunnel. If enough sites support OE, a "FAX effect"
- occurs, and many of us can communicate without eavesdroppers. 
+ strongSwan is an open source IPsec implementation for the Linux
+ operating system. It is one of the two remaining forks of the 
+ original FreeS/WAN projects and focuses on IKEv2 support, X.509 
+ authentication and complete PKI support. For a focus on
+ Opportunistic Encryption (OE) and interoperability with non-standard
+ IPsec features, see Openswan.
  .
  In addition to OE, you may manually configure secure tunnels through
  untrusted networks. Everything passing through the untrusted net is
- encrypted by the IPSec gateway machine and decrypted by the gateway
+ encrypted by the IPsec gateway machine and decrypted by the gateway
  at the other end. The result is Virtual Private Network or VPN. This
  is a network which is effectively private even though it includes
  machines at several different sites connected by the insecure Internet.
  .
  Please note that you will need a recent kernel (>=2.4.24 or 2.6.x)
- for using this package. The standard Debian kernel includes both IPSec
+ for using this package. The standard Debian kernel includes both IPsec
  and crypto support, patching the kernel is no longer necessary!
- .
- If you want to use the KLIPS IPSec code for kernel modules instead of the
- native ones, you will need to install either openswan-modules-source or
- linux-patch-openswan and build the respective modules for your kernel.
+
+Package: network-manager-strongswan
+Architecture: any
+Depends: ${shlibs:Depends}, strongswan, network-manager (>= 0.7)
+Description: strongSwan plugin to interact with NetworkManager
+ This plugin for NetworkManager allows to configure strongSwan
+ and control the IKEv2 daemon directly through DBUS. 
