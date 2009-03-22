@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: leak_detective.c 4796 2008-12-12 09:10:52Z martin $
+ * $Id: leak_detective.c 4936 2009-03-12 18:07:32Z tobias $
  */
 	
 #define _GNU_SOURCE
@@ -29,7 +29,6 @@
 #include <syslog.h>
 #include <pthread.h>
 #include <netdb.h>
-#include <printf.h>
 #include <locale.h>
 
 #include "leak_detective.h"

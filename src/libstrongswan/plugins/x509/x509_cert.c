@@ -17,7 +17,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509_cert.c 4767 2008-12-08 19:15:38Z martin $
+ * $Id: x509_cert.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #define _GNU_SOURCE
@@ -1010,7 +1010,7 @@ static bool is_newer(certificate_t *this, certificate_t *that)
 	this->get_validity(this, &now, &this_update, NULL);
 	that->get_validity(that, &now, &that_update, NULL);
 	new = this_update > that_update;
-	DBG1("  certificate from %#T is %s - existing certificate from %#T %s",
+	DBG1("  certificate from %T is %s - existing certificate from %T %s",
 				&this_update, FALSE, new ? "newer":"not newer",
 				&that_update, FALSE, new ? "replaced":"retained");
 	return new;

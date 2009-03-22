@@ -1,3 +1,11 @@
+strongswan (4.2.13-1) unstable; urgency=low
+
+  * New upstream release. This is now compatible with network-manager 0.7
+    in Debian, so start building the strongswan-side support. The actual
+    plugin will need to be another source package.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 22 Mar 2009 10:59:31 +0100
+
 strongswan (4.2.12-1) unstable; urgency=low
 
   * New upstream release. Starting with this version, the strongswan

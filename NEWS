@@ -1,5 +1,20 @@
+strongswan-4.2.13
+-----------------
+
+- Fixed a use-after-free bug in the DPD timeout section of the
+  IKEv1 pluto daemon which sporadically caused a segfault.
+
+- Fixed a crash in the IKEv2 charon daemon occuring with
+  mixed RAM-based and SQL-based virtual IP address pools. 
+
+- Fixed ASN.1 parsing of algorithmIdentifier objects where the
+  parameters field is optional.
+
+- Ported nm plugin to NetworkManager 7.1.
+
+
 strongswan-4.2.12
-'----------------
+-----------------
 
 - Support of the EAP-MSCHAPv2 protocol enabled by the option
   --enable-eap-mschapv2. Requires the MD4 hash algorithm enabled

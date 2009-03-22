@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2008 Martin Willi
  * Copyright (C) 2007 Andreas Steffen
- * Hochschule für Technik Rapperswil
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509_ocsp_response.c 4317 2008-09-02 11:00:13Z martin $
+ * $Id: x509_ocsp_response.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #include "x509_ocsp_response.h"
@@ -806,7 +806,7 @@ static bool is_newer(certificate_t *this, certificate_t *that)
 	this->get_validity(this, &now, &this_update, NULL);
 	that->get_validity(that, &now, &that_update, NULL);
 	new = this_update > that_update;
-	DBG1("  ocsp response from %#T is %s - existing ocsp response from %#T %s",
+	DBG1("  ocsp response from %T is %s - existing ocsp response from %T %s",
 				&this_update, FALSE, new ? "newer":"not newer",
 				&that_update, FALSE, new ? "replaced":"retained");
 	return new;

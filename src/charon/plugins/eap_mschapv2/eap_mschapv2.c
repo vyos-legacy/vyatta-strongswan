@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_mschapv2.c 4888 2009-02-19 14:32:13Z tobias $
+ * $Id: eap_mschapv2.c 4896 2009-02-24 13:39:50Z martin $
  */
 
 #include "eap_mschapv2.h"
@@ -643,7 +643,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	rng->destroy(rng);
 			
 	shared = charon->credentials->get_shared(charon->credentials,
-											 SHARED_EAP, this->server, this->peer);
+											 SHARED_EAP, this->peer, this->server);
 	if (shared == NULL)
 	{
 		DBG1(DBG_IKE, "no EAP key found for hosts '%D' - '%D'",
