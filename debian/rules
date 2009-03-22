@@ -12,7 +12,7 @@ export DEB_BUILD_HARDENING=1
 
 CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
-		--enable-http --enable-ldap --enable-curl \
+		--enable-ldap --enable-curl \
 		--enable-nonblocking --enable-thread \
 		--enable-smartcard --enable-cisco-quirks \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
