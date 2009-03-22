@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: connections.c 3686 2008-03-28 11:48:14Z martin $
+ * RCSID $Id: connections.c 4924 2009-03-10 21:13:18Z andreas $
  */
 
 #include <string.h>
@@ -2995,6 +2995,8 @@ terminate_connection(const char *nm)
 	    c->policy &= ~POLICY_UP;
 	    flush_pending_by_connection(c);
 	    delete_states_by_connection(c, FALSE);
+	    if (c->kind == CK_INSTANCE)
+		delete_connection(c, FALSE);
 	    reset_cur_connection();
 	}
 	c = n;

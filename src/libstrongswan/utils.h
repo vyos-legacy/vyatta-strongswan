@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: utils.h 4742 2008-12-03 09:45:58Z tobias $
+ * $Id: utils.h 4936 2009-03-12 18:07:32Z tobias $
  */
 
 /**
@@ -285,31 +285,30 @@ bool ref_put(refcount_t *ref);
 #endif /* HAVE_GCC_ATOMIC_OPERATIONS */
 
 /**
- * Get printf hooks for time.
+ * printf hook for time_t.
  *
  * Arguments are: 
- *    time_t* time
- * Arguments using #-specificer
  *    time_t* time, bool utc
  */
-printf_hook_functions_t time_get_printf_hooks();
+int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+					 const void *const *args);
 
 /**
- * Get printf hooks for time deltas.
+ * printf hook for time_t deltas.
  *
  * Arguments are: 
- *    time_t* delta
- * Arguments using #-specificer
  *    time_t* begin, time_t* end
  */
-printf_hook_functions_t time_delta_get_printf_hooks();
+int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+						   const void *const *args);
 
 /**
- * Get printf hooks for time deltas.
+ * printf hook for memory areas.
  *
  * Arguments are: 
  *    u_char *ptr, int len
  */
-printf_hook_functions_t mem_get_printf_hooks();
+int mem_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+					const void *const *args);
 
 #endif /* UTILS_H_ @}*/

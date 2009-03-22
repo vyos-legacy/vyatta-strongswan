@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: asn1.c 4776 2008-12-09 15:00:30Z martin $
+ * $Id: asn1.c 4942 2009-03-13 20:22:24Z andreas $
  */
 
 #include <stdio.h>
@@ -397,7 +397,7 @@ void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 			{
 				time_t time = asn1_to_time(&object, type);
 
-				DBG2("  '%T'", &time);
+				DBG2("  '%T'", &time, TRUE);
 			}
 			return;
 		default:
@@ -452,13 +452,6 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level, const c
  * ASN.1 definition of an algorithmIdentifier
  */
 static const asn1Object_t algorithmIdentifierObjects[] = {
-	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE }, /* 0 */
-	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY }, /* 1 */
-	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW  }, /* 2 */
-	{ 0, "exit",				ASN1_EOC,		ASN1_EXIT }
-};
-/* parameters are optional in case of ecdsa-with-SHA1 as algorithm (RFC 3279) */
-static const asn1Object_t algorithmIdentifierObjectsOptional[] = {
 	{ 0, "algorithmIdentifier",	ASN1_SEQUENCE,	ASN1_NONE         }, /* 0 */
 	{ 1,   "algorithm",			ASN1_OID,		ASN1_BODY         }, /* 1 */
 	{ 1,   "parameters",		ASN1_EOC,		ASN1_RAW|ASN1_OPT }, /* 2 */
@@ -477,14 +470,8 @@ int asn1_parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters
 	chunk_t object;
 	int objectID;
 	int alg = OID_UNKNOWN;
-	const asn1Object_t *objects = algorithmIdentifierObjectsOptional;
 	
-	if (parameters != NULL)
-	{
-		objects = algorithmIdentifierObjects;
-	}
-	
-	parser = asn1_parser_create(objects, blob);
+	parser = asn1_parser_create(algorithmIdentifierObjects, blob);
 	parser->set_top_level(parser, level0);
 	
 	while (parser->iterate(parser, &objectID, &object))

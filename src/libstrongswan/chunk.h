@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: chunk.h 4841 2009-01-15 01:52:44Z andreas $
+ * $Id: chunk.h 4936 2009-03-12 18:07:32Z tobias $
  */
 
 /**
@@ -240,11 +240,13 @@ u_int32_t chunk_hash(chunk_t chunk);
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash);
 
 /**
- * Get printf hooks for a chunk.
+ * printf hook function for chunk_t.
  *
  * Arguments are: 
  *    chunk_t *chunk
+ * Use #-modifier to print a compact version
  */
-printf_hook_functions_t chunk_get_printf_hooks();
+int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+					  const void *const *args);
 
 #endif /* CHUNK_H_ @}*/

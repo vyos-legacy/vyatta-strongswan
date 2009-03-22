@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509_crl.c 4576 2008-11-05 08:32:38Z martin $
+ * $Id: x509_crl.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #include "x509_crl.h"
@@ -539,7 +539,7 @@ static bool is_newer(private_x509_crl_t *this, crl_t *that)
 		this_cert->get_validity(this_cert, &now, &this_update, NULL);
 		that_cert->get_validity(that_cert, &now, &that_update, NULL);
 		new = this_update > that_update;
-		DBG1("  crl from %#T is %s - existing crl from %#T %s",
+		DBG1("  crl from %T is %s - existing crl from %T %s",
 				&this_update, FALSE, new ? "newer":"not newer",
 				&that_update, FALSE, new ? "replaced":"retained");
 	}

@@ -15,12 +15,11 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa.c 4808 2008-12-16 15:48:36Z martin $
+ * $Id: ike_sa.c 4945 2009-03-16 14:23:36Z martin $
  */
 
 #include <sys/time.h>
 #include <string.h>
-#include <printf.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <time.h>
@@ -1103,6 +1102,12 @@ static void resolve_hosts(private_ike_sa_t *this)
 			{
 				host->set_port(host, IKEV2_UDP_PORT);
 			}
+			else
+			{	/* fallback to address family specific %any(6), if configured */
+				host = host_create_from_dns(
+									this->ike_cfg->get_my_addr(this->ike_cfg),
+									0, IKEV2_UDP_PORT);
+			}
 		}
 	}
 	if (host)
@@ -1743,7 +1748,7 @@ static status_t reauth(private_ike_sa_t *this)
 		{
 			time_t now = time(NULL);
 			
-			DBG1(DBG_IKE, "IKE_SA will timeout in %#V",
+			DBG1(DBG_IKE, "IKE_SA will timeout in %V",
 				 &now, &this->stats[STAT_DELETE]);
 			return FAILED;
 		}

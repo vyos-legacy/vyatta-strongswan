@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -12,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: enum.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: enum.h 4936 2009-03-12 18:07:32Z tobias $
  */
 
 /**
@@ -108,12 +109,12 @@ struct enum_name_t {
 #define ENUM(name, first, last, ...) ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END(name, last)
 
 /**
- * Get printf hook functions for enum_names_t.
+ * printf hook function for enum_names_t.
  *
- * The handler takes the arguments: enum_names_t *names, int value
- *
- * @return 		printf hook functions
+ * Arguments are: 
+ *    enum_names_t *names, int value
  */
-printf_hook_functions_t enum_get_printf_hooks();
+int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
+					 const void *const *args);
 
 #endif /* ENUM_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: library.h 4311 2008-08-28 16:27:48Z martin $
+ * $Id: library.h 4936 2009-03-12 18:07:32Z tobias $
  */
 
 /**
@@ -57,10 +57,10 @@
 #ifndef LIBRARY_H_
 #define LIBRARY_H_
 
+#include <printf_hook.h>
 #include <utils.h>
 #include <chunk.h>
 #include <settings.h>
-#include <printf_hook.h>
 #include <plugins/plugin_loader.h>
 #include <crypto/crypto_factory.h>
 #include <credentials/credential_factory.h>
