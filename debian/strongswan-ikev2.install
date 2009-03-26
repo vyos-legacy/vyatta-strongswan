@@ -1,0 +1,9 @@
+usr/lib/strongswan/charon       usr/lib/strongswan/
+usr/lib/strongswan/plugins/libstrongswan-kernel-netlink.so*     usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-eapgtc.so*     usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-eapidentity.so*        usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-eapmd5.so*     usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-eapmschapv2.so*        usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-agent.so*      usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-curl.so*       usr/lib/strongswan/plugins/
+usr/lib/strongswan/plugins/libstrongswan-ldap.so*       usr/lib/strongswan/plugins/

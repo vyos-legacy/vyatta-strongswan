@@ -10,7 +10,8 @@ strongswan (4.2.12-1) unstable; urgency=low
 
   * New upstream release. Starting with this version, the strongswan
     packages is modularized and includes support for plugins like the 
-    NetworkManager plugin.
+    NetworkManager plugin. Many details were adopted from Martin Willi's
+    packages.
   * Dropping support for raw RSA public/private keypairs, as charon does
     not support it.
   * Explicitly remove directories /etc/ipsec.d and /var/run/pluto on purge.
