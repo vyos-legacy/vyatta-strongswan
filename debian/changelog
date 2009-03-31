@@ -1,3 +1,13 @@
+strongswan (4.2.13-2) unstable; urgency=low
+
+  * Fix DoS issue via malicious Dead Peer Detection packet. Thanks to the 
+    security team for providing the patch.
+    Closes: #521950: CVE-2009-0790: DoS
+    Gerd v. Egidy discovered that the Pluto IKE daemon in openswan is prone
+    to a denial of service attack via a malicious packet.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Tue, 31 Mar 2009 12:00:51 +0200
+
 strongswan (4.2.13-1) unstable; urgency=low
 
   * New upstream release. This is now compatible with network-manager 0.7
