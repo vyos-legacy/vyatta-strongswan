@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: rekey_ike_sa_job.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: rekey_ike_sa_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -50,4 +50,4 @@ struct rekey_ike_sa_job_t {
  */
 rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id, bool reauth);
 
-#endif /* REKEY_IKE_SA_JOB_H_ @} */
+#endif /** REKEY_IKE_SA_JOB_H_ @}*/

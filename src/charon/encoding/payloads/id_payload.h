@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: id_payload.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: id_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -121,4 +121,4 @@ id_payload_t *id_payload_create(payload_type_t payload_type);
 id_payload_t *id_payload_create_from_identification(payload_type_t payload_type,
 											identification_t *identification);
 
-#endif /* ID_PAYLOAD_H_ @} */
+#endif /** ID_PAYLOAD_H_ @}*/

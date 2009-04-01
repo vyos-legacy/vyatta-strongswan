@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: medsrv_creds.h 3915 2008-05-08 12:11:30Z martin $
+ * $Id: medsrv_creds.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -52,4 +52,4 @@ struct medsrv_creds_t {
  */
 medsrv_creds_t *medsrv_creds_create(database_t *database);
 
-#endif /* MEDSRV_CREDS_H_ @}*/
+#endif /** MEDSRV_CREDS_H_ @}*/

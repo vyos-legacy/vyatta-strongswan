@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_interface.c 4655 2008-11-14 13:04:22Z martin $
+ * $Id: kernel_interface.c 4997 2009-03-24 10:24:58Z martin $
  */
 
 #include "kernel_interface.h"

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: transform_substructure.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: transform_substructure.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -173,4 +173,4 @@ transform_substructure_t *transform_substructure_create_type(
 						transform_type_t transform_type, u_int16_t transform_id,
 						u_int16_t key_length);
 
-#endif /*TRANSFORM_SUBSTRUCTURE_H_ @} */
+#endif /** TRANSFORM_SUBSTRUCTURE_H_ @}*/

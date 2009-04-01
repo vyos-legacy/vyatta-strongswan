@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: callback_job.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: callback_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -116,4 +116,4 @@ callback_job_t *callback_job_create(callback_job_cb_t cb, void *data,
 									callback_job_cleanup_t cleanup,
 									callback_job_t *parent);
 
-#endif /* CALLBACK_JOB_H_ @} */
+#endif /** CALLBACK_JOB_H_ @}*/

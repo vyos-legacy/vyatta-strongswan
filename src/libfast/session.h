@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: session.h 3519 2008-03-02 12:14:34Z martin $
+ * $Id: session.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -77,4 +77,4 @@ struct session_t {
  */
 session_t *session_create(context_t *context);
 
-#endif /* SESSION_H_ @} */
+#endif /** SESSION_H_ @}*/

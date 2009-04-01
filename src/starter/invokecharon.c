@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: invokecharon.c 4833 2009-01-13 06:50:55Z andreas $
+ * RCSID $Id: invokecharon.c 5050 2009-03-27 16:14:59Z andreas $
  */
 
 #include <sys/types.h>
@@ -216,7 +216,7 @@ starter_start_charon (starter_config_t *cfg, bool no_fork)
 		    {
 			kill(pid, SIGKILL);
 		    }
-		    usleep(20000);
+		    usleep(20000); /* sleep for 20 ms */
 		}
 	    }
 	    else

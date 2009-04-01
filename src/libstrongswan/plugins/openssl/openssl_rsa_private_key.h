@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  * 
- * $Id: openssl_rsa_private_key.h 4000 2008-05-22 12:13:10Z tobias $
+ * $Id: openssl_rsa_private_key.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct openssl_rsa_private_key_t {
  */
 builder_t *openssl_rsa_private_key_builder(key_type_t type);
 
-#endif /*OPENSSL_RSA_PRIVATE_KEY_H_ @}*/
+#endif /** OPENSSL_RSA_PRIVATE_KEY_H_ @}*/

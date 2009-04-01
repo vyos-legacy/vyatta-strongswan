@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_sim_plugin.h 4406 2008-10-10 08:36:01Z martin $
+ * $Id: eap_sim_plugin.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct eap_sim_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_SIM_PLUGIN_H_ @}*/
+#endif /** EAP_SIM_PLUGIN_H_ @}*/

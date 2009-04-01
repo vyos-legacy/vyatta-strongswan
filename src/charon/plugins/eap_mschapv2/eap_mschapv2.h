@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_mschapv2.h 4882 2009-02-18 19:57:15Z tobias $
+ * $Id: eap_mschapv2.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -56,4 +56,4 @@ eap_mschapv2_t *eap_mschapv2_create_server(identification_t *server, identificat
  */
 eap_mschapv2_t *eap_mschapv2_create_peer(identification_t *server, identification_t *peer);
 
-#endif /* EAP_MSCHAPV2_H_ @}*/
+#endif /** EAP_MSCHAPV2_H_ @}*/

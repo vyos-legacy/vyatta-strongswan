@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: asn1_parser.h 3894 2008-04-28 18:44:21Z andreas $
+ * $Id: asn1_parser.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -116,4 +116,4 @@ struct asn1_parser_t {
  */
 asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, chunk_t blob);
 
-#endif /* ASN1_PARSER_H_ @}*/
+#endif /** ASN1_PARSER_H_ @}*/

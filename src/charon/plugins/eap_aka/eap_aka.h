@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_aka.h 3491 2008-02-22 14:04:00Z martin $
+ * $Id: eap_aka.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -49,7 +49,7 @@ typedef struct eap_aka_t eap_aka_t;
  * a sequence number derived from time. It is initialized to the startup
  * time of the daemon. As long as the (UTC) time of the system is not
  * turned back while the daemon is not running, this method is secure.
- * To enable time based SEQs, #define SEQ_CHECK as 1. Default is to accept
+ * To enable time based SEQs, define SEQ_CHECK as 1. Default is to accept
  * any SEQ numbers. This allows an attacker to do replay attacks. But since
  * the server has proven his identity via IKE, such an attack is only
  * possible between server and AAA (if any).
@@ -80,4 +80,4 @@ eap_aka_t *eap_aka_create_server(identification_t *server, identification_t *pee
  */
 eap_aka_t *eap_aka_create_peer(identification_t *server, identification_t *peer);
 
-#endif /* EAP_AKA_H_ @}*/
+#endif /** EAP_AKA_H_ @}*/

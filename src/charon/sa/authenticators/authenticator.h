@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: authenticator.h 4276 2008-08-22 10:44:51Z martin $
+ * $Id: authenticator.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -162,4 +162,4 @@ authenticator_t *authenticator_create_from_class(ike_sa_t *ike_sa,
 authenticator_t *authenticator_create_from_method(ike_sa_t *ike_sa,	
 												  auth_method_t method);
 
-#endif /* AUTHENTICATOR_H_ @} */
+#endif /** AUTHENTICATOR_H_ @}*/

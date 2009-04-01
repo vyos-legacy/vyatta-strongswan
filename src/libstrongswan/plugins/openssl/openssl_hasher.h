@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  * 
- * $Id: openssl_hasher.h 4000 2008-05-22 12:13:10Z tobias $
+ * $Id: openssl_hasher.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -42,9 +42,8 @@ struct openssl_hasher_t {
  * Constructor to create openssl_hasher_t.
  * 
  * @param algo			algorithm
- * @param key_size		key size in bytes
  * @return				openssl_hasher_t, NULL if not supported
  */
 openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo);
 
-#endif /* OPENSSL_HASHER_H_ @}*/
+#endif /** OPENSSL_HASHER_H_ @}*/

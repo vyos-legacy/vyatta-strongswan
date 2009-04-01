@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: process_message_job.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: process_message_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -48,4 +48,4 @@ struct process_message_job_t {
  */
 process_message_job_t *process_message_job_create(message_t *message);
 
-#endif /*PROCESS_MESSAGE_JOB_H_ @} */
+#endif /** PROCESS_MESSAGE_JOB_H_ @}*/

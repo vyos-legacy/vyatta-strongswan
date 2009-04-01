@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_netlink_ipsec.h 4358 2008-09-25 13:56:23Z tobias $
+ * $Id: kernel_netlink_ipsec.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -45,4 +45,4 @@ struct kernel_netlink_ipsec_t {
  */
 kernel_netlink_ipsec_t *kernel_netlink_ipsec_create();
 
-#endif /* KERNEL_NETLINK_IPSEC_H_ @} */
+#endif /** KERNEL_NETLINK_IPSEC_H_ @}*/

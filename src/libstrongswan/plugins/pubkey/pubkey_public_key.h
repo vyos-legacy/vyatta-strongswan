@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: pubkey_public_key.h 3961 2008-05-15 12:33:00Z tobias $
+ * $Id: pubkey_public_key.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -33,4 +33,4 @@
  */
 builder_t *pubkey_public_key_builder(key_type_t type);
 
-#endif /*PUBKEY_RSA_PUBLIC_KEY_H_ @}*/
+#endif /** PUBKEY_RSA_PUBLIC_KEY_H_ @}*/

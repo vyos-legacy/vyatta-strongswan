@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509.h 3656 2008-03-25 22:28:27Z andreas $
+ * $Id: x509.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -104,4 +104,4 @@ struct x509_t {
 	enumerator_t* (*create_ocsp_uri_enumerator)(x509_t *this);
 };
 
-#endif /* X509_H_ @}*/
+#endif /** X509_H_ @}*/

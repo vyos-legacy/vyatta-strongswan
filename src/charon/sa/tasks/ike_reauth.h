@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_reauth.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ike_reauth.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -50,4 +50,4 @@ struct ike_reauth_t {
  */
 ike_reauth_t *ike_reauth_create(ike_sa_t *ike_sa);
 
-#endif /* IKE_REAUTH_H_ @} */
+#endif /** IKE_REAUTH_H_ @}*/

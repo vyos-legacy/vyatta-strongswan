@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: sql_plugin.h 3577 2008-03-12 14:38:35Z martin $
+ * $Id: sql_plugin.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct sql_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* SQL_PLUGIN_H_ @}*/
+#endif /** SQL_PLUGIN_H_ @}*/

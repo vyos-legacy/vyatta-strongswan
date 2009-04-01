@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  * 
- * $Id: openssl_crypter.h 4000 2008-05-22 12:13:10Z tobias $
+ * $Id: openssl_crypter.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -48,4 +48,4 @@ struct openssl_crypter_t {
 openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 												  size_t key_size);
 
-#endif /* OPENSSL_CRYPTER_H_ @}*/
+#endif /** OPENSSL_CRYPTER_H_ @}*/

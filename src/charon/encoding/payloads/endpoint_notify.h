@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: endpoint_notify.h 3701 2008-03-31 10:56:49Z tobias $
+ * $Id: endpoint_notify.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -172,4 +172,4 @@ endpoint_notify_t *endpoint_notify_create_from_host(me_endpoint_type_t type,
  */
 endpoint_notify_t *endpoint_notify_create_from_payload(notify_payload_t *notify);
 
-#endif /*ENDPOINT_NOTIFY_H_ @} */
+#endif /** ENDPOINT_NOTIFY_H_ @}*/

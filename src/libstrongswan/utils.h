@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: utils.h 4936 2009-03-12 18:07:32Z tobias $
+ * $Id: utils.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -311,4 +311,4 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 int mem_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					const void *const *args);
 
-#endif /* UTILS_H_ @}*/
+#endif /** UTILS_H_ @}*/

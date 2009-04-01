@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa_manager.h 4811 2008-12-17 09:00:22Z martin $
+ * $Id: ike_sa_manager.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -216,4 +216,4 @@ struct ike_sa_manager_t {
  */
 ike_sa_manager_t *ike_sa_manager_create(void);
 
-#endif /*IKE_SA_MANAGER_H_ @} */
+#endif /** IKE_SA_MANAGER_H_ @}*/

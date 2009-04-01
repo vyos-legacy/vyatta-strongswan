@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa_id.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ike_sa_id.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -125,4 +125,4 @@ struct ike_sa_id_t {
 ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi,
 							   bool is_initiaor);
 
-#endif /*IKE_SA_ID_H_ @} */
+#endif /** IKE_SA_ID_H_ @}*/

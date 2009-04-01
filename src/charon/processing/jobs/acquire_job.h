@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: acquire_job.h 4535 2008-10-31 01:43:23Z andreas $
+ * $Id: acquire_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -55,4 +55,4 @@ acquire_job_t *acquire_job_create(u_int32_t reqid,
 								  traffic_selector_t *src_ts,
 								  traffic_selector_t *dst_ts);
 
-#endif /* REKEY_CHILD_SA_JOB_H_ @} */
+#endif /** REKEY_CHILD_SA_JOB_H_ @}*/

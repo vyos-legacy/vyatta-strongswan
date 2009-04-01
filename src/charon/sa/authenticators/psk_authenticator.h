@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: psk_authenticator.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: psk_authenticator.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct psk_authenticator_t {
  */
 psk_authenticator_t *psk_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* PSK_AUTHENTICATOR_H_ @} */
+#endif /** PSK_AUTHENTICATOR_H_ @}*/

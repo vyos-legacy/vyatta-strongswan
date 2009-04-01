@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: private_key.h 3620 2008-03-19 14:21:56Z martin $
+ * $Id: private_key.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -111,4 +111,4 @@ struct private_key_t {
     void (*destroy)(private_key_t *this);
 };
 
-#endif /* PRIVATE_KEY_H_ @} */
+#endif /** PRIVATE_KEY_H_ @}*/

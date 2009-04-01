@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: linked_list.h 4576 2008-11-05 08:32:38Z martin $
+ * $Id: linked_list.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -272,4 +272,4 @@ struct linked_list_t {
  */
 linked_list_t *linked_list_create(void);
 
-#endif /*LINKED_LIST_H_ @} */
+#endif /** LINKED_LIST_H_ @}*/

@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_interface.h 4618 2008-11-11 09:22:00Z tobias $
+ * $Id: kernel_interface.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -379,4 +379,4 @@ struct kernel_interface_t {
  */
 kernel_interface_t *kernel_interface_create(void);
 
-#endif /* KERNEL_INTERFACE_H_ @} */
+#endif /** KERNEL_INTERFACE_H_ @}*/

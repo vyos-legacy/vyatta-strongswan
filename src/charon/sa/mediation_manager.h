@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: mediation_manager.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: mediation_manager.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -88,4 +88,4 @@ struct mediation_manager_t {
  */
 mediation_manager_t *mediation_manager_create(void);
 
-#endif /*MEDIATION_MANAGER_H_ @} */
+#endif /** MEDIATION_MANAGER_H_ @}*/

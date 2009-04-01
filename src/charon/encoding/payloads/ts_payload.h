@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ts_payload.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ts_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -126,4 +126,4 @@ ts_payload_t *ts_payload_create(bool is_initiator);
 ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, 
 											linked_list_t *traffic_selectors);
 
-#endif /* TS_PAYLOAD_H_ @} */
+#endif /** TS_PAYLOAD_H_ @}*/

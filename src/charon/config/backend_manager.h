@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: backend_manager.h 4132 2008-07-01 09:05:20Z martin $
+ * $Id: backend_manager.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -119,5 +119,4 @@ struct backend_manager_t {
  */
 backend_manager_t* backend_manager_create(void);
 
-#endif /*BACKEND_MANAGER_H_ @} */
-
+#endif /** BACKEND_MANAGER_H_ @}*/

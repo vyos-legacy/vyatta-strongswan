@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_netlink_net.h 4350 2008-09-18 15:16:43Z tobias $
+ * $Id: kernel_netlink_net.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -45,4 +45,4 @@ struct kernel_netlink_net_t {
  */
 kernel_netlink_net_t *kernel_netlink_net_create();
 
-#endif /* KERNEL_NETLINK_NET_H_ @} */
+#endif /** KERNEL_NETLINK_NET_H_ @}*/

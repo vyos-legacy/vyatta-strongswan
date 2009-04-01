@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_payload.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: eap_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -128,4 +128,4 @@ eap_payload_t *eap_payload_create_code(eap_code_t code, u_int8_t identifier);
  */
 eap_payload_t *eap_payload_create_nak(u_int8_t identifier);
 
-#endif /* EAP_PAYLOAD_H_ @} */
+#endif /** EAP_PAYLOAD_H_ @}*/

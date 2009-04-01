@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: manager.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: manager.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -95,4 +95,4 @@ struct manager_t {
  */
 manager_t *manager_create(storage_t *storage);
 
-#endif /* MANAGER_H_ @} */
+#endif /** MANAGER_H_ @}*/

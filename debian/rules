@@ -18,6 +18,7 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-mediation --enable-medsrv --enable-medcli \
 		--enable-openssl --enable-agent \
+		--enable-eap-radius \
 		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
 		--disable-md5 --disable-sha1 --disable-sha2 \
 		--enable-nm

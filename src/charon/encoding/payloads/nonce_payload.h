@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: nonce_payload.h 4819 2008-12-31 08:58:49Z martin $
+ * $Id: nonce_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -77,4 +77,4 @@ struct nonce_payload_t {
  */
 nonce_payload_t *nonce_payload_create(void);
 
-#endif /*NONCE_PAYLOAD_H_ @} */
+#endif /** NONCE_PAYLOAD_H_ @}*/

@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: notify_payload.h 4842 2009-01-19 12:32:42Z andreas $
+ * $Id: notify_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -215,4 +215,4 @@ notify_payload_t *notify_payload_create(void);
 notify_payload_t *notify_payload_create_from_protocol_and_type(
 								protocol_id_t protocol_id, notify_type_t type);
 
-#endif /*NOTIFY_PAYLOAD_H_ @} */
+#endif /** NOTIFY_PAYLOAD_H_ @}*/

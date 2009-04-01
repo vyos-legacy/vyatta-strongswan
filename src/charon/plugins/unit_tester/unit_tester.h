@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: unit_tester.h 3491 2008-02-22 14:04:00Z martin $
+ * $Id: unit_tester.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -48,4 +48,4 @@ struct unit_tester_t {
  */
 plugin_t *plugin_create();
 
-#endif /* UNIT_TESTER_H_ @}*/
+#endif /** UNIT_TESTER_H_ @}*/

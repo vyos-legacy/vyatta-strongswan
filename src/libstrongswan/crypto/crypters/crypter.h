@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: crypter.h 4886 2009-02-19 13:46:08Z tobias $
+ * $Id: crypter.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -122,4 +122,4 @@ struct crypter_t {
 	void (*destroy) (crypter_t *this);
 };
 
-#endif /*CRYPTER_H_ @} */
+#endif /** CRYPTER_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_klips_plugin.h 4617 2008-11-11 08:45:19Z tobias $
+ * $Id: kernel_klips_plugin.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct kernel_klips_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* KERNEL_KLIPS_PLUGIN_H_ @} */
+#endif /** KERNEL_KLIPS_PLUGIN_H_ @}*/

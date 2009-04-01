@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: library.h 4936 2009-03-12 18:07:32Z tobias $
+ * $Id: library.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -132,4 +132,4 @@ void library_deinit();
  */
 extern library_t *lib;
 
-#endif /* LIBRARY_H_ @}*/
+#endif /** LIBRARY_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: rekey_child_sa_job.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: rekey_child_sa_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -56,4 +56,4 @@ struct rekey_child_sa_job_t {
 rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid, 
 												protocol_id_t protocol,
 												u_int32_t spi);
-#endif /* REKEY_CHILD_SA_JOB_H_ @} */
+#endif /** REKEY_CHILD_SA_JOB_H_ @}*/

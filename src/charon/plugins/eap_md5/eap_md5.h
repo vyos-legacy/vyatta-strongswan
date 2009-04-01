@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_md5.h 3491 2008-02-22 14:04:00Z martin $
+ * $Id: eap_md5.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -56,4 +56,4 @@ eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *pee
  */
 eap_md5_t *eap_md5_create_peer(identification_t *server, identification_t *peer);
 
-#endif /* EAP_MD5_H_ @}*/
+#endif /** EAP_MD5_H_ @}*/

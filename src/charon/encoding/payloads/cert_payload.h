@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: cert_payload.h 3838 2008-04-18 11:24:45Z tobias $
+ * $Id: cert_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -115,7 +115,6 @@ struct cert_payload_t {
 /**
  * Creates an empty certificate payload.
  * 
- * @param cert				certificate to embed
  * @return					cert_payload_t object
  */
 cert_payload_t *cert_payload_create(void);
@@ -137,4 +136,4 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert);
  */
 cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url);
 
-#endif /* CERT_PAYLOAD_H_ @} */
+#endif /** CERT_PAYLOAD_H_ @}*/

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: delete_ike_sa_job.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: delete_ike_sa_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -56,4 +56,4 @@ struct delete_ike_sa_job_t {
 delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id,
 											  bool delete_if_established);
 
-#endif /* DELETE_IKE_SA_JOB_H_ @} */
+#endif /** DELETE_IKE_SA_JOB_H_ @}*/

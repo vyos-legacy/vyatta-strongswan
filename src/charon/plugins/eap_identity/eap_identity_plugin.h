@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_identity_plugin.h 3491 2008-02-22 14:04:00Z martin $
+ * $Id: eap_identity_plugin.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct eap_identity_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_IDENTITY_PLUGIN_H_ @}*/
+#endif /** EAP_IDENTITY_PLUGIN_H_ @}*/

@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-# RCSID $Id: build-umlrootfs 4889 2009-02-19 22:02:28Z andreas $
+# RCSID $Id: build-umlrootfs 5006 2009-03-25 07:26:53Z andreas $
 
 DIR=`dirname $0`
 
@@ -165,6 +165,11 @@ fi
 if [ "$USE_EAP_IDENTITY" = "yes" ]
 then
     echo -n " --enable-eap-identity" >> $INSTALLSHELL
+fi
+
+if [ "$USE_EAP_RADIUS" = "yes" ]
+then
+    echo -n " --enable-eap-radius" >> $INSTALLSHELL
 fi
 
 if [ "$USE_SQL" = "yes" ]

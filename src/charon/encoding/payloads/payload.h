@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: payload.h 4875 2009-02-17 17:14:15Z tobias $
+ * $Id: payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -271,4 +271,4 @@ struct payload_t {
  */
 payload_t *payload_create(payload_type_t type);
 
-#endif /*PAYLOAD_H_ @} */
+#endif /** PAYLOAD_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: proposal.h 4936 2009-03-12 18:07:32Z tobias $
+ * $Id: proposal.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -243,4 +243,4 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 						 const void *const *args);
 
-#endif /* PROPOSAL_H_ @} */
+#endif /** PROPOSAL_H_ @}*/

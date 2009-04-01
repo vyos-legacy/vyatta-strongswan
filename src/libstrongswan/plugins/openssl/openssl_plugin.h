@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  * 
- * $Id: openssl_plugin.h 4000 2008-05-22 12:13:10Z tobias $
+ * $Id: openssl_plugin.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct openssl_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* OPENSSL_PLUGIN_H_ @}*/
+#endif /** OPENSSL_PLUGIN_H_ @}*/

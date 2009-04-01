@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: message.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: message.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -353,4 +353,4 @@ message_t * message_create_from_packet(packet_t *packet);
  */
 message_t * message_create(void);
 
-#endif /*MESSAGE_H_ @} */
+#endif /** MESSAGE_H_ @}*/

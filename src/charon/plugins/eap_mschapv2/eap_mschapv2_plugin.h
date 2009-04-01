@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_mschapv2_plugin.h 4882 2009-02-18 19:57:15Z tobias $
+ * $Id: eap_mschapv2_plugin.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct eap_mschapv2_plugin_t {
  */
 plugin_t *plugin_create();
 
-#endif /* EAP_MSCHAPV2_PLUGIN_H_ @}*/
+#endif /** EAP_MSCHAPV2_PLUGIN_H_ @}*/

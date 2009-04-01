@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: hashtable.h 4762 2008-12-05 10:01:52Z martin $
+ * $Id: hashtable.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -113,4 +113,4 @@ struct hashtable_t {
 hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 							  u_int capacity);
 
-#endif /* HASHTABLE_H_ @} */
+#endif /** HASHTABLE_H_ @}*/

@@ -80,16 +80,18 @@ ipsec_PROGRAMS = charon$(EXEEXT)
 @USE_EAP_AKA_TRUE@am__append_34 = eapaka
 @USE_EAP_MSCHAPV2_TRUE@am__append_35 = plugins/eap_mschapv2
 @USE_EAP_MSCHAPV2_TRUE@am__append_36 = eapmschapv2
-@USE_MEDSRV_TRUE@am__append_37 = plugins/medsrv
-@USE_MEDSRV_TRUE@am__append_38 = medsrv
-@USE_MEDCLI_TRUE@am__append_39 = plugins/medcli
-@USE_MEDCLI_TRUE@am__append_40 = medcli
-@USE_NM_TRUE@am__append_41 = plugins/nm
-@USE_NM_TRUE@am__append_42 = nm
-@USE_UCI_TRUE@am__append_43 = plugins/uci
-@USE_UCI_TRUE@am__append_44 = uci
-@USE_UNIT_TESTS_TRUE@am__append_45 = plugins/unit_tester
-@USE_UNIT_TESTS_TRUE@am__append_46 = unit-tester
+@USE_EAP_RADIUS_TRUE@am__append_37 = plugins/eap_radius
+@USE_EAP_RADIUS_TRUE@am__append_38 = eapradius
+@USE_MEDSRV_TRUE@am__append_39 = plugins/medsrv
+@USE_MEDSRV_TRUE@am__append_40 = medsrv
+@USE_MEDCLI_TRUE@am__append_41 = plugins/medcli
+@USE_MEDCLI_TRUE@am__append_42 = medcli
+@USE_NM_TRUE@am__append_43 = plugins/nm
+@USE_NM_TRUE@am__append_44 = nm
+@USE_UCI_TRUE@am__append_45 = plugins/uci
+@USE_UCI_TRUE@am__append_46 = uci
+@USE_UNIT_TESTS_TRUE@am__append_47 = plugins/unit_tester
+@USE_UNIT_TESTS_TRUE@am__append_48 = unit-tester
 subdir = src/charon
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -311,8 +313,8 @@ DIST_SUBDIRS = . plugins/load_tester plugins/kernel_pfkey \
 	plugins/smp plugins/sql plugins/updown plugins/eap_identity \
 	plugins/eap_sim plugins/eap_sim_file plugins/eap_md5 \
 	plugins/eap_gtc plugins/eap_aka plugins/eap_mschapv2 \
-	plugins/medsrv plugins/medcli plugins/nm plugins/uci \
-	plugins/unit_tester
+	plugins/eap_radius plugins/medsrv plugins/medcli plugins/nm \
+	plugins/uci plugins/unit_tester
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -587,14 +589,15 @@ SUBDIRS = . $(am__append_7) $(am__append_9) $(am__append_11) \
 	$(am__append_25) $(am__append_27) $(am__append_29) \
 	$(am__append_31) $(am__append_33) $(am__append_35) \
 	$(am__append_37) $(am__append_39) $(am__append_41) \
-	$(am__append_43) $(am__append_45)
+	$(am__append_43) $(am__append_45) $(am__append_47)
 PLUGINS = ${libstrongswan_plugins} $(am__append_8) $(am__append_10) \
 	$(am__append_12) $(am__append_14) $(am__append_16) \
 	$(am__append_18) $(am__append_20) $(am__append_22) \
 	$(am__append_24) $(am__append_26) $(am__append_28) \
 	$(am__append_30) $(am__append_32) $(am__append_34) \
 	$(am__append_36) $(am__append_38) $(am__append_40) \
-	$(am__append_42) $(am__append_44) $(am__append_46)
+	$(am__append_42) $(am__append_44) $(am__append_46) \
+	$(am__append_48)
 all: all-recursive
 
 .SUFFIXES:

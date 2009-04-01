@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: connect_manager.h 3792 2008-04-10 12:51:04Z tobias $
+ * $Id: connect_manager.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -120,4 +120,4 @@ struct connect_manager_t {
  */
 connect_manager_t *connect_manager_create(void);
 
-#endif /*CONNECT_MANAGER_H_ @} */
+#endif /** CONNECT_MANAGER_H_ @}*/
