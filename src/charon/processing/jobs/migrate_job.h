@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: migrate_job.h 4662 2008-11-16 21:19:58Z andreas $
+ * $Id: migrate_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -62,4 +62,4 @@ migrate_job_t *migrate_job_create(u_int32_t reqid,
 								  policy_dir_t dir,
 								  host_t *local, host_t *remote);
 
-#endif /* MIGRATE_JOB_H_ @} */
+#endif /** MIGRATE_JOB_H_ @}*/

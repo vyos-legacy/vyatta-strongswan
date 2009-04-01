@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: traffic_selector_substructure.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: traffic_selector_substructure.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -150,4 +150,4 @@ traffic_selector_substructure_t *traffic_selector_substructure_create(void);
 traffic_selector_substructure_t *traffic_selector_substructure_create_from_traffic_selector(
 										traffic_selector_t *traffic_selector);
 
-#endif /* /TRAFFIC_SELECTOR_SUBSTRUCTURE_H_ @} */
+#endif /** TRAFFIC_SELECTOR_SUBSTRUCTURE_H_ @}*/

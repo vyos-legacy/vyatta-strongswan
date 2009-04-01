@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: transform_attribute.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: transform_attribute.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -131,4 +131,4 @@ transform_attribute_t *transform_attribute_create(void);
  */
 transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length);
 
-#endif /*TRANSFORM_ATTRIBUTE_H_ @} */
+#endif /** TRANSFORM_ATTRIBUTE_H_ @}*/

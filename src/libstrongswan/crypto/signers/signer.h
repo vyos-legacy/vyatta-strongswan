@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: signer.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: signer.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -51,6 +51,8 @@ enum integrity_algorithm_t {
 	AUTH_HMAC_SHA2_512_256 = 14,
 	/** Implemented via hmac_signer_t */
 	AUTH_HMAC_SHA1_128 = 1025,
+	/** Implemented via hmac_signer_t */
+	AUTH_HMAC_MD5_128 = 1026,
 };
 
 /**
@@ -120,4 +122,4 @@ struct signer_t {
 	void (*destroy) (signer_t *this);
 };
 
-#endif /*SIGNER_H_ @} */
+#endif /** SIGNER_H_ @}*/

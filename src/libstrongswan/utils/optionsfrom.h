@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: optionsfrom.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: optionsfrom.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -56,4 +56,4 @@ struct options_t {
  */
 options_t *options_create(void);
 
-#endif /*OPTIONSFROM_H_ @} */
+#endif /** OPTIONSFROM_H_ @}*/

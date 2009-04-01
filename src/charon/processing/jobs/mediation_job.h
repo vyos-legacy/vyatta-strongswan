@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: mediation_job.h 3666 2008-03-26 18:40:19Z tobias $
+ * $Id: mediation_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -73,4 +73,4 @@ mediation_job_t *mediation_job_create(identification_t *peer_id,
 mediation_job_t *mediation_callback_job_create(identification_t *requester,
 		identification_t *peer_id);
 
-#endif /*MEDIATION_JOB_H_ @} */
+#endif /** MEDIATION_JOB_H_ @}*/

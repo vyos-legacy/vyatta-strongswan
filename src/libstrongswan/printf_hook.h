@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: printf_hook.h 4936 2009-03-12 18:07:32Z tobias $
+ * $Id: printf_hook.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -150,4 +150,4 @@ struct printf_hook_t {
  */
 printf_hook_t *printf_hook_create();
 
-#endif /* PRINTF_HOOK_H_ @}*/
+#endif /** PRINTF_HOOK_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: enumerator.h 4142 2008-07-02 08:09:07Z martin $
+ * $Id: enumerator.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -122,7 +122,7 @@ enumerator_t* enumerator_create_token(char *string, char *sep, char *trim);
  * @return						the nested enumerator
  */
 enumerator_t *enumerator_create_nested(enumerator_t *outer,
-					enumerator_t *(inner_constructor)(void *outer, void *data),
+					enumerator_t *(*inner_constructor)(void *outer, void *data),
 					void *data, void (*destroy_data)(void *data));
 
 /**
@@ -157,4 +157,4 @@ enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
 enumerator_t *enumerator_create_cleaner(enumerator_t *wrapped,
 					void (*cleanup)(void *data), void *data);
 
-#endif /* ENUMERATOR_H_ @} */
+#endif /** ENUMERATOR_H_ @}*/

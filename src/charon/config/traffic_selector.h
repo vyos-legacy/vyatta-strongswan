@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: traffic_selector.h 4936 2009-03-12 18:07:32Z tobias $
+ * $Id: traffic_selector.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -264,6 +264,8 @@ traffic_selector_t *traffic_selector_create_from_bytes(
  * 
  * @param net			subnet to use
  * @param netbits		size of the subnet, as used in e.g. 192.168.0.0/24 notation
+ * @param protocol 		protocol for this ts, such as TCP or UDP
+ * @param port			port number, host order
  * @return
  * 						- traffic_selector_t object
  * 						- NULL if address family of net not supported
@@ -301,4 +303,4 @@ traffic_selector_t *traffic_selector_create_dynamic(u_int8_t protocol,
 int traffic_selector_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 								 const void *const *args);
 
-#endif /* TRAFFIC_SELECTOR_H_ @} */
+#endif /** TRAFFIC_SELECTOR_H_ @}*/

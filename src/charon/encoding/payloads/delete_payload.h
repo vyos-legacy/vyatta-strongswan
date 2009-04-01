@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: delete_payload.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: delete_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -83,4 +83,4 @@ struct delete_payload_t {
  */
 delete_payload_t *delete_payload_create(protocol_id_t protocol_id);
 
-#endif /* DELETE_PAYLOAD_H_ @} */
+#endif /** DELETE_PAYLOAD_H_ @}*/

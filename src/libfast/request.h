@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: request.h 3531 2008-03-06 09:50:56Z martin $
+ * $Id: request.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -183,4 +183,4 @@ struct request_t {
  */
 request_t *request_create(int fd, bool debug);
 
-#endif /* REQUEST_H_ @} */
+#endif /** REQUEST_H_ @}*/

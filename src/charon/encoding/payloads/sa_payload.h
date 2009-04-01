@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: sa_payload.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: sa_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -114,4 +114,4 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals);
  */
 sa_payload_t *sa_payload_create_from_proposal(proposal_t *proposal);
 
-#endif /*SA_PAYLOAD_H_ @} */
+#endif /** SA_PAYLOAD_H_ @}*/

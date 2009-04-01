@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: bus.h 4622 2008-11-11 10:52:37Z martin $
+ * $Id: bus.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -350,4 +350,4 @@ struct bus_t {
  */
 bus_t *bus_create();
 
-#endif /* BUS_H_ @} */
+#endif /** BUS_H_ @}*/

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: processor.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: processor.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -93,4 +93,4 @@ struct processor_t {
  */
 processor_t *processor_create();
 
-#endif /*PROCESSOR_H_ @} */
+#endif /** PROCESSOR_H_ @}*/

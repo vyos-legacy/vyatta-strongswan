@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: sys_logger.h 4434 2008-10-14 08:52:13Z martin $
+ * $Id: sys_logger.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -61,4 +61,4 @@ struct sys_logger_t {
  */
 sys_logger_t *sys_logger_create(int facility);
 
-#endif /* SYS_LOGGER_H_ @} */
+#endif /** SYS_LOGGER_H_ @}*/

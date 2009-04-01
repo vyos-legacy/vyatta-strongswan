@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: task.h 3666 2008-03-26 18:40:19Z tobias $
+ * $Id: task.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -145,4 +145,4 @@ struct task_t {
 	void (*destroy) (task_t *this);
 };
 
-#endif /* TASK_H_ @} */
+#endif /** TASK_H_ @}*/

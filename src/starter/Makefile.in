@@ -33,6 +33,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 ipsec_PROGRAMS = starter$(EXEEXT)
+@USE_PLUTO_TRUE@am__append_1 = -DSTART_PLUTO
+@USE_CHARON_TRUE@am__append_2 = -DSTART_CHARON
 subdir = src/starter
 DIST_COMMON = README $(dist_man_MANS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -219,7 +221,9 @@ keywords.c files.h keywords.h cmp.c starter.c cmp.h exec.c invokecharon.c \
 exec.h invokecharon.h lex.yy.c loglite.c klips.c klips.h
 
 INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libfreeswan -I$(top_srcdir)/src/pluto -I$(top_srcdir)/src/whack -I$(top_srcdir)/src/stroke
-AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\" -DDEBUG
+AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\" -DIPSEC_EAPDIR=\"${eapdir}\" \
+	-DDEBUG $(am__append_1) $(am__append_2)
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
 dist_man_MANS = ipsec.conf.5 starter.8

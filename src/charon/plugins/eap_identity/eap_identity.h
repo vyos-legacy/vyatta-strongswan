@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_identity.h 4276 2008-08-22 10:44:51Z martin $
+ * $Id: eap_identity.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -58,4 +58,4 @@ eap_identity_t *eap_identity_create_server(identification_t *server,
 eap_identity_t *eap_identity_create_peer(identification_t *server,
 										 identification_t *peer);
 
-#endif /* EAP_IDENTITY_H_ @}*/
+#endif /** EAP_IDENTITY_H_ @}*/

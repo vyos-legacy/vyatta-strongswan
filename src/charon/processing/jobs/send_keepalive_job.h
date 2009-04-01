@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: send_keepalive_job.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: send_keepalive_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -50,4 +50,4 @@ struct send_keepalive_job_t {
  */
 send_keepalive_job_t *send_keepalive_job_create(ike_sa_id_t *ike_sa_id);
 
-#endif /*SEND_KEEPALIVE_JOB_H_ @} */
+#endif /** SEND_KEEPALIVE_JOB_H_ @}*/

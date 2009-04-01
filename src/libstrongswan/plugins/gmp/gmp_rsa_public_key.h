@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: gmp_rsa_public_key.h 3721 2008-04-01 14:51:31Z martin $
+ * $Id: gmp_rsa_public_key.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -47,4 +47,4 @@ struct gmp_rsa_public_key_t {
  */
 builder_t *gmp_rsa_public_key_builder(key_type_t type);
 
-#endif /*GMP_RSA_PUBLIC_KEY_H_ @}*/
+#endif /** GMP_RSA_PUBLIC_KEY_H_ @}*/

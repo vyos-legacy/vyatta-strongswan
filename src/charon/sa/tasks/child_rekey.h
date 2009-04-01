@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: child_rekey.h 4730 2008-12-01 18:38:28Z martin $
+ * $Id: child_rekey.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -63,4 +63,4 @@ struct child_rekey_t {
 child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 								  u_int32_t spi);
 
-#endif /* CHILD_REKEY_H_ @} */
+#endif /** CHILD_REKEY_H_ @}*/

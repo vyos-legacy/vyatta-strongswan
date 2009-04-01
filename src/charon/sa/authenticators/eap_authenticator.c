@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_authenticator.c 4754 2008-12-04 10:09:21Z martin $
+ * $Id: eap_authenticator.c 5037 2009-03-26 13:58:17Z andreas $
  */
 
 #include <string.h>
@@ -141,7 +141,8 @@ static identification_t *get_peer_id(private_eap_authenticator_t *this)
 	{
 		config = this->ike_sa->get_peer_cfg(this->ike_sa);
 		auth = config->get_auth(config);
-		if (!auth->get_item(auth, AUTHN_EAP_IDENTITY, (void**)&id))
+		if (!auth->get_item(auth, AUTHN_EAP_IDENTITY, (void**)&id) ||
+			id->get_type(id) == ID_ANY)
 		{
 			if (this->role == EAP_PEER)
 			{
@@ -252,7 +253,7 @@ static status_t initiate(private_eap_authenticator_t *this, eap_type_t type,
 	if (this->method->initiate(this->method, out) != NEED_MORE)
 	{
 		DBG1(DBG_IKE, "failed to initiate EAP exchange, sending %N",
-			 eap_type_names, type, eap_code_names, EAP_FAILURE);
+			 eap_code_names, EAP_FAILURE);
 		*out = eap_payload_create_code(EAP_FAILURE, 0);
 		return FAILED;	
 	}
@@ -412,7 +413,7 @@ static status_t process_server(private_eap_authenticator_t *this,
 			}
 			else
 			{
-				DBG1(DBG_IKE, "EAP method %N failed for peer %D",
+				DBG1(DBG_IKE, "EAP method %N failed for peer '%D'",
 					 eap_type_names, type,
 					 this->ike_sa->get_other_id(this->ike_sa));
 			}

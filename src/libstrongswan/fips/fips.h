@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: fips.h 3877 2008-04-26 09:40:22Z andreas $
+ * $Id: fips.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -43,4 +43,4 @@ bool fips_compute_hmac_signature(const char *key, char *signature);
  */
 bool fips_verify_hmac_signature(const char *key, const char *signature);
 
-#endif /*FIPS_H_ @} */
+#endif /** FIPS_H_ @}*/

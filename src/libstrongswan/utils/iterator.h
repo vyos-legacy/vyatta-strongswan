@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: iterator.h 4577 2008-11-05 08:37:09Z martin $
+ * $Id: iterator.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -113,4 +113,4 @@ struct iterator_t {
 	void (*destroy) (iterator_t *this);
 };
 
-#endif /*ITERATOR_H_ @} */
+#endif /** ITERATOR_H_ @}*/

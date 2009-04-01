@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_dpd.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ike_dpd.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -50,4 +50,4 @@ struct ike_dpd_t {
  */
 ike_dpd_t *ike_dpd_create(bool initiator);
 
-#endif /* IKE_DPD_H_ @} */
+#endif /** IKE_DPD_H_ @}*/

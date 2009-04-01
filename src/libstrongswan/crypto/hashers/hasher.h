@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: hasher.h 4880 2009-02-18 19:45:46Z tobias $
+ * $Id: hasher.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -133,4 +133,4 @@ int hasher_algorithm_to_oid(hash_algorithm_t alg);
  */
 int hasher_signature_algorithm_to_oid(hash_algorithm_t alg);
 
-#endif /* HASHER_H_ @} */
+#endif /** HASHER_H_ @}*/

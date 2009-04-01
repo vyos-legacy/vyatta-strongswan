@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_header.h 3666 2008-03-26 18:40:19Z tobias $
+ * $Id: ike_header.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -227,4 +227,4 @@ struct ike_header_t {
  */
 ike_header_t *ike_header_create(void);
 
-#endif /*IKE_HEADER_H_ @} */
+#endif /** IKE_HEADER_H_ @}*/

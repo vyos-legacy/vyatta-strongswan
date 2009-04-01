@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: credential_set.h 4229 2008-07-30 11:38:44Z martin $
+ * $Id: credential_set.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -107,4 +107,4 @@ struct credential_set_t {
 	void (*cache_cert)(credential_set_t *this, certificate_t *cert);	
 };
 
-#endif /* CREDENTIAL_SET_H_ @} */
+#endif /** CREDENTIAL_SET_H_ @}*/

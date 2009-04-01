@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_method.h 4882 2009-02-18 19:57:15Z tobias $
+ * $Id: eap_method.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -57,6 +57,8 @@ enum eap_type_t {
 	EAP_SIM = 18,
 	EAP_AKA = 23,
 	EAP_MSCHAPV2 = 26,
+	/** not a method, but an implementation providing different methods */
+	EAP_RADIUS = 253,
 	EAP_EXPANDED = 254,
 	EAP_EXPERIMENTAL = 255,
 };
@@ -185,4 +187,4 @@ struct eap_method_t {
 typedef eap_method_t *(*eap_constructor_t)(identification_t *server,
 										   identification_t *peer);
 
-#endif /* EAP_METHOD_H_ @} */
+#endif /** EAP_METHOD_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: smp.h 3689 2008-03-28 12:44:01Z martin $
+ * $Id: smp.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -49,4 +49,4 @@ struct smp_t {
  */
 plugin_t *plugin_create();
 
-#endif /* XML_H_ @}*/
+#endif /** XML_H_ @}*/

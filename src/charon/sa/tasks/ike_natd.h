@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_natd.h 4368 2008-10-06 13:37:04Z martin $
+ * $Id: ike_natd.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -58,4 +58,4 @@ struct ike_natd_t {
  */
 ike_natd_t *ike_natd_create(ike_sa_t *ike_sa, bool initiator);
 
-#endif /* IKE_NATD_H_ @} */
+#endif /** IKE_NATD_H_ @}*/

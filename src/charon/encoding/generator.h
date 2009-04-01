@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: generator.h 4702 2008-11-26 10:42:54Z martin $
+ * $Id: generator.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -84,4 +84,4 @@ struct generator_t {
  */
 generator_t *generator_create(void);
 
-#endif /*GENERATOR_H_ @} */
+#endif /** GENERATOR_H_ @}*/

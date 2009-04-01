@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: initiate_mediation_job.h 3792 2008-04-10 12:51:04Z tobias $
+ * $Id: initiate_mediation_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -60,4 +60,4 @@ initiate_mediation_job_t *initiate_mediation_job_create(ike_sa_id_t *ike_sa_id);
 initiate_mediation_job_t *reinitiate_mediation_job_create(ike_sa_id_t *mediation_sa_id,
 		ike_sa_id_t *mediated_sa_id);
 
-#endif /*INITIATE_MEDIATION_JOB_H_ @} */
+#endif /** INITIATE_MEDIATION_JOB_H_ @}*/

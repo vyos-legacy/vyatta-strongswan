@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_net.h 4386 2008-10-08 08:23:46Z martin $
+ * $Id: kernel_net.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -142,4 +142,4 @@ struct kernel_net_t {
 	void (*destroy) (kernel_net_t *this);
 };
 
-#endif /* KERNEL_NET_H_ @} */
+#endif /** KERNEL_NET_H_ @}*/

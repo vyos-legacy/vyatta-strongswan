@@ -2,6 +2,8 @@ SUBDIRS = src testing scripts
 EXTRA_DIST = Doxyfile.in CREDITS
 CLEANFILES = apidoc Doxyfile
 
+ACLOCAL_AMFLAGS = -I m4
+
 Doxyfile :	Doxyfile.in
 		sed \
 		-e "s:\@PACKAGE_VERSION\@:$(PACKAGE_VERSION):" \

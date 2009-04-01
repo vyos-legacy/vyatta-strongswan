@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: crl.h 3656 2008-03-25 22:28:27Z andreas $
+ * $Id: crl.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -85,4 +85,4 @@ struct crl_t {
 	
 };
 
-#endif /* CRL_H_ @}*/
+#endif /** CRL_H_ @}*/

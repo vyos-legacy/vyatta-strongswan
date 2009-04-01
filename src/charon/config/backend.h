@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: backend.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: backend.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -72,4 +72,4 @@ struct backend_t {
 	peer_cfg_t *(*get_peer_cfg_by_name)(backend_t *this, char *name);
 };
 
-#endif /* BACKEND_H_ @} */
+#endif /** BACKEND_H_ @}*/

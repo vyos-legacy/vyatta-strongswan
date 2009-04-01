@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ke_payload.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ke_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -103,4 +103,4 @@ ke_payload_t *ke_payload_create(void);
 ke_payload_t *ke_payload_create_from_diffie_hellman(
 											diffie_hellman_t *diffie_hellman);
 
-#endif /* KE_PAYLOAD_H_ @} */
+#endif /** KE_PAYLOAD_H_ @}*/

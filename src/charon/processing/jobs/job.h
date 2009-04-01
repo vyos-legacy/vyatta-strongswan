@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: job.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -51,4 +51,4 @@ struct job_t {
 	void (*destroy) (job_t *job);
 };
 
-#endif /* JOB_H_ @} */
+#endif /** JOB_H_ @}*/

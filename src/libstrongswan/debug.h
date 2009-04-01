@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: debug.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: debug.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -60,4 +60,4 @@ extern void (*dbg) (int level, char *fmt, ...);
 /** default logging function, prints to stderr */
 void dbg_default(int level, char *fmt, ...);
 
-#endif /* DEBUG_H_ @} */
+#endif /** DEBUG_H_ @}*/

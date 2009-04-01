@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: configuration_attribute.h 4844 2009-01-20 22:55:13Z andreas $
+ * $Id: configuration_attribute.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -127,4 +127,4 @@ struct configuration_attribute_t {
  */
 configuration_attribute_t *configuration_attribute_create(void);
 
-#endif /* CONFIGURATION_ATTRIBUTE_H_ @} */
+#endif /** CONFIGURATION_ATTRIBUTE_H_ @}*/

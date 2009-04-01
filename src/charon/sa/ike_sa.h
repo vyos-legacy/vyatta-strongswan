@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa.h 4810 2008-12-16 17:21:28Z tobias $
+ * $Id: ike_sa.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -920,4 +920,4 @@ struct ike_sa_t {
  */
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id);
 
-#endif /* IKE_SA_H_ @} */
+#endif /** IKE_SA_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: x509_cert.h 3650 2008-03-22 08:15:18Z andreas $
+ * $Id: x509_cert.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct x509_cert_t {
  */
 builder_t *x509_cert_builder(certificate_type_t type);
 
-#endif /* X509_CERT_H_ @}*/
+#endif /** X509_CERT_H_ @}*/

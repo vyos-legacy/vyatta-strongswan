@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: openssl_util.h 4051 2008-06-10 09:08:27Z tobias $
+ * $Id: openssl_util.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -67,4 +67,4 @@ bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk);
  */
 bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b);
 
-#endif /*OPENSSL_UTIL_H_ @}*/
+#endif /** OPENSSL_UTIL_H_ @}*/

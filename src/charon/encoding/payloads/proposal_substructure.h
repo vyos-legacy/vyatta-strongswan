@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: proposal_substructure.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: proposal_substructure.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -172,4 +172,4 @@ proposal_substructure_t *proposal_substructure_create(void);
 proposal_substructure_t *proposal_substructure_create_from_proposal(
 														proposal_t *proposal);
 
-#endif /*PROPOSAL_SUBSTRUCTURE_H_ @} */
+#endif /** PROPOSAL_SUBSTRUCTURE_H_ @}*/

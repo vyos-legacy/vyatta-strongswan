@@ -15,7 +15,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: daemon.h 4797 2008-12-12 09:13:06Z martin $
+ * $Id: daemon.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -330,4 +330,4 @@ struct daemon_t {
  */
 extern daemon_t *charon;
 
-#endif /*DAEMON_H_ @} */
+#endif /** DAEMON_H_ @}*/

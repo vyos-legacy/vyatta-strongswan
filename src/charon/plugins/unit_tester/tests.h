@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: tests.h 4815 2008-12-18 16:24:22Z martin $
+ * $Id: tests.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -41,3 +41,5 @@ DEFINE_TEST("Base64 converter", test_chunk_base64, FALSE)
 DEFINE_TEST("IP pool", test_pool, FALSE)
 DEFINE_TEST("SSH agent", test_agent, FALSE)
 DEFINE_TEST("RNG quality", test_rng, FALSE)
+
+/** @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: dispatcher.h 3519 2008-03-02 12:14:34Z martin $
+ * $Id: dispatcher.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -136,4 +136,4 @@ struct dispatcher_t {
 dispatcher_t *dispatcher_create(char *socket, bool debug, int timeout,
 								context_constructor_t constructor, void *param);
 
-#endif /* DISPATCHER_H_ @} */
+#endif /** DISPATCHER_H_ @}*/

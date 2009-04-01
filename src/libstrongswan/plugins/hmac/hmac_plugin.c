@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: hmac_plugin.c 4309 2008-08-28 11:07:57Z martin $
+ * $Id: hmac_plugin.c 4997 2009-03-24 10:24:58Z martin $
  */
 
 #include "hmac_plugin.h"
@@ -73,6 +73,8 @@ plugin_t *plugin_create()
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128, 
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96, 
+							(signer_constructor_t)hmac_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_128, 
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_192, 
 							(signer_constructor_t)hmac_signer_create);

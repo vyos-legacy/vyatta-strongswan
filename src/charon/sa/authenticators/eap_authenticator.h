@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: eap_authenticator.h 4276 2008-08-22 10:44:51Z martin $
+ * $Id: eap_authenticator.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -144,4 +144,4 @@ struct eap_authenticator_t {
  */
 eap_authenticator_t *eap_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* EAP_AUTHENTICATOR_H_ @} */
+#endif /** EAP_AUTHENTICATOR_H_ @}*/

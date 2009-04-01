@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_init.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: ike_init.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -59,4 +59,4 @@ struct ike_init_t {
  */
 ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa);
 
-#endif /* IKE_INIT_H_ @} */
+#endif /** IKE_INIT_H_ @}*/

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: prf.h 3916 2008-05-08 12:43:27Z martin $
+ * $Id: prf.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -115,4 +115,4 @@ struct prf_t {
 	void (*destroy) (prf_t *this);
 };
 
-#endif /*PRF_H_ @} */
+#endif /** PRF_H_ @}*/

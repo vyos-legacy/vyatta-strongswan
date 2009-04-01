@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: encryption_payload.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: encryption_payload.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -172,4 +172,4 @@ struct encryption_payload_t {
  */
 encryption_payload_t *encryption_payload_create(void);
 
-#endif /*ENCRYPTION_PAYLOAD_H_ @} */
+#endif /** ENCRYPTION_PAYLOAD_H_ @}*/

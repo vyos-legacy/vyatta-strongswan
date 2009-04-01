@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: openssl_ec_public_key.h 4051 2008-06-10 09:08:27Z tobias $
+ * $Id: openssl_ec_public_key.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,4 +46,4 @@ struct openssl_ec_public_key_t {
  */
 builder_t *openssl_ec_public_key_builder(key_type_t type);
 
-#endif /*OPENSSL_EC_PUBLIC_KEY_H_ @}*/
+#endif /** OPENSSL_EC_PUBLIC_KEY_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: controller.h 3489 2008-02-22 09:40:58Z martin $
+ * $Id: controller.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -76,4 +76,4 @@ struct controller_t {
 	void (*destroy) (controller_t *this);
 };
 
-#endif /* CONTROLLER_H_ @} */
+#endif /** CONTROLLER_H_ @}*/

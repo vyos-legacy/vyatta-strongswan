@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: parser.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: parser.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -78,4 +78,4 @@ struct parser_t {
  */
 parser_t *parser_create(chunk_t data);
 
-#endif /*PARSER_H_ @} */
+#endif /** PARSER_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: kernel_pfkey_ipsec.h 4361 2008-10-01 16:47:51Z tobias $
+ * $Id: kernel_pfkey_ipsec.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -45,4 +45,4 @@ struct kernel_pfkey_ipsec_t {
  */
 kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create();
 
-#endif /* KERNEL_PFKEY_IPSEC_H_ @} */
+#endif /** KERNEL_PFKEY_IPSEC_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: child_create.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: child_create.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -77,4 +77,4 @@ struct child_create_t {
  */
 child_create_t *child_create_create(ike_sa_t *ike_sa, child_cfg_t *config);
 
-#endif /* CHILD_CREATE_H_ @} */
+#endif /** CHILD_CREATE_H_ @}*/

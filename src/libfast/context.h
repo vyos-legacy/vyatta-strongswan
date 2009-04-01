@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: context.h 3489 2008-02-22 09:40:58Z martin $
+ * $Id: context.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -41,4 +41,4 @@ struct context_t {
 	void (*destroy) (context_t *this);
 };
 
-#endif /* CONTEXT_H_ @}*/
+#endif /** CONTEXT_H_ @}*/

@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: sql_config.h 3594 2008-03-13 14:53:57Z martin $
+ * $Id: sql_config.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -52,4 +52,4 @@ struct sql_config_t {
  */
 sql_config_t *sql_config_create(database_t *db);
 
-#endif /* SQL_CONFIG_H_ @}*/
+#endif /** SQL_CONFIG_H_ @}*/

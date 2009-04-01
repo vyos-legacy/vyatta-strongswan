@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: ike_sa_manager.c 4811 2008-12-17 09:00:22Z martin $
+ * $Id: ike_sa_manager.c 5035 2009-03-26 13:18:19Z andreas $
  */
 
 #include <string.h>
@@ -1476,8 +1476,8 @@ static bool check_uniqueness(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 					switch (policy)
 					{
 						case UNIQUE_REPLACE:
-							DBG1(DBG_IKE, "deleting duplicate IKE_SA due"
-									" uniqueness policy");
+							DBG1(DBG_IKE, "deleting duplicate IKE_SA for peer "
+									"'%D' due to uniqueness policy", other);
 							status = duplicate->delete(duplicate);
 							break;
 						case UNIQUE_KEEP:

@@ -208,6 +208,7 @@ xml_LIBS = @xml_LIBS@
 SUBDIRS = src testing scripts
 EXTRA_DIST = Doxyfile.in CREDITS
 CLEANFILES = apidoc Doxyfile
+ACLOCAL_AMFLAGS = -I m4
 all: all-recursive
 
 .SUFFIXES:

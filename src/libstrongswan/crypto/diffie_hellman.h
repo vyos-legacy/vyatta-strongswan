@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: diffie_hellman.h 4685 2008-11-22 16:14:55Z martin $
+ * $Id: diffie_hellman.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -108,4 +108,4 @@ struct diffie_hellman_t {
 	void (*destroy) (diffie_hellman_t *this);
 };
 
-#endif /*DIFFIE_HELLMAN_H_ @} */
+#endif /** DIFFIE_HELLMAN_H_ @}*/

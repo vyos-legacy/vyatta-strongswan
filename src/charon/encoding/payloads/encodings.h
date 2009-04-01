@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: encodings.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: encodings.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -527,4 +527,4 @@ struct encoding_rule_t {
 	u_int32_t offset;
 };
 
-#endif /*ENCODINGS_H_ @} */
+#endif /** ENCODINGS_H_ @}*/

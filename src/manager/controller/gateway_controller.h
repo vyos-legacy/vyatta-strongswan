@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: gateway_controller.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: gateway_controller.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -44,4 +44,4 @@ struct gateway_controller_t {
  */
 controller_t *gateway_controller_create(context_t *context, void *param);
 
-#endif /* GATEWAY_CONTROLLER_H_ @} */
+#endif /** GATEWAY_CONTROLLER_H_ @}*/

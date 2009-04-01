@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: prf_plus.h 3589 2008-03-13 14:14:44Z martin $
+ * $Id: prf_plus.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -77,4 +77,4 @@ struct prf_plus_t {
  */
 prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed);
 
-#endif /*PRF_PLUS_H_ @} */
+#endif /** PRF_PLUS_H_ @}*/

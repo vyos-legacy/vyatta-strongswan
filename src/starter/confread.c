@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: confread.c 4882 2009-02-18 19:57:15Z tobias $
+ * RCSID $Id: confread.c 5002 2009-03-24 15:02:12Z martin $
  */
 
 #include <stddef.h>
@@ -61,8 +61,13 @@ static void default_values(starter_config_t *cfg)
 	cfg->setup.hidetos     = TRUE;
 	cfg->setup.uniqueids   = TRUE;
 	cfg->setup.interfaces  = new_list("%defaultroute");
+
+#ifdef START_CHARON
 	cfg->setup.charonstart = TRUE;
+#endif
+#ifdef START_PLUTO
 	cfg->setup.plutostart  = TRUE;
+#endif
 
 	cfg->conn_default.seen    = LEMPTY;
 	cfg->conn_default.startup = STARTUP_NO;
@@ -624,6 +629,10 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			else if (streq(kw->value, "mschapv2"))
 			{
 				conn->eap_type = 26;
+			}
+			else if (streq(kw->value, "radius"))
+			{	/* pseudo-type */
+				conn->eap_type = 253;
 			}
 			else
 			{

@@ -13,7 +13,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * $Id: pubkey_authenticator.h 4051 2008-06-10 09:08:27Z tobias $
+ * $Id: pubkey_authenticator.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -47,4 +47,4 @@ struct pubkey_authenticator_t {
  */
 pubkey_authenticator_t *pubkey_authenticator_create(ike_sa_t *ike_sa);
 
-#endif /* PUBKEY_AUTHENTICATOR_H_ @} */
+#endif /** PUBKEY_AUTHENTICATOR_H_ @}*/

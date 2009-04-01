@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  * 
- * $Id: openssl_ec_diffie_hellman.h 4000 2008-05-22 12:13:10Z tobias $
+ * $Id: openssl_ec_diffie_hellman.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -46,5 +46,5 @@ struct openssl_ec_diffie_hellman_t {
  */
 openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_group_t group);
 
-#endif /*OPENSSL_EC_DIFFIE_HELLMAN_H_ @}*/
+#endif /** OPENSSL_EC_DIFFIE_HELLMAN_H_ @}*/
 
