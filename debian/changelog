@@ -2,6 +2,7 @@ strongswan (4.2.14-1) unstable; urgency=low
 
   * New upstream release, which incorporates the fix. Removed dpatch for it.
     Closes: #521950: CVE-2009-0790: DoS
+  * New support for EAP RADIUS authentication, enabled for this package.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Wed, 01 Apr 2009 22:17:52 +0200
 
