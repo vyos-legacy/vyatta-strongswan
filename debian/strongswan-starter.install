@@ -1,6 +1,6 @@
 # starter
-usr/lib/strongswan/starter                              usr/lib/strongswan/
-usr/lib/strongswan/_copyright                   usr/lib/strongswan/
+usr/lib/ipsec/starter                              usr/lib/ipsec/
+usr/lib/ipsec/_copyright                   usr/lib/ipsec/
 usr/sbin/ipsec                                                  usr/sbin/
 etc/ipsec.d                                                             etc/
 etc/ipsec.conf                                                  etc/
