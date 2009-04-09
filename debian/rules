@@ -54,6 +54,7 @@ build-stamp: patch
 	dh_testdir
 	./configure $(CONFIGUREARGS)
 	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)"
+	touch build-stamp
 
 clean: unpatch
 	dh_testdir
@@ -79,10 +80,10 @@ clean: unpatch
 
 	dh_clean
 
-install-strongswan: DH_OPTIONS=-a
-install-strongswan: build-stamp
+install: build-stamp
 	dh_testdir
 	dh_testroot
+	dh_clean
 	dh_installdirs
 
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/strongswan
@@ -141,6 +142,7 @@ binary-common:
 	dh_installdebconf
 	dh_installchangelogs NEWS
 	dh_installdocs README
+	dh_install
 	dh_link
 	dh_strip
 	dh_compress
@@ -152,16 +154,13 @@ binary-common:
 	dh_md5sums
 	dh_builddeb
 
-# Build architecture-independent files here.
 binary-indep: 
 	$(MAKE) -f debian/rules binary-common DH_OPTIONS=-i
 
-# Build architecture-dependent files here.
-binary-arch: install-strongswan
+binary-arch: install
 	$(MAKE) -f debian/rules binary-common DH_OPTIONS=-a
 
-# Any other binary targets build just one binary package at a time.
-binary-%: build-stamp install-strongswan
+binary-%: build-stamp install
 	make -f debian/rules binary-common DH_OPTIONS=-p$*
 
 binary: binary-indep binary-arch
