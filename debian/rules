@@ -85,19 +85,29 @@ install: build-stamp
 	dh_testroot
 	dh_clean
 	dh_installdirs
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/strongswan
+	# install files from debian/tmp into proper package dirs
+	dh_install
 
-	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan/etc/ipsec.secrets
+	# and additional files not covered by upstream makefile...
+	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
 	# also "patch" ipsec.conf to include the debconf-managed file
-	echo >> $(CURDIR)/debian/strongswan/etc/ipsec.conf
-	echo "include /var/lib/strongswan/ipsec.conf.inc" >> $(CURDIR)/debian/strongswan/etc/ipsec.conf
+	echo >> $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
+	echo "include /var/lib/strongswan/ipsec.conf.inc" >> $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
 	# and to enable both IKEv1 and IKEv2 by default
-	sed -r 's/^[ \t]+# *plutostart=(yes|no) */\tplutostart=yes/;s/^[ \t]+# *charonstart=(yes|no) */\tcharonstart=yes/' < $(CURDIR)/debian/strongswan/etc/ipsec.conf > $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp
-	mv $(CURDIR)/debian/strongswan/etc/ipsec.conf.tmp $(CURDIR)/debian/strongswan/etc/ipsec.conf
+	sed -r 's/^[ \t]+# *plutostart=(yes|no) */\tplutostart=yes/;s/^[ \t]+# *charonstart=(yes|no) */\tcharonstart=yes/' < $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf > $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf.tmp
+	mv $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf.tmp $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
+	# set permissions on ipsec.secrets
+	chmod 600 $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
+	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
+	chmod 700 -R $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/private/
+	# don't know why they come with +x set by default...
+	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/policies/*
+	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/examples/*
 
 	# this is handled by update-rc.d
-	rm -rf $(CURDIR)/debian/strongswan/etc/rc?.d
+	rm -rf $(CURDIR)/debian/strongswan-starter/etc/rc?.d
 
 	dh_installdocs -pstrongswan -n
 	# change the paths in the installed doc files (but only in regular 
@@ -114,22 +124,14 @@ install: build-stamp
 	  done )
 
 	# the logcheck ignore files
-	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.paranoid $(CURDIR)/debian/strongswan/etc/logcheck/ignore.d.paranoid/strongswan
-	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.server $(CURDIR)/debian/strongswan/etc/logcheck/ignore.d.server/strongswan
-	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.server $(CURDIR)/debian/strongswan/etc/logcheck/ignore.d.workstation/strongswan
-	install -D --mode=0600 $(CURDIR)/debian/logcheck.violations.ignore $(CURDIR)/debian/strongswan/etc/logcheck/violations.ignore.d/strongswan
-
-	# set permissions on ipsec.secrets
-	chmod 600 $(CURDIR)/debian/strongswan/etc/ipsec.secrets
-	#chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.conf
-	chmod 700 -R $(CURDIR)/debian/strongswan/etc/ipsec.d/private/
-	# don't know why they come with +x set by default...
-	#chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.d/policies/*
-	#chmod 644 $(CURDIR)/debian/strongswan/etc/ipsec.d/examples/*
+	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.paranoid $(CURDIR)/debian/libstrongswan/etc/logcheck/ignore.d.paranoid/strongswan
+	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.server $(CURDIR)/debian/libstrongswan/etc/logcheck/ignore.d.server/strongswan
+	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.server $(CURDIR)/debian/libstrongswan/etc/logcheck/ignore.d.workstation/strongswan
+	install -D --mode=0600 $(CURDIR)/debian/logcheck.violations.ignore $(CURDIR)/debian/libstrongswan/etc/logcheck/violations.ignore.d/strongswan
 
 	# more lintian cleanups
-	find $(CURDIR)/debian/strongswan -name ".cvsignore" | xargs --no-run-if-empty rm -f
-	find $(CURDIR)/debian/strongswan -name "/.svn/" | xargs --no-run-if-empty rm -rf
+	find $(CURDIR)/debian/*strongswan*/ -name ".cvsignore" | xargs --no-run-if-empty rm -f
+	find $(CURDIR)/debian/*strongswan*/ -name "/.svn/" | xargs --no-run-if-empty rm -rf
 
 	# and lintian overrides
 	install --mode=0644 $(CURDIR)/debian/strongswan.lintian-overrides $(CURDIR)/debian/strongswan/usr/share/lintian/overrides/strongswan
@@ -142,7 +144,6 @@ binary-common:
 	dh_installdebconf
 	dh_installchangelogs NEWS
 	dh_installdocs README
-	dh_install
 	dh_link
 	dh_strip
 	dh_compress
