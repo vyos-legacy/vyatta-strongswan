@@ -92,9 +92,9 @@ install: build-stamp
 	# install files from debian/tmp into proper package dirs
 	dh_install
 	# special handling for padlock, as it is only built on i386
-	ifeq ($(DEB_BUILD_ARCH_CPU),i386)
+ifeq ($(DEB_BUILD_ARCH_CPU),i386)
 	  install $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-padlock.so* $(CURDIR)/debian/libstrongswan/usr/lib/ipsec/plugins/
-	endif
+endif
 
 	# and additional files not covered by upstream makefile...
 	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
