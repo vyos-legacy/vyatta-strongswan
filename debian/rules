@@ -85,8 +85,8 @@ install-strongswan: build-stamp
 	dh_testroot
 	dh_installdirs
 
-	# Add here commands to install the package into debian/tmp.
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/strongswan
+
 	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan/etc/ipsec.secrets
 	# also "patch" ipsec.conf to include the debconf-managed file
 	echo >> $(CURDIR)/debian/strongswan/etc/ipsec.conf
@@ -136,6 +136,7 @@ install-strongswan: build-stamp
 binary-common:
 	dh_testdir
 	dh_testroot
+	dh_installdirs
 	dh_installinit --name=ipsec
 	dh_installdebconf
 	dh_installchangelogs NEWS
