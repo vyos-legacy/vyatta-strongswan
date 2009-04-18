@@ -1,3 +1,9 @@
+strongswan (4.2.14-2) unstable; urgency=low
+
+  * Fix padlock handling for i386 in debian/rules.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sat, 18 Apr 2009 20:28:51 +0200
+
 strongswan (4.2.14-1) unstable; urgency=low
 
   * New upstream release, which incorporates the fix. Removed dpatch for it.

@@ -41,7 +41,7 @@ endif
 # the padlock plugin only makes sense on i386 
 # but it actually doesn't do much, so maybe we don't need it
 ifeq ($(DEB_BUILD_ARCH_CPU),i386)
-  CONFIGURE_ARGS += --enable-padlock
+  CONFIGUREARGS += --enable-padlock
 endif
 
 patch:
