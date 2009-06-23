@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "load_tester_config.h"
@@ -57,15 +55,121 @@ struct private_load_tester_config_t {
 	proposal_t *proposal;
 	
 	/**
-	 * Authentication method to use
+	 * Authentication method(s) to use/expect from initiator
 	 */
-	auth_class_t class;
+	char *initiator_auth;
+	
+	/**
+	 * Authentication method(s) use/expected from responder
+	 */
+	char *responder_auth;
+	
+	/**
+	 * IKE_SA rekeying delay
+	 */
+	u_int ike_rekey;
+	
+	/**
+	 * CHILD_SA rekeying delay
+	 */
+	u_int child_rekey;
 	
 	/**
 	 * incremental numbering of generated configs
 	 */
 	u_int num;
 };
+
+/**
+ * Generate auth config from string
+ */
+static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
+							  peer_cfg_t *peer_cfg, bool local, int num)
+{
+	enumerator_t *enumerator;
+	auth_cfg_t *auth;
+	identification_t *id;
+	auth_class_t class;
+	eap_type_t type;
+	char buf[128];
+	int rnd = 0;
+	
+	enumerator = enumerator_create_token(str, "|", " ");
+	while (enumerator->enumerate(enumerator, &str))
+	{
+		auth = auth_cfg_create();
+		rnd++;
+		
+		if (streq(str, "psk"))
+		{	/* PSK authentication, use FQDNs */
+			class = AUTH_CLASS_PSK;
+			if ((local && !num) || (!local && num))
+			{
+				id = identification_create_from_string("srv.strongswan.org");
+			}
+			else if (local)
+			{
+				snprintf(buf, sizeof(buf), "c%d-r%d.strongswan.org", num, rnd);
+				id = identification_create_from_string(buf);
+			}
+			else
+			{
+				id = identification_create_from_string("*.strongswan.org");
+			}
+		}
+		else if (strneq(str, "eap", strlen("eap")))
+		{	/* EAP authentication, use a NAI */
+			class = AUTH_CLASS_EAP;
+			if (*(str + strlen("eap")) == '-')
+			{
+				type = eap_type_from_string(str + strlen("eap-"));
+				if (type)
+				{
+					auth->add(auth, AUTH_RULE_EAP_TYPE, type);
+				}
+			}
+			if (local && num)
+			{
+				snprintf(buf, sizeof(buf), "1%.10d%.4d@strongswan.org", num, rnd);
+				id = identification_create_from_string(buf);
+			}
+			else
+			{
+				id = identification_create_from_encoding(ID_ANY, chunk_empty);
+			}
+		}
+		else
+		{
+			if (!streq(str, "pubkey"))
+			{
+				DBG1(DBG_CFG, "invalid authentication: '%s', fallback to pubkey",
+					 str);
+			}
+			/* certificate authentication, use distinguished names */
+			class = AUTH_CLASS_PUBKEY;
+			if ((local && !num) || (!local && num))
+			{
+				id = identification_create_from_string(
+							"CN=srv, OU=load-test, O=strongSwan");
+			}
+			else if (local)
+			{
+				snprintf(buf, sizeof(buf),
+						 "CN=c%d-r%d, OU=load-test, O=strongSwan", num, rnd);
+				id = identification_create_from_string(buf);
+			}
+			else
+			{
+				id = identification_create_from_string(
+								"CN=*, OU=load-test, O=strongSwan");
+			}
+		}
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, class);
+		auth->add(auth, AUTH_RULE_IDENTITY, id);
+		peer_cfg->add_auth_cfg(peer_cfg, auth, local);
+	}
+	enumerator->destroy(enumerator);
+}
 
 /**
  * Generate a new initiator config, num = 0 for responder config
@@ -76,36 +180,29 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	child_cfg_t *child_cfg;
 	peer_cfg_t *peer_cfg;
 	traffic_selector_t *ts;
-	auth_info_t *auth;
-	identification_t *local, *remote;
 	proposal_t *proposal;
-	char buf[128];
-	
-	if (num)
-	{	/* initiator */
-		snprintf(buf, sizeof(buf), "CN=cli-%d, OU=load-test, O=strongSwan", num);
-		local = identification_create_from_string(buf);
-		snprintf(buf, sizeof(buf), "CN=srv, OU=load-test, O=strongSwan", num);
-		remote = identification_create_from_string(buf);
-	}
-	else
-	{	/* responder */
-		local = identification_create_from_string(
-										"CN=srv, OU=load-test, O=strongSwan");
-		remote = identification_create_from_string(
-										"CN=*, OU=load-test, O=strongSwan");
-	}
 	
 	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", this->remote);
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
-	peer_cfg = peer_cfg_create("load-test", 2, ike_cfg, local, remote,
-			CERT_SEND_IF_ASKED, UNIQUE_NO, 1, 0, 0, /* keytries, rekey, reauth */
-			0, 0, FALSE, 0,	/* jitter, overtime, mobike, dpddelay */
-			this->vip ? this->vip->clone(this->vip) : NULL,
-			this->pool, FALSE, NULL, NULL);
-	auth = peer_cfg->get_auth(peer_cfg);
-	auth->add_item(auth, AUTHN_AUTH_CLASS, &this->class);
-	child_cfg = child_cfg_create("load-test", 600, 400, 100, NULL, TRUE,
+	peer_cfg = peer_cfg_create("load-test", 2, ike_cfg,
+							   CERT_SEND_IF_ASKED, UNIQUE_NO, 1, /* keytries */
+							   this->ike_rekey, 0, /* rekey, reauth */
+							   0, this->ike_rekey, /* jitter, overtime */
+							   FALSE, 0, /* mobike, dpddelay */
+							   this->vip ? this->vip->clone(this->vip) : NULL,
+							   this->pool, FALSE, NULL, NULL);
+	if (num)
+	{	/* initiator */
+		generate_auth_cfg(this, this->initiator_auth, peer_cfg, TRUE, num);
+		generate_auth_cfg(this, this->responder_auth, peer_cfg, FALSE, num);
+	}
+	else
+	{	/* responder */
+		generate_auth_cfg(this, this->responder_auth, peer_cfg, TRUE, num);
+		generate_auth_cfg(this, this->initiator_auth, peer_cfg, FALSE, num);
+	}
+	child_cfg = child_cfg_create("load-test", this->child_rekey * 2,
+								 this->child_rekey, 0, NULL, TRUE,
 								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
 	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	child_cfg->add_proposal(child_cfg, proposal);
@@ -169,7 +266,6 @@ static void destroy(private_load_tester_config_t *this)
 load_tester_config_t *load_tester_config_create()
 {
 	private_load_tester_config_t *this = malloc_thing(private_load_tester_config_t);
-	char *authstr;
 	
 	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
@@ -195,16 +291,15 @@ load_tester_config_t *load_tester_config_create()
 		this->proposal = proposal_create_from_string(PROTO_IKE,
 													 "aes128-sha1-modp768");
 	}
-	authstr = lib->settings->get_str(lib->settings,
-								"charon.plugins.load_tester.auth", "pubkey");
-	if (streq(authstr, "psk"))
-	{
-		this->class = AUTH_CLASS_PSK;
-	}
-	else
-	{
-		this->class = AUTH_CLASS_PUBKEY;
-	}
+	this->ike_rekey = lib->settings->get_int(lib->settings,
+				"charon.plugins.load_tester.ike_rekey", 0);
+	this->child_rekey = lib->settings->get_int(lib->settings,
+				"charon.plugins.load_tester.child_rekey", 600);
+	
+	this->initiator_auth = lib->settings->get_str(lib->settings,
+				"charon.plugins.load_tester.initiator_auth", "pubkey");
+	this->responder_auth = lib->settings->get_str(lib->settings,
+				"charon.plugins.load_tester.responder_auth", "pubkey");
 	
 	this->num = 1;
 	this->peer_cfg = generate_config(this, 0);

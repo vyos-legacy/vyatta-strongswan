@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: eap_identity.c 4276 2008-08-22 10:44:51Z martin $
  */
 
 #include "eap_identity.h"

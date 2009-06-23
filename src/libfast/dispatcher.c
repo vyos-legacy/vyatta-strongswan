@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: dispatcher.c 3672 2008-03-27 10:24:37Z martin $
  */
 
 #include "dispatcher.h"

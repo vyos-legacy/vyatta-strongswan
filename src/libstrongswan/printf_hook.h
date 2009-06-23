@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: printf_hook.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -28,12 +26,13 @@ typedef struct printf_hook_t printf_hook_t;
 typedef struct printf_hook_spec_t printf_hook_spec_t;
 typedef enum printf_hook_argtype_t printf_hook_argtype_t;
 
-#ifdef HAVE_PRINTF_HOOKS
+#if defined(HAVE_PRINTF_HOOKS) && !defined(USE_VSTR)
 
+#include <stdio.h>
 #include <printf.h>
 
 enum printf_hook_argtype_t {
-	PRINTF_HOOK_ARGTYPE_END = PA_LAST,
+	PRINTF_HOOK_ARGTYPE_END = -1,
 	PRINTF_HOOK_ARGTYPE_INT = PA_INT,
 	PRINTF_HOOK_ARGTYPE_POINTER = PA_POINTER,
 };

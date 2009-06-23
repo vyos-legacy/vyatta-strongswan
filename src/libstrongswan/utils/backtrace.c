@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #define _GNU_SOURCE
@@ -24,6 +22,8 @@
 #ifdef HAVE_BACKTRACE
 # include <execinfo.h>
 #endif /* HAVE_BACKTRACE */
+
+#include <string.h>
 
 #include "backtrace.h"
 

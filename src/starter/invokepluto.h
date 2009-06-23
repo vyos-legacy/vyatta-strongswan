@@ -10,8 +10,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: invokepluto.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _STARTER_PLUTO_H_
@@ -22,7 +20,7 @@
 extern void starter_pluto_sigchild (pid_t pid);
 extern pid_t starter_pluto_pid (void);
 extern int starter_stop_pluto (void);
-extern int starter_start_pluto (struct starter_config *cfg, bool debug);
+extern int starter_start_pluto (struct starter_config *cfg, bool no_fork, bool attach_gdb);
 
 #endif /* _STARTER_PLUTO_H_ */
 

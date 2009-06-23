@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: smp.c 4446 2008-10-15 12:24:44Z martin $
  */
 
 #include <stdlib.h>
@@ -109,7 +107,7 @@ static void write_id(xmlTextWriterPtr writer, char *element, identification_t *i
 					break;
 			}
 			xmlTextWriterWriteAttribute(writer, "type", type);
-			xmlTextWriterWriteFormatString(writer, "%D", id);
+			xmlTextWriterWriteFormatString(writer, "%Y", id);
 			break;
 		}
 		default:
@@ -294,8 +292,9 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 	/* <configlist> */
 	xmlTextWriterStartElement(writer, "configlist");
 	
-	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends);
-	while (enumerator->enumerate(enumerator, (void**)&peer_cfg))
+	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+														NULL, NULL, NULL, NULL);
+	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
 		enumerator_t *children;
 		child_cfg_t *child_cfg;
@@ -310,8 +309,8 @@ static void request_query_config(xmlTextReaderPtr reader, xmlTextWriterPtr write
 		/* <peerconfig> */
 		xmlTextWriterStartElement(writer, "peerconfig");
 		xmlTextWriterWriteElement(writer, "name", peer_cfg->get_name(peer_cfg));
-		write_id(writer, "local", peer_cfg->get_my_id(peer_cfg));
-		write_id(writer, "remote", peer_cfg->get_other_id(peer_cfg));
+		
+		/* TODO: write auth_cfgs */
 		
 		/* <ikeconfig> */
 		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);

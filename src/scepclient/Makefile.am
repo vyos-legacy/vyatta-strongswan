@@ -1,5 +1,5 @@
 ipsec_PROGRAMS = scepclient
-scepclient_SOURCES = scepclient.c rsakey.c rsakey.h pkcs10.c pkcs10.h scep.c scep.h loglite.c 
+scepclient_SOURCES = scepclient.c pkcs10.c pkcs10.h scep.c scep.h loglite.c 
 
 PLUTODIR=$(top_srcdir)/src/pluto
 OPENACDIR=$(top_srcdir)/src/openac
@@ -15,33 +15,29 @@ INCLUDES = \
 -I$(LIBCRYPTODIR) \
 -I$(WHACKDIR)
 
-AM_CFLAGS = -DDEBUG -DNO_PLUTO -DIPSEC_CONFDIR=\"${confdir}\"
+AM_CFLAGS = \
+-DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_PLUGINDIR=\"${plugindir}\" \
+-DPLUGINS=\""${pluto_plugins}\"" \
+-DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
+-DDEBUG -DNO_PLUTO
 
+LIBSTRONGSWANBUILDDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANBUILDDIR=$(top_builddir)/src/libfreeswan
-LIBCRYPTOBUILDDIR=$(top_builddir)/src/libcrypto
 
-scepclient_LDADD = asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
-                   keys.o lex.o md2.o md5.o mp_defs.o ocsp.o oid.o pem.o pgp.o \
-                   pkcs1.o pkcs7.o rnd.o sha1.o smartcard.o x509.o \
-                   $(LIBFREESWANBUILDDIR)/libfreeswan.a $(LIBCRYPTOBUILDDIR)/libcrypto.a \
-                   -lgmp
+scepclient_LDADD = \
+ca.o crl.o certs.o constants.o defs.o fetch.o id.o keys.o lex.o \
+ocsp.o pem.o pgpcert.o pkcs7.o smartcard.o x509.o \
+$(LIBSTRONGSWANBUILDDIR)/libstrongswan.la \
+$(LIBFREESWANBUILDDIR)/libfreeswan.a
 
 # This compile option activates smartcard support
 if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
-  scepclient_LDADD += -ldl
-endif
-
-# This compile option activates dynamic URL fetching using libcurl
-if USE_CURL
-  AM_CFLAGS += -DLIBCURL
-  scepclient_LDADD += -lcurl
+  scepclient_LDADD += $(DLLIB)
 endif
 
 dist_man_MANS = scepclient.8
-
-asn1.o :	$(PLUTODIR)/asn1.c $(PLUTODIR)/asn1.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 ca.o :		$(PLUTODIR)/ca.c $(PLUTODIR)/ca.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
@@ -58,9 +54,6 @@ crl.o : 	$(PLUTODIR)/crl.c $(PLUTODIR)/crl.h
 defs.o : 	$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
-mp_defs.o :	$(PLUTODIR)/mp_defs.c $(PLUTODIR)/mp_defs.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
 fetch.o : 	$(PLUTODIR)/fetch.c $(PLUTODIR)/fetch.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
@@ -73,34 +66,16 @@ keys.o :	$(PLUTODIR)/keys.c $(PLUTODIR)/keys.h
 lex.o :		$(PLUTODIR)/lex.c $(PLUTODIR)/lex.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
-md2.o :		$(PLUTODIR)/md2.c $(PLUTODIR)/md2.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-md5.o :		$(PLUTODIR)/md5.c $(PLUTODIR)/md5.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
 ocsp.o :	$(PLUTODIR)/ocsp.c $(PLUTODIR)/ocsp.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-oid.o :		$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
-		$(COMPILE) -c -o $@ $<
 
 pem.o :		$(PLUTODIR)/pem.c $(PLUTODIR)/pem.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
-pgp.o :		$(PLUTODIR)/pgp.c $(PLUTODIR)/pgp.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-pkcs1.o :	$(PLUTODIR)/pkcs1.c $(PLUTODIR)/pkcs1.h
+pgpcert.o :		$(PLUTODIR)/pgpcert.c $(PLUTODIR)/pgpcert.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 pkcs7.o :	$(PLUTODIR)/pkcs7.c $(PLUTODIR)/pkcs7.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-rnd.o :		$(PLUTODIR)/rnd.c $(PLUTODIR)/rnd.h
-		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-sha1.o :	$(PLUTODIR)/sha1.c $(PLUTODIR)/sha1.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
 
 smartcard.o :	$(PLUTODIR)/smartcard.c $(PLUTODIR)/smartcard.h

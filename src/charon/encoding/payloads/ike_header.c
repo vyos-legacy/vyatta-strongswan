@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: ike_header.c 3666 2008-03-26 18:40:19Z tobias $
  */
 
 /* offsetof macro */

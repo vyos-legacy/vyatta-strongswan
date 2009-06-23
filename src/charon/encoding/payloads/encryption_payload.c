@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: encryption_payload.c 3862 2008-04-22 07:14:24Z martin $
  */
 
 #include <stddef.h>

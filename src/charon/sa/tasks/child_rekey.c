@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: child_rekey.c 4730 2008-12-01 18:38:28Z martin $
  */
 
 #include "child_rekey.h"
@@ -103,11 +101,11 @@ static status_t process_i_delete(private_child_rekey_t *this, message_t *message
  */
 static void find_child(private_child_rekey_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		notify_payload_t *notify;
 		u_int32_t spi;
@@ -131,7 +129,7 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 		break;
 			
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -159,7 +157,7 @@ static status_t build_i(private_child_rekey_t *this, message_t *message)
 	
 	/* ... our CHILD_CREATE task does the hard work for us. */
 	reqid = this->child_sa->get_reqid(this->child_sa);
-	this->child_create = child_create_create(this->ike_sa, config);
+	this->child_create = child_create_create(this->ike_sa, config, NULL, NULL);
 	this->child_create->use_reqid(this->child_create, reqid);
 	this->child_create->task.build(&this->child_create->task, message);
 	
@@ -220,12 +218,12 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 	protocol_id_t protocol;
 	u_int32_t spi;
 	child_sa_t *to_delete;
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 	
 	/* handle NO_ADDITIONAL_SAS notify */
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) == NOTIFY)
 		{
@@ -239,12 +237,12 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 				charon->processor->queue_job(charon->processor,
 						(job_t*)rekey_ike_sa_job_create(
 									this->ike_sa->get_id(this->ike_sa), TRUE));
-				iterator->destroy(iterator);
+				enumerator->destroy(enumerator);
 				return SUCCESS;
 			}
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	if (this->child_create->task.process(&this->child_create->task, message) == NEED_MORE)
 	{
@@ -269,7 +267,7 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 			DBG1(DBG_IKE, "CHILD_SA rekeying failed, "
 				 				"trying again in %d seconds", retry);
 			this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-			charon->scheduler->schedule_job(charon->scheduler, job, retry * 1000);
+			charon->scheduler->schedule_job(charon->scheduler, job, retry);
 		}
 		return SUCCESS;
 	}
@@ -418,7 +416,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 		this->initiator = FALSE;
-		this->child_create = child_create_create(ike_sa, NULL);
+		this->child_create = child_create_create(ike_sa, NULL, NULL, NULL);
 	}
 	
 	this->ike_sa = ike_sa;

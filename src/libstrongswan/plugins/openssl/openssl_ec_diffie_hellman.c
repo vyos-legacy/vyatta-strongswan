@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: openssl_ec_diffie_hellman.c 4566 2008-11-04 13:12:11Z martin $
  */
 
 #include <openssl/ec.h>

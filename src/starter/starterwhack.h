@@ -10,8 +10,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: starterwhack.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _STARTER_WHACK_H_

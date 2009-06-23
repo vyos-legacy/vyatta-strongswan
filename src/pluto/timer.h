@@ -10,20 +10,18 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: timer.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
-extern time_t now(void);	/* careful version of time(2) */
+extern time_t now(void);        /* careful version of time(2) */
 
-struct state;	/* forward declaration */
+struct state;   /* forward declaration */
 
 struct event
 {
-    time_t          ev_time;
-    int             ev_type;        /* Event type */
-    struct state   *ev_state;       /* Pointer to relevant state (if any) */
-    struct event   *ev_next;        /* Pointer to next event */
+	time_t          ev_time;
+	int             ev_type;        /* Event type */
+	struct state   *ev_state;       /* Pointer to relevant state (if any) */
+	struct event   *ev_next;        /* Pointer to next event */
 };
 
 extern void event_schedule(enum event_type type, time_t tm, struct state *st);
@@ -32,3 +30,5 @@ extern long next_event(void);
 extern void delete_event(struct state *st);
 extern void delete_dpd_event(struct state *st);
 extern void daily_log_event(void);
+extern void free_events(void);
+extern void init_secret(void);

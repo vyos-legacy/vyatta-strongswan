@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: chunk.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -41,7 +39,7 @@ struct chunk_t {
 	size_t len;
 };
 
-#include <library.h>
+#include <utils.h>
 
 /**
  * A { NULL, 0 }-chunk handy for initialization.
@@ -86,8 +84,14 @@ void chunk_split(chunk_t chunk, const char *mode, ...);
 
 /**
   * Write the binary contents of a chunk_t to a file
-  */
-bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
+  *
+ * @param path			path where file is written to
+ * @param label			label specifying file type 
+ * @param mask			file mode creation mask
+ * @param force			overwrite existing file by force
+ * @return				TRUE if write operation was successful
+ */
+bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force);
 
 /**
  * Convert a chunk of data to hex encoding.
@@ -95,7 +99,6 @@ bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force);
  * The resulting string is '\\0' terminated, but the chunk does not include
  * the '\\0'. If buf is supplied, it must hold at least (chunk.len * 2 + 1).
  *
- * @param chunk			data to convert
  * @param buf			buffer to write to, NULL to malloc
  * @param uppercase		TRUE to use uppercase letters
  * @return				chunk of encoded data
@@ -181,12 +184,12 @@ static inline void chunk_clear(chunk_t *chunk)
 /**
  * Clone a chunk on heap
  */
-#define chunk_clone(chunk) chunk_create_clone((chunk).len ? malloc(chunk.len) : NULL, chunk)
+#define chunk_clone(chunk) chunk_create_clone((chunk).len ? malloc((chunk).len) : NULL, chunk)
 
 /**
  * Clone a chunk on stack
  */
-#define chunk_clonea(chunk) chunk_create_clone(alloca(chunk.len), chunk)
+#define chunk_clonea(chunk) chunk_create_clone(alloca((chunk).len), chunk)
 
 /**
  * Concatenate chunks into a chunk on heap

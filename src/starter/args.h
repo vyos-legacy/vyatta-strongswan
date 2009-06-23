@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: args.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _ARGS_H_
@@ -23,12 +21,12 @@
 
 extern char **new_list(char *value);
 extern bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw
-    , char *base, bool *assigned);
+	, char *base, bool *assigned);
 extern void free_args(kw_token_t first, kw_token_t last, char *base);
 extern void clone_args(kw_token_t first, kw_token_t last, char *base1
-    , char *base2);
+	, char *base2);
 extern bool cmp_args(kw_token_t first, kw_token_t last, char *base1
-    , char *base2);
+	, char *base2);
 
 #endif /* _ARGS_H_ */
 

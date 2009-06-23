@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: traffic_selector.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #include <arpa/inet.h>

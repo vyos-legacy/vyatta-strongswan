@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: openssl_ec_public_key.c 4317 2008-09-02 11:00:13Z martin $
  */
 
 #include "openssl_ec_public_key.h"
@@ -75,9 +73,16 @@ static bool verify_signature(private_openssl_ec_public_key_t *this,
 	ECDSA_SIG *sig;
 	bool valid = FALSE;
 	
-	if (!openssl_hash_chunk(hash_type, data, &hash))
+	if (hash_type == NID_undef)
 	{
-		return FALSE;
+		hash = data;
+	}
+	else
+	{
+		if (!openssl_hash_chunk(hash_type, data, &hash))
+		{
+			return FALSE;
+		}
 	}
 	
 	sig = ECDSA_SIG_new();
@@ -90,7 +95,6 @@ static bool verify_signature(private_openssl_ec_public_key_t *this,
 	{
 		goto error;
 	}
-	
 	valid = (ECDSA_do_verify(hash.ptr, hash.len, sig, this->ec) == 1);
 	
 error:
@@ -98,7 +102,10 @@ error:
 	{
 		ECDSA_SIG_free(sig);
 	}
-	chunk_free(&hash);
+	if (hash_type != NID_undef)
+	{
+		chunk_free(&hash);
+	}
 	return valid;
 }
 
@@ -160,6 +167,8 @@ static bool verify(private_openssl_ec_public_key_t *this, signature_scheme_t sch
 {
 	switch (scheme)
 	{
+		case SIGN_ECDSA_WITH_NULL:
+			return verify_signature(this, NID_undef, data, signature);
 		case SIGN_ECDSA_WITH_SHA1:
 			return verify_default_signature(this, data, signature);
 		case SIGN_ECDSA_256:
@@ -178,7 +187,7 @@ static bool verify(private_openssl_ec_public_key_t *this, signature_scheme_t sch
 /**
  * Implementation of public_key_t.get_keysize.
  */
-static bool encrypt(private_openssl_ec_public_key_t *this, chunk_t crypto, chunk_t *plain)
+static bool encrypt_(private_openssl_ec_public_key_t *this, chunk_t crypto, chunk_t *plain)
 {
 	DBG1("EC public key encryption not implemented");
 	return FALSE;
@@ -279,7 +288,7 @@ static private_openssl_ec_public_key_t *openssl_ec_public_key_create_empty()
 	
 	this->public.interface.get_type = (key_type_t (*)(public_key_t *this))get_type;
 	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
-	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt;
+	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
 	this->public.interface.get_keysize = (size_t (*) (public_key_t *this))get_keysize;
 	this->public.interface.get_id = (identification_t* (*) (public_key_t *this,id_type_t))get_id;
 	this->public.interface.get_encoding = (chunk_t(*)(public_key_t*))get_encoding;
@@ -331,24 +340,6 @@ bool openssl_ec_public_key_build_id(EC_KEY *ec, identification_t **keyid,
 }
 
 /**
- * Create a public key from BIGNUM values, used in openssl_ec_private_key.c
- */
-openssl_ec_public_key_t *openssl_ec_public_key_create_from_private_key(EC_KEY *ec)
-{
-	private_openssl_ec_public_key_t *this = openssl_ec_public_key_create_empty();
-	
-	this->ec = EC_KEY_new();
-	EC_KEY_set_public_key(this->ec, EC_KEY_get0_public_key(ec));
-	
-	if (!openssl_ec_public_key_build_id(this->ec, &this->keyid, &this->keyid_info))
-	{
-		destroy(this);
-		return NULL;
-	}
-	return &this->public;
-}
-
-/**
  * Load a public key from an ASN1 encoded blob
  */
 static openssl_ec_public_key_t *load(chunk_t blob)
@@ -372,6 +363,14 @@ static openssl_ec_public_key_t *load(chunk_t blob)
 		return NULL;
 	}
 	return &this->public;
+}
+
+/**
+ * Create a public key from BIGNUM values, used in openssl_ec_private_key.c
+ */
+openssl_ec_public_key_t *openssl_ec_public_key_create_from_private_key(EC_KEY *ec)
+{
+	return (openssl_ec_public_key_t*)load(get_encoding_full(ec));
 }
 
 typedef struct private_builder_t private_builder_t;

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: credential_factory.c 4777 2008-12-09 15:57:51Z martin $
  */
 
 #include "credential_factory.h"
@@ -158,6 +156,8 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 				case BUILD_END:
 					break;
 				case BUILD_BLOB_ASN1_DER:
+				case BUILD_BLOB_PGP:
+				case BUILD_BLOB_RFC_3110:
 				case BUILD_SERIAL:
 					builder->add(builder, part, va_arg(args, chunk_t));
 					continue;

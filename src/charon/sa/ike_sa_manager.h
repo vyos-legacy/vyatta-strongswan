@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: ike_sa_manager.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -53,6 +51,9 @@ struct ike_sa_manager_t {
 	
 	/**
 	 * Create and check out a new IKE_SA.
+	 * 
+	 * @note If initiator equals FALSE, the returned IKE_SA is not registered
+	 * in the manager.
 	 *
 	 * @param initiator			TRUE for initiator, FALSE otherwise
 	 * @returns 				created and checked out IKE_SA

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: pubkey_authenticator.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -29,22 +27,36 @@ typedef struct pubkey_authenticator_t pubkey_authenticator_t;
 #include <sa/authenticators/authenticator.h>
 
 /**
- * Implementation of the authenticator_t interface using AUTH_PUBKEY.
+ * Implementation of authenticator_t using public key authenitcation.
  */
 struct pubkey_authenticator_t {
 
 	/**
 	 * Implemented authenticator_t interface.
 	 */
-	authenticator_t authenticator_interface;
+	authenticator_t authenticator;
 };
 
 /**
- * Creates an authenticator for AUTH_PUBKEY.
+ * Create an authenticator to build public key signatures.
  *
- * @param ike_sa		associated ike_sa
- * @return				pubkey_authenticator_t object
+ * @param ike_sa			associated ike_sa
+ * @param received_nonce	nonce received in IKE_SA_INIT
+ * @param sent_init			sent IKE_SA_INIT message data
+ * @return					public key authenticator
  */
-pubkey_authenticator_t *pubkey_authenticator_create(ike_sa_t *ike_sa);
+pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
+									chunk_t received_nonce, chunk_t sent_init);
+
+/**
+ * Create an authenticator to verify public key signatures.
+ * 
+ * @param ike_sa			associated ike_sa
+ * @param sent_nonce		nonce sent in IKE_SA_INIT
+ * @param received_init		received IKE_SA_INIT message data
+ * @return					public key authenticator
+ */
+pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
+									chunk_t sent_nonce, chunk_t received_init);
 
 #endif /** PUBKEY_AUTHENTICATOR_H_ @}*/

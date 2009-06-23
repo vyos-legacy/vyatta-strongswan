@@ -10,8 +10,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: starterstroke.h 3825 2008-04-17 15:01:57Z martin $
  */
 
 #ifndef _STARTER_STROKE_H_

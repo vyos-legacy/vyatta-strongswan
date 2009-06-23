@@ -18,8 +18,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: stroke_msg.h 4783 2008-12-10 13:00:02Z martin $
  */
 
 #ifndef STROKE_MSG_H_
@@ -105,6 +103,8 @@ enum purge_flag_t {
 	PURGE_NONE =		0x0000,
 	/** purge ocsp cache entries */
 	PURGE_OCSP =		0x0001,
+	/** purge IKE_SAs without a CHILD_SA */
+	PURGE_IKE =			0x0002,
 };
 
 /**
@@ -123,9 +123,15 @@ typedef struct stroke_end_t stroke_end_t;
  * definition of a peer in a stroke message
  */
 struct stroke_end_t {
+	char *auth;
+	char *auth2;
 	char *id;
+	char *id2;
+	char *eap_id;
 	char *cert;
+	char *cert2;
 	char *ca;
+	char *ca2;
 	char *groups;
 	char *updown;
 	char *address;
@@ -206,6 +212,7 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 			int ikev2;
+			/* next three are deprecated, use stroke_end_t.auth instead */
 			int auth_method;
 			u_int32_t eap_type;
 			u_int32_t eap_vendor;

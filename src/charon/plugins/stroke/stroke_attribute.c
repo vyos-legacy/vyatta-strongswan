@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "stroke_attribute.h"
@@ -191,7 +189,7 @@ int host2offset(pool_t *pool, host_t *addr)
  */
 static host_t* acquire_address(private_stroke_attribute_t *this,
 							   char *name, identification_t *id,
-							   auth_info_t *auth, host_t *requested)
+							   host_t *requested)
 {
 	pool_t *pool;
 	uintptr_t offset = 0;
@@ -208,8 +206,9 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			this->mutex->unlock(this->mutex);
 			return requested->clone(requested);
 		}
-
-		if (requested->get_family(requested) !=
+		
+		if (!requested->is_anyaddr(requested) &&
+			requested->get_family(requested) !=
 			pool->base->get_family(pool->base))
 		{
 			DBG1(DBG_CFG, "IP pool address family mismatch");
@@ -223,7 +222,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			id = pool->ids->get(pool->ids, id);
 			if (id)
 			{
-				DBG1(DBG_CFG, "reassigning offline lease to %D", id);
+				DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
 				pool->online->put(pool->online, id, (void*)offset);
 				break;
 			}
@@ -233,7 +232,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 		offset = (uintptr_t)pool->online->get(pool->online, id);
 		if (offset && offset == host2offset(pool, requested))
 		{
-			DBG1(DBG_CFG, "reassigning online lease to %D", id);
+			DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
 			break;
 		}
 		
@@ -245,7 +244,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			id = id->clone(id);
 			pool->ids->put(pool->ids, id, id);
 			pool->online->put(pool->online, id, (void*)offset);
-			DBG1(DBG_CFG, "assigning new lease to %D", id);
+			DBG1(DBG_CFG, "assigning new lease to '%Y'", id);
 			break;
 		}
 		/* no more addresses, replace the first found offline lease */
@@ -257,7 +256,7 @@ static host_t* acquire_address(private_stroke_attribute_t *this,
 			{
 				/* destroy reference to old ID */
 				old_id = pool->ids->remove(pool->ids, old_id);
-				DBG1(DBG_CFG, "reassigning existing offline lease of %D to %D",
+				DBG1(DBG_CFG, "reassigning existing offline lease by '%Y' to '%Y'",
 					 old_id, id);
 				if (old_id)
 				{
@@ -305,7 +304,7 @@ static bool release_address(private_stroke_attribute_t *this,
 				id = pool->ids->get(pool->ids, id);
 				if (id)
 				{
-					DBG1(DBG_CFG, "lease %H of %D went offline", address, id);
+					DBG1(DBG_CFG, "lease %H by '%Y' went offline", address, id);
 					pool->offline->put(pool->offline, id, (void*)offset);
 					found = TRUE;
 				}
@@ -530,8 +529,9 @@ stroke_attribute_t *stroke_attribute_create()
 {
 	private_stroke_attribute_t *this = malloc_thing(private_stroke_attribute_t);
 	
-	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,auth_info_t *, host_t *))acquire_address;
+	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
+	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id))enumerator_create_empty;
 	this->public.add_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))add_pool;
 	this->public.del_pool = (void(*)(stroke_attribute_t*, stroke_msg_t *msg))del_pool;
 	this->public.create_pool_enumerator = (enumerator_t*(*)(stroke_attribute_t*))create_pool_enumerator;

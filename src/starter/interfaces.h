@@ -10,22 +10,22 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: interfaces.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _STARTER_INTERFACES_H_
 #define _STARTER_INTERFACES_H_
 
-#include <linux/if.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <net/if.h>
 
 #include "../pluto/constants.h"
 
 typedef struct {
-    bool defined;
-    char iface[IFNAMSIZ];
-    ip_address addr;
-    ip_address nexthop;
+	bool defined;
+	char iface[IFNAMSIZ];
+	ip_address addr;
+	ip_address nexthop;
 } defaultroute_t;
 
 extern void get_defaultroute(defaultroute_t *defaultroute);

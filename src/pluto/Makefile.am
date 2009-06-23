@@ -7,7 +7,6 @@ ipsec_PROGRAMS = pluto _pluto_adns
 pluto_SOURCES = \
 ac.c ac.h \
 alg_info.c alg_info.h \
-asn1.c asn1.h \
 ca.c ca.h \
 certs.c certs.h \
 connections.c connections.h \
@@ -19,11 +18,8 @@ db_ops.c db_ops.h \
 defs.c defs.h \
 demux.c demux.h \
 dnskey.c dnskey.h \
-dsa.c dsa.h \
-elgamal.c elgamal.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
-gcryptfix.c gcryptfix.h \
 id.c id.h \
 ike_alg.c ike_alg.h \
 ipsec_doi.c ipsec_doi.h \
@@ -36,23 +32,16 @@ kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
 log.c log.h \
-md2.c md2.h \
-md5.c md5.h \
 modecfg.c modecfg.h \
-mp_defs.c mp_defs.h \
 nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
 pem.c pem.h \
-pgp.c pgp.h \
-pkcs1.c pkcs1.h \
+pgpcert.c pgpcert.h \
 pkcs7.c pkcs7.h \
 plutomain.c \
-primegen.c smallprime.c \
 rcv_whack.c rcv_whack.h \
-rnd.c rnd.h \
 server.c server.h \
-sha1.c sha1.h \
 smartcard.c smartcard.h \
 spdb.c spdb.h \
 state.c state.h \
@@ -61,22 +50,17 @@ vendor.c vendor.h \
 virtual.c virtual.h \
 xauth.c xauth.h \
 x509.c x509.h \
-alg/ike_alg_aes.c alg/ike_alg_blowfish.c alg/ike_alg_twofish.c \
-alg/ike_alg_serpent.c alg/ike_alg_sha2.c alg/ike_alginit.c \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h
 
-LIBSTRONGSWANDIR=$(top_srcdir)/src/libstrongswan
+LIBSTRONGSWANDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
-LIBCRYPTODIR=$(top_builddir)/src/libcrypto
-
 
 INCLUDES = \
 -I${linuxdir} \
--I$(LIBSTRONGSWANDIR)\
+-I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
--I$(top_srcdir)/src/libcrypto \
 -I$(top_srcdir)/src/whack
 
 AM_CFLAGS = \
@@ -84,23 +68,22 @@ AM_CFLAGS = \
 -DIPSEC_CONFDIR=\"${confdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
+-DIPSEC_PLUGINDIR=\"${plugindir}\" \
+-DPLUGINS=\""${pluto_plugins}\"" \
+-DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
-oid.o \
+$(LIBSTRONGSWANDIR)/libstrongswan.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
-$(LIBCRYPTODIR)/libcrypto.a \
--lgmp -lresolv -lpthread -ldl
+-lresolv -lpthread $(DLLIB)
 
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
--lresolv -ldl
+-lresolv $(DLLIB)
 
 dist_man_MANS = pluto.8 ipsec.secrets.5
-
-oid.o :	$(LIBSTRONGSWANDIR)/asn1/oid.c $(LIBSTRONGSWANDIR)/asn1/oid.h
-		$(COMPILE) -c -o $@ $<
 
 # This compile option activates the sending of a strongSwan VID
 if USE_VENDORID
@@ -122,21 +105,14 @@ if USE_NAT_TRANSPORT
   AM_CFLAGS += -DI_KNOW_TRANSPORT_MODE_HAS_SECURITY_CONCERN_BUT_I_WANT_IT
 endif
 
-# This compile option activates dynamic URL fetching using libcurl
-if USE_CURL
-  pluto_LDADD += -lcurl
-  AM_CFLAGS += -DLIBCURL
-endif
-
-# This compile option activates dynamic LDAP CRL fetching
-if USE_LDAP
-  pluto_LDADD += -lldap -llber
-  AM_CFLAGS += -DLIBLDAP
-endif
-
 # This compile option activates smartcard support
 if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
+endif
+
+# This compile option activates the integrity test of libstrongswan
+if USE_INTEGRITY_TEST
+  AM_CFLAGS += -DINTEGRITY_TEST
 endif
 
 if USE_CAPABILITIES

@@ -15,8 +15,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: sha1_hasher.c 4308 2008-08-28 10:57:24Z martin $
  */
 
 #include <string.h>

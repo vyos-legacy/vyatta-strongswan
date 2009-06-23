@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "padlock_rng.h"
@@ -126,7 +124,7 @@ padlock_rng_t *padlock_rng_create(rng_quality_t quality)
 		case RNG_STRONG:
 			this->quality = PADLOCK_QF1;
 			break;
-		case RNG_REAL:
+		case RNG_TRUE:
 			this->quality = PADLOCK_QF3;
 			break;
 	}

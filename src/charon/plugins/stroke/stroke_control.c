@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "stroke_control.h"
@@ -145,11 +143,13 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 {
 	char *string, *pos = NULL, *name = NULL;
 	u_int32_t id = 0;
-	bool child;
+	bool child, all = FALSE;
 	int len;
 	ike_sa_t *ike_sa;
 	enumerator_t *enumerator;
+	linked_list_t *ike_list, *child_list;
 	stroke_log_info_t info;
+	uintptr_t del;
 	
 	string = msg->terminate.name;
 	
@@ -185,19 +185,44 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 		name = string;
 	}
 	else
-	{	/* is name[123] or name{23} */
-		string[len-1] = '\0';
-		id = atoi(pos + 1);
-		if (id == 0)
-		{
-			DBG1(DBG_CFG, "error parsing string");
-			return;
+	{
+		if (*(pos + 1) == '*')
+		{	/* is name[*] */
+			all = TRUE;
+			*pos = '\0';
+			name = string;
+		}
+		else
+		{	/* is name[123] or name{23} */
+			id = atoi(pos + 1);
+			if (id == 0)
+			{
+				DBG1(DBG_CFG, "error parsing string");
+				return;
+			}
 		}
 	}
 	
 	info.out = out;
 	info.level = msg->output_verbosity;
 	
+	if (id)
+	{
+		if (child)
+		{
+			charon->controller->terminate_child(charon->controller, id,
+									(controller_cb_t)stroke_log, &info);
+		}
+		else
+		{
+			charon->controller->terminate_ike(charon->controller, id,
+									(controller_cb_t)stroke_log, &info);
+		}
+		return;
+	}
+	
+	ike_list = linked_list_create();
+	child_list = linked_list_create();
 	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
 	while (enumerator->enumerate(enumerator, &ike_sa))
 	{
@@ -209,35 +234,58 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 			children = ike_sa->create_child_sa_iterator(ike_sa);
 			while (children->iterate(children, (void**)&child_sa))
 			{
-				if ((name && streq(name, child_sa->get_name(child_sa))) ||
-					(id && id == child_sa->get_reqid(child_sa)))
+				if (streq(name, child_sa->get_name(child_sa)))
 				{
-					id = child_sa->get_reqid(child_sa);
-					children->destroy(children);
-					enumerator->destroy(enumerator);
-					
-					charon->controller->terminate_child(charon->controller, id,
-									(controller_cb_t)stroke_log, &info);
-					return;
+					child_list->insert_last(child_list,
+							(void*)(uintptr_t)child_sa->get_reqid(child_sa));
+					if (!all)
+					{
+						break;
+					}
 				}
 			}
 			children->destroy(children);
+			if (child_list->get_count(child_list) && !all)
+			{
+				break;
+			}
 		}
-		else if ((name && streq(name, ike_sa->get_name(ike_sa))) ||
-				 (id && id == ike_sa->get_unique_id(ike_sa)))
+		else if (streq(name, ike_sa->get_name(ike_sa)))
 		{
-			id = ike_sa->get_unique_id(ike_sa);
-			/* unlock manager first */
-			enumerator->destroy(enumerator);
-			
-			charon->controller->terminate_ike(charon->controller, id,
-								 	(controller_cb_t)stroke_log, &info);
-			return;
+			ike_list->insert_last(ike_list,
+						(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+			if (!all)
+			{
+				break;
+			}
 		}
-		
 	}
 	enumerator->destroy(enumerator);
-	DBG1(DBG_CFG, "no such SA found");
+	
+	enumerator = child_list->create_enumerator(child_list);
+	while (enumerator->enumerate(enumerator, &del))
+	{
+		charon->controller->terminate_child(charon->controller, del,
+									(controller_cb_t)stroke_log, &info);
+	}
+	enumerator->destroy(enumerator);
+	
+	enumerator = ike_list->create_enumerator(ike_list);
+	while (enumerator->enumerate(enumerator, &del))
+	{
+		charon->controller->terminate_ike(charon->controller, del,
+									(controller_cb_t)stroke_log, &info);
+	}
+	enumerator->destroy(enumerator);
+	
+	if (child_list->get_count(child_list) == 0 &&
+		ike_list->get_count(ike_list) == 0)
+	{
+		DBG1(DBG_CFG, "no %s_SA named '%s' found",
+			 child ? "CHILD" : "IKE", name);
+	}
+	ike_list->destroy(ike_list);
+	child_list->destroy(child_list);
 }
 
 /**
@@ -249,7 +297,7 @@ static void terminate_srcip(private_stroke_control_t *this,
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
 	host_t *start = NULL, *end = NULL, *vip;
-	chunk_t chunk_start, chunk_end, chunk_vip;
+	chunk_t chunk_start, chunk_end = chunk_empty, chunk_vip;
 	
 	if (msg->terminate_srcip.start)
 	{
@@ -310,13 +358,52 @@ static void terminate_srcip(private_stroke_control_t *this,
 }
 
 /**
+ * Implementation of stroke_control_t.purge_ike
+ */
+static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	enumerator_t *enumerator;
+	iterator_t *iterator;
+	ike_sa_t *ike_sa;
+	child_sa_t *child_sa;
+	linked_list_t *list;
+	uintptr_t del;
+	stroke_log_info_t info;
+	
+	info.out = out;
+	info.level = msg->output_verbosity;
+	
+	list = linked_list_create();
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		iterator = ike_sa->create_child_sa_iterator(ike_sa);
+		if (!iterator->iterate(iterator, (void**)&child_sa))
+		{
+			list->insert_last(list,
+						(void*)(uintptr_t)ike_sa->get_unique_id(ike_sa));
+		}
+		iterator->destroy(iterator);
+	}
+	enumerator->destroy(enumerator);
+	
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &del))
+	{
+		charon->controller->terminate_ike(charon->controller, del,
+									(controller_cb_t)stroke_log, &info);
+	}
+	enumerator->destroy(enumerator);
+	list->destroy(list);
+}
+
+/**
  * Implementation of stroke_control_t.route.
  */
 static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
-	stroke_log_info_t info;
 	
 	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
 													  msg->route.name);
@@ -339,10 +426,14 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 		return;
 	}
 	
-	info.out = out;
-	info.level = msg->output_verbosity;
-	charon->controller->route(charon->controller, peer_cfg, child_cfg,
-							  (controller_cb_t)stroke_log, &info);
+	if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
+	{
+		fprintf(out, "configuration '%s' routed\n", msg->route.name);
+	}
+	else
+	{
+		fprintf(out, "routing configuration '%s' failed\n", msg->route.name);
+	}
 	peer_cfg->destroy(peer_cfg);
 	child_cfg->destroy(child_cfg);
 }
@@ -352,41 +443,24 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
  */
 static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
-	char *name;
-	ike_sa_t *ike_sa;
+	child_sa_t *child_sa;
 	enumerator_t *enumerator;
-	stroke_log_info_t info;
+	u_int32_t id;
 	
-	name = msg->terminate.name;
-	
-	info.out = out;
-	info.level = msg->output_verbosity;
-	
-	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
-	while (enumerator->enumerate(enumerator, &ike_sa))
+	enumerator = charon->traps->create_enumerator(charon->traps);
+	while (enumerator->enumerate(enumerator, NULL, &child_sa))
 	{
-		child_sa_t *child_sa;
-		iterator_t *children;
-		u_int32_t id;
-
-		children = ike_sa->create_child_sa_iterator(ike_sa);
-		while (children->iterate(children, (void**)&child_sa))
+		if (streq(msg->unroute.name, child_sa->get_name(child_sa)))
 		{
-			if (child_sa->get_state(child_sa) == CHILD_ROUTED &&
-				streq(name, child_sa->get_name(child_sa)))
-			{
-				id = child_sa->get_reqid(child_sa);
-				children->destroy(children);
-				enumerator->destroy(enumerator);
-				charon->controller->unroute(charon->controller, id,
-								(controller_cb_t)stroke_log, &info);
-				return;
-			}
+			id = child_sa->get_reqid(child_sa);
+			enumerator->destroy(enumerator);
+			charon->traps->uninstall(charon->traps, id);
+			fprintf(out, "configuration '%s' unrouted\n", msg->unroute.name);
+			return;
 		}
-		children->destroy(children);
 	}
 	enumerator->destroy(enumerator);
-	DBG1(DBG_CFG, "no such SA found");
+	fprintf(out, "configuration '%s' not found\n", msg->unroute.name);
 }
 
 /**
@@ -407,6 +481,7 @@ stroke_control_t *stroke_control_create()
 	this->public.initiate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))initiate;
 	this->public.terminate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate;
 	this->public.terminate_srcip = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate_srcip;
+	this->public.purge_ike = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))purge_ike;
 	this->public.route = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))route;
 	this->public.unroute = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))unroute;
 	this->public.destroy = (void(*)(stroke_control_t*))destroy;

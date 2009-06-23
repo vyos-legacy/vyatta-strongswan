@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: curl_plugin.c 3529 2008-03-05 15:26:24Z martin $
  */
 
 #include "curl_plugin.h"

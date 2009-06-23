@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: starterstroke.c 4856 2009-02-05 22:13:48Z andreas $
  */
 
 #include <sys/types.h>
@@ -21,10 +19,10 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <linux/xfrm.h>
 
 #include <freeswan.h>
 
@@ -40,6 +38,15 @@
 
 #define IPV4_LEN	 4
 #define IPV6_LEN	16
+
+/**
+ * Mode of an IPsec SA, must be the same as in charons kernel_ipsec.h
+ */
+enum ipsec_mode_t {
+	MODE_TRANSPORT = 1,
+	MODE_TUNNEL,
+	MODE_BEET
+};
 
 /**
  * Authentication methods, must be the same as in charons authenticator.h
@@ -68,9 +75,12 @@ static char* push_string(stroke_msg_t *msg, char *string)
 
 static int send_stroke_msg (stroke_msg_t *msg)
 {
-	struct sockaddr_un ctl_addr = { AF_UNIX, CHARON_CTL_FILE };
+	struct sockaddr_un ctl_addr;
 	int byte_count;
 	char buffer[64];
+
+	ctl_addr.sun_family = AF_UNIX;
+	strcpy(ctl_addr.sun_path, CHARON_CTL_FILE);
 	
 	/* starter is not called from commandline, and therefore absolutely silent */
 	msg->output_verbosity = -1;
@@ -164,9 +174,14 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 {
 	char buffer[INET6_ADDRSTRLEN];
 	
+	msg_end->auth = push_string(msg, conn_end->auth);
+	msg_end->auth2 = push_string(msg, conn_end->auth2);
 	msg_end->id = push_string(msg, conn_end->id);
+	msg_end->id2 = push_string(msg, conn_end->id2);
 	msg_end->cert = push_string(msg, conn_end->cert);
+	msg_end->cert2 = push_string(msg, conn_end->cert2);
 	msg_end->ca = push_string(msg, conn_end->ca);
+	msg_end->ca2 = push_string(msg, conn_end->ca2);
 	msg_end->groups = push_string(msg, conn_end->groups);
 	msg_end->updown = push_string(msg, conn_end->updown);
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
@@ -224,7 +239,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
 	
 	/* PUBKEY is preferred to PSK and EAP */
-	if (conn->policy & POLICY_RSASIG || conn->policy & POLICY_ECDSASIG)
+	if (conn->policy & POLICY_PUBKEY)
 	{
 		msg.add_conn.auth_method = AUTH_PUBKEY;
 	}
@@ -242,20 +257,20 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	
 	if (conn->policy & POLICY_TUNNEL)
 	{
-		msg.add_conn.mode = XFRM_MODE_TUNNEL;
+		msg.add_conn.mode = MODE_TUNNEL;
 	}
 	else if (conn->policy & POLICY_BEET)
 	{
-		msg.add_conn.mode = XFRM_MODE_BEET;
+		msg.add_conn.mode = MODE_BEET;
 	}
 	else if (conn->policy & POLICY_PROXY)
 	{
-		msg.add_conn.mode = XFRM_MODE_TRANSPORT;
+		msg.add_conn.mode = MODE_TRANSPORT;
 		msg.add_conn.proxy_mode = TRUE;
 	} 
 	else
 	{
-		msg.add_conn.mode = XFRM_MODE_TRANSPORT;
+		msg.add_conn.mode = MODE_TRANSPORT;
 	}
 
 	if (!(conn->policy & POLICY_DONT_REKEY))

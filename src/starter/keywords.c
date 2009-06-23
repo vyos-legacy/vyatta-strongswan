@@ -1,6 +1,6 @@
 /* C code produced by gperf version 3.0.3 */
-/* Command-line: /usr/bin/gperf -C -G -t  */
-/* Computed positions: -k'1-2,$' */
+/* Command-line: /usr/bin/gperf -m 10 -C -G -D -t  */
+/* Computed positions: -k'1-2,6,$' */
 
 #if !((' ' == 32) && ('!' == 33) && ('"' == 34) && ('#' == 35) \
       && ('%' == 37) && ('&' == 38) && ('\'' == 39) && ('(' == 40) \
@@ -43,8 +43,6 @@ error "gperf generated tables don't work with this execution character set. Plea
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: keywords.txt 4612 2008-11-11 06:37:37Z andreas $
  */
 
 #include <string.h>
@@ -56,12 +54,12 @@ struct kw_entry {
     kw_token_t token;
 };
 
-#define TOTAL_KEYWORDS 102
+#define TOTAL_KEYWORDS 112
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 17
-#define MIN_HASH_VALUE 6
-#define MAX_HASH_VALUE 248
-/* maximum key range = 243, duplicates = 0 */
+#define MIN_HASH_VALUE 13
+#define MAX_HASH_VALUE 200
+/* maximum key range = 188, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -77,198 +75,192 @@ hash (str, len)
 {
   static const unsigned char asso_values[] =
     {
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249,  25,
-       10, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 110, 249,   0,
-      100,   5,  75,  65,  90,   0, 249,  60,  10,  15,
-       80,  60,  15, 249,   0,  50,  35,  15,  30, 249,
-        0,  75,   0, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249, 249, 249, 249, 249,
-      249, 249, 249, 249, 249, 249
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201,   3,
+       42, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201,   1, 201,   9, 201,   5,
+       39,   1,  64,  47,  62,   1, 201,  88,   5,  83,
+       39,  30,  21, 201,   1,  10,   6,  44,  14, 201,
+        4,  54,   4, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+      201, 201, 201, 201, 201, 201
     };
-  return len + asso_values[(unsigned char)str[1]] + asso_values[(unsigned char)str[0]] + asso_values[(unsigned char)str[len - 1]];
+  register int hval = len;
+
+  switch (hval)
+    {
+      default:
+        hval += asso_values[(unsigned char)str[5]];
+      /*FALLTHROUGH*/
+      case 5:
+      case 4:
+      case 3:
+      case 2:
+        hval += asso_values[(unsigned char)str[1]];
+      /*FALLTHROUGH*/
+      case 1:
+        hval += asso_values[(unsigned char)str[0]];
+        break;
+    }
+  return hval + asso_values[(unsigned char)str[len - 1]];
 }
 
 static const struct kw_entry wordlist[] =
   {
-    {""}, {""}, {""}, {""}, {""}, {""},
-    {"crluri",            KW_CRLURI},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""},
-    {"rekeyfuzz",         KW_REKEYFUZZ},
-    {""}, {""},
-    {"crluri2",           KW_CRLURI2},
-    {""}, {""}, {""},
-    {"certuribase",       KW_CERTURIBASE},
-    {""},
-    {"rightfirewall",     KW_RIGHTFIREWALL},
-    {""},
-    {"rightnatip",        KW_RIGHTNATIP},
-    {"crlcheckinterval",  KW_CRLCHECKINTERVAL},
-    {"rightnexthop",      KW_RIGHTNEXTHOP},
-    {"rightsourceip",     KW_RIGHTSOURCEIP},
-    {""}, {""}, {""},
-    {"crluri1",           KW_CRLURI},
-    {""}, {""}, {""}, {""},
-    {"leftfirewall",      KW_LEFTFIREWALL},
-    {""},
-    {"leftnatip",         KW_LEFTNATIP},
     {"right",             KW_RIGHT},
-    {"leftnexthop",       KW_LEFTNEXTHOP},
-    {"leftsourceip",      KW_LEFTSOURCEIP},
-    {""},
-    {"rightcert",         KW_RIGHTCERT},
-    {""},
-    {"rightsubnet",       KW_RIGHTSUBNET},
-    {""},
-    {"rightsendcert",     KW_RIGHTSENDCERT},
-    {"rightprotoport",    KW_RIGHTPROTOPORT},
-    {"virtual_private",   KW_VIRTUAL_PRIVATE},
-    {""}, {""}, {""},
+    {"crluri",            KW_CRLURI},
     {"left",              KW_LEFT},
-    {""}, {""}, {""},
+    {"crluri1",           KW_CRLURI},
+    {"certuribase",       KW_CERTURIBASE},
     {"leftcert",          KW_LEFTCERT,},
-    {""},
-    {"leftsubnet",        KW_LEFTSUBNET},
-    {"rightgroups",       KW_RIGHTGROUPS},
+    {"rightcert",         KW_RIGHTCERT},
+    {"rightca",           KW_RIGHTCA},
+    {"leftfirewall",      KW_LEFTFIREWALL},
     {"leftsendcert",      KW_LEFTSENDCERT},
     {"leftprotoport",     KW_LEFTPROTOPORT},
-    {""},
-    {"righthostaccess",   KW_RIGHTHOSTACCESS},
-    {""},
-    {"ocspuri",           KW_OCSPURI},
-    {"ike",               KW_IKE},
-    {""},
-    {"plutostart",        KW_PLUTOSTART},
-    {""}, {""},
-    {"esp",               KW_ESP},
-    {""},
     {"leftgroups",        KW_LEFTGROUPS},
-    {"ikelifetime",       KW_IKELIFETIME},
-    {"keylife",           KW_KEYLIFE},
-    {"ocspuri2",          KW_OCSPURI2},
-    {"lefthostaccess",    KW_LEFTHOSTACCESS},
-    {"keep_alive",        KW_KEEP_ALIVE},
-    {"keyexchange",       KW_KEYEXCHANGE},
-    {""},
-    {"prepluto",          KW_PREPLUTO},
-    {""},
-    {"rekey",             KW_REKEY},
-    {"mobike",	           KW_MOBIKE},
-    {""},
-    {"rightallowany",     KW_RIGHTALLOWANY},
-    {"rightrsasigkey",    KW_RIGHTRSASIGKEY},
-    {""},
-    {"rightupdown",       KW_RIGHTUPDOWN},
-    {"pkcs11module",      KW_PKCS11MODULE},
-    {"ocspuri1",          KW_OCSPURI},
-    {""},
-    {"pkcs11keepstate",   KW_PKCS11KEEPSTATE},
-    {"rekeymargin",       KW_REKEYMARGIN},
-    {"rightsubnetwithin", KW_RIGHTSUBNETWITHIN},
-    {"fragicmp",          KW_FRAGICMP},
-    {""},
-    {"plutodebug",        KW_PLUTODEBUG},
-    {"reauth",            KW_REAUTH},
-    {"leftallowany",      KW_LEFTALLOWANY},
-    {"leftrsasigkey",     KW_LEFTRSASIGKEY},
-    {"plutostderrlog",    KW_PLUTOSTDERRLOG},
-    {"leftupdown",        KW_LEFTUPDOWN},
-    {"mediated_by",       KW_MEDIATED_BY},
-    {"rightid",           KW_RIGHTID},
-    {""},
-    {"mediation",         KW_MEDIATION},
-    {""},
-    {"leftsubnetwithin",  KW_LEFTSUBNETWITHIN},
-    {""},
-    {"pfsgroup",          KW_PFSGROUP},
-    {""}, {""},
-    {"overridemtu",       KW_OVERRIDEMTU},
-    {"rightca",           KW_RIGHTCA},
-    {"compress",          KW_COMPRESS},
-    {"type",              KW_TYPE},
-    {""},
-    {"leftid",            KW_LEFTID},
-    {"dumpdir",           KW_DUMPDIR},
-    {"ldapbase",          KW_LDAPBASE},
-    {""}, {""},
-    {"keyingtries",       KW_KEYINGTRIES},
-    {""}, {""},
-    {"me_peerid",         KW_ME_PEERID},
-    {""},
+    {"crlcheckinterval",  KW_CRLCHECKINTERVAL},
+    {"rightsubnet",       KW_RIGHTSUBNET},
     {"leftca",            KW_LEFTCA},
-    {""},
-    {"eap",               KW_EAP},
-    {""}, {""},
-    {"charonstart",       KW_CHARONSTART},
-    {""}, {""},
-    {"pkcs11initargs",    KW_PKCS11INITARGS},
-    {"interfaces",        KW_INTERFACES},
-    {""}, {""},
-    {"pfs",               KW_PFS},
-    {"postpluto",         KW_POSTPLUTO},
-    {"klipsdebug",        KW_KLIPSDEBUG},
-    {""},
-    {"hidetos",           KW_HIDETOS},
-    {""}, {""},
-    {"modeconfig",        KW_MODECONFIG},
+    {"rightsendcert",     KW_RIGHTSENDCERT},
     {"cacert",            KW_CACERT},
-    {""},
-    {"ldaphost",          KW_LDAPHOST},
-    {"uniqueids",         KW_UNIQUEIDS},
-    {"force_keepalive",   KW_FORCE_KEEPALIVE},
-    {""}, {""}, {""}, {""},
-    {"dpdtimeout",        KW_DPDTIMEOUT},
-    {"pkcs11proxy",       KW_PKCS11PROXY},
-    {""}, {""}, {""}, {""},
-    {"charondebug",       KW_CHARONDEBUG},
-    {""},
-    {"installpolicy",     KW_INSTALLPOLICY},
+    {"eap",               KW_EAP},
+    {"esp",               KW_ESP},
     {"cachecrls",         KW_CACHECRLS},
-    {""}, {""}, {""},
-    {"packetdefault",     KW_PACKETDEFAULT},
-    {""},
-    {"strictcrlpolicy",   KW_STRICTCRLPOLICY},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {"leftnexthop",       KW_LEFTNEXTHOP},
+    {"virtual_private",   KW_VIRTUAL_PRIVATE},
+    {"rightprotoport",    KW_RIGHTPROTOPORT},
+    {"ocspuri",           KW_OCSPURI},
+    {"leftnatip",         KW_LEFTNATIP},
+    {"rightsourceip",     KW_RIGHTSOURCEIP},
+    {"ocspuri1",          KW_OCSPURI},
     {"also",              KW_ALSO},
-    {""}, {""}, {""}, {""},
-    {"auto",              KW_AUTO},
-    {""}, {""}, {""}, {""}, {""}, {""},
-    {"forceencaps",       KW_FORCEENCAPS},
-    {""},
-    {"dpddelay",          KW_DPDDELAY},
-    {""}, {""}, {""},
-    {"eap_identity",      KW_EAP_IDENTITY},
-    {""},
-    {"dpdaction",         KW_DPDACTION},
-    {"xauth",             KW_XAUTH},
-    {"authby",            KW_AUTHBY},
-    {""}, {""}, {""}, {""}, {""}, {""},
+    {"rightid",           KW_RIGHTID},
+    {"plutostart",        KW_PLUTOSTART},
+    {"rightid2",          KW_RIGHTID2},
+    {"compress",          KW_COMPRESS},
+    {"packetdefault",     KW_PACKETDEFAULT},
+    {"crluri2",           KW_CRLURI2},
+    {"rightca2",          KW_RIGHTCA2},
+    {"leftcert2",         KW_LEFTCERT2,},
+    {"rightcert2",        KW_RIGHTCERT2},
+    {"lefthostaccess",    KW_LEFTHOSTACCESS},
+    {"rekey",             KW_REKEY},
+    {"ldapbase",          KW_LDAPBASE},
+    {"rightauth2",        KW_RIGHTAUTH2},
+    {"leftca2",           KW_LEFTCA2},
+    {"type",              KW_TYPE},
+    {"leftsubnet",        KW_LEFTSUBNET},
     {"nat_traversal",     KW_NAT_TRAVERSAL},
-    {""}, {""}, {""}, {""}, {""},
+    {"rightsubnetwithin", KW_RIGHTSUBNETWITHIN},
+    {"leftsourceip",      KW_LEFTSOURCEIP},
+    {"rightgroups",       KW_RIGHTGROUPS},
+    {"rightrsasigkey",    KW_RIGHTRSASIGKEY},
+    {"rightnatip",        KW_RIGHTNATIP},
+    {"rightnexthop",      KW_RIGHTNEXTHOP},
+    {"leftupdown",        KW_LEFTUPDOWN},
+    {"leftallowany",      KW_LEFTALLOWANY},
+    {"rightallowany",     KW_RIGHTALLOWANY},
+    {"rekeyfuzz",         KW_REKEYFUZZ},
+    {"xauth",             KW_XAUTH},
+    {"rightauth",         KW_RIGHTAUTH},
+    {"leftrsasigkey",     KW_LEFTRSASIGKEY},
+    {"rightfirewall",     KW_RIGHTFIREWALL},
+    {"ocspuri2",          KW_OCSPURI2},
+    {"auto",              KW_AUTO},
+    {"ldaphost",          KW_LDAPHOST},
+    {"righthostaccess",   KW_RIGHTHOSTACCESS},
+    {"leftid",            KW_LEFTID},
+    {"strictcrlpolicy",   KW_STRICTCRLPOLICY},
+    {"dumpdir",           KW_DUMPDIR},
+    {"ike",               KW_IKE},
+    {"leftid2",           KW_LEFTID2},
+    {"postpluto",         KW_POSTPLUTO},
+    {"rightupdown",       KW_RIGHTUPDOWN},
+    {"plutostderrlog",    KW_PLUTOSTDERRLOG},
+    {"pfs",               KW_PFS},
+    {"fragicmp",          KW_FRAGICMP},
+    {"overridemtu",       KW_OVERRIDEMTU},
+    {"leftauth2",         KW_LEFTAUTH2},
+    {"uniqueids",         KW_UNIQUEIDS},
+    {"prepluto",          KW_PREPLUTO},
+    {"leftsubnetwithin",  KW_LEFTSUBNETWITHIN},
+    {"keyexchange",       KW_KEYEXCHANGE},
+    {"keep_alive",        KW_KEEP_ALIVE},
+    {"hidetos",           KW_HIDETOS},
+    {"force_keepalive",   KW_FORCE_KEEPALIVE},
+    {"installpolicy",     KW_INSTALLPOLICY},
+    {"dpdaction",         KW_DPDACTION},
+    {"eap_identity",      KW_EAP_IDENTITY},
+    {"forceencaps",       KW_FORCEENCAPS},
+    {"nocrsend",          KW_NOCRSEND},
     {"auth",              KW_AUTH},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
-    {""},
-    {"nocrsend",          KW_NOCRSEND}
+    {"leftauth",          KW_LEFTAUTH},
+    {"mobike",	           KW_MOBIKE},
+    {"plutodebug",        KW_PLUTODEBUG},
+    {"charonstart",       KW_CHARONSTART},
+    {"interfaces",        KW_INTERFACES},
+    {"pkcs11module",      KW_PKCS11MODULE},
+    {"dpddelay",          KW_DPDDELAY},
+    {"pkcs11keepstate",   KW_PKCS11KEEPSTATE},
+    {"reauth",            KW_REAUTH},
+    {"me_peerid",         KW_ME_PEERID},
+    {"rekeymargin",       KW_REKEYMARGIN},
+    {"pkcs11initargs",    KW_PKCS11INITARGS},
+    {"mediation",         KW_MEDIATION},
+    {"pfsgroup",          KW_PFSGROUP},
+    {"mediated_by",       KW_MEDIATED_BY},
+    {"keyingtries",       KW_KEYINGTRIES},
+    {"dpdtimeout",        KW_DPDTIMEOUT},
+    {"keylife",           KW_KEYLIFE},
+    {"charondebug",       KW_CHARONDEBUG},
+    {"ikelifetime",       KW_IKELIFETIME},
+    {"authby",            KW_AUTHBY},
+    {"pkcs11proxy",       KW_PKCS11PROXY},
+    {"klipsdebug",        KW_KLIPSDEBUG},
+    {"modeconfig",        KW_MODECONFIG}
+  };
+
+static const short lookup[] =
+  {
+     -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+     -1,  -1,  -1,   0,   1,  -1,   2,   3,  -1,   4,
+     -1,   5,   6,   7,   8,   9,  10,  11,  12,  13,
+     14,  15,  16,  -1,  17,  18,  -1,  -1,  19,  20,
+     21,  -1,  -1,  22,  23,  24,  25,  26,  27,  28,
+     -1,  -1,  29,  30,  31,  32,  33,  34,  35,  36,
+     37,  38,  39,  40,  41,  42,  43,  44,  45,  46,
+     47,  48,  49,  -1,  50,  -1,  51,  52,  53,  54,
+     55,  -1,  56,  57,  58,  -1,  59,  60,  61,  62,
+     63,  64,  65,  66,  67,  68,  69,  70,  71,  72,
+     73,  74,  -1,  75,  76,  77,  78,  -1,  -1,  79,
+     80,  81,  82,  -1,  83,  84,  85,  86,  -1,  87,
+     88,  89,  90,  91,  92,  93,  -1,  94,  95,  -1,
+     -1,  -1,  96,  97,  -1,  98,  99,  -1, 100,  -1,
+     -1,  -1,  -1,  -1, 101,  -1,  -1,  -1,  -1,  -1,
+     -1,  -1,  -1,  -1,  -1, 102,  -1, 103,  -1, 104,
+     -1, 105,  -1,  -1, 106, 107,  -1, 108,  -1,  -1,
+     -1,  -1,  -1,  -1,  -1,  -1,  -1, 109,  -1,  -1,
+     -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1, 110,
+     -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    111
   };
 
 #ifdef __GNUC__
@@ -288,10 +280,15 @@ in_word_set (str, len)
 
       if (key <= MAX_HASH_VALUE && key >= 0)
         {
-          register const char *s = wordlist[key].name;
+          register int index = lookup[key];
 
-          if (*str == *s && !strcmp (str + 1, s + 1))
-            return &wordlist[key];
+          if (index >= 0)
+            {
+              register const char *s = wordlist[index].name;
+
+              if (*str == *s && !strcmp (str + 1, s + 1))
+                return &wordlist[index];
+            }
         }
     }
   return 0;

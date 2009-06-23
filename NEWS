@@ -1,3 +1,96 @@
+strongswan-4.3.2
+----------------
+
+- The new gcrypt plugin provides symmetric cipher, hasher, RNG, Diffie-Hellman
+  and RSA crypto primitives using the LGPL licensed GNU gcrypt library.
+
+- libstrongswan features an integrated crypto selftest framework for registered
+  algorithms. The test-vector plugin provides a first set of test vectors and
+  allows pluto and charon to rely on tested crypto algorithms.
+
+- pluto can now use all libstrongswan plugins with the exception of x509 and xcbc.
+  Thanks to the openssl plugin, the ECP Diffie-Hellman groups 19, 20, 21, 25, and
+  26 as well as ECDSA-256, ECDSA-384, and ECDSA-521 authentication can be used
+  with IKEv1.
+
+- Applying their fuzzing tool, the Orange Labs vulnerability research team found
+  another two DoS vulnerabilities, one in the rather old ASN.1 parser of Relative
+  Distinguished Names (RDNs) and a second one in the conversion of ASN.1 UTCTIME
+  and GENERALIZEDTIME strings to a time_t value.
+  
+
+strongswan-4.3.1
+----------------
+
+- The nm plugin now passes DNS/NBNS server information to NetworkManager,
+  allowing a gateway administrator to set DNS/NBNS configuration on clients
+  dynamically.
+
+- The nm plugin also accepts CA certificates for gateway authentication. If
+  a CA certificate is configured, strongSwan uses the entered gateway address
+  as its idenitity, requiring the gateways certificate to contain the same as
+  subjectAltName. This allows a gateway administrator to deploy the same
+  certificates to Windows 7 and NetworkManager clients.
+
+- The command ipsec purgeike deletes IKEv2 SAs that don't have a CHILD SA.
+  The command ipsec down <conn>{n} deletes CHILD SA instance n of connection
+  <conn> whereas ipsec down <conn>{*} deletes all CHILD SA instances.
+  The command ipsec down <conn>[n] deletes IKE SA instance n of connection
+  <conn> plus dependent CHILD SAs whereas ipsec down <conn>[*] deletes all
+  IKE SA instances of connection <conn>.
+
+- Fixed a regression introduced in 4.3.0 where EAP authentication calculated
+  the AUTH payload incorrectly. Further, the EAP-MSCHAPv2 MSK key derivation
+  has been updated to be compatible with the Windows 7 Release Candidate.
+
+- Refactored installation of triggering policies. Routed policies are handled
+  outside of IKE_SAs to keep them installed in any case. A tunnel gets
+  established only once, even if initiation is delayed due network outages.
+
+- Improved the handling of multiple acquire signals triggered by the kernel.
+
+- Fixed two DoS vulnerabilities in the charon daemon that were discovered by
+  fuzzing techniques: 1) Sending a malformed IKE_SA_INIT request leaved an
+  incomplete state which caused a null pointer dereference if a subsequent
+  CREATE_CHILD_SA request was sent. 2) Sending an IKE_AUTH request with either
+  a missing TSi or TSr payload caused a null pointer derefence because the
+  checks for TSi and TSr were interchanged. The IKEv2 fuzzer used was 
+  developped by the Orange Labs vulnerability research team. The tool was
+  initially written by Gabriel Campana and is now maintained by Laurent Butti.
+
+- Added support for AES counter mode in ESP in IKEv2 using the proposal
+  keywords aes128ctr, aes192ctr and aes256ctr.
+
+- Further progress in refactoring pluto: Use of the curl and ldap plugins
+  for fetching crls and OCSP. Use of the random plugin to get keying material
+  from /dev/random or /dev/urandom. Use of the openssl plugin as an alternative
+  to the aes, des, sha1, sha2, and md5 plugins. The blowfish, twofish, and
+  serpent encryption plugins are now optional and are not enabled by default.
+
+
+strongswan-4.3.0
+----------------
+
+- Support for the IKEv2 Multiple Authentication Exchanges extension (RFC4739).
+  Initiators and responders can use several authentication rounds (e.g. RSA
+  followed by EAP) to authenticate. The new ipsec.conf leftauth/rightauth and
+  leftauth2/rightauth2 parameters define own authentication rounds or setup
+  constraints for the remote peer. See the ipsec.conf man page for more detials.
+
+- If glibc printf hooks (register_printf_function) are not available,
+  strongSwan can use the vstr string library to run on non-glibc systems.
+
+- The IKEv2 charon daemon can now configure the ESP CAMELLIA-CBC cipher
+  (esp=camellia128|192|256).
+
+- Refactored the pluto and scepclient code to use basic functions (memory
+  allocation, leak detective, chunk handling, printf_hooks, strongswan.conf
+  attributes, ASN.1 parser, etc.) from the libstrongswan library.
+
+- Up to two DNS and WINS servers to be sent via IKEv1 ModeConfig can be
+  configured in the pluto section of strongswan.conf.
+
+
 strongswan-4.2.14
 -----------------
 

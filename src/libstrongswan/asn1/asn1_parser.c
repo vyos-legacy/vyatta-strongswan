@@ -13,15 +13,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: asn1_parser.c 3894 2008-04-28 18:44:21Z andreas $
  */
 
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
-#include <library.h>
+#include <utils.h>
 #include <debug.h>
 
 #include "asn1.h"
@@ -160,7 +158,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 	
 	blob1->len = asn1_length(blob);
 	
-	if (blob1->len == ASN1_INVALID_LENGTH || blob->len < blob1->len)
+	if (blob1->len == ASN1_INVALID_LENGTH)
 	{
 		DBG1("L%d - %s:  length of ASN.1 object invalid or too large", 
 					level, obj.name);

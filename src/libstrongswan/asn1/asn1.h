@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: asn1.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -27,7 +25,8 @@
 
 #include <stdarg.h>
 
-#include <library.h>
+#include <utils.h>
+#include <chunk.h>
 
 /**
  * Definition of some primitive ASN1 types
@@ -107,13 +106,21 @@ chunk_t asn1_algorithmIdentifier(int oid);
 int asn1_known_oid(chunk_t object);
 
 /**
+ * Converts a known OID index to an ASN.1 OID
+ *
+ * @param n			index into the oid_names[] table
+ * @return			allocated OID chunk, chunk_empty if index out of range
+ */
+chunk_t asn1_build_known_oid(int n);
+
+/**
  * Returns the length of an ASN.1 object
  * The blob pointer is advanced past the tag length fields
  *
  * @param blob		pointer to an ASN.1 coded blob
  * @return			length of ASN.1 object
  */
-u_int asn1_length(chunk_t *blob);
+size_t asn1_length(chunk_t *blob);
 
 /**
  * Parses an ASN.1 algorithmIdentifier object
@@ -219,6 +226,15 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content);
  * @return			chunk containing the ASN.1 coded BITSTRING
  */
 chunk_t asn1_bitstring(const char *mode, chunk_t content);
+
+/**
+ * Build an ASN.1 INTEGER object
+ *
+ * @param mode		'c' for copy or 'm' for move
+ * @param content	content of the INTEGER
+ * @return			chunk containing the ASN.1 coded INTEGER
+ */
+chunk_t asn1_integer(const char *mode, chunk_t content);
 
 /**
  * Build an ASN.1 object from a variable number of individual chunks

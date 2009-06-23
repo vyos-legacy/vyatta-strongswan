@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: aes_crypter.c 3900 2008-04-30 14:02:25Z martin $
  */
  
 #include "aes_crypter.h"
@@ -33,8 +31,6 @@
  */
 #define AES_KS_LENGTH   120
 #define AES_RC_LENGTH    29
-
-#define AES_BLOCK_SIZE 16
 
 typedef struct private_aes_crypter_t private_aes_crypter_t;
 

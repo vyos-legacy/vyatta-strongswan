@@ -25,32 +25,24 @@
 
 static void* testing(void *thread)
 {
-	int i;	
-	auth_info_t *auth;
+	int i;
 	host_t *addr[ALLOCS];
 	identification_t *id[ALLOCS];
-	
-	
-	auth = auth_info_create();
 	
 	/* prepare identities */
 	for (i = 0; i < ALLOCS; i++)
 	{
 		char buf[256];
 		
-		snprintf(buf, sizeof(buf), "%d-%d@strongswan.org", (int)thread, i);
+		snprintf(buf, sizeof(buf), "%d-%d@strongswan.org", (uintptr_t)thread, i);
 		id[i] = identification_create_from_string(buf);
-		if (!id[i])
-		{
-			return (void*)FALSE;
-		}
 	}
 	
 	/* allocate addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
 		addr[i] = charon->attributes->acquire_address(charon->attributes, 
-													  "test", id[i], auth, NULL);
+													  "test", id[i], NULL);
 		if (!addr[i])
 		{
 			return (void*)FALSE;
@@ -69,7 +61,6 @@ static void* testing(void *thread)
 		addr[i]->destroy(addr[i]);
 		id[i]->destroy(id[i]);
 	}
-	auth->destroy(auth);
 	return (void*)TRUE;
 }
 
@@ -79,7 +70,7 @@ static void* testing(void *thread)
  ******************************************************************************/
 bool test_pool()
 {
-	int i;
+	uintptr_t i;
 	void *res;
 	pthread_t thread[THREADS];
 	

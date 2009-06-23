@@ -1159,7 +1159,7 @@ The presence of a rightca parameter also causes the CA to be sent as
 part of the certificate request message when strongSwan is the initiator.
 A special case occurs when strongSwan responds to a roadwarrior. If several
 roadwarrior connections based on different CAs are defined then all eligible
-CAs will be listed in Pluto’s certificate request message.
+CAs will be listed in Plutoï¿½s certificate request message.
 
 
 4.9 IPsec policies based on group attributes
@@ -1505,12 +1505,16 @@ any certificates to the other end via the IKE Main Mode protocol. Especially
 if self-signed certificates are used which wouldn't be accepted any way by
 the other side. In these cases it is recommended to add
 
-          leftsendcert=never
+    leftsendcert=never
 
 to the connection definition[s] in order to avoid the sending of the host's
 own certificate. The default value is
 
-    leftsendcert=always.
+    leftsendcert=ifasked
+
+If a peer does not send a certificate request then use the setting
+
+    leftsendcert=always
 
 If a peer certificate contains a subjectAltName extension, then an alternative
 rightid type can be used, as the example "conn sun" shows. If no rightid
@@ -3118,7 +3122,7 @@ by the pluto/xauth.h header file.
 	               Copyright (c) 2000, Kai Martius
 
 		   X.509, OCSP and smartcard functionality:
-°
+
   Copyright (c) 2000, Andreas Hess, Patric Lichtsteiner, Roger Wegmann
   Copyright (c) 2001, Marco Bertossa, Andreas Schleiss
   Copyright (c) 2002, Uli Galizzi, Ariane Seiler, Mario Strasser
@@ -3146,6 +3150,4 @@ by the pluto/xauth.h header file.
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
   for more details.
 -----------------------------------------------------------------------------
-
-This file is RCSID $Id: README 3272 2007-10-08 20:15:30Z andreas $
 

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: fetcher_manager.c 4591 2008-11-05 16:12:54Z martin $
  */
 
 #include "fetcher_manager.h"
@@ -101,7 +99,11 @@ static status_t fetch(private_fetcher_manager_t *this,
 					good = fetcher->set_option(fetcher, opt, va_arg(args, chunk_t));
 					continue;
 				case FETCH_REQUEST_TYPE:
+				case FETCH_REQUEST_HEADER:
 					good = fetcher->set_option(fetcher, opt, va_arg(args, char*));
+					continue;
+				case FETCH_HTTP_VERSION_1_0:
+					good = fetcher->set_option(fetcher, opt);
 					continue;
 				case FETCH_TIMEOUT:
 					good = fetcher->set_option(fetcher, opt, va_arg(args, u_int));

@@ -11,8 +11,6 @@
   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
   for more details.
-
-  $Id: guest.rb 4295 2008-08-27 07:35:20Z tobias $
 =end
 
 module Dumm
@@ -33,6 +31,30 @@ module Dumm
         super(id, *args)
       end
       self[id]
+    end
+    
+    # delete all interfaces
+    def reset
+      each {|i|
+        i.delete
+      }
+    end
+    
+    # has the guest booted up?
+    def booted?
+      begin
+        exec("pgrep getty")
+      rescue
+        return false
+      end
+      return true
+    end
+    
+    # wait until the guest has booted
+    def boot
+      while not booted?
+        sleep(1)
+      end
     end
   end
 end

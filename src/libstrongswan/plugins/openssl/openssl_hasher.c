@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: openssl_hasher.c 4879 2009-02-18 19:41:33Z tobias $
  */
 
 #include "openssl_hasher.h"

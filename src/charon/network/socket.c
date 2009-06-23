@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -14,8 +14,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: socket.c 4688 2008-11-24 08:22:05Z martin $
  */
 
 /* for struct in6_pktinfo */
@@ -30,12 +28,11 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <netinet/in_systm.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
-#include <linux/types.h>
-#include <linux/filter.h>
 #include <net/if.h>
 
 #include "socket.h"
@@ -54,10 +51,23 @@
 #define UDP_ENCAP_ESPINUDP 2
 #endif /*UDP_ENCAP_ESPINUDP*/
 
-/* needed for older kernel headers */
-#ifndef IPV6_2292PKTINFO
-#define IPV6_2292PKTINFO 2
-#endif /*IPV6_2292PKTINFO*/
+/* these are not defined on some platforms */
+#ifndef SOL_IP
+#define SOL_IP IPPROTO_IP
+#endif
+#ifndef SOL_IPV6
+#define SOL_IPV6 IPPROTO_IPV6
+#endif
+#ifndef SOL_UDP
+#define SOL_UDP IPPROTO_UDP
+#endif
+
+/* IPV6_RECVPKTINFO is defined in RFC 3542 which obsoletes RFC 2292 that
+ * previously defined IPV6_PKTINFO */
+#ifndef IPV6_RECVPKTINFO
+#define IPV6_RECVPKTINFO IPV6_PKTINFO;
+#endif
+
 
 typedef struct private_socket_t private_socket_t;
 
@@ -68,27 +78,27 @@ struct private_socket_t {
 	/**
 	 * public functions
 	 */
-	 socket_t public;
+	socket_t public;
+	
+	/**
+	 * IPv4 socket (500)
+	 */
+	int ipv4;
 	 
-	 /**
-	  * IPv4 socket (500)
-	  */
-	 int ipv4;
-	 
-	 /**
-	  * IPv4 socket for NATT (4500)
-	  */
-	 int ipv4_natt;
-	 
-	 /**
-	  * IPv6 socket (500)
-	  */
-	 int ipv6;
-	 
-	 /**
-	  * IPv6 socket for NATT (4500)
-	  */
-	 int ipv6_natt;
+	/**
+	 * IPv4 socket for NATT (4500)
+	 */
+	int ipv4_natt;
+	
+	/**
+	 * IPv6 socket (500)
+	 */
+	int ipv6;
+	
+	/**
+	 * IPv6 socket for NATT (4500)
+	 */
+	int ipv6_natt;
 };
 
 /**
@@ -104,8 +114,8 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	int data_offset, oldstate;
 	fd_set rfds;
 	int max_fd = 0, selected = 0;
-	u_int16_t port;
-
+	u_int16_t port = 0;
+	
 	FD_ZERO(&rfds);
 	
 	if (this->ipv4)
@@ -201,7 +211,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			}
 			
 			if (cmsgptr->cmsg_level == SOL_IPV6 &&
-				cmsgptr->cmsg_type == IPV6_2292PKTINFO)
+				cmsgptr->cmsg_type == IPV6_PKTINFO)
 			{
 				struct in6_pktinfo *pktinfo;
 				pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsgptr);
@@ -214,14 +224,28 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 				dest = host_create_from_sockaddr((sockaddr_t*)&dst);
 			}
 			if (cmsgptr->cmsg_level == SOL_IP &&
-				cmsgptr->cmsg_type == IP_PKTINFO)
-			{			
+#ifdef IP_PKTINFO
+				cmsgptr->cmsg_type == IP_PKTINFO
+#elif defined(IP_RECVDSTADDR)
+				cmsgptr->cmsg_type == IP_RECVDSTADDR
+#else
+				FALSE
+#endif
+				)
+			{
+				struct in_addr *addr;
+				struct sockaddr_in dst;
+
+#ifdef IP_PKTINFO
 				struct in_pktinfo *pktinfo;
 				pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsgptr);
-				struct sockaddr_in dst;
-				
+				addr = &pktinfo->ipi_addr;
+#elif defined(IP_RECVDSTADDR)
+				addr = (struct in_addr*)CMSG_DATA(cmsgptr);
+#endif
 				memset(&dst, 0, sizeof(dst));
-				memcpy(&dst.sin_addr, &pktinfo->ipi_addr, sizeof(dst.sin_addr));
+				memcpy(&dst.sin_addr, addr, sizeof(dst.sin_addr));
+				
 				dst.sin_family = AF_INET;
 				dst.sin_port = htons(port);
 				dest = host_create_from_sockaddr((sockaddr_t*)&dst);
@@ -340,24 +364,37 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	msg.msg_iovlen = 1;
 	msg.msg_flags = 0;
 	
-	if (!dst->is_anyaddr(dst))
+	if (!src->is_anyaddr(src))
 	{
 		if (family == AF_INET)
 		{
+#if defined(IP_PKTINFO) || defined(IP_SENDSRCADDR)
+			struct in_addr *addr;
+			struct sockaddr_in *sin;
+#ifdef IP_PKTINFO
 			char buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
 			struct in_pktinfo *pktinfo;
-			struct sockaddr_in *sin;
-			
+#elif defined(IP_SENDSRCADDR)
+			char buf[CMSG_SPACE(sizeof(struct in_addr))];
+#endif
 			msg.msg_control = buf;
 			msg.msg_controllen = sizeof(buf);
 			cmsg = CMSG_FIRSTHDR(&msg);
 			cmsg->cmsg_level = SOL_IP;
+#ifdef IP_PKTINFO
 			cmsg->cmsg_type = IP_PKTINFO;
 			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
 			memset(pktinfo, 0, sizeof(struct in_pktinfo));
+			addr = &pktinfo->ipi_spec_dst;
+#elif defined(IP_SENDSRCADDR)
+			cmsg->cmsg_type = IP_SENDSRCADDR;
+			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+			addr = (struct in_addr*)CMSG_DATA(cmsg);
+#endif
 			sin = (struct sockaddr_in*)src->get_sockaddr(src);
-			memcpy(&pktinfo->ipi_spec_dst, &sin->sin_addr, sizeof(struct in_addr));
+			memcpy(addr, &sin->sin_addr, sizeof(struct in_addr));
+#endif /* IP_PKTINFO || IP_SENDSRCADDR */
 		}
 		else
 		{
@@ -369,7 +406,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			msg.msg_controllen = sizeof(buf);
 			cmsg = CMSG_FIRSTHDR(&msg);
 			cmsg->cmsg_level = SOL_IPV6;
-			cmsg->cmsg_type = IPV6_2292PKTINFO;
+			cmsg->cmsg_type = IPV6_PKTINFO;
 			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 			pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
 			memset(pktinfo, 0, sizeof(struct in6_pktinfo));
@@ -389,14 +426,15 @@ status_t sender(private_socket_t *this, packet_t *packet)
 }
 
 /**
- * open a socket to send packets
+ * open a socket to send and receive packets
  */
 static int open_socket(private_socket_t *this, int family, u_int16_t port)
 {
 	int on = TRUE;
 	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
-	u_int sol, pktinfo;
+	socklen_t addrlen;
+	u_int sol, pktinfo = 0;
 	int skt;
 	
 	memset(&addr, 0, sizeof(addr));
@@ -409,8 +447,13 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 			sin->sin_family = AF_INET;
 			sin->sin_addr.s_addr = INADDR_ANY;
 			sin->sin_port = htons(port);
+			addrlen = sizeof(struct sockaddr_in);
 			sol = SOL_IP;
+#ifdef IP_PKTINFO
 			pktinfo = IP_PKTINFO;
+#elif defined(IP_RECVDSTADDR)
+			pktinfo = IP_RECVDSTADDR;
+#endif
 			break;
 		}
 		case AF_INET6:
@@ -419,8 +462,9 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 			sin6->sin6_family = AF_INET6;
 			memcpy(&sin6->sin6_addr, &in6addr_any, sizeof(in6addr_any));
 			sin6->sin6_port = htons(port);
+			addrlen = sizeof(struct sockaddr_in6);
 			sol = SOL_IPV6;
-			pktinfo = IPV6_2292PKTINFO;
+			pktinfo = IPV6_RECVPKTINFO;
 			break;
 		}
 		default:
@@ -440,8 +484,8 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 		return 0;
 	}
 	
-	/* bind the send socket */
-	if (bind(skt, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+	/* bind the socket */
+	if (bind(skt, (struct sockaddr *)&addr, addrlen) < 0)
 	{
 		DBG1(DBG_NET, "unable to bind socket: %s", strerror(errno));
 		close(skt);
@@ -449,11 +493,14 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 	}
 	
 	/* get additional packet info on receive */
-	if (setsockopt(skt, sol, pktinfo, &on, sizeof(on)) < 0)
+	if (pktinfo > 0)
 	{
-		DBG1(DBG_NET, "unable to set IP_PKTINFO on socket: %s", strerror(errno));
-		close(skt);
-		return 0;
+		if (setsockopt(skt, sol, pktinfo, &on, sizeof(on)) < 0)
+		{
+			DBG1(DBG_NET, "unable to set IP_PKTINFO on socket: %s", strerror(errno));
+			close(skt);
+			return 0;
+		}
 	}
 	
 	/* enable UDP decapsulation globally, only for one socket needed */
@@ -578,7 +625,7 @@ socket_t *socket_create()
 			DBG1(DBG_NET, "could not open IPv4 NAT-T socket");
 		}
 	}
-
+	
 	this->ipv6 = open_socket(this, AF_INET6, IKEV2_UDP_PORT);
 	if (this->ipv6 == 0)
 	{

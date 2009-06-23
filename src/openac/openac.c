@@ -19,8 +19,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: openac.c 4749 2008-12-04 04:34:49Z andreas $
  */
 
 #include <stdio.h>
@@ -39,6 +37,7 @@
 #include <asn1/pem.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
+#include <credentials/keys/private_key.h>
 #include <utils/optionsfrom.h>
 
 #ifdef INTEGRITY_TEST
@@ -218,18 +217,35 @@ static bool stderr_quiet = FALSE;
 static void openac_dbg(int level, char *fmt, ...)
 {
 	int priority = LOG_INFO;
+	char buffer[8192];
+	char *current = buffer, *next;
 	va_list args;
 	
 	if (level <= debug_level)
 	{
 		va_start(args, fmt);
+
 		if (!stderr_quiet)
 		{
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
 		}
-		vsyslog(priority, fmt, args);
+
+		/* write in memory buffer first */
+		vsnprintf(buffer, sizeof(buffer), fmt, args);
 		va_end(args);
+
+		/* do a syslog with every line */
+		while (current)
+		{
+			next = strchr(current, '\n');
+			if (next)
+			{
+				*(next++) = '\0';
+			}
+			syslog(priority, "%s\n", current);
+			current = next;
+		}
 	}
 }
 
@@ -547,9 +563,8 @@ int main(int argc, char **argv)
 	
 		/* write the attribute certificate to file */
 		attr_chunk = attr_cert->get_encoding(attr_cert);
-		if (chunk_write(attr_chunk, outfile, 0022, TRUE))
+		if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
 		{
-			DBG1("  wrote attribute cert file '%s' (%u bytes)", outfile, attr_chunk.len);
 			write_serial(serial);
 			status = 0;
 		}

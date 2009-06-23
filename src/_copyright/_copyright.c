@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: _copyright.c 3266 2007-10-08 19:57:37Z andreas $
  */
 
 #include <sys/types.h>
@@ -39,7 +37,6 @@ main(int argc, char *argv[])
 	int opt;
 	extern int optind;
 	int errflg = 0;
-	const char *version = ipsec_version_code();
 	const char **notice = ipsec_copyright_notice();
 	const char **co;
 
@@ -50,7 +47,7 @@ main(int argc, char *argv[])
 			exit(0);
 			break;
 		case 'v':	/* version */
-			printf("%s %s\n", me, version);
+			printf("%s strongSwan "VERSION"\n", me);
 			exit(0);
 			break;
 		case '?':

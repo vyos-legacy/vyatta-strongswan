@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: encodings.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -97,19 +95,6 @@ enum encoding_type_t {
 	 * The current read pointer is moved 32 bit forward afterwards.
 	 */
 	U_INT_32,
-	
-	/**
-	 * Representing a 64 Bit unsigned int value.
-	 * 
-	 * When generating it must be changed from host to network order.
-	 * The value is read from the associated data struct.
-	 * The current write position is moved 64 bit forward afterwards.
-	 * 
-	 * When parsing it must be changed from network to host order.
-	 * The value is written to the associated data struct.
-	 * The current read pointer is moved 64 bit forward afterwards.
-	 */
-	U_INT_64,
 	
 	/**
 	 * represents a RESERVED_BIT used in FLAG-Bytes.

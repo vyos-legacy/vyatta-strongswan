@@ -13,8 +13,6 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-#
-# RCSID $Id: make-testing 3517 2008-03-01 10:25:52Z andreas $
 
 DIR=`dirname $0`
 

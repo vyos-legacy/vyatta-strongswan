@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: certificate.c 3664 2008-03-26 15:21:50Z martin $
  */
 
 #include "certificate.h"
@@ -31,11 +29,11 @@ ENUM(certificate_type_names, CERT_ANY, CERT_PGP,
 	"PGP",
 );
 
-ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_SKIPPED,
-	"VALIDATION_GOOD",
-	"VALIDATION_STALE",
-	"VALIDATION_REVOKED",
-	"VALIDATION_FAILED",
-	"VALIDATION_SKIPPED",
+ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_REVOKED,
+	"GOOD",
+	"SKIPPED",
+	"STALE",
+	"FAILED",
+	"REVOKED",
 );
 

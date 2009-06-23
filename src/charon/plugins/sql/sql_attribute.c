@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "sql_attribute.h"
@@ -179,7 +177,7 @@ static host_t *get_address(private_sql_attribute_t *this, char *name,
  */
 static host_t* acquire_address(private_sql_attribute_t *this,
 							   char *name, identification_t *id,
-							   auth_info_t *auth, host_t *requested)
+							   host_t *requested)
 {
 	enumerator_t *enumerator;
 	u_int pool, timeout, identity;
@@ -263,8 +261,9 @@ sql_attribute_t *sql_attribute_create(database_t *db)
 	private_sql_attribute_t *this = malloc_thing(private_sql_attribute_t);
 	time_t now = time(NULL);
 	
-	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *,auth_info_t *, host_t *))acquire_address;
+	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *, host_t *))acquire_address;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))release_address;
+	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id))enumerator_create_empty;
 	this->public.destroy = (void(*)(sql_attribute_t*))destroy;
 	
 	this->db = db;

@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: curl_fetcher.c 4632 2008-11-11 18:37:19Z martin $
  */
 
 #include <curl/curl.h>
@@ -35,16 +33,16 @@ struct private_curl_fetcher_t {
 	 * Public data
 	 */
 	curl_fetcher_t public;
-
+	
 	/**
 	 * CURL handle
 	 */
 	CURL* curl;
 	
 	/**
-	 * request type, as set with FETCH_REQUEST_TYPE
+     * Optional HTTP headers
 	 */
-	char *request_type;
+	struct curl_slist *headers;
 };
 
 /**
@@ -52,15 +50,15 @@ struct private_curl_fetcher_t {
  */
 static size_t append(void *ptr, size_t size, size_t nmemb, chunk_t *data)
 {
-    size_t realsize = size * nmemb;
-
-    data->ptr = (u_char*)realloc(data->ptr, data->len + realsize);
-    if (data->ptr)
-    {
+	size_t realsize = size * nmemb;
+	
+	data->ptr = (u_char*)realloc(data->ptr, data->len + realsize);
+	if (data->ptr)
+	{
 		memcpy(&data->ptr[data->len], ptr, realsize);
 		data->len += realsize;
-    }
-    return realsize;
+	}
+	return realsize;
 }
 
 /**
@@ -68,9 +66,7 @@ static size_t append(void *ptr, size_t size, size_t nmemb, chunk_t *data)
  */
 static status_t fetch(private_curl_fetcher_t *this, char *uri, chunk_t *result)
 {
-	struct curl_slist *headers = NULL;
 	char error[CURL_ERROR_SIZE];
-	char buf[256];;
 	status_t status;
 	
 	*result = chunk_empty;
@@ -85,14 +81,12 @@ static status_t fetch(private_curl_fetcher_t *this, char *uri, chunk_t *result)
 	curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_TIMEOUT);
 	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, (void*)append);
 	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, (void*)result);
-	if (this->request_type)
+	if (this->headers)
 	{
-		snprintf(buf, sizeof(buf), "Content-Type: %s", this->request_type);
-		headers = curl_slist_append(headers, buf);
-		curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, headers);
+		curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, this->headers);
 	}
-
-	DBG2("sending http request to '%s'...", uri);
+	
+	DBG2("  sending http request to '%s'...", uri);
 	switch (curl_easy_perform(this->curl))
 	{
 		case CURLE_UNSUPPORTED_PROTOCOL:
@@ -102,11 +96,10 @@ static status_t fetch(private_curl_fetcher_t *this, char *uri, chunk_t *result)
 			status = SUCCESS;
 			break;
 		default:
-    		DBG1("libcurl http request failed: %s", error);
+			DBG1("libcurl http request failed: %s", error);
 			status = FAILED;
 			break;
 	}
-	curl_slist_free_all(headers);
 	return status;
 }
 
@@ -123,13 +116,31 @@ static bool set_option(private_curl_fetcher_t *this, fetcher_option_t option, ..
 		case FETCH_REQUEST_DATA:
 		{
 			chunk_t data = va_arg(args, chunk_t);
+
 			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, (char*)data.ptr);
 			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, data.len);
 			return TRUE;
 		}
 		case FETCH_REQUEST_TYPE:
 		{
-			this->request_type = va_arg(args, char*);
+			char header[BUF_LEN];
+			char *request_type = va_arg(args, char*);
+
+			snprintf(header, BUF_LEN, "Content-Type: %s", request_type);
+			this->headers = curl_slist_append(this->headers, header);
+			return TRUE;
+		}
+		case FETCH_REQUEST_HEADER:
+		{
+			char *header = va_arg(args, char*);
+
+			this->headers = curl_slist_append(this->headers, header);
+			return TRUE;
+		}
+		case FETCH_HTTP_VERSION_1_0:
+		{
+			curl_easy_setopt(this->curl, CURLOPT_HTTP_VERSION,
+							 CURL_HTTP_VERSION_1_0);
 			return TRUE;
 		}
 		case FETCH_TIMEOUT:
@@ -148,6 +159,7 @@ static bool set_option(private_curl_fetcher_t *this, fetcher_option_t option, ..
  */
 static void destroy(private_curl_fetcher_t *this)
 {
+	curl_slist_free_all(this->headers);
 	curl_easy_cleanup(this->curl);
 	free(this);
 }
@@ -158,19 +170,19 @@ static void destroy(private_curl_fetcher_t *this)
 curl_fetcher_t *curl_fetcher_create()
 {
 	private_curl_fetcher_t *this = malloc_thing(private_curl_fetcher_t);
-
+	
 	this->curl = curl_easy_init();
 	if (this->curl == NULL)
 	{
 		free(this);
 		return NULL;
 	}
-	this->request_type = NULL;
-
+	this->headers = NULL;
+	
 	this->public.interface.fetch = (status_t(*)(fetcher_t*,char*,chunk_t*))fetch;
 	this->public.interface.set_option = (bool(*)(fetcher_t*, fetcher_option_t option, ...))set_option;
 	this->public.interface.destroy = (void (*)(fetcher_t*))destroy;
-
+	
 	return &this->public;
 }
 

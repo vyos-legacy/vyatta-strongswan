@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: proposal_substructure.c 3658 2008-03-26 10:06:45Z martin $
  */
 
 #include <stddef.h>

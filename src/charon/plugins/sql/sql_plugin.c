@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: sql_plugin.c 4711 2008-11-27 14:33:41Z martin $
  */
 
 #include "sql_plugin.h"

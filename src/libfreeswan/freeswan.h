@@ -13,24 +13,10 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
- *
- * RCSID $Id: freeswan.h 4632 2008-11-11 18:37:19Z martin $
  */
 #define	_FREESWAN_H	/* seen it, no need to see it again */
 
-
-
-/*
- * We've just got to have some datatypes defined...  And annoyingly, just
- * where we get them depends on whether we're in userland or not.
- */
-#ifdef __KERNEL__
-
-#  include <linux/types.h>
-#  include <linux/in.h>
-
-#else /* __KERNEL__ */
-
+#  include <sys/types.h>
 #  include <stdio.h>
 #  include <netinet/in.h>
 
@@ -41,25 +27,13 @@
 
 #  define DEBUG_NO_STATIC static
 
-#endif /* __KERNEL__ */
-
 #include <ipsec_param.h>
-
+#include <utils.h>
 
 /*
- * Grab the kernel version to see if we have NET_21, and therefore 
- * IPv6. Some of this is repeated from ipsec_kversions.h. Of course, 
- * we aren't really testing if the kernel has IPv6, but rather if the
- * the include files do.
+ * We assume header files have IPv6 (i.e. kernel version >= 2.1.0)
  */
-#include <linux/version.h>
-#ifndef KERNEL_VERSION
-#define KERNEL_VERSION(x,y,z) (((x)<<16)+((y)<<8)+(z))
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,1,0)
 #define NET_21
-#endif
 
 #ifndef IPPROTO_COMP
 #  define IPPROTO_COMP 108
@@ -84,28 +58,6 @@
  * use their definitions directly, they are subject to change!
  */
 
-/* first, some quick fakes in case we're on an old system with no IPv6 */
-#ifndef s6_addr16
-struct in6_addr {
-	union 
-	{
-		__u8		u6_addr8[16];
-		__u16		u6_addr16[8];
-		__u32		u6_addr32[4];
-	} in6_u;
-#define s6_addr			in6_u.u6_addr8
-#define s6_addr16		in6_u.u6_addr16
-#define s6_addr32		in6_u.u6_addr32
-};
-struct sockaddr_in6 {
-	unsigned short int	sin6_family;    /* AF_INET6 */
-	__u16			sin6_port;      /* Transport layer port # */
-	__u32			sin6_flowinfo;  /* IPv6 flow information */
-	struct in6_addr		sin6_addr;      /* IPv6 address */
-	__u32			sin6_scope_id;  /* scope id (new in RFC2553) */
-};
-#endif	/* !s6_addr16 */
-
 /* then the main types */
 typedef struct {
 	union {
@@ -119,11 +71,7 @@ typedef struct {
 } ip_subnet;
 
 /* and the SA ID stuff */
-#ifdef __KERNEL__
-typedef __u32 ipsec_spi_t;
-#else
 typedef u_int32_t ipsec_spi_t;
-#endif
 typedef struct {		/* to identify an SA, we need: */
         ip_address dst;		/* A. destination host */
         ipsec_spi_t spi;	/* B. 32-bit SPI, assigned by dest. host */
@@ -147,7 +95,6 @@ struct sa_id {			/* old v4-only version */
 };
 
 /* misc */
-typedef const char *err_t;	/* error message, or NULL for success */
 struct prng {			/* pseudo-random-number-generator guts */
 	unsigned char sbox[256];
 	int i, j;
@@ -159,6 +106,8 @@ struct prng {			/* pseudo-random-number-generator guts */
  * definitions for user space, taken from freeswan/ipsec_sa.h
  */
 typedef uint32_t IPsecSAref_t;
+
+#define IPSEC_SA_REF_TABLE_NUM_ENTRIES (1 << IPSEC_SA_REF_TABLE_IDX_WIDTH)
 
 #define IPSEC_SA_REF_FIELD_WIDTH (8 * sizeof(IPsecSAref_t))
 
@@ -220,7 +169,7 @@ size_t splitkeytoid(const unsigned char *e, size_t elen, const unsigned char *m,
 					size_t mlen, char *dst, size_t dstlen);
 #define	KEYID_BUF		10	/* up to 9 text digits plus NUL */
 err_t ttoprotoport(char *src, size_t src_len, u_int8_t *proto, u_int16_t *port,
-							int *has_port_wildcard);
+							bool *has_port_wildcard);
 
 /* initializations */
 void initsaid(const ip_address *addr, ipsec_spi_t spi, int proto, ip_said *dst);
@@ -269,8 +218,6 @@ unsigned long prng_count(struct prng *prng);
 void prng_final(struct prng *prng);
 
 /* odds and ends */
-const char *ipsec_version_code(void);
-const char *ipsec_version_string(void);
 const char **ipsec_copyright_notice(void);
 
 const char *dns_string_rr(int rr, char *buf, int bufsize);
@@ -435,19 +382,6 @@ struct in_addr
 bitstomask(
 	int n
 );
-
-
-
-/*
- * general utilities
- */
-
-#ifndef __KERNEL__
-/* option pickup from files (userland only because of use of FILE) */
-const char *optionsfrom(const char *filename, int *argcp, char ***argvp,
-						int optind, FILE *errorreport);
-#define ignore_result(call) { if (call); }
-#endif
 
 /*
  * Debugging levels for pfkey_lib_debug

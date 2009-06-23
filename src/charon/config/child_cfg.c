@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: child_cfg.c 4862 2009-02-11 16:41:37Z andreas $
  */
 
 #include "child_cfg.h"

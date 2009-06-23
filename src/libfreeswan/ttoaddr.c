@@ -11,9 +11,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
- *
- * RCSID $Id: ttoaddr.c 3684 2008-03-28 11:46:30Z martin $
  */
+#include <sys/socket.h>
+
 #include "internal.h"
 #include "freeswan.h"
 

@@ -10,8 +10,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: crl.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include "constants.h"
@@ -22,9 +20,9 @@ typedef struct revokedCert revokedCert_t;
 
 struct revokedCert{
   revokedCert_t *next;
-  chunk_t	userCertificate;
-  time_t	revocationDate;
-  crl_reason_t	revocationReason;
+  chunk_t       userCertificate;
+  time_t        revocationDate;
+  crl_reason_t  revocationReason;
 };
 
 /* storage structure for an X.509 CRL */
@@ -33,28 +31,28 @@ typedef struct x509crl x509crl_t;
 
 struct x509crl {
   x509crl_t     *next;
-  time_t	 installed;
+  time_t         installed;
   generalName_t *distributionPoints;
   chunk_t        certificateList;
   chunk_t          tbsCertList;
   u_int              version;
-  	         /*  signature */
+				 /*  signature */
   int                  sigAlg;
   chunk_t            issuer;
   time_t             thisUpdate;
   time_t             nextUpdate;
   revokedCert_t      *revokedCertificates;
-                /*   v2 extensions */
-                /*   crlExtensions */
-                /*     extension */
-                /*       extnID */
-                /*       critical */
-                /*       extnValue */
-  chunk_t		 authKeyID;
-  chunk_t		 authKeySerialNumber;
-  chunk_t		 crlNumber;
+				/*   v2 extensions */
+				/*   crlExtensions */
+				/*     extension */
+				/*       extnID */
+				/*       critical */
+				/*       extnValue */
+  chunk_t                authKeyID;
+  chunk_t                authKeySerialNumber;
+  chunk_t                crlNumber;
 
-                /* signatureAlgorithm */
+				/* signatureAlgorithm */
   int                algorithm;
   chunk_t          signature;
 };
@@ -82,7 +80,7 @@ extern void load_crls(void);
 extern void check_crls(void);
 extern bool insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl);
 extern cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until
-    , time_t *revocationDate, crl_reason_t *revocationReason);
+	, time_t *revocationDate, crl_reason_t *revocationReason);
 extern void list_crls(bool utc, bool strict);
 extern void free_crls(void);
 extern void free_crl(x509crl_t *crl);

@@ -12,24 +12,27 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: signer.c 3589 2008-03-13 14:14:44Z martin $
  */
 
 #include "signer.h"
 
 ENUM_BEGIN(integrity_algorithm_names, AUTH_UNDEFINED, AUTH_HMAC_SHA1_128,
 	"UNDEFINED",
-	"AUTH_HMAC_SHA1_128");
-ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_MD5_96, AUTH_AES_XCBC_96, AUTH_HMAC_SHA1_128,
+	"HMAC_SHA1_128");
+ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_MD5_96, AUTH_HMAC_SHA2_512_256, AUTH_HMAC_SHA1_128,
 	"HMAC_MD5_96",
 	"HMAC_SHA1_96",
 	"DES_MAC",
 	"KPDK_MD5",
-	"AES_XCBC_96");
-ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_SHA2_256_128, AUTH_HMAC_SHA2_512_256, AUTH_AES_XCBC_96,
-	"AUTH_HMAC_SHA2_256_128",
-	"AUTH_HMAC_SHA2_384_192",
-	"AUTH_HMAC_SHA2_512_256");
+	"AES_XCBC_96",
+	"HMAC_MD5_128",
+	"HMAC_SHA1_160",
+	"AES_CMAC_96",
+	"AES_128_GMAC",
+	"AES_192_GMAC",
+	"AES_256_GMAC",
+	"HMAC_SHA2_256_128",
+	"HMAC_SHA2_384_192",
+	"HMAC_SHA2_512_256");
 ENUM_END(integrity_algorithm_names, AUTH_HMAC_SHA2_512_256);
 

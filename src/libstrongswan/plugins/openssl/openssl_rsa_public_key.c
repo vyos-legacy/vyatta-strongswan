@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: openssl_rsa_public_key.c 4567 2008-11-04 14:05:42Z martin $
  */
 
 #include "openssl_rsa_public_key.h"
@@ -62,49 +60,65 @@ static bool verify_emsa_pkcs1_signature(private_openssl_rsa_public_key_t *this,
 										int type, chunk_t data, chunk_t signature)
 {
 	bool valid = FALSE;
-	const EVP_MD *hasher = EVP_get_digestbynid(type);
-	if (!hasher)
+	int rsa_size = RSA_size(this->rsa);
+
+	/* OpenSSL expects a signature of exactly RSA size (no leading 0x00) */
+	if (signature.len > rsa_size)
 	{
-		return FALSE;
+		signature = chunk_skip(signature, signature.len - rsa_size);
 	}
-	
-	EVP_MD_CTX *ctx = EVP_MD_CTX_create();
-	EVP_PKEY *key = EVP_PKEY_new();
-	if (!ctx || !key)
+
+	if (type == NID_undef)
 	{
-		goto error;
+		chunk_t hash = chunk_alloc(rsa_size);
+
+		hash.len = RSA_public_decrypt(signature.len, signature.ptr, hash.ptr,
+									  this->rsa, RSA_PKCS1_PADDING);
+		valid = chunk_equals(data, hash);
+		free(hash.ptr);
 	}
-	
-	if (!EVP_PKEY_set1_RSA(key, this->rsa))
+	else
 	{
-		goto error;
-	}
-	
-	if (!EVP_VerifyInit_ex(ctx, hasher, NULL))
-	{
-		goto error;
-	}
-	
-	if (!EVP_VerifyUpdate(ctx, data.ptr, data.len))
-	{
-		goto error;
-	}
-	
-	/* VerifyFinal expects a signature of exactly RSA size (no leading 0x00) */
-	if (signature.len > RSA_size(this->rsa))
-	{
-		signature = chunk_skip(signature, signature.len - RSA_size(this->rsa));
-	}
-	valid = (EVP_VerifyFinal(ctx, signature.ptr, signature.len, key) == 1);
+		EVP_MD_CTX *ctx;
+		EVP_PKEY *key;
+		const EVP_MD *hasher;
+
+		hasher = EVP_get_digestbynid(type);
+		if (!hasher)
+		{
+			return FALSE;
+		}
+
+		ctx = EVP_MD_CTX_create();
+		key = EVP_PKEY_new();
+
+		if (!ctx || !key)
+		{
+			goto error;
+		}
+		if (!EVP_PKEY_set1_RSA(key, this->rsa))
+		{
+			goto error;
+		}
+		if (!EVP_VerifyInit_ex(ctx, hasher, NULL))
+		{
+			goto error;
+		}
+		if (!EVP_VerifyUpdate(ctx, data.ptr, data.len))
+		{
+			goto error;
+		}
+		valid = (EVP_VerifyFinal(ctx, signature.ptr, signature.len, key) == 1);
 	
 error:
-	if (key)
-	{
-		EVP_PKEY_free(key);
-	}
-	if (ctx)
-	{
-		EVP_MD_CTX_destroy(ctx);
+		if (key)
+		{
+			EVP_PKEY_free(key);
+		}
+		if (ctx)
+		{
+			EVP_MD_CTX_destroy(ctx);
+		}
 	}
 	return valid;
 }
@@ -125,8 +139,8 @@ static bool verify(private_openssl_rsa_public_key_t *this, signature_scheme_t sc
 {
 	switch (scheme)
 	{
-		case SIGN_DEFAULT:
-			/* default is EMSA-PKCS1 using SHA1 */
+		case SIGN_RSA_EMSA_PKCS1_NULL:
+			return verify_emsa_pkcs1_signature(this, NID_undef, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return verify_emsa_pkcs1_signature(this, NID_sha1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
@@ -147,9 +161,37 @@ static bool verify(private_openssl_rsa_public_key_t *this, signature_scheme_t sc
 /**
  * Implementation of public_key_t.get_keysize.
  */
-static bool encrypt(private_openssl_rsa_public_key_t *this, chunk_t crypto, chunk_t *plain)
+static bool encrypt_(private_openssl_rsa_public_key_t *this, chunk_t crypto, chunk_t *plain)
 {
 	DBG1("RSA public key encryption not implemented");
+	return FALSE;
+}
+
+/**
+ * Implementation of public_key_t.equals.
+ */
+static bool equals(private_openssl_rsa_public_key_t *this, public_key_t *other)
+{
+	identification_t *keyid;
+
+	if (&this->public.interface == other)
+	{
+		return TRUE;
+	}
+	if (other->get_type(other) != KEY_RSA)
+	{
+		return FALSE;
+	}
+	keyid = other->get_id(other, ID_PUBKEY_SHA1);
+	if (keyid && keyid->equals(keyid, this->keyid))
+	{
+		return TRUE;
+	}
+	keyid = other->get_id(other, ID_PUBKEY_INFO_SHA1);
+	if (keyid && keyid->equals(keyid, this->keyid_info))
+	{
+		return TRUE;
+	}
 	return FALSE;
 }
 
@@ -263,7 +305,8 @@ static private_openssl_rsa_public_key_t *openssl_rsa_public_key_create_empty()
 	
 	this->public.interface.get_type = (key_type_t (*)(public_key_t *this))get_type;
 	this->public.interface.verify = (bool (*)(public_key_t *this, signature_scheme_t scheme, chunk_t data, chunk_t signature))verify;
-	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt;
+	this->public.interface.encrypt = (bool (*)(public_key_t *this, chunk_t crypto, chunk_t *plain))encrypt_;
+	this->public.interface.equals = (bool (*) (public_key_t*, public_key_t*))equals;
 	this->public.interface.get_keysize = (size_t (*) (public_key_t *this))get_keysize;
 	this->public.interface.get_id = (identification_t* (*) (public_key_t *this,id_type_t))get_id;
 	this->public.interface.get_encoding = (chunk_t(*)(public_key_t*))get_encoding;

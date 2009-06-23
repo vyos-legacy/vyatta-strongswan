@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
- *
- * $Id: optionsfrom.c 3589 2008-03-13 14:14:44Z martin $
  */
 
 #include <stdio.h>

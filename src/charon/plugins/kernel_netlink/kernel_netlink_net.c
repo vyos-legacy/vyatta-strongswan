@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: kernel_netlink_net.c 4671 2008-11-18 09:52:28Z martin $
  */
 
 #include <sys/socket.h>
@@ -163,7 +161,11 @@ struct private_kernel_netlink_net_t {
 	 * whether to react to RTM_NEWROUTE or RTM_DELROUTE events
 	 */
 	bool process_route;
-
+	
+	/**
+	 * whether to actually install virtual IPs
+	 */
+	bool install_virtual_ip;
 };
 
 /**
@@ -219,7 +221,7 @@ static void fire_roam_job(private_kernel_netlink_net_t *this, bool address)
 				now.tv_usec -= 1000000;
 			}
 			this->last_roam = now;
-			charon->scheduler->schedule_job(charon->scheduler,
+			charon->scheduler->schedule_job_ms(charon->scheduler,
 					(job_t*)roam_job_create(address), ROAM_DELAY);
 		}
 	}
@@ -985,7 +987,12 @@ static status_t add_ip(private_kernel_netlink_net_t *this,
 	addr_entry_t *addr;
 	enumerator_t *addrs, *ifaces;
 	int ifindex;
-
+	
+	if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
+	
 	DBG2(DBG_KNL, "adding virtual IP %H", virtual_ip);
 	
 	this->mutex->lock(this->mutex);
@@ -1059,7 +1066,12 @@ static status_t del_ip(private_kernel_netlink_net_t *this, host_t *virtual_ip)
 	enumerator_t *addrs, *ifaces;
 	status_t status;
 	int ifindex;
-
+	
+	if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
+	
 	DBG2(DBG_KNL, "deleting virtual IP %H", virtual_ip);
 	
 	this->mutex->lock(this->mutex);
@@ -1175,7 +1187,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this, int nlmsg_ty
 /**
  * Implementation of kernel_net_t.add_route.
  */
-status_t add_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
+static status_t add_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
 		u_int8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
 {
 	return manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
@@ -1185,7 +1197,7 @@ status_t add_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
 /**
  * Implementation of kernel_net_t.del_route.
  */
-status_t del_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
+static status_t del_route(private_kernel_netlink_net_t *this, chunk_t dst_net,
 		u_int8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
 {
 	return manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,
@@ -1367,6 +1379,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 					"charon.routing_table_prio", IPSEC_ROUTING_TABLE_PRIO);
 	this->process_route = lib->settings->get_bool(lib->settings,
 					"charon.process_route", TRUE);
+	this->install_virtual_ip = lib->settings->get_bool(lib->settings,
+					"charon.install_virtual_ip", TRUE);
 	
 	this->socket = netlink_socket_create(NETLINK_ROUTE);
 	

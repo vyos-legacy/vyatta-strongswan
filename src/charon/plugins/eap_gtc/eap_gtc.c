@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: eap_gtc.c 3806 2008-04-15 05:56:35Z martin $
  */
  
 #include "eap_gtc.h"
@@ -174,7 +172,7 @@ static status_t process_peer(private_eap_gtc_t *this,
 											 this->peer, this->server);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for '%D' - '%D'",
+		DBG1(DBG_IKE, "no EAP key found for '%Y' - '%Y'",
 			 this->peer, this->server);
 		return FAILED;
 	}

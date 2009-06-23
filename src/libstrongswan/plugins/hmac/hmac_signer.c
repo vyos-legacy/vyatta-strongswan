@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: hmac_signer.c 4997 2009-03-24 10:24:58Z martin $
  */
 
 #include <string.h>
@@ -154,6 +152,10 @@ hmac_signer_t *hmac_signer_create(integrity_algorithm_t algo)
 		case AUTH_HMAC_SHA1_128:
 			hash = HASH_SHA1;
 			trunc = 16;
+			break;
+		case AUTH_HMAC_SHA1_160:
+			hash = HASH_SHA1;
+			trunc = 20;
 			break;
 		case AUTH_HMAC_MD5_96:
 			hash = HASH_MD5;

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2008 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,8 +14,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: ike_sa.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -35,18 +33,19 @@ typedef struct ike_sa_t ike_sa_t;
 #include <library.h>
 #include <encoding/message.h>
 #include <encoding/payloads/proposal_substructure.h>
+#include <encoding/payloads/configuration_attribute.h>
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <sa/tasks/task.h>
 #include <sa/keymat.h>
 #include <config/peer_cfg.h>
 #include <config/ike_cfg.h>
-#include <credentials/auth_info.h>
+#include <config/auth_cfg.h>
 
 /**
- * Timeout in milliseconds after that a half open IKE_SA gets deleted.
+ * Timeout in seconds after that a half open IKE_SA gets deleted.
  */
-#define HALF_OPEN_IKE_SA_TIMEOUT 30000
+#define HALF_OPEN_IKE_SA_TIMEOUT 30
 
 /**
  * Interval to send keepalives when NATed, in seconds.
@@ -82,6 +81,11 @@ enum ike_extension_t {
 	 * peer supports HTTP cert lookups as specified in RFC4306
 	 */
 	EXT_HASH_AND_URL = (1<<2),
+	
+	/**
+	 * peer supports multiple authentication exchanges, RFC4739
+	 */
+	EXT_MULTIPLE_AUTH = (1<<3),
 };
 
 /**
@@ -110,7 +114,7 @@ enum ike_condition_t {
 	COND_NAT_FAKE = (1<<3),
 	
 	/**
-	 * peer has ben authenticated using EAP
+	 * peer has been authenticated using EAP at least once
 	 */
 	COND_EAP_AUTHENTICATED = (1<<4),
 	
@@ -391,18 +395,12 @@ struct ike_sa_t {
 	void (*set_peer_cfg) (ike_sa_t *this, peer_cfg_t *config);
 	
 	/**
-	 * Get authentication/authorization info for local peer.
+	 * Get the authentication config with rules of the current auth round.
 	 *
-	 * @return				auth_info for me
+	 * @param local			TRUE for local rules, FALSE for remote constraints
+	 * @return				current cfg
 	 */
-	auth_info_t* (*get_my_auth)(ike_sa_t *this);
-	
-	/**
-	 * Get authentication/authorization info for remote peer.
-	 *
-	 * @return				auth_info for me
-	 */
-	auth_info_t* (*get_other_auth)(ike_sa_t *this);
+	auth_cfg_t* (*get_auth_cfg)(ike_sa_t *this, bool local);
 	
 	/**
 	 * Get the selected proposal of this IKE_SA.
@@ -602,51 +600,21 @@ struct ike_sa_t {
 	/**
 	 * Initiate a new connection.
 	 *
-	 * The configs are owned by the IKE_SA after the call.
+	 * The configs are owned by the IKE_SA after the call. If the initiate
+	 * is triggered by a packet, traffic selectors of the packet can be added
+	 * to the CHILD_SA.
 	 * 
 	 * @param child_cfg		child config to create CHILD from
+	 * @param reqid			reqid to use for CHILD_SA, 0 assigne uniquely
+	 * @param tsi			source of triggering packet
+	 * @param tsr			destination of triggering packet.
 	 * @return				
 	 * 						- SUCCESS if initialization started
 	 * 						- DESTROY_ME if initialization failed
 	 */
-	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg);
-
-	/**
-	 * Route a policy in the kernel.
-	 *
-	 * Installs the policies in the kernel. If traffic matches,
-	 * the kernel requests connection setup from the IKE_SA via acquire().
-	 * 
-	 * @param child_cfg		child config to route
-	 * @return				
-	 * 						- SUCCESS if routed successfully
-	 * 						- FAILED if routing failed
-	 */
-	status_t (*route) (ike_sa_t *this, child_cfg_t *child_cfg);
-
-	/**
-	 * Unroute a policy in the kernel previously routed.
-	 *
-	 * @param reqid			reqid of CHILD_SA to unroute
-	 * @return				
-	 * 						- SUCCESS if route removed
-	 *						- NOT_FOUND if CHILD_SA not found
-	 * 						- DESTROY_ME if last CHILD_SA was unrouted
-	 */
-	status_t (*unroute) (ike_sa_t *this, u_int32_t reqid);
-	
-	/**
-	 * Acquire connection setup for an installed kernel policy.
-	 *
-	 * If an installed policy raises an acquire, the kernel calls
-	 * this function to establish the CHILD_SA (and maybe the IKE_SA).
-	 *
-	 * @param reqid			reqid of the CHILD_SA the policy belongs to.
-	 * @return				
-	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed
-	 */
-	status_t (*acquire) (ike_sa_t *this, u_int32_t reqid);
+	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg,
+						  u_int32_t reqid, traffic_selector_t *tsi,
+						  traffic_selector_t *tsr);
 	
 	/**
 	 * Initiates the deletion of an IKE_SA.
@@ -869,14 +837,18 @@ struct ike_sa_t {
 	host_t* (*get_virtual_ip) (ike_sa_t *this, bool local);
 	
 	/**
-	 * Add a DNS server to the system.
+	 * Register a configuration attribute to the IKE_SA.
 	 *
-	 * An IRAS may send a DNS server. To use it, it is installed on the
-	 * system. The DNS entry has a lifetime until the IKE_SA gets closed.
+	 * If an IRAS sends a configuration attribute it is installed and
+	 * registered at the IKE_SA. Attributes are inherit()ed and get released
+	 * when the IKE_SA is closed.
 	 *
-	 * @param dns			DNS server to install on the system
+	 * @param handler		handler installed the attribute, use for release()
+	 * @param type			configuration attribute type
+	 * @param data			associated attribute data
 	 */
-	void (*add_dns_server) (ike_sa_t *this, host_t *dns);
+	void (*add_configuration_attribute)(ike_sa_t *this,
+							configuration_attribute_type_t type, chunk_t data);
 	
 	/**
 	 * Set local and remote host addresses to be used for IKE.
@@ -888,7 +860,7 @@ struct ike_sa_t {
 	 * @param remote		remote kmaddress
 	 */
 	void (*set_kmaddress) (ike_sa_t *this, host_t *local, host_t *remote);
-
+	
 	/**
 	 * Inherit all attributes of other to this after rekeying.
 	 *

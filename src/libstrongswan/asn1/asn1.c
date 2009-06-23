@@ -13,15 +13,14 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: asn1.c 5041 2009-03-27 08:58:48Z andreas $
  */
 
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <pthread.h>
 
-#include <library.h>
+#include <utils.h>
 #include <debug.h>
 
 #include "oid.h"
@@ -209,9 +208,13 @@ int asn1_known_oid(chunk_t object)
 		else
 		{
 			if (oid_names[oid].next)
+			{
 				oid = oid_names[oid].next;
+			}
 			else
+			{
 				return OID_UNKNOWN;
+			}
 		}
 	}
 	return -1;
@@ -220,7 +223,39 @@ int asn1_known_oid(chunk_t object)
 /*
  * Defined in header.
  */
-u_int asn1_length(chunk_t *blob)
+chunk_t asn1_build_known_oid(int n)
+{
+	chunk_t oid;
+	int i;
+	
+	if (n < 0 || n >= OID_MAX)
+	{
+		return chunk_empty;
+	}
+	
+	i = oid_names[n].level + 1;
+	oid = chunk_alloc(2 + i);
+	oid.ptr[0] = ASN1_OID;
+	oid.ptr[1] = i;
+	
+	do
+	{
+		if (oid_names[n].level >= i)
+		{
+			n--;
+			continue;
+		}
+		oid.ptr[--i + 2] = oid_names[n--].octet;
+	}
+	while (i > 0);
+	
+	return oid;
+}
+
+/*
+ * Defined in header.
+ */
+size_t asn1_length(chunk_t *blob)
 {
 	u_char n;
 	size_t len;
@@ -261,18 +296,28 @@ u_int asn1_length(chunk_t *blob)
 		len = 256*len + *blob->ptr++;
 		blob->len--;
 	}
+	if (len > blob->len)
+	{
+		DBG2("length is larger than remaining blob size");
+		return ASN1_INVALID_LENGTH;
+	}
 	return len;
 }
 
 #define TIME_MAX	0x7fffffff
+
+static const int days[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
+static const int tm_leap_1970 = 477;
 
 /**
  * Converts ASN.1 UTCTIME or GENERALIZEDTIME into calender time
  */
 time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 {
-	struct tm t;
-	time_t tc, tz_offset;
+	int tm_year, tm_mon, tm_day, tm_days, tm_hour, tm_min, tm_sec;
+	int tm_leap_4, tm_leap_100, tm_leap_400, tm_leap;
+	int tz_hour, tz_min, tz_offset;
+	time_t tm_secs;
 	u_char *eot = NULL;
 	
 	if ((eot = memchr(utctime->ptr, 'Z', utctime->len)) != NULL)
@@ -281,16 +326,18 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 	}
 	else if ((eot = memchr(utctime->ptr, '+', utctime->len)) != NULL)
 	{
-		int tz_hour, tz_min;
-	
-		sscanf(eot+1, "%2d%2d", &tz_hour, &tz_min);
+		if (sscanf(eot+1, "%2d%2d", &tz_hour, &tz_min) != 2)
+		{
+			return 0; /* error in positive timezone offset format */
+		}
 		tz_offset = 3600*tz_hour + 60*tz_min;  /* positive time zone offset */
 	}
 	else if ((eot = memchr(utctime->ptr, '-', utctime->len)) != NULL)
 	{
-		int tz_hour, tz_min;
-	
-		sscanf(eot+1, "%2d%2d", &tz_hour, &tz_min);
+		if (sscanf(eot+1, "%2d%2d", &tz_hour, &tz_min) != 2)
+		{
+			return 0; /* error in negative timezone offset format */
+		}
 		tz_offset = -3600*tz_hour - 60*tz_min;  /* negative time zone offset */
 	}
 	else
@@ -303,45 +350,65 @@ time_t asn1_to_time(const chunk_t *utctime, asn1_t type)
 		const char* format = (type == ASN1_UTCTIME)? "%2d%2d%2d%2d%2d":
 													 "%4d%2d%2d%2d%2d";
 	
-		sscanf(utctime->ptr, format, &t.tm_year, &t.tm_mon, &t.tm_mday,
-			   						 &t.tm_hour, &t.tm_min);
+		if (sscanf(utctime->ptr, format, &tm_year, &tm_mon, &tm_day,
+										 &tm_hour, &tm_min) != 5)
+		{
+			return 0; /* error in [yy]yymmddhhmm time format */
+		}
 	}
 	
 	/* is there a seconds field? */
 	if ((eot - utctime->ptr) == ((type == ASN1_UTCTIME)?12:14))
 	{
-		sscanf(eot-2, "%2d", &t.tm_sec);
+		if (sscanf(eot-2, "%2d", &tm_sec) != 1)
+		{
+			return 0; /* error in ss seconds field format */
+		}
 	}
 	else
 	{
-		t.tm_sec = 0;
+		tm_sec = 0;
 	}
 	
-	/* representation of year */
-	if (t.tm_year >= 1900)
+	/* representation of two-digit years */
+	if (type == ASN1_UTCTIME)
 	{
-		t.tm_year -= 1900;
+		tm_year += (tm_year < 50) ? 2000 : 1900;
 	}
-	else if (t.tm_year >= 100)
+	
+	/* prevent large 32 bit integer overflows */
+	if (sizeof(time_t) == 4 && tm_year > 2038)
 	{
-		return 0;
+		return TIME_MAX;
 	}
-	else if (t.tm_year < 50)
-	{
-		t.tm_year += 100;
-	}
-	
-	/* representation of month 0..11*/
-	t.tm_mon--;
-	
-	/* set daylight saving time to off */
-	t.tm_isdst = 0;
-	
-	/* convert to time_t */
-	tc = mktime(&t);
 
-	/* if no conversion overflow occurred, compensate timezone */
-	return (tc == -1) ? TIME_MAX : (tc - timezone - tz_offset);
+	/* representation of months as 0..11*/
+	if (tm_mon < 1 || tm_mon > 12)
+	{
+		return 0; /* error in month format */
+	}
+	tm_mon--;
+	
+	/* representation of days as 0..30 */
+	tm_day--;
+
+	/* number of leap years between last year and 1970? */
+	tm_leap_4 = (tm_year - 1) / 4;
+	tm_leap_100 = tm_leap_4 / 25;
+	tm_leap_400 = tm_leap_100 / 4;
+	tm_leap = tm_leap_4 - tm_leap_100 + tm_leap_400 - tm_leap_1970;
+
+	/* if date later then February, is the current year a leap year? */
+	if (tm_mon > 1 && (tm_year % 4 == 0) &&
+		(tm_year % 100 != 0 || tm_year % 400 == 0))
+	{
+		tm_leap++;
+	}
+	tm_days = 365 * (tm_year - 1970) + days[tm_mon] + tm_day + tm_leap;
+	tm_secs = 60 * (60 * (24 * tm_days + tm_hour) + tm_min) + tm_sec - tz_offset;
+
+	/* has a 32 bit overflow occurred? */
+	return (tm_secs < 0) ? TIME_MAX : tm_secs;
 }
 
 /**
@@ -626,7 +693,7 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 }
 
 /**
- * Build an ASN.1 BITSTRING object
+ * Build an ASN.1 BIT_STRING object
  */
 chunk_t asn1_bitstring(const char *mode, chunk_t content)
 {
@@ -635,6 +702,41 @@ chunk_t asn1_bitstring(const char *mode, chunk_t content)
 
 	*pos++ = 0x00;
 	memcpy(pos, content.ptr, content.len);
+	if (*mode == 'm')
+	{
+		free(content.ptr);
+	}
+	return object;
+}
+
+/**
+ * Build an ASN.1 INTEGER object
+ */
+chunk_t asn1_integer(const char *mode, chunk_t content)
+{
+	chunk_t object;
+	size_t len;
+	u_char *pos;
+
+	if (content.len == 0 || (content.len == 1 && *content.ptr == 0x00))
+	{
+		/* a zero ASN.1 integer does not have a value field */
+		len = 0;
+	}
+	else
+	{
+		/* ASN.1 integers must be positive numbers in two's complement */
+		len = content.len + ((*content.ptr & 0x80) ? 1 : 0);
+	}
+	pos = asn1_build_object(&object, ASN1_INTEGER, len);
+	if (len > content.len)
+	{
+		*pos++ = 0x00;
+	}
+	if (len)
+	{
+		memcpy(pos, content.ptr, content.len);
+	}
 	if (*mode == 'm')
 	{
 		free(content.ptr);

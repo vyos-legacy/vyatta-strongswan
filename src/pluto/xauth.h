@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: xauth.h 3738 2008-04-02 19:04:45Z andreas $
  */
 
 #ifndef _XAUTH_H
@@ -26,20 +24,20 @@
 struct chunk_t;
 
 typedef struct {
-    char *conn_name;
-    char id[BUF_LEN];
-    char ip_address[ADDRTOT_BUF];
+	char *conn_name;
+	char id[BUF_LEN];
+	char ip_address[ADDRTOT_BUF];
 } xauth_peer_t;
 
 typedef struct {
-    chunk_t user_name;
-    chunk_t user_password;
+	chunk_t user_name;
+	chunk_t user_password;
 } xauth_t;
 
 typedef struct {
-    void *handle;
-    bool (*get_secret) (xauth_t *xauth_secret);
-    bool (*verify_secret) (const xauth_peer_t *peer, const xauth_t *xauth_secret);
+	void *handle;
+	bool (*get_secret) (xauth_t *xauth_secret);
+	bool (*verify_secret) (const xauth_peer_t *peer, const xauth_t *xauth_secret);
 } xauth_module_t;
 
 extern xauth_module_t xauth_module;

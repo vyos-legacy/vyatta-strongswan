@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: x509_crl.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #include "x509_crl.h"
@@ -226,7 +224,7 @@ static bool parse(private_x509_crl_t *this)
 				break;
 			case CRL_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", this->issuer);
+				DBG2("  '%Y'", this->issuer);
 				break;
 			case CRL_OBJ_THIS_UPDATE:
 				this->thisUpdate = asn1_parse_time(object, level);
@@ -436,31 +434,11 @@ static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
 			return FALSE;
 		}
 	}
-	/* TODO: generic OID to scheme mapper? */
-	switch (this->algorithm)
-	{
-		case OID_MD5_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_MD5;
-			break;
-		case OID_SHA1_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			break;
-		case OID_SHA256_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
-			break;
-		case OID_SHA384_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
-			break;
-		case OID_SHA512_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
-			break;
-		case OID_ECDSA_WITH_SHA1:
-			scheme = SIGN_ECDSA_WITH_SHA1;
-			break;
-		default:
-			return FALSE;
-	}
-	if (key == NULL)
+
+	/* determine signature scheme */
+	scheme = signature_scheme_from_oid(this->algorithm);
+
+	if (scheme == SIGN_UNKNOWN || key == NULL)
 	{
 		return FALSE;
 	}

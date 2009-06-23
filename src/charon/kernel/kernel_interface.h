@@ -14,8 +14,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: kernel_interface.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -145,14 +143,15 @@ struct kernel_interface_t {
 	/**
 	 * Delete a previously installed SA from the SAD.
 	 * 
+	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @param cpi			CPI for IPComp or 0
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi,
-						protocol_id_t protocol, u_int16_t cpi);
+	status_t (*del_sa) (kernel_interface_t *this, host_t *src, host_t *dst,
+						u_int32_t spi, protocol_id_t protocol, u_int16_t cpi);
 	
 	/**
 	 * Add a policy to the SPD.
@@ -362,11 +361,6 @@ struct kernel_interface_t {
 	 * @param create			constructor to unregister
 	 */
 	void (*remove_net_interface)(kernel_interface_t *this, kernel_net_constructor_t create);
-	
-	/**
-	 * Create the kernel interfaces classes.
-	 */
-	void (*create_interfaces)(kernel_interface_t *this);
 	
 	/**
 	 * Destroys a kernel_interface_manager_t object.

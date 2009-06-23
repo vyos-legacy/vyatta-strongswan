@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: medsrv_plugin.c 4137 2008-07-01 13:57:47Z martin $
  */
 
 #include "medsrv_plugin.h"

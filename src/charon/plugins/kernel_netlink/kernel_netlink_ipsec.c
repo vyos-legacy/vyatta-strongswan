@@ -16,8 +16,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: kernel_netlink_ipsec.c 4997 2009-03-24 10:24:58Z martin $
  */
 
 #include <sys/types.h>
@@ -170,14 +168,20 @@ static kernel_algorithm_t encryption_algs[] = {
 /*	{ENCR_DES_IV32, 			"***"				}, */
 	{ENCR_NULL, 				"cipher_null"		},
 	{ENCR_AES_CBC,	 			"aes"				},
-/*	{ENCR_AES_CTR, 				"***"				}, */
+	{ENCR_AES_CTR, 				"rfc3686(ctr(aes))"	},
 	{ENCR_AES_CCM_ICV8,			"rfc4309(ccm(aes))"	},
 	{ENCR_AES_CCM_ICV12,		"rfc4309(ccm(aes))"	},
 	{ENCR_AES_CCM_ICV16,		"rfc4309(ccm(aes))"	},
 	{ENCR_AES_GCM_ICV8,			"rfc4106(gcm(aes))"	},
 	{ENCR_AES_GCM_ICV12,		"rfc4106(gcm(aes))"	},
 	{ENCR_AES_GCM_ICV16,		"rfc4106(gcm(aes))"	},
-	{END_OF_LIST, 				NULL				},
+/*	{ENCR_NULL_AUTH_AES_GMAC,	"***"				}, */
+	{ENCR_CAMELLIA_CBC,			"cbc(camellia)"		},
+/*	{ENCR_CAMELLIA_CTR,			"***"				}, */
+/*	{ENCR_CAMELLIA_CCM_ICV8,	"***"				}, */
+/*	{ENCR_CAMELLIA_CCM_ICV12,	"***"				}, */
+/*	{ENCR_CAMELLIA_CCM_ICV16,	"***"				}, */
+	{END_OF_LIST, 				NULL				}
 };
 
 /**
@@ -192,7 +196,7 @@ static kernel_algorithm_t integrity_algs[] = {
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
-	{END_OF_LIST, 				NULL				},
+	{END_OF_LIST, 				NULL				}
 };
 
 /**
@@ -203,7 +207,7 @@ static kernel_algorithm_t compression_algs[] = {
 	{IPCOMP_DEFLATE,			"deflate"			},
 	{IPCOMP_LZS,				"lzs"				},
 	{IPCOMP_LZJH,				"lzjh"				},
-	{END_OF_LIST, 				NULL				},
+	{END_OF_LIST, 				NULL				}
 };
 
 /**
@@ -365,6 +369,24 @@ static protocol_id_t proto_kernel2ike(u_int8_t proto)
 			return PROTO_AH;
 		default:
 			return proto;
+	}
+}
+
+/**
+ * convert the general ipsec mode to the one defined in xfrm.h
+ */
+static u_int8_t mode2kernel(ipsec_mode_t mode)
+{
+	switch (mode)
+	{
+		case MODE_TRANSPORT:
+			return XFRM_MODE_TRANSPORT;
+		case MODE_TUNNEL:
+			return XFRM_MODE_TUNNEL;
+		case MODE_BEET:
+			return XFRM_MODE_BEET;
+		default:
+			return mode;
 	}
 }
 
@@ -797,7 +819,7 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	host2xfrm(src, &userspi->info.saddr);
 	host2xfrm(dst, &userspi->info.id.daddr);
 	userspi->info.id.proto = proto;
-	userspi->info.mode = TRUE; /* tunnel mode */
+	userspi->info.mode = XFRM_MODE_TUNNEL;
 	userspi->info.reqid = reqid;
 	userspi->info.family = src->get_family(src);
 	userspi->min = min;
@@ -935,7 +957,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 	sa->id.spi = spi;
 	sa->id.proto = proto_ike2kernel(protocol);
 	sa->family = src->get_family(src);
-	sa->mode = mode;
+	sa->mode = mode2kernel(mode);
 	if (mode == MODE_TUNNEL)
 	{
 		sa->flags |= XFRM_STATE_AF_UNSPEC;
@@ -1210,8 +1232,9 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 /**
  * Implementation of kernel_interface_t.del_sa.
  */
-static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
-					   u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
+static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *src,
+					   host_t *dst, u_int32_t spi, protocol_id_t protocol,
+					   u_int16_t cpi)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr;
@@ -1220,7 +1243,7 @@ static status_t del_sa(private_kernel_netlink_ipsec_t *this, host_t *dst,
 	/* if IPComp was used, we first delete the additional IPComp SA */
 	if (cpi)
 	{
-		del_sa(this, dst, htonl(ntohs(cpi)), IPPROTO_COMP, 0);
+		del_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, 0);
 	}
 	
 	memset(&request, 0, sizeof(request));
@@ -1333,7 +1356,7 @@ static status_t update_sa(private_kernel_netlink_ipsec_t *this,
 	}
 	
 	/* delete the old SA (without affecting the IPComp SA) */
-	if (del_sa(this, dst, spi, protocol, 0) != SUCCESS)
+	if (del_sa(this, src, dst, spi, protocol, 0) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI %.8x", ntohl(spi));
 		free(out);
@@ -1520,7 +1543,7 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 		tmpl->reqid = reqid;
 		tmpl->id.proto = IPPROTO_COMP;
 		tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
-		tmpl->mode = mode;
+		tmpl->mode = mode2kernel(mode);
 		tmpl->optional = direction != POLICY_OUT;
 		tmpl->family = src->get_family(src);
 		
@@ -1541,7 +1564,7 @@ static status_t add_policy(private_kernel_netlink_ipsec_t *this,
 	tmpl->reqid = reqid;
 	tmpl->id.proto = proto_ike2kernel(protocol);
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
-	tmpl->mode = mode;
+	tmpl->mode = mode2kernel(mode);
 	tmpl->family = src->get_family(src);
 	
 	host2xfrm(src, &tmpl->saddr);
@@ -1865,7 +1888,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
 	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
-	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
+	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;

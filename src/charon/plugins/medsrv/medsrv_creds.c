@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: medsrv_creds.c 4317 2008-09-02 11:00:13Z martin $
  */
 
 #include "medsrv_creds.h"

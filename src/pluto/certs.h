@@ -1,5 +1,7 @@
 /* Certificate support for IKE authentication
- * Copyright (C) 2002-2004 Andreas Steffen, Zuercher Hochschule Winterthur
+ * Copyright (C) 2002-2009 Andreas Steffen
+ *
+ * HSR - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -10,66 +12,65 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: certs.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #ifndef _CERTS_H
 #define _CERTS_H
 
-#include "pkcs1.h"
+#include <credentials/keys/private_key.h>
+
 #include "x509.h"
-#include "pgp.h"
+#include "pgpcert.h"
 
 /* path definitions for private keys, end certs,
  * cacerts, attribute certs and crls
  */
 #define PRIVATE_KEY_PATH  IPSEC_CONFDIR "/ipsec.d/private"
 #define HOST_CERT_PATH    IPSEC_CONFDIR "/ipsec.d/certs"
-#define CA_CERT_PATH	  IPSEC_CONFDIR "/ipsec.d/cacerts"
-#define A_CERT_PATH	  IPSEC_CONFDIR "/ipsec.d/acerts"
-#define AA_CERT_PATH	  IPSEC_CONFDIR "/ipsec.d/aacerts"
-#define OCSP_CERT_PATH	  IPSEC_CONFDIR "/ipsec.d/ocspcerts"
-#define CRL_PATH	  IPSEC_CONFDIR "/ipsec.d/crls"
-#define REQ_PATH	  IPSEC_CONFDIR "/ipsec.d/reqs"
+#define CA_CERT_PATH      IPSEC_CONFDIR "/ipsec.d/cacerts"
+#define A_CERT_PATH       IPSEC_CONFDIR "/ipsec.d/acerts"
+#define AA_CERT_PATH      IPSEC_CONFDIR "/ipsec.d/aacerts"
+#define OCSP_CERT_PATH    IPSEC_CONFDIR "/ipsec.d/ocspcerts"
+#define CRL_PATH          IPSEC_CONFDIR "/ipsec.d/crls"
+#define REQ_PATH          IPSEC_CONFDIR "/ipsec.d/reqs"
 
 /* advance warning of imminent expiry of
  * cacerts, public keys, and crls
  */
-#define CA_CERT_WARNING_INTERVAL	30 /* days */
-#define OCSP_CERT_WARNING_INTERVAL	30 /* days */
-#define PUBKEY_WARNING_INTERVAL		 7 /* days */
-#define CRL_WARNING_INTERVAL		 7 /* days */
-#define ACERT_WARNING_INTERVAL		 1 /* day */
+#define CA_CERT_WARNING_INTERVAL        30 /* days */
+#define OCSP_CERT_WARNING_INTERVAL      30 /* days */
+#define PUBKEY_WARNING_INTERVAL          7 /* days */
+#define CRL_WARNING_INTERVAL             7 /* days */
+#define ACERT_WARNING_INTERVAL           1 /* day */
 
 /* certificate access structure
  * currently X.509 and OpenPGP certificates are supported
  */
 typedef struct {
-    u_char type;
-    union {
-	x509cert_t *x509;
-	pgpcert_t  *pgp;
-    } u;
+	u_char type;
+	union {
+		x509cert_t *x509;
+		pgpcert_t  *pgp;
+	} u;
 } cert_t;
 
 /* used for initialization */
-extern const cert_t empty_cert;
+extern const cert_t cert_empty;
 
 /*  do not send certificate requests
  *  flag set in plutomain.c and used in ipsec_doi.c
  */
 extern bool no_cr_send;
 
-extern err_t load_rsa_private_key(const char* filename, prompt_pass_t *pass
-    , RSA_private_key_t *key);
-extern chunk_t get_mycert(cert_t cert);
-extern bool load_coded_file(const char *filename, prompt_pass_t *pass
-    , const char *type, chunk_t *blob, bool *pgp);
-extern bool load_cert(const char *filename, const char *label
-    , cert_t *cert);
-extern bool load_host_cert(const char *filename, cert_t *cert);
-extern bool load_ca_cert(const char *filename, cert_t *cert);
+extern public_key_t* cert_get_public_key(const cert_t cert);
+extern chunk_t cert_get_encoding(cert_t cert);
+extern private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
+									   key_type_t type);
+extern bool load_coded_file(char *filename, prompt_pass_t *pass,
+							const char *type, chunk_t *blob, bool *pgp);
+extern bool load_cert(char *filename, const char *label, cert_t *cert);
+extern bool load_host_cert(char *filename, cert_t *cert);
+extern bool load_ca_cert(char *filename, cert_t *cert);
 extern bool same_cert(const cert_t *a, const cert_t *b);
 extern void share_cert(cert_t cert);
 extern void release_cert(cert_t cert);

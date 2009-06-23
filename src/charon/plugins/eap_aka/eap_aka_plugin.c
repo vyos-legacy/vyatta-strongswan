@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: eap_aka_plugin.c 3491 2008-02-22 14:04:00Z martin $
  */
 
 #include "eap_aka_plugin.h"

@@ -9,8 +9,10 @@ config/child_cfg.c config/child_cfg.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
+config/auth_cfg.c config/auth_cfg.h \
 config/traffic_selector.c config/traffic_selector.h \
 config/attributes/attribute_provider.h \
+config/attributes/attribute_handler.h \
 config/attributes/attribute_manager.c config/attributes/attribute_manager.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
@@ -76,6 +78,7 @@ sa/ike_sa_id.c sa/ike_sa_id.h \
 sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/task_manager.c sa/task_manager.h \
 sa/keymat.c sa/keymat.h \
+sa/trap_manager.c sa/trap_manager.h \
 sa/tasks/child_create.c sa/tasks/child_create.h \
 sa/tasks/child_delete.c sa/tasks/child_delete.h \
 sa/tasks/child_rekey.c sa/tasks/child_rekey.h \
@@ -93,8 +96,7 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/task.c sa/tasks/task.h \
 credentials/credential_manager.c credentials/credential_manager.h \
-credentials/auth_info.c credentials/auth_info.h \
-credentials/sets/auth_info_wrapper.c credentials/sets/auth_info_wrapper.h \
+credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
 credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
@@ -104,9 +106,8 @@ AM_CFLAGS = -rdynamic \
   -DIPSEC_DIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\" \
   -DIPSEC_PLUGINDIR=\"${plugindir}\" \
-  -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
-  -DRESOLV_CONF=\"${resolv_conf}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm -ldl
+  -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm $(DLLIB)
 
 # compile options
 #################
@@ -131,10 +132,6 @@ if USE_INTEGRITY_TEST
   AM_CFLAGS += -DINTEGRITY_TEST
 endif
 
-if USE_SELF_TEST
-  AM_CFLAGS += -DSELF_TEST
-endif
-
 if USE_CAPABILITIES
   charon_LDADD += -lcap
 endif
@@ -154,6 +151,11 @@ endif
 if USE_KERNEL_PFKEY
   SUBDIRS += plugins/kernel_pfkey
   PLUGINS += kernel-pfkey
+endif
+
+if USE_KERNEL_PFROUTE
+  SUBDIRS += plugins/kernel_pfroute
+  PLUGINS += kernel-pfroute
 endif
 
 if USE_KERNEL_KLIPS
@@ -184,6 +186,11 @@ endif
 if USE_UPDOWN
   SUBDIRS += plugins/updown
   PLUGINS += updown
+endif
+
+if USE_ATTR
+  SUBDIRS += plugins/attr
+  PLUGINS += attr
 endif
 
 if USE_EAP_IDENTITY
@@ -239,6 +246,11 @@ endif
 if USE_NM
   SUBDIRS += plugins/nm
   PLUGINS += nm
+endif
+
+if USE_RESOLV_CONF
+  SUBDIRS += plugins/resolv_conf
+  PLUGINS += resolv-conf
 endif
 
 if USE_UCI

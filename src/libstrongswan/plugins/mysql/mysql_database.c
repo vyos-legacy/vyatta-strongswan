@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: mysql_database.c 4193 2008-07-21 11:13:06Z martin $
  */
 
 #define _GNU_SOURCE

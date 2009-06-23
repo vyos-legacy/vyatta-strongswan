@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: sqlite_database.c 4268 2008-08-21 11:58:58Z andreas $
  */
 
 #include "sqlite_database.h"

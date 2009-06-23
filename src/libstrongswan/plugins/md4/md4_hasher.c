@@ -17,8 +17,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: md4_hasher.c 4885 2009-02-19 10:16:45Z andreas $
  */
 
 #include <string.h>

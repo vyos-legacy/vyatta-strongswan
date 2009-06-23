@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: traffic_selector_substructure.c 4639 2008-11-12 15:09:24Z martin $
  */
 
 #include "traffic_selector_substructure.h"

@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: library.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #include "library.h"
@@ -101,8 +99,6 @@ void library_init(char *settings)
 					 PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'B', chunk_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
-	pfh->add_handler(pfh, 'D', identification_printf_hook,
-					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'H', host_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'N', enum_printf_hook,
@@ -114,12 +110,14 @@ void library_init(char *settings)
 	pfh->add_handler(pfh, 'V', time_delta_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_POINTER,
 					 PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'Y', identification_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 	
+	this->public.settings = settings_create(settings);
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();
 	this->public.fetcher = fetcher_manager_create();
 	this->public.db = database_factory_create();
-	this->public.settings = settings_create(settings);
 	this->public.plugins = plugin_loader_create();
 }
 

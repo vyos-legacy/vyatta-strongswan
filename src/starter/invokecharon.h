@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: invokecharon.h 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #ifndef _STARTER_CHARON_H_
@@ -25,7 +23,7 @@
 extern void starter_charon_sigchild (pid_t pid);
 extern pid_t starter_charon_pid (void);
 extern int starter_stop_charon (void);
-extern int starter_start_charon(struct starter_config *cfg, bool debug);
+extern int starter_start_charon(struct starter_config *cfg, bool no_fork, bool attach_gdb);
 
 #endif /* _STARTER_CHARON_H_ */
 

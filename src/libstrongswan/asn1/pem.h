@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: pem.h 4011 2008-05-23 19:18:08Z andreas $
  */
 
 #ifndef PEM_H_
@@ -23,9 +21,9 @@
 
 #include <library.h>
 
-bool pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp);
+status_t pem_to_bin(chunk_t *blob, chunk_t passphrase, bool *pgp);
 
-bool pem_asn1_load_file(char *filename, chunk_t *passphrase,
-						chunk_t *blob, bool *pgp);
+bool pem_asn1_load_file(char *filename, chunk_t *passphrase, chunk_t *blob,
+						bool *pgp);
 
 #endif /*PEM_H_ @} */

@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: utils.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -49,6 +47,11 @@
  * Macro compares two strings for equality
  */
 #define strneq(x,y,len) (strncmp(x, y, len) == 0)
+
+/**
+ * Macro compares two strings for equality ignoring case
+ */
+#define strcaseeq(x,y) (strcasecmp(x, y) == 0)
 
 /**
  * Macro compares two binary blobs for equality
@@ -113,12 +116,22 @@
 /**
  * General purpose boolean type.
  */
-typedef int bool;
+#ifdef HAVE_STDBOOL_H
+# include <stdbool.h>
+#else
+# ifndef HAVE__BOOL
+#  define _Bool signed char
+# endif /* HAVE__BOOL */
+# define bool _Bool
+# define false 0
+# define true 1
+# define __bool_true_false_are_defined 1
+#endif /* HAVE_STDBOOL_H */
 #ifndef FALSE
-# define FALSE 0
+# define FALSE false
 #endif /* FALSE */
 #ifndef TRUE
-# define TRUE  1
+# define TRUE  true
 #endif /* TRUE */
 
 typedef enum status_t status_t;
@@ -248,6 +261,16 @@ void *return_null();
  * No-Operation function
  */
 void nop();
+
+/**
+ * returns TRUE
+ */
+bool return_true();
+
+/**
+ * returns FALSE
+ */
+bool return_false();
 
 /**
  * Special type to count references
