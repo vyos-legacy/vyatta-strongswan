@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: pubkey_public_key.c 4379 2008-10-08 01:19:26Z andreas $
  */
 
 #include "pubkey_public_key.h"
@@ -147,7 +145,7 @@ static void add(private_builder_t *this, builder_part_t part, ...)
 				va_start(args, part);
 				pem = va_arg(args, char *);
 				blob = chunk_clone(chunk_create(pem, strlen(pem)));
-				if (pem_to_bin(&blob, &chunk_empty, &pgp))
+				if (pem_to_bin(&blob, chunk_empty, &pgp) == SUCCESS)
 				{
 					this->key = pubkey_public_key_load(chunk_clone(blob));
 				}

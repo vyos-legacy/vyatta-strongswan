@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: leak_detective.c 4936 2009-03-12 18:07:32Z tobias $
  */
 	
 #define _GNU_SOURCE
@@ -202,6 +200,11 @@ char *whitelist[] = {
 	"DH_new_method",
 	"ENGINE_load_builtin_engines",
 	"OPENSSL_config",
+	/* libgcrypt */
+	"gcry_control",
+	"gcry_check_version",
+	"gcry_randomize",
+	"gcry_create_nonce",
 };
 
 /**

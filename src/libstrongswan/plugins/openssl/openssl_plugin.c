@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: openssl_plugin.c 4879 2009-02-18 19:41:33Z tobias $
  */
 
 #include <openssl/conf.h>
@@ -121,7 +119,7 @@ static void destroy_function(struct CRYPTO_dynlock_value *lock,
  */
 static unsigned long id_function(void)
 {
-	return pthread_self();
+	return (unsigned long)pthread_self();
 }
 
 /**

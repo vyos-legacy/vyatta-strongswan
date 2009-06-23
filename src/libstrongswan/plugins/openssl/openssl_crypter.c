@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: openssl_crypter.c 4879 2009-02-18 19:41:33Z tobias $
  */
 
 #include "openssl_crypter.h"
@@ -133,10 +131,12 @@ static void crypt(private_openssl_crypter_t *this, chunk_t data,
 	}
 	EVP_CIPHER_CTX ctx;
 	EVP_CIPHER_CTX_init(&ctx);
-	EVP_CipherInit_ex(&ctx, this->cipher, NULL, this->key.ptr, iv.ptr, enc);
-	EVP_CIPHER_CTX_set_padding(&ctx, 0); /* disable padding */
+	EVP_CipherInit_ex(&ctx, this->cipher, NULL, NULL, NULL, enc);
+	EVP_CIPHER_CTX_set_padding(&ctx, 0); 		/* disable padding */
+	EVP_CIPHER_CTX_set_key_length(&ctx, this->key.len);
+	EVP_CipherInit_ex(&ctx, NULL, NULL, this->key.ptr, iv.ptr, enc);
 	EVP_CipherUpdate(&ctx, out, &len, data.ptr, data.len);
-	EVP_CipherFinal_ex(&ctx, out, &len); /* since padding is disabled this does nothing */
+	EVP_CipherFinal_ex(&ctx, out + len, &len); /* since padding is disabled this does nothing */
 	EVP_CIPHER_CTX_cleanup(&ctx);
 }
 

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: plugin_loader.c 4144 2008-07-02 08:19:43Z martin $
  */
 
 #define _GNU_SOURCE

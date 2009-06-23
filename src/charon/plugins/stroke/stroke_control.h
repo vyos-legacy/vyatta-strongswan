@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 /**
@@ -56,6 +54,13 @@ struct stroke_control_t {
 	void (*terminate_srcip)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
 	
 	/**
+	 * Delete IKE_SAs without a CHILD_SA.
+	 *
+	 * @param msg		stroke message
+	 */
+	void (*purge_ike)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
+	
+	/**
 	 * Route a connection.
 	 *
 	 * @param msg		stroke message
@@ -70,9 +75,9 @@ struct stroke_control_t {
 	void (*unroute)(stroke_control_t *this, stroke_msg_t *msg, FILE *out);
 	
 	/**
-     * Destroy a stroke_control instance.
-     */
-    void (*destroy)(stroke_control_t *this);
+	 * Destroy a stroke_control instance.
+	 */
+	void (*destroy)(stroke_control_t *this);
 };
 
 /**

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: gmp_plugin.c 4309 2008-08-28 11:07:57Z martin $
  */
 
 #include "gmp_plugin.h"

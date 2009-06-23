@@ -13,8 +13,6 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-#
-# RCSID $Id: build-umlrootfs 5006 2009-03-25 07:26:53Z andreas $
 
 DIR=`dirname $0`
 
@@ -187,6 +185,11 @@ then
     echo -n " --enable-openssl" >> $INSTALLSHELL
 fi
 
+if [ "$USE_BLOWFISH" = "yes" ]
+then
+    echo -n " --enable-blowfish" >> $INSTALLSHELL
+fi
+
 if [ "$USE_KERNEL_PFKEY" = "yes" ]
 then
     echo -n " --enable-kernel-pfkey" >> $INSTALLSHELL
@@ -205,6 +208,16 @@ fi
 if [ "$USE_LOAD_TESTS" = "yes" ]
 then
     echo -n " --enable-load-tests" >> $INSTALLSHELL
+fi
+
+if [ "$USE_TEST_VECTORS" = "yes" ]
+then
+    echo -n " --enable-test-vectors" >> $INSTALLSHELL
+fi
+
+if [ "$USE_GCRYPT" = "yes" ]
+then
+    echo -n " --enable-gcrypt" >> $INSTALLSHELL
 fi
 
 echo "" >> $INSTALLSHELL

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: acquire_job.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -44,9 +42,7 @@ struct acquire_job_t {
 /**
  * Creates a job of type ACQUIRE.
  *
- * We use the reqid to find the routed CHILD_SA.
- *
- * @param reqid		reqid of the CHILD_SA to acquire
+ * @param reqid		reqid of the trapped CHILD_SA to acquire
  * @param src_ts	source traffic selector
  * @param dst_ts	destination traffic selector
  * @return			acquire_job_t object

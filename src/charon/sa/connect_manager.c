@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: connect_manager.c 4579 2008-11-05 11:29:56Z martin $
  */
 
 #include "connect_manager.h"
@@ -734,11 +732,11 @@ static void build_pairs(check_list_t *checklist)
  */
 static status_t process_payloads(message_t *message, check_t *check)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
 
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) != NOTIFY)
 		{
@@ -796,7 +794,7 @@ static status_t process_payloads(message_t *message, check_t *check)
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 	
 	if (!check->connect_id.ptr || !check->endpoint || !check->auth.ptr)
 	{
@@ -904,7 +902,7 @@ static void update_checklist_state(private_connect_manager_t *this, check_list_t
 		
 		callback_data_t *data = callback_data_create(this, checklist->connect_id);
 		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-		charon->scheduler->schedule_job(charon->scheduler, job, ME_WAIT_TO_FINISH);
+		charon->scheduler->schedule_job_ms(charon->scheduler, job, ME_WAIT_TO_FINISH);
 		checklist->is_finishing = TRUE;
 	}
 	
@@ -1002,7 +1000,7 @@ static void queue_retransmission(private_connect_manager_t *this, check_list_t *
 	}
 	DBG2(DBG_IKE, "scheduling retransmission %d of pair '%d' in %dms", retransmission, pair->id, rto);
 	
-	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, rto);
+	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)job, rto);
 }
 
 /**
@@ -1139,7 +1137,7 @@ static void schedule_checks(private_connect_manager_t *this, check_list_t *check
 {
 	callback_data_t *data = callback_data_create(this, checklist->connect_id);
 	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-	charon->scheduler->schedule_job(charon->scheduler, checklist->sender, time);
+	charon->scheduler->schedule_job_ms(charon->scheduler, checklist->sender, time);
 }
 
 /**
@@ -1196,8 +1194,8 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 		}
 		else
 		{
-			DBG1(DBG_IKE, "there is no mediated connection waiting between '%D' "
-					"and '%D'", checklist->initiator.id, checklist->responder.id);
+			DBG1(DBG_IKE, "there is no mediated connection waiting between '%Y' "
+					"and '%Y'", checklist->initiator.id, checklist->responder.id);
 		}
 	}
 }
@@ -1396,7 +1394,7 @@ static bool check_and_register(private_connect_manager_t *this,
 
 	if (get_initiated_by_ids(this, id, peer_id, &initiated) != SUCCESS)
 	{
-		DBG2(DBG_IKE, "registered waiting mediated connection with '%D'", peer_id);
+		DBG2(DBG_IKE, "registered waiting mediated connection with '%Y'", peer_id);
 		initiated = initiated_create(id, peer_id);
 		this->initiated->insert_last(this->initiated, initiated);
 		already_there = FALSE;
@@ -1425,7 +1423,7 @@ static void check_and_initiate(private_connect_manager_t *this, ike_sa_id_t *med
 
 	if (get_initiated_by_ids(this, id, peer_id, &initiated) != SUCCESS)
 	{
-		DBG2(DBG_IKE, "no waiting mediated connections with '%D'", peer_id);
+		DBG2(DBG_IKE, "no waiting mediated connections with '%Y'", peer_id);
 		this->mutex->unlock(this->mutex);
 		return;
 	}

@@ -94,7 +94,7 @@
 
 
 /* Copy the first part of user declarations.  */
-#line 1 "parser.y"
+#line 1 "./parser.y"
 
 /* strongSwan config file parser (parser.y)
  * Copyright (C) 2001 Mathieu Lafon - Arkoon Network Security
@@ -108,8 +108,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: parser.y 3267 2007-10-08 19:57:54Z andreas $
  */
 
 #include <stdio.h>
@@ -124,7 +122,7 @@
 #include "parser.h"
 
 #define YYERROR_VERBOSE
-#define ERRSTRING_LEN	256
+#define ERRSTRING_LEN   256
 
 /**
  * Bison
@@ -170,10 +168,10 @@ extern kw_entry_t *in_word_set (char *str, unsigned int len);
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 56 "parser.y"
+#line 54 "./parser.y"
 { char *s; }
 /* Line 187 of yacc.c.  */
-#line 177 "y.tab.c"
+#line 175 "y.tab.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -186,7 +184,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 190 "y.tab.c"
+#line 188 "y.tab.c"
 
 #ifdef short
 # undef short
@@ -474,8 +472,8 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    67,    67,    68,    72,    77,    76,    82,    81,    99,
-      98,   115,   114,   120,   124,   125,   129,   154,   158
+       0,    65,    65,    66,    70,    75,    74,    80,    79,    96,
+      95,   111,   110,   116,   120,   121,   125,   150,   154
 };
 #endif
 
@@ -1390,106 +1388,104 @@ yyreduce:
   switch (yyn)
     {
         case 4:
-#line 73 "parser.y"
+#line 71 "./parser.y"
     {
-	free((yyvsp[(2) - (3)].s));
-    }
+		free((yyvsp[(2) - (3)].s));
+	}
     break;
 
   case 5:
-#line 77 "parser.y"
+#line 75 "./parser.y"
     {
-	_parser_kw = &(_parser_cfg->config_setup);
-	_parser_kw_last = NULL;
-    }
+		_parser_kw = &(_parser_cfg->config_setup);
+		_parser_kw_last = NULL;
+	}
     break;
 
   case 7:
-#line 82 "parser.y"
+#line 80 "./parser.y"
     {
-	section_list_t *section = (section_list_t *)alloc_thing(section_list_t
-							     , "section_list_t");
-	
-	section->name = clone_str((yyvsp[(2) - (3)].s), "conn section name");
-	section->kw = NULL;
-	section->next = NULL;
-	_parser_kw = &(section->kw);
-	if (!_parser_cfg->conn_first)
-	    _parser_cfg->conn_first = section;
-	if (_parser_cfg->conn_last)
-	    _parser_cfg->conn_last->next = section;
-	_parser_cfg->conn_last = section;
-	_parser_kw_last = NULL;
-	free((yyvsp[(2) - (3)].s));
-    }
+		section_list_t *section = malloc_thing(section_list_t);
+		
+		section->name = clone_str((yyvsp[(2) - (3)].s));
+		section->kw = NULL;
+		section->next = NULL;
+		_parser_kw = &(section->kw);
+		if (!_parser_cfg->conn_first)
+			_parser_cfg->conn_first = section;
+		if (_parser_cfg->conn_last)
+			_parser_cfg->conn_last->next = section;
+		_parser_cfg->conn_last = section;
+		_parser_kw_last = NULL;
+		free((yyvsp[(2) - (3)].s));
+	}
     break;
 
   case 9:
-#line 99 "parser.y"
+#line 96 "./parser.y"
     {
-	section_list_t *section = (section_list_t *)alloc_thing(section_list_t
-							     , "section_list_t");
-	section->name = clone_str((yyvsp[(2) - (3)].s), "ca section name");
-	section->kw = NULL;
-	section->next = NULL;
-	_parser_kw = &(section->kw);
-	if (!_parser_cfg->ca_first)
-	    _parser_cfg->ca_first = section;
-	if (_parser_cfg->ca_last)
-	    _parser_cfg->ca_last->next = section;
-	_parser_cfg->ca_last = section;
-	_parser_kw_last = NULL;
-	free((yyvsp[(2) - (3)].s));
-    }
+		section_list_t *section = malloc_thing(section_list_t);
+		section->name = clone_str((yyvsp[(2) - (3)].s));
+		section->kw = NULL;
+		section->next = NULL;
+		_parser_kw = &(section->kw);
+		if (!_parser_cfg->ca_first)
+			_parser_cfg->ca_first = section;
+		if (_parser_cfg->ca_last)
+			_parser_cfg->ca_last->next = section;
+		_parser_cfg->ca_last = section;
+		_parser_kw_last = NULL;
+		free((yyvsp[(2) - (3)].s));
+	}
     break;
 
   case 11:
-#line 115 "parser.y"
+#line 111 "./parser.y"
     {
-	extern void _parser_y_include (const char *f);
-	_parser_y_include((yyvsp[(2) - (2)].s));
-	free((yyvsp[(2) - (2)].s));
-    }
+		extern void _parser_y_include (const char *f);
+		_parser_y_include((yyvsp[(2) - (2)].s));
+		free((yyvsp[(2) - (2)].s));
+	}
     break;
 
   case 16:
-#line 130 "parser.y"
+#line 126 "./parser.y"
     {
-	kw_list_t  *new;
-	kw_entry_t *entry = in_word_set((yyvsp[(1) - (3)].s), strlen((yyvsp[(1) - (3)].s)));
+		kw_list_t  *new;
+		kw_entry_t *entry = in_word_set((yyvsp[(1) - (3)].s), strlen((yyvsp[(1) - (3)].s)));
 
-	if (entry == NULL)
-	{
-	    snprintf(errbuf, ERRSTRING_LEN, "unknown keyword '%s'", (yyvsp[(1) - (3)].s));
-	    yyerror(errbuf);
+		if (entry == NULL)
+		{
+			snprintf(errbuf, ERRSTRING_LEN, "unknown keyword '%s'", (yyvsp[(1) - (3)].s));
+			yyerror(errbuf);
+		}
+		else if (_parser_kw)
+		{
+			new = (kw_list_t *)malloc_thing(kw_list_t);
+			new->entry = entry;
+			new->value = clone_str((yyvsp[(3) - (3)].s));
+			new->next = NULL;
+			if (_parser_kw_last)
+				_parser_kw_last->next = new;
+			_parser_kw_last = new;
+			if (!*_parser_kw)
+				*_parser_kw = new;
+		}
+		free((yyvsp[(1) - (3)].s));
+		free((yyvsp[(3) - (3)].s));
 	}
-	else if (_parser_kw)
-	{
-	    new = (kw_list_t *)alloc_thing(kw_list_t, "kw_list_t");
-	    new->entry = entry;
-	    new->value = clone_str((yyvsp[(3) - (3)].s), "kw_list value");
-	    new->next = NULL;
-	    if (_parser_kw_last)
-		_parser_kw_last->next = new;
-	    _parser_kw_last = new;
-	    if (!*_parser_kw)
-		*_parser_kw = new;
-	}
-	free((yyvsp[(1) - (3)].s));
-	free((yyvsp[(3) - (3)].s));
-    }
     break;
 
   case 17:
-#line 155 "parser.y"
+#line 151 "./parser.y"
     {
-	free((yyvsp[(1) - (2)].s));
-      }
+		free((yyvsp[(1) - (2)].s));
+	  }
     break;
 
 
 /* Line 1267 of yacc.c.  */
-#line 1493 "y.tab.c"
+#line 1489 "y.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1703,128 +1699,125 @@ yyreturn:
 }
 
 
-#line 161 "parser.y"
+#line 157 "./parser.y"
 
 
 void
 yyerror(const char *s)
 {
-    if (_save_errors_)
-	_parser_y_error(parser_errstring, ERRSTRING_LEN, s);
+	if (_save_errors_)
+		_parser_y_error(parser_errstring, ERRSTRING_LEN, s);
 }
 
 config_parsed_t *
 parser_load_conf(const char *file)
 {
-    config_parsed_t *cfg = NULL;
-    int err = 0;
-    FILE *f;
+	config_parsed_t *cfg = NULL;
+	int err = 0;
+	FILE *f;
 
-    extern void _parser_y_init (const char *f);
-    extern FILE *yyin;
+	extern void _parser_y_init (const char *f);
+	extern FILE *yyin;
 
-    memset(parser_errstring, 0, ERRSTRING_LEN+1);
+	memset(parser_errstring, 0, ERRSTRING_LEN+1);
 
-    cfg = (config_parsed_t *)alloc_thing(config_parsed_t, "config_parsed_t");
-    if (cfg)
-    {
-	memset(cfg, 0, sizeof(config_parsed_t));
-	f = fopen(file, "r");
-	if (f)
+	cfg = (config_parsed_t *)malloc_thing(config_parsed_t);
+	if (cfg)
 	{
-	    yyin = f;
-	    _parser_y_init(file);
-	    _save_errors_ = 1;
-	    _parser_cfg = cfg;
-
-	    if (yyparse() !=0 )
-	    {
-		if (parser_errstring[0] == '\0')
+		memset(cfg, 0, sizeof(config_parsed_t));
+		f = fopen(file, "r");
+		if (f)
 		{
-		    snprintf(parser_errstring, ERRSTRING_LEN, "Unknown error...");
-		}
-		_save_errors_ = 0;
-		while (yyparse() != 0);
-		err++;
-	    }
-	    else if (parser_errstring[0] != '\0')
-	    {
-		err++;
-	    }
-	    else
-	    {
-		/**
-		 * Config valid
-		 */
-	    }
+			yyin = f;
+			_parser_y_init(file);
+			_save_errors_ = 1;
+			_parser_cfg = cfg;
 
-	    fclose(f);
+			if (yyparse() !=0 )
+			{
+				if (parser_errstring[0] == '\0')
+				{
+					snprintf(parser_errstring, ERRSTRING_LEN, "Unknown error...");
+				}
+				_save_errors_ = 0;
+				while (yyparse() != 0);
+				err++;
+			}
+			else if (parser_errstring[0] != '\0')
+			{
+				err++;
+			}
+			else
+			{
+				/**
+				 * Config valid
+				 */
+			}
+
+			fclose(f);
+		}
+		else
+		{
+			snprintf(parser_errstring, ERRSTRING_LEN, "can't load file '%s'", file);
+			err++;
+		}
 	}
 	else
 	{
-	    snprintf(parser_errstring, ERRSTRING_LEN, "can't load file '%s'", file);
-	    err++;
+		snprintf(parser_errstring, ERRSTRING_LEN, "can't allocate memory");
+		err++;
 	}
-    }
-    else
-    {
-	snprintf(parser_errstring, ERRSTRING_LEN, "can't allocate memory");
-	err++;
-    }
 
-    if (err)
-    {
-	plog("%s", parser_errstring);
+	if (err)
+	{
+		plog("%s", parser_errstring);
 
-	if (cfg)
-	    parser_free_conf(cfg);
-	cfg = NULL;
-    }
+		if (cfg)
+			parser_free_conf(cfg);
+		cfg = NULL;
+	}
 
-    return cfg;
+	return cfg;
 }
 
 static void
 parser_free_kwlist(kw_list_t *list)
 {
-    kw_list_t *elt;
+	kw_list_t *elt;
 
-    while (list)
-    {
-	elt = list;
-	list = list->next;
-	if (elt->value)
-	    pfree(elt->value);
-	pfree(elt);
-    }
+	while (list)
+	{
+		elt = list;
+		list = list->next;
+		free(elt->value);
+		free(elt);
+	}
 }
 
 void
 parser_free_conf(config_parsed_t *cfg)
 {
-    section_list_t *sec;
-    if (cfg)
-    {
-	parser_free_kwlist(cfg->config_setup);
-	while (cfg->conn_first)
+	section_list_t *sec;
+	if (cfg)
 	{
-	    sec = cfg->conn_first;
-	    cfg->conn_first = cfg->conn_first->next;
-	    if (sec->name)
-		pfree(sec->name);
-	    parser_free_kwlist(sec->kw);
-	    pfree(sec);
+		parser_free_kwlist(cfg->config_setup);
+		while (cfg->conn_first)
+		{
+			sec = cfg->conn_first;
+			cfg->conn_first = cfg->conn_first->next;
+			free(sec->name);
+			parser_free_kwlist(sec->kw);
+			free(sec);
+		}
+		while (cfg->ca_first)
+		{
+			sec = cfg->ca_first;
+			cfg->ca_first = cfg->ca_first->next;
+			free(sec->name);
+			parser_free_kwlist(sec->kw);
+			free(sec);
+		}
+		free(cfg);
 	}
-	while (cfg->ca_first)
-	{
-	    sec = cfg->ca_first;
-	    cfg->ca_first = cfg->ca_first->next;
-	    if (sec->name)
-		pfree(sec->name);
-	    parser_free_kwlist(sec->kw);
-	    pfree(sec);
-	}
-	pfree(cfg);
-    }
 }
 

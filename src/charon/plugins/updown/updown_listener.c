@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #define _GNU_SOURCE
@@ -188,14 +186,14 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 				"PLUTO_INTERFACE='%s' "
 				"PLUTO_REQID='%u' "
 				"PLUTO_ME='%H' "
-				"PLUTO_MY_ID='%D' "
+				"PLUTO_MY_ID='%Y' "
 				"PLUTO_MY_CLIENT='%s/%s' "
 				"PLUTO_MY_CLIENT_NET='%s' "
 				"PLUTO_MY_CLIENT_MASK='%s' "
 				"PLUTO_MY_PORT='%u' "
 				"PLUTO_MY_PROTOCOL='%u' "
 				"PLUTO_PEER='%H' "
-				"PLUTO_PEER_ID='%D' "
+				"PLUTO_PEER_ID='%Y' "
 				"PLUTO_PEER_CLIENT='%s/%s' "
 				"PLUTO_PEER_CLIENT_NET='%s' "
 				"PLUTO_PEER_CLIENT_MASK='%s' "

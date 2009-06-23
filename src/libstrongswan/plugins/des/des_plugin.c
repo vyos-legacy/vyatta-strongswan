@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: des_plugin.c 4887 2009-02-19 14:29:25Z tobias $
  */
 
 #include "des_plugin.h"

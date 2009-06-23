@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: stroke_keywords.h 4783 2008-12-10 13:00:02Z martin $
  */
 
 #ifndef _STROKE_KEYWORDS_H_
@@ -50,6 +48,7 @@ typedef enum {
 	STROKE_REREAD_CRLS,
 	STROKE_REREAD_ALL,
 	STROKE_PURGE_OCSP,
+	STROKE_PURGE_IKE,
 	STROKE_LEASES
 } stroke_keyword_t;
 

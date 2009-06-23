@@ -13,8 +13,6 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-#
-# RCSID $Id: ipsec.in 4790 2008-12-11 12:49:41Z martin $
 
 # define a minimum PATH environment in case it is not set
 PATH="/sbin:/bin:/usr/sbin:/usr/bin:@IPSEC_SBINDIR@"
@@ -67,7 +65,7 @@ case "$1" in
 	echo "	rereadsecrets|rereadgroups"
 	echo "	rereadcacerts|rereadaacerts|rereadocspcerts"
 	echo "	rereadacerts|rereadcrls|rereadall"
-	echo "	purgeocsp"
+	echo "	purgeocsp|purgeike"
 	echo "	scencrypt|scdecrypt <value> [--inbase <base>] [--outbase <base>] [--keyid <id>]"
  	echo "	openac"
 	echo "	pluto"
@@ -180,6 +178,15 @@ rereadall|purgeocsp)
 	if [ -e $IPSEC_CHARON_PID ]
 	then
 		$IPSEC_STROKE "$op" "$@"
+		rc="$?"
+	fi
+	exit "$rc"
+	;;
+purgeike)
+	rc=7
+	if [ -e $IPSEC_CHARON_PID ]
+	then
+		$IPSEC_STROKE purgeike
 		rc="$?"
 	fi
 	exit "$rc"

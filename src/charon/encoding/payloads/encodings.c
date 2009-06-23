@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: encodings.c 3589 2008-03-13 14:14:44Z martin $
  */
 
 
@@ -24,7 +22,6 @@ ENUM(encoding_type_names, U_INT_4, ENCRYPTED_DATA,
 	"U_INT_8",
 	"U_INT_16",
 	"U_INT_32",
-	"U_INT_64",
 	"RESERVED_BIT",
 	"RESERVED_BYTE",
 	"FLAG",

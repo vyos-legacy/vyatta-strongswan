@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include <string.h>
@@ -114,7 +112,7 @@ random_rng_t *random_rng_create(rng_quality_t quality)
 	this->public.rng.allocate_bytes = (void (*) (rng_t *, size_t, chunk_t*)) allocate_bytes;
 	this->public.rng.destroy = (void (*) (rng_t *))destroy;
 
-	if (quality == RNG_REAL)
+	if (quality == RNG_TRUE)
 	{
 		this->file = DEV_RANDOM;
 	}

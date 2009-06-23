@@ -1,6 +1,7 @@
 /* cookie generation/verification routines.
  * Copyright (C) 1997 Angelos D. Keromytis.
  * Copyright (C) 1998-2002  D. Hugh Redelmeier.
+ * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -11,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: cookie.c 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <stdio.h>
@@ -23,45 +22,52 @@
 
 #include <freeswan.h>
 
+#include <library.h>
+#include <crypto/rngs/rng.h>
+
 #include "constants.h"
 #include "defs.h"
-#include "sha1.h"
-#include "rnd.h"
 #include "cookie.h"
 
-const u_char zero_cookie[COOKIE_SIZE];	/* guaranteed 0 */
+const u_char zero_cookie[COOKIE_SIZE];  /* guaranteed 0 */
 
 /* Generate a cookie.
  * First argument is true if we're to create an Initiator cookie.
  * Length SHOULD be a multiple of sizeof(u_int32_t).
  */
-void
-get_cookie(bool initiator, u_int8_t *cookie, int length, const ip_address *addr)
+void get_cookie(bool initiator, u_int8_t *cookie, int length, ip_address *addr)
 {
-    u_char buffer[SHA1_DIGEST_SIZE];
-    SHA1_CTX ctx;
+	hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	u_char buffer[HASH_SIZE_SHA1];
 
-    do {
-	if (initiator)
-	{
-	    get_rnd_bytes(cookie, length);
-	}
-	else  /* Responder cookie */
-	{
-	    /* This looks as good as any way */
-	    size_t addr_length;
-	    static u_int32_t counter = 0;
-	    unsigned char addr_buff[
-		sizeof(union {struct in_addr A; struct in6_addr B;})];
+	do {
+		if (initiator)
+		{
+			rng_t *rng;
 
-	    addr_length = addrbytesof(addr, addr_buff, sizeof(addr_buff));
-	    SHA1Init(&ctx);
-	    SHA1Update(&ctx, addr_buff, addr_length);
-	    SHA1Update(&ctx, secret_of_the_day, sizeof(secret_of_the_day));
-	    counter++;
-	    SHA1Update(&ctx, (const void *) &counter, sizeof(counter));
-	    SHA1Final(buffer, &ctx);
-	    memcpy(cookie, buffer, length);
-	}
-    } while (is_zero_cookie(cookie));	/* probably never loops */
+			rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+			rng->get_bytes(rng, length, cookie);
+			rng->destroy(rng);
+		}
+		else  /* Responder cookie */
+		{
+			chunk_t addr_chunk, secret_chunk, counter_chunk;
+			size_t addr_len;
+			static u_int32_t counter = 0;
+			unsigned char addr_buf[
+				sizeof(union {struct in_addr A; struct in6_addr B;})];
+
+			addr_len = addrbytesof(addr, addr_buf, sizeof(addr_buf));
+			addr_chunk = chunk_create(addr_buf, addr_len);
+			secret_chunk = chunk_create(secret_of_the_day, HASH_SIZE_SHA1);
+			counter++;
+			counter_chunk = chunk_create((void *) &counter, sizeof(counter));
+			hasher->get_hash(hasher, addr_chunk, NULL);
+			hasher->get_hash(hasher, secret_chunk, NULL);
+			hasher->get_hash(hasher, counter_chunk, buffer);
+			memcpy(cookie, buffer, length);
+		}
+	} while (is_zero_cookie(cookie));   /* probably never loops */
+
+	hasher->destroy(hasher);
 }

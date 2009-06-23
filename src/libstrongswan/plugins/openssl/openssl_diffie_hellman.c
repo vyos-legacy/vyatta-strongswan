@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: openssl_diffie_hellman.c 4639 2008-11-12 15:09:24Z martin $
  */
 
 #include <openssl/dh.h>
@@ -171,7 +169,7 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 	bool ansi_x9_42;
 	
 	ansi_x9_42 = lib->settings->get_bool(lib->settings,
-										 "charon.dh_exponent_ansi_x9_42", TRUE);
+										 "libstrongswan.dh_exponent_ansi_x9_42", TRUE);
 	
 	for (i = 0; i < (sizeof(modulus_entries) / sizeof(modulus_entry_t)); i++)
 	{

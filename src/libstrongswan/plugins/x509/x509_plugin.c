@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: x509_plugin.c 3640 2008-03-21 10:52:11Z andreas $
  */
 
 #include "x509_plugin.h"

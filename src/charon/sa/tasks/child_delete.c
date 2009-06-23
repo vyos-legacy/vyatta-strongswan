@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: child_delete.c 4730 2008-12-01 18:38:28Z martin $
  */
 
 #include "child_delete.h"
@@ -114,15 +112,16 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
  */
 static void process_payloads(private_child_delete_t *this, message_t *message)
 {
-	iterator_t *payloads, *spis;
+	enumerator_t *payloads;
+	iterator_t *spis;
 	payload_t *payload;
 	delete_payload_t *delete_payload;
 	u_int32_t *spi;
 	protocol_id_t protocol;
 	child_sa_t *child_sa;
 	
-	payloads = message->get_payload_iterator(message);
-	while (payloads->iterate(payloads, (void**)&payload))
+	payloads = message->create_payload_enumerator(message);
+	while (payloads->enumerate(payloads, &payload))
 	{
 		if (payload->get_type(payload) == DELETE)
 		{
@@ -202,10 +201,12 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 			{
 				case ACTION_RESTART:
 					child_cfg->get_ref(child_cfg);
-					status = this->ike_sa->initiate(this->ike_sa, child_cfg);
+					status = this->ike_sa->initiate(this->ike_sa, child_cfg, 0,
+													NULL, NULL);
 					break;
-				case ACTION_ROUTE:
-					status = this->ike_sa->route(this->ike_sa, child_cfg);
+				case ACTION_ROUTE:	
+					charon->traps->install(charon->traps,
+							this->ike_sa->get_peer_cfg(this->ike_sa), child_cfg);
 					break;
 				default:
 					break;

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006-2007 Tobias Brunner
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,8 +14,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: daemon.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -159,6 +157,7 @@ typedef struct daemon_t daemon_t;
 #include <bus/listeners/file_logger.h>
 #include <bus/listeners/sys_logger.h>
 #include <sa/ike_sa_manager.h>
+#include <sa/trap_manager.h>
 #include <config/backend_manager.h>
 #include <config/attributes/attribute_manager.h>
 #include <credentials/credential_manager.h>
@@ -205,11 +204,16 @@ struct daemon_t {
 	 * A socket_t instance.
 	 */
 	socket_t *socket;
-
+	
 	/**
 	 * A ike_sa_manager_t instance.
 	 */
 	ike_sa_manager_t *ike_sa_manager;
+	
+	/**
+	 * Manager for triggering policies, called traps
+	 */
+	trap_manager_t *traps;
 	
 	/**
 	 * Manager for the different configuration backends.

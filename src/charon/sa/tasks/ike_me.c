@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: ike_me.c 4640 2008-11-12 16:07:17Z martin $
  */
  
 #include "ike_me.h"
@@ -166,11 +164,11 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
  */
 static void process_payloads(private_ike_me_t *this, message_t *message)
 {
-	iterator_t *iterator;
+	enumerator_t *enumerator;
 	payload_t *payload;
-
-	iterator = message->get_payload_iterator(message);
-	while (iterator->iterate(iterator, (void**)&payload))
+	
+	enumerator = message->create_payload_enumerator(message);
+	while (enumerator->enumerate(enumerator, &payload))
 	{
 		if (payload->get_type(payload) != NOTIFY)
 		{
@@ -237,7 +235,7 @@ static void process_payloads(private_ike_me_t *this, message_t *message)
 				break;
 		}
 	}
-	iterator->destroy(iterator);
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -339,7 +337,7 @@ static status_t process_r(private_ike_me_t *this, message_t *message)
 			
 			if (this->callback)
 			{
-				DBG1(DBG_IKE, "received ME_CALLBACK for '%D'", this->peer_id);
+				DBG1(DBG_IKE, "received ME_CALLBACK for '%Y'", this->peer_id);
 				break;
 			}			
 			
@@ -471,7 +469,7 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 			
 			if (this->failed)
 			{
-				DBG1(DBG_IKE, "peer '%D' is not online", this->peer_id);
+				DBG1(DBG_IKE, "peer '%Y' is not online", this->peer_id);
 				/* FIXME: notify the mediated connection (job?) */
 			}
 			else

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "stroke_socket.h"
@@ -143,18 +141,28 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->address);
 	pop_string(msg, &end->subnets);
 	pop_string(msg, &end->sourceip);
+	pop_string(msg, &end->auth);
+	pop_string(msg, &end->auth2);
 	pop_string(msg, &end->id);
+	pop_string(msg, &end->id2);
 	pop_string(msg, &end->cert);
+	pop_string(msg, &end->cert2);
 	pop_string(msg, &end->ca);
+	pop_string(msg, &end->ca2);
 	pop_string(msg, &end->groups);
 	pop_string(msg, &end->updown);
 	
 	DBG2(DBG_CFG, "  %s=%s", label, end->address);
 	DBG2(DBG_CFG, "  %ssubnet=%s", label, end->subnets);
 	DBG2(DBG_CFG, "  %ssourceip=%s", label, end->sourceip);
+	DBG2(DBG_CFG, "  %sauth=%s", label, end->auth);
+	DBG2(DBG_CFG, "  %sauth2=%s", label, end->auth2);
 	DBG2(DBG_CFG, "  %sid=%s", label, end->id);
+	DBG2(DBG_CFG, "  %sid2=%s", label, end->id2);
 	DBG2(DBG_CFG, "  %scert=%s", label, end->cert);
+	DBG2(DBG_CFG, "  %scert2=%s", label, end->cert2);
 	DBG2(DBG_CFG, "  %sca=%s", label, end->ca);
+	DBG2(DBG_CFG, "  %sca2=%s", label, end->ca2);
 	DBG2(DBG_CFG, "  %sgroups=%s", label, end->groups);
 	DBG2(DBG_CFG, "  %supdown=%s", label, end->updown);
 }
@@ -333,8 +341,15 @@ static void stroke_reread(private_stroke_socket_t *this,
 static void stroke_purge(private_stroke_socket_t *this,
 						 stroke_msg_t *msg, FILE *out)
 {
-	charon->credentials->flush_cache(charon->credentials,
-									 CERT_X509_OCSP_RESPONSE);
+	if (msg->purge.flags & PURGE_OCSP)
+	{
+		charon->credentials->flush_cache(charon->credentials,
+										 CERT_X509_OCSP_RESPONSE);
+	}
+	if (msg->purge.flags & PURGE_IKE)
+	{
+		this->control->purge_ike(this->control, msg, out);
+	}
 }
 
 /**
@@ -351,16 +366,16 @@ static void stroke_leases(private_stroke_socket_t *this,
 
 debug_t get_group_from_name(char *type)
 {
-	if (strcasecmp(type, "any") == 0) return DBG_ANY;
-	else if (strcasecmp(type, "mgr") == 0) return DBG_MGR;
-	else if (strcasecmp(type, "ike") == 0) return DBG_IKE;
-	else if (strcasecmp(type, "chd") == 0) return DBG_CHD;
-	else if (strcasecmp(type, "job") == 0) return DBG_JOB;
-	else if (strcasecmp(type, "cfg") == 0) return DBG_CFG;
-	else if (strcasecmp(type, "knl") == 0) return DBG_KNL;
-	else if (strcasecmp(type, "net") == 0) return DBG_NET;
-	else if (strcasecmp(type, "enc") == 0) return DBG_ENC;
-	else if (strcasecmp(type, "lib") == 0) return DBG_LIB;
+	if (strcaseeq(type, "any")) return DBG_ANY;
+	else if (strcaseeq(type, "mgr")) return DBG_MGR;
+	else if (strcaseeq(type, "ike")) return DBG_IKE;
+	else if (strcaseeq(type, "chd")) return DBG_CHD;
+	else if (strcaseeq(type, "job")) return DBG_JOB;
+	else if (strcaseeq(type, "cfg")) return DBG_CFG;
+	else if (strcaseeq(type, "knl")) return DBG_KNL;
+	else if (strcaseeq(type, "net")) return DBG_NET;
+	else if (strcaseeq(type, "enc")) return DBG_ENC;
+	else if (strcaseeq(type, "lib")) return DBG_LIB;
 	else return -1;
 }
 
@@ -561,8 +576,11 @@ static job_requeue_t receive(private_stroke_socket_t *this)
  */
 static bool open_socket(private_stroke_socket_t *this)
 {
-	struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
+	struct sockaddr_un socket_addr;
 	mode_t old;
+
+	socket_addr.sun_family = AF_UNIX;
+	strcpy(socket_addr.sun_path, STROKE_SOCKET);
 	
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);

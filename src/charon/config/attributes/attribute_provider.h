@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 /**
@@ -25,7 +23,7 @@
 
 #include <library.h>
 #include <utils/host.h>
-#include <credentials/auth_info.h>
+#include <utils/identification.h>
 
 typedef struct attribute_provider_t attribute_provider_t;
 
@@ -39,13 +37,12 @@ struct attribute_provider_t {
 	 *
 	 * @param pool			name of the pool to acquire address from
 	 * @param id			peer ID
-	 * @param auth			authorization infos
 	 * @param requested		IP in configuration request
 	 * @return				allocated address, NULL to serve none
 	 */
 	host_t* (*acquire_address)(attribute_provider_t *this,
 							   char *pool, identification_t *id, 
-							   auth_info_t *auth, host_t *requested);
+							   host_t *requested);
 	/**
 	 * Release a previously acquired address.
 	 *
@@ -56,6 +53,15 @@ struct attribute_provider_t {
 	 */
 	bool (*release_address)(attribute_provider_t *this,
 							char *pool, host_t *address, identification_t *id);
+	
+	/**
+	 * Create an enumerator over attributes to hand out to a peer.
+	 *
+	 * @param id			peer ID
+	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
+	 */
+	enumerator_t* (*create_attribute_enumerator)(attribute_provider_t *this,
+												 identification_t *id);
 };
 
 #endif /** ATTRIBUTE_PROVIDER_H_ @}*/

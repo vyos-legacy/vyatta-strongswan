@@ -11,11 +11,52 @@
   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
   for more details.
-
-  $Id: dumm.rb 4295 2008-08-27 07:35:20Z tobias $
 =end
 
 require 'dumm.so'
 require 'dumm/guest'
+
+module Dumm
+  
+  # use guest/bridge indentifiers directly
+  def method_missing(id, *args)
+    if Guest.guest? id
+      return Guest[id]
+    end
+    if Bridge.bridge? id
+      return Bridge[id]
+    end
+    super(id, *args)
+  end
+  
+  # shortcut for Template loading
+  def template(name = nil)
+    if name
+      Template.load name
+    else
+      Template.each {|t| puts t }
+    end
+  end
+  
+  # unload templates, reset all guests and delete bridges
+  def reset
+    Template.unload
+    Guest.each { |guest|
+      guest.reset if guest.running?
+    }
+    Bridge.each { |bridge|
+      bridge.delete
+    }
+    return Dumm
+  end
+  
+  # wait until all running guests have booted up
+  def boot
+    Guest.each {|g|
+      g.boot if g.running?
+    }
+    return Dumm
+  end
+end
 
 # vim:sw=2 ts=2 et

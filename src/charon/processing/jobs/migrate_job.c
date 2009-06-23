@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: migrate_job.c 4677 2008-11-19 15:31:27Z martin $
  */
 
 #include "migrate_job.h"

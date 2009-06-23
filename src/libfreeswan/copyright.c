@@ -11,14 +11,12 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
- *
- * RCSID $Id: copyright.c 4181 2008-07-16 12:28:29Z andreas $
  */
 #include "internal.h"
 #include "freeswan.h"
 
 static const char *co[] = {
- "Copyright (C) 1999-2008  Henry Spencer, Richard Guy Briggs,",
+ "Copyright (C) 1999-2009  Henry Spencer, Richard Guy Briggs,",
  "    D. Hugh Redelmeier, Sandy Harris, Claudia Schmeing,",
  "    Michael Richardson, Angelos D. Keromytis, John Ioannidis,",
  "",

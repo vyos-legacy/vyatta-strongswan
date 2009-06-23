@@ -14,8 +14,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: child_sa.c 4677 2008-11-19 15:31:27Z martin $
  */
 
 #define _GNU_SOURCE
@@ -412,26 +410,11 @@ static u_int32_t get_lifetime(private_child_sa_t *this, bool hard)
  */
 static u_int32_t alloc_spi(private_child_sa_t *this, protocol_id_t protocol)
 {
-	switch (protocol)
+	if (charon->kernel_interface->get_spi(charon->kernel_interface,
+							this->other_addr, this->my_addr, protocol,
+							this->reqid, &this->my_spi) == SUCCESS)
 	{
-		case PROTO_AH:
-			if (charon->kernel_interface->get_spi(charon->kernel_interface, 
-							this->other_addr, this->my_addr, PROTO_AH,
-							this->reqid, &this->my_spi) == SUCCESS)
-			{
-				return this->my_spi;
-			}
-			break;
-		case PROTO_ESP:
-			if (charon->kernel_interface->get_spi(charon->kernel_interface,
-							this->other_addr, this->my_addr, PROTO_ESP,
-							this->reqid, &this->my_spi) == SUCCESS)
-			{
-				return this->my_spi;
-			}
-			break;
-		default:
-			break;
+		return this->my_spi;
 	}
 	return 0;
 }
@@ -504,8 +487,14 @@ static status_t install(private_child_sa_t *this, chunk_t encr, chunk_t integ,
 				this->mode, this->ipcomp, cpi, this->encap, update);
 	
 	now = time(NULL);
-	this->rekey_time = now + soft;
-	this->expire_time = now + hard;
+	if (soft)
+	{
+		this->rekey_time = now + soft;
+	}
+	if (hard)
+	{
+		this->expire_time = now + hard;
+	}
 	return status;
 }
 
@@ -724,14 +713,14 @@ static void destroy(private_child_sa_t *this)
 	if (this->my_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->my_addr, this->my_spi, this->protocol,
-					this->my_cpi);
+					this->other_addr, this->my_addr, this->my_spi,
+					this->protocol, this->my_cpi);
 	}
 	if (this->other_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-					this->other_addr, this->other_spi, this->protocol,
-					this->other_cpi);
+					this->my_addr, this->other_addr, this->other_spi,
+					this->protocol, this->other_cpi);
 	}
 	
 	if (this->config->install_policy(this->config))
@@ -816,6 +805,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->protocol = PROTO_NONE;
 	this->mode = MODE_TUNNEL;
 	this->proposal = NULL;
+	this->rekey_time = 0;
+	this->expire_time = 0;
 	this->config = config;
 	config->get_ref(config);
 	

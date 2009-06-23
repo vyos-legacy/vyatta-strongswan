@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- * 
- * $Id: dumm.c 4447 2008-10-15 14:47:52Z martin $
  */
 
 #include <stdio.h>
@@ -24,11 +22,13 @@
 #include <library.h>
 #include <dumm.h>
 #include <debug.h>
+#include <utils/linked_list.h>
 
 #undef PACKAGE_NAME
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #undef PACKAGE_STRING
+#undef PACKAGE_BUGREPORT
 #include <ruby.h>
 
 static dumm_t *dumm;
@@ -84,8 +84,6 @@ static void sigchld_handler(int signal, siginfo_t *info, void* ptr)
 	enumerator->destroy(enumerator);
 }
 
-
-
 /**
  * Guest bindings
  */
@@ -93,7 +91,9 @@ static VALUE guest_find(VALUE class, VALUE key)
 {
 	enumerator_t *enumerator;
 	guest_t *guest, *found = NULL;
-	if (TYPE(key) == T_SYMBOL) {
+	
+	if (TYPE(key) == T_SYMBOL)
+	{
 		key = rb_convert_type(key, T_STRING, "String", "to_s");
 	}
 	enumerator = dumm->create_guest_enumerator(dumm);
@@ -125,19 +125,26 @@ static VALUE guest_get(VALUE class, VALUE key)
 
 static VALUE guest_each(int argc, VALUE *argv, VALUE class)
 {
+	linked_list_t *list;
 	enumerator_t *enumerator;
 	guest_t *guest;
-
+	
 	if (!rb_block_given_p())
-    {
+	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
+	list = linked_list_create();
 	enumerator = dumm->create_guest_enumerator(dumm);
 	while (enumerator->enumerate(enumerator, &guest))
 	{
-  		rb_yield(Data_Wrap_Struct(class, NULL, NULL, guest));
+		list->insert_last(list, guest);
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&guest) == SUCCESS)
+	{
+		rb_yield(Data_Wrap_Struct(class, NULL, NULL, guest));
+	}
+	list->destroy(list);
 	return class;
 }
 
@@ -249,7 +256,9 @@ static VALUE guest_find_iface(VALUE self, VALUE key)
 	enumerator_t *enumerator;
 	iface_t *iface, *found = NULL;
 	guest_t *guest;
-	if (TYPE(key) == T_SYMBOL) {
+	
+	if (TYPE(key) == T_SYMBOL)
+	{
 		key = rb_convert_type(key, T_STRING, "String", "to_s");
 	}
 	Data_Get_Struct(self, guest_t, guest);
@@ -283,20 +292,27 @@ static VALUE guest_get_iface(VALUE self, VALUE key)
 static VALUE guest_each_iface(int argc, VALUE *argv, VALUE self)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	guest_t *guest;
 	iface_t *iface;
-
+	
 	if (!rb_block_given_p())
-    {
+	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
 	Data_Get_Struct(self, guest_t, guest);
+	list = linked_list_create();
 	enumerator = guest->create_iface_enumerator(guest);
 	while (enumerator->enumerate(enumerator, &iface))
 	{
-  		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
+		list->insert_last(list, iface);
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&iface) == SUCCESS)
+	{
+		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
+	}
+	list->destroy(list);
 	return self;
 }
 
@@ -305,6 +321,10 @@ static VALUE guest_delete(VALUE self)
 	guest_t *guest;
 	
 	Data_Get_Struct(self, guest_t, guest);
+	if (guest->get_pid(guest))
+	{
+		rb_raise(rb_eRuntimeError, "guest is running");
+	}
 	dumm->delete_guest(dumm, guest);
 	return Qnil;
 }
@@ -338,11 +358,15 @@ static void guest_init()
 /**
  * Bridge binding
  */
-static VALUE bridge_get(VALUE class, VALUE key)
+static VALUE bridge_find(VALUE class, VALUE key)
 {
 	enumerator_t *enumerator;
 	bridge_t *bridge, *found = NULL;
 	
+	if (TYPE(key) == T_SYMBOL)
+	{
+		key = rb_convert_type(key, T_STRING, "String", "to_s");
+	}
 	enumerator = dumm->create_bridge_enumerator(dumm);
 	while (enumerator->enumerate(enumerator, &bridge))
 	{
@@ -355,26 +379,43 @@ static VALUE bridge_get(VALUE class, VALUE key)
 	enumerator->destroy(enumerator);
 	if (!found)
 	{
-		rb_raise(rb_eRuntimeError, "bridge not found");
+		return Qnil;
 	}
 	return Data_Wrap_Struct(class, NULL, NULL, found);
+}
+
+static VALUE bridge_get(VALUE class, VALUE key)
+{
+	VALUE bridge = bridge_find(class, key);
+	if (NIL_P(bridge))
+	{
+		rb_raise(rb_eRuntimeError, "bridge not found");
+	}
+	return bridge;
 }
 
 static VALUE bridge_each(int argc, VALUE *argv, VALUE class)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	bridge_t *bridge;
-
+	
 	if (!rb_block_given_p())
-    {
+	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
+	list = linked_list_create();
 	enumerator = dumm->create_bridge_enumerator(dumm);
 	while (enumerator->enumerate(enumerator, &bridge))
 	{
-  		rb_yield(Data_Wrap_Struct(class, NULL, NULL, bridge));
+		list->insert_last(list, bridge);
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&bridge) == SUCCESS)
+	{
+		rb_yield(Data_Wrap_Struct(class, NULL, NULL, bridge));
+	}
+	list->destroy(list);
 	return class;
 }
 
@@ -402,20 +443,27 @@ static VALUE bridge_to_s(VALUE self)
 static VALUE bridge_each_iface(int argc, VALUE *argv, VALUE self)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	bridge_t *bridge;
 	iface_t *iface;
-
+	
 	if (!rb_block_given_p())
-    {
+	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
 	Data_Get_Struct(self, bridge_t, bridge);
+	list = linked_list_create();
 	enumerator = bridge->create_iface_enumerator(bridge);
 	while (enumerator->enumerate(enumerator, &iface))
 	{
-  		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
+		list->insert_last(list, iface);
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&iface) == SUCCESS)
+	{
+		rb_yield(Data_Wrap_Struct(rbc_iface, NULL, NULL, iface));
+	}
+	list->destroy(list);
 	return self;
 }
 
@@ -437,6 +485,8 @@ static void bridge_init()
 	rb_define_singleton_method(rbc_bridge, "[]", bridge_get, 1);
 	rb_define_singleton_method(rbc_bridge, "each", bridge_each, -1);
 	rb_define_singleton_method(rbc_bridge, "new", bridge_new, 1);
+	rb_define_singleton_method(rbc_bridge, "include?", bridge_find, 1);
+	rb_define_singleton_method(rbc_bridge, "bridge?", bridge_find, 1);
 	
 	rb_define_method(rbc_bridge, "to_s", bridge_to_s, 0);
 	rb_define_method(rbc_bridge, "each", bridge_each_iface, -1);
@@ -509,22 +559,29 @@ static VALUE iface_add_addr(VALUE self, VALUE name)
 static VALUE iface_each_addr(int argc, VALUE *argv, VALUE self)
 {
 	enumerator_t *enumerator;
+	linked_list_t *list;
 	iface_t *iface;
 	host_t *addr;
 	char buf[64];
-
+	
 	if (!rb_block_given_p())
-    {
+	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
 	Data_Get_Struct(self, iface_t, iface);
 	enumerator = iface->create_address_enumerator(iface);
 	while (enumerator->enumerate(enumerator, &addr))
 	{
-		snprintf(buf, sizeof(buf), "%H", addr);
-  		rb_yield(rb_str_new2(buf));
+		list->insert_last(list, addr->clone(addr));
 	}
 	enumerator->destroy(enumerator);
+	while (list->remove_first(list, (void**)&addr) == SUCCESS)
+	{
+		snprintf(buf, sizeof(buf), "%H", addr);
+		addr->destroy(addr);
+		rb_yield(rb_str_new2(buf));
+	}
+	list->destroy(list);
 	return self;
 }
 
@@ -595,12 +652,31 @@ static VALUE template_unload(VALUE class)
 	return class;
 }
 
+static VALUE template_each(int argc, VALUE *argv, VALUE class)
+{
+	enumerator_t *enumerator;
+	char *template;
+	
+	if (!rb_block_given_p())
+	{
+		rb_raise(rb_eArgError, "must be called with a block");
+	}
+	enumerator = dumm->create_template_enumerator(dumm);
+	while (enumerator->enumerate(enumerator, &template))
+	{
+		rb_yield(rb_str_new2(template));
+	}
+	enumerator->destroy(enumerator);
+	return class;
+}
+
 static void template_init()
 {
 	rbc_template = rb_define_class_under(rbm_dumm , "Template", rb_cObject);
 	
 	rb_define_singleton_method(rbc_template, "load", template_load, 1);
 	rb_define_singleton_method(rbc_template, "unload", template_unload, 0);
+	rb_define_singleton_method(rbc_template, "each", template_each, -1);
 }
 
 /**

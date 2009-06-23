@@ -13,13 +13,11 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: hasher.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
- * @defgroup traffic_selector traffic_selector
- * @{ @ingroup config
+ * @defgroup hasher hasher
+ * @{ @ingroup crypto
  */
 
 #ifndef HASHER_H_
@@ -39,12 +37,12 @@ enum hash_algorithm_t {
 	/** preferred hash function, general purpose */
 	HASH_PREFERRED	 	= 1,
 	HASH_MD2 			= 2,
-	HASH_MD5 			= 3,
-	HASH_SHA1 			= 4,
-	HASH_SHA256 		= 5,
-	HASH_SHA384 		= 6,
-	HASH_SHA512 		= 7,
-	HASH_MD4			= 8,
+	HASH_MD4			= 3,
+	HASH_MD5 			= 4,
+	HASH_SHA1 			= 5,
+	HASH_SHA256 		= 6,
+	HASH_SHA384 		= 7,
+	HASH_SHA512 		= 8
 };
 
 #define HASH_SIZE_MD2		16

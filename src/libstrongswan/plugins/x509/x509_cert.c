@@ -16,8 +16,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: x509_cert.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #define _GNU_SOURCE
@@ -37,6 +35,7 @@
 #include <asn1/asn1_parser.h>
 #include <asn1/pem.h>
 #include <crypto/hashers/hasher.h>
+#include <credentials/keys/private_key.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
@@ -353,7 +352,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 		if (id_type != ID_ANY)
 		{
 			gn = identification_create_from_encoding(id_type, object);
-			DBG2("  '%D'", gn);
+			DBG2("  '%Y'", gn);
 			goto end;
 		}
 	}
@@ -510,9 +509,9 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 								/* parsing went wrong - abort */
 								goto end;
 							}
-							DBG2("  '%D'", id);
+							DBG2("  '%Y'", id);
 							if (accessMethod == OID_OCSP &&
-								asprintf(&uri, "%D", id) > 0)
+								asprintf(&uri, "%Y", id) > 0)
 							{
 								this->ocsp_uris->insert_last(this->ocsp_uris, uri);
 							}
@@ -619,7 +618,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 			{
 				char *uri;
 				
-				if (asprintf(&uri, "%D", id) > 0)
+				if (asprintf(&uri, "%Y", id) > 0)
 				{
 					this->crl_uris->insert_last(this->crl_uris, uri);
 				}
@@ -714,7 +713,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 			case X509_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", this->issuer);
+				DBG2("  '%Y'", this->issuer);
 				break;
 			case X509_OBJ_NOT_BEFORE:
 				this->notBefore = asn1_parse_time(object, level);
@@ -724,14 +723,13 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 			case X509_OBJ_SUBJECT:
 				this->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				DBG2("  '%D'", this->subject);
+				DBG2("  '%Y'", this->subject);
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_INFO:
 				this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 						KEY_ANY, BUILD_BLOB_ASN1_DER, object, BUILD_END);
 				if (this->public_key == NULL)
 				{
-					DBG1("could not create public key");
 					goto end;
 				}
 				break;
@@ -911,32 +909,14 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 	{
 		return FALSE;
 	}
-	/* TODO: generic OID to scheme mapper? */
-	switch (this->algorithm)
-	{
-		case OID_MD5_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_MD5;
-			break;
-		case OID_SHA1_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			break;
-		case OID_SHA256_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
-			break;
-		case OID_SHA384_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
-			break;
-		case OID_SHA512_WITH_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
-			break;
-		case OID_ECDSA_WITH_SHA1:
-			scheme = SIGN_ECDSA_WITH_SHA1;
-			break;
-		default:
-			return FALSE;
-	}
+
+	/* get the public key of the issuer */
 	key = issuer->get_public_key(issuer);
-	if (key == NULL)
+
+	/* determine signature scheme */
+	scheme = signature_scheme_from_oid(this->algorithm);
+
+	if (scheme == SIGN_UNKNOWN || key == NULL)
 	{
 		return FALSE;
 	}
@@ -1124,19 +1104,19 @@ static private_x509_cert_t* create_empty(void)
 {
 	private_x509_cert_t *this = malloc_thing(private_x509_cert_t);
 	
-	this->public.interface.interface.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
-	this->public.interface.interface.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
-	this->public.interface.interface.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.interface.interface.has_subject = (id_match_t (*)(certificate_t*, identification_t *subject))has_subject;
-	this->public.interface.interface.has_issuer = (id_match_t (*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.interface.interface.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
-	this->public.interface.interface.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
-	this->public.interface.interface.get_validity = (bool (*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.interface.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
-	this->public.interface.interface.get_encoding = (chunk_t (*)(certificate_t*))get_encoding;
-	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t *other))equals;
-	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
-	this->public.interface.interface.destroy = (void (*)(certificate_t *this))destroy;
+	this->public.interface.interface.get_type = (certificate_type_t (*) (certificate_t*))get_type;
+	this->public.interface.interface.get_subject = (identification_t* (*) (certificate_t*))get_subject;
+	this->public.interface.interface.get_issuer = (identification_t* (*) (certificate_t*))get_issuer;
+	this->public.interface.interface.has_subject = (id_match_t (*) (certificate_t*, identification_t*))has_subject;
+	this->public.interface.interface.has_issuer = (id_match_t (*) (certificate_t*, identification_t*))has_issuer;
+	this->public.interface.interface.issued_by = (bool (*) (certificate_t*, certificate_t*))issued_by;
+	this->public.interface.interface.get_public_key = (public_key_t* (*) (certificate_t*))get_public_key;
+	this->public.interface.interface.get_validity = (bool (*) (certificate_t*, time_t*, time_t*, time_t*))get_validity;
+	this->public.interface.interface.is_newer = (bool (*) (certificate_t*,certificate_t*))is_newer;
+	this->public.interface.interface.get_encoding = (chunk_t (*) (certificate_t*))get_encoding;
+	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
+	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;
+	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
 	this->public.interface.get_flags = (x509_flag_t (*)(x509_t*))get_flags;
 	this->public.interface.get_serial = (chunk_t (*)(x509_t*))get_serial;
 	this->public.interface.get_authKeyIdentifier = (identification_t* (*)(x509_t*))get_authKeyIdentifier;
@@ -1178,6 +1158,7 @@ static private_x509_cert_t *create_from_chunk(chunk_t chunk)
 	private_x509_cert_t *this = create_empty();
 	
 	this->encoding = chunk;
+	this->parsed = TRUE;
 	if (!parse_certificate(this))
 	{
 		destroy(this);
@@ -1191,17 +1172,15 @@ static private_x509_cert_t *create_from_chunk(chunk_t chunk)
 	}
 	
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher != NULL)
+	if (hasher == NULL)
 	{
-		hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
-		hasher->destroy(hasher);
+		DBG1("  unable to create hash of certificate, SHA1 not supported");	
+		destroy(this);
+		return NULL;	
 	}
-	else
-	{
-		DBG1("  unable to create hash of certificate, SHA1 not supported");		
-	}
+	hasher->allocate_hash(hasher, this->encoding, &this->encoding_hash);
+	hasher->destroy(hasher);
 	
-	this->parsed = TRUE;
 	return this;
 }
 
@@ -1316,7 +1295,7 @@ static bool generate(private_builder_t *this)
 	
 	this->cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmccmcmm", 
 		asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2),
-		asn1_simple_object(ASN1_INTEGER, this->cert->serialNumber),
+		asn1_integer("c", this->cert->serialNumber),
 		asn1_algorithmIdentifier(this->cert->algorithm),
 		issuer->get_encoding(issuer),
 		asn1_wrap(ASN1_SEQUENCE, "mm",
@@ -1352,33 +1331,22 @@ static bool generate(private_builder_t *this)
 static private_x509_cert_t *build(private_builder_t *this)
 {
 	private_x509_cert_t *cert;
-	x509_flag_t flags;
 	
-	if (this->cert && !this->cert->encoding.ptr)
+	if (this->cert)
 	{
-		if (!this->sign_key || !this->cert ||
-			!generate(this))
-		{
-			destroy(this->cert);
-			free(this);
-			return NULL;
+		this->cert->flags |= this->flags;
+		if (!this->cert->encoding.ptr)
+		{	/* generate a new certificate */
+			if (!this->sign_key || !generate(this))
+			{
+				destroy(this->cert);
+				free(this);
+				return NULL;
+			}
 		}
 	}
 	cert = this->cert;
-	flags =  this->flags;
 	free(this);
-	if (cert == NULL)
-	{
-		return NULL;
-	}
-	
-	if ((flags & X509_CA) && !(cert->flags & X509_CA))
-	{
-		DBG1("  ca certificate must have ca basic constraint set, discarded");
-		destroy(cert);
-		return NULL;
-	}
-	cert->flags |= flags;
 	return cert;
 }
 

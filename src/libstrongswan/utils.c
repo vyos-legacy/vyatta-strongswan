@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: utils.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #include "utils.h"
@@ -22,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <limits.h>
 #include <dirent.h>
 #include <time.h>
 
@@ -145,6 +144,22 @@ bool mkdir_p(const char *path, mode_t mode)
 void *return_null()
 {
 	return NULL;
+}
+
+/**
+ * returns TRUE
+ */
+bool return_true()
+{
+	return TRUE;
+}
+
+/**
+ * returns FALSE
+ */
+bool return_false()
+{
+	return FALSE;
 }
 
 /**

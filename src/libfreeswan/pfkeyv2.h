@@ -1,8 +1,4 @@
 /*
- * RCSID $Id: pfkeyv2.h 3846 2008-04-18 17:01:45Z andreas $
- */
-
-/*
 RFC 2367               PF_KEY Key Management API               July 1998
 
 

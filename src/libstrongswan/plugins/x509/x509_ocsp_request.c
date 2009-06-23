@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: x509_ocsp_request.c 4317 2008-09-02 11:00:13Z martin $
  */
 
 #include "x509_ocsp_request.h"
@@ -26,6 +24,7 @@
 #include <utils/linked_list.h>
 #include <debug.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/keys/private_key.h>
 
 #define NONCE_LEN		16
 

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: endpoint_notify.c 3735 2008-04-02 18:21:03Z tobias $
  */
 
 #include "endpoint_notify.h"

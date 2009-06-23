@@ -12,22 +12,20 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: crypter.c 4880 2009-02-18 19:45:46Z tobias $
  */
+
+#include <asn1/oid.h>
 
 #include "crypter.h"
 
-ENUM_BEGIN(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_UNDEFINED,
-	"UNDEFINED");
-ENUM_NEXT(encryption_algorithm_names, ENCR_DES_IV64, ENCR_DES_IV32, ENCR_UNDEFINED,
+ENUM_BEGIN(encryption_algorithm_names, ENCR_DES_IV64, ENCR_DES_IV32,
 	"DES_IV64",
-	"DES",
-	"3DES",
-	"RC5",
-	"IDEA",
-	"CAST",
-	"BLOWFISH",
+	"DES_CBC",
+	"3DES_CBC",
+	"RC5_CBC",
+	"IDEA_CBC",
+	"CAST_CBC",
+	"BLOWFISH_CBC",
 	"3IDEA",
 	"DES_IV32");
 ENUM_NEXT(encryption_algorithm_names, ENCR_NULL, ENCR_AES_CCM_ICV16, ENCR_DES_IV32,
@@ -37,11 +35,128 @@ ENUM_NEXT(encryption_algorithm_names, ENCR_NULL, ENCR_AES_CCM_ICV16, ENCR_DES_IV
 	"AES_CCM_8",
 	"AES_CCM_12",
 	"AES_CCM_16");
-ENUM_NEXT(encryption_algorithm_names, ENCR_AES_GCM_ICV8, ENCR_AES_GCM_ICV16, ENCR_AES_CCM_ICV16,
+ENUM_NEXT(encryption_algorithm_names, ENCR_AES_GCM_ICV8, ENCR_NULL_AUTH_AES_GMAC, ENCR_AES_CCM_ICV16,
 	"AES_GCM_8",
 	"AES_GCM_12",
-	"AES_GCM_16");
-ENUM_NEXT(encryption_algorithm_names, ENCR_DES_ECB, ENCR_DES_ECB, ENCR_AES_GCM_ICV16,
-	"DES_ECB");
-ENUM_END(encryption_algorithm_names, ENCR_DES_ECB);
+	"AES_GCM_16",
+	"NULL_AES_GMAC");
+ENUM_NEXT(encryption_algorithm_names, ENCR_CAMELLIA_CBC, ENCR_CAMELLIA_CCM_ICV16, ENCR_NULL_AUTH_AES_GMAC,
+	"CAMELLIA_CBC",
+	"CAMELLIA_CTR",
+	"CAMELLIA_CCM_8",
+	"CAMELLIA_CCM_12",
+	"CAMELLIA_CCM_16");
+ENUM_NEXT(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_TWOFISH_CBC, ENCR_CAMELLIA_CCM_ICV16,
+	"UNDEFINED",
+	"DES_ECB",
+	"SERPENT_CBC",
+	"TWOFISH_CBC");
+ENUM_END(encryption_algorithm_names, ENCR_TWOFISH_CBC);
+
+/*
+ * Described in header.
+ */
+encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size)
+{
+	encryption_algorithm_t alg;
+	size_t alg_key_size;
+
+	switch (oid)
+	{
+		case OID_DES_CBC:
+			alg = ENCR_DES;
+			alg_key_size = 0;
+			break;
+		case OID_3DES_EDE_CBC:
+			alg = ENCR_3DES;
+			alg_key_size = 0;
+			break;
+		case OID_AES128_CBC:
+			alg = ENCR_AES_CBC;
+			alg_key_size = 128;
+			break;
+		case OID_AES192_CBC:
+			alg = ENCR_AES_CBC;
+			alg_key_size = 192;
+			break;
+		case OID_AES256_CBC:
+			alg = ENCR_AES_CBC;
+			alg_key_size = 256;
+			break;
+		case OID_CAMELLIA128_CBC:
+			alg = ENCR_CAMELLIA_CBC;
+			alg_key_size = 128;
+			break;
+		case OID_CAMELLIA192_CBC:
+			alg = ENCR_CAMELLIA_CBC;
+			alg_key_size = 192;
+			break;
+		case OID_CAMELLIA256_CBC:
+			alg = ENCR_CAMELLIA_CBC;
+			alg_key_size = 256;
+			break;
+		default:
+			alg = ENCR_UNDEFINED;
+			alg_key_size = 0;
+	}
+	if (key_size)
+	{
+			*key_size = alg_key_size;
+	}
+	return alg;
+}
+
+/*
+ * Described in header.
+ */
+int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size)
+{
+	int oid;
+
+	switch(alg)
+	{
+		case ENCR_DES:
+			oid = OID_DES_CBC;
+			break;
+		case ENCR_3DES:
+			oid = OID_3DES_EDE_CBC;
+			break;
+		case ENCR_AES_CBC:
+			switch (key_size)
+			{
+				case 128:
+					oid = OID_AES128_CBC;
+					break;
+				case 192:
+					oid = OID_AES192_CBC;
+					break;
+				case 256:
+					oid = OID_AES256_CBC;
+					break;
+				default:
+					oid = OID_UNKNOWN;
+			}
+			break;
+		case ENCR_CAMELLIA_CBC:
+			switch (key_size)
+			{
+				case 128:
+					oid = OID_CAMELLIA128_CBC;
+					break;
+				case 192:
+					oid = OID_CAMELLIA192_CBC;
+					break;
+				case 256:
+					oid = OID_CAMELLIA256_CBC;
+					break;
+				default:
+					oid = OID_UNKNOWN;
+			}
+			break;
+		default:
+			oid = OID_UNKNOWN;
+	}
+	return oid;
+}
+
 

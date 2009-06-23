@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: chunk.c 4936 2009-03-12 18:07:32Z tobias $
  */
 
 #include <stdio.h>
@@ -208,7 +206,7 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 /**
  * Described in header.
  */
-bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
+bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force)
 {
 	mode_t oldmask;
 	FILE *fd;
@@ -216,7 +214,7 @@ bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 
 	if (!force && access(path, F_OK) == 0)
 	{
-		DBG1("  file '%s' already exists", path);
+		DBG1("  %s file '%s' already exists", label, path);
 		return FALSE;
 	}
 	oldmask = umask(mask);
@@ -225,18 +223,20 @@ bool chunk_write(chunk_t chunk, char *path, mode_t mask, bool force)
 	{
 		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
 		{
+			DBG1("  written %s file '%s' (%d bytes)",
+				 label, path, chunk.len);
 			good = TRUE;
 		}
 		else
 		{
-			DBG1("  writing to file '%s' failed: %s", path, strerror(errno));
+			DBG1("  writing %s file '%s' failed: %s",
+				 label, path, strerror(errno));
 		}
 		fclose(fd);
-		return TRUE;
 	}
 	else
 	{
-		DBG1("  could not open file '%s': %s", path, strerror(errno));
+		DBG1("  could not open %s file '%s': %s", label, path, strerror(errno));
 	}
 	umask(oldmask);
 	return good;

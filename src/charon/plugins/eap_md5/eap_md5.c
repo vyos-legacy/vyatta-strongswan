@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: eap_md5.c 4276 2008-08-22 10:44:51Z martin $
  */
  
 #include "eap_md5.h"
@@ -90,7 +88,7 @@ static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response)
 											 this->server, this->peer);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for hosts '%D' - '%D'",
+		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
 			 this->server, this->peer);
 		return NOT_FOUND;
 	}

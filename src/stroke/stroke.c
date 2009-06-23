@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: stroke.c 4783 2008-12-10 13:00:02Z martin $
  */
 
 #include <stdlib.h>
@@ -27,6 +25,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "stroke_msg.h"
 #include "stroke_keywords.h"
@@ -54,10 +53,13 @@ static char* push_string(stroke_msg_t *msg, char *string)
 
 static int send_stroke_msg (stroke_msg_t *msg)
 {
-	struct sockaddr_un ctl_addr = { AF_UNIX, STROKE_SOCKET };
+	struct sockaddr_un ctl_addr;
 	int sock;
 	char buffer[64];
 	int byte_count;
+
+	ctl_addr.sun_family = AF_UNIX;
+	strcpy(ctl_addr.sun_path, STROKE_SOCKET);
 	
 	msg->output_verbosity = 1; /* CONTROL */
 	
@@ -246,7 +248,8 @@ static int reread(stroke_keyword_t kw)
 }
 
 static int purge_flags[] = {
-	PURGE_OCSP
+	PURGE_OCSP,
+	PURGE_IKE,
 };
 
 static int purge(stroke_keyword_t kw)
@@ -330,6 +333,8 @@ static void exit_usage(char *error)
 	printf("    stroke rereadsecrets|rereadcrls|rereadall\n");
 	printf("  Purge ocsp cache entries:\n");
 	printf("    stroke purgeocsp\n");
+	printf("  Purge IKE_SAs without a CHILD_SA:\n");
+	printf("    stroke purgeike\n");
 	printf("  Show leases of a pool:\n");
 	printf("    stroke leases [POOL [ADDRESS]]\n");
 	exit_error(error);
@@ -441,6 +446,7 @@ int main(int argc, char *argv[])
 			res = reread(token->kw);
 			break;
 		case STROKE_PURGE_OCSP:
+		case STROKE_PURGE_IKE:
 			res = purge(token->kw);
 			break;
 		case STROKE_LEASES:

@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: vendor_id_payload.c 4120 2008-06-27 15:22:27Z andreas $
  */
 
 #include <stddef.h>

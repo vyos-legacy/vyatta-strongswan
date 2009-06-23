@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: delete_ike_sa_job.c 4722 2008-11-28 15:44:25Z martin $
  */
 
 #include "delete_ike_sa_job.h"

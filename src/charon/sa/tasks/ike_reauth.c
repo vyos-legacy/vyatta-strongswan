@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: ike_reauth.c 4495 2008-10-28 16:07:06Z martin $
  */
 
 #include "ike_reauth.h"
@@ -100,7 +98,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 	/* we initiate the new IKE_SA of the mediation connection without CHILD_SA */
 	if (peer_cfg->is_mediation(peer_cfg))
 	{
-		if (new->initiate(new, NULL) == DESTROY_ME)
+		if (new->initiate(new, NULL, 0, NULL, NULL) == DESTROY_ME)
 		{
 			charon->ike_sa_manager->checkin_and_destroy(
 								charon->ike_sa_manager, new);
@@ -128,7 +126,7 @@ static status_t process_i(private_ike_reauth_t *this, message_t *message)
 				/* initiate/queue all child SAs */
 				child_cfg_t *child_cfg = child_sa->get_config(child_sa);
 				child_cfg->get_ref(child_cfg);
-				if (new->initiate(new, child_cfg) == DESTROY_ME)
+				if (new->initiate(new, child_cfg, 0, NULL, NULL) == DESTROY_ME)
 				{
 					iterator->destroy(iterator);
 					charon->ike_sa_manager->checkin_and_destroy(

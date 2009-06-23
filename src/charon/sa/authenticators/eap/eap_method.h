@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: eap_method.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -69,6 +67,14 @@ enum eap_type_t {
 extern enum_name_t *eap_type_names;
 
 /**
+ * Lookup the EAP method type from a string.
+ *
+ * @param name		EAP method name (such as "md5", "aka")
+ * @return			method type, 0 if unkown
+ */
+eap_type_t eap_type_from_string(char *name);
+
+/**
  * EAP code, type of an EAP message
  */
 enum eap_code_t {
@@ -82,7 +88,6 @@ enum eap_code_t {
  * enum names for eap_code_t.
  */
 extern enum_name_t *eap_code_names;
-
 
 /**
  * Interface of an EAP method for server and client side.

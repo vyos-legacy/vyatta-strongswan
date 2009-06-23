@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: enumerator.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -25,7 +23,7 @@
 
 typedef struct enumerator_t enumerator_t;
 
-#include <library.h>
+#include <utils.h>
 
 /**
  * Enumerate is simpler, but more flexible than iterator.

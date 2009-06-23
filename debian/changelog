@@ -1,8 +1,9 @@
-strongswan (4.2.14-2) unstable; urgency=HIGH
+strongswan (4.3.2-1) unstable; urgency=HIGH
 
   Urgency high because of security issue and FTBFS.
+  * New upstream release, fixes security bug.
   * Fix padlock handling for i386 in debian/rules.
-    Closes: #525652
+    Closes: #525652 (FTBFS on i386)
   * Acknowledge NMUs by security team.
     Closes: #533837, #531612
   * Add "Conflicts: strongswan (< 4.2.12-1)" to libstrongswan, 

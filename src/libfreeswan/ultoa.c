@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
- *
- * RCSID $Id: ultoa.c 3265 2007-10-08 19:52:55Z andreas $
  */
 #include "internal.h"
 #include "freeswan.h"

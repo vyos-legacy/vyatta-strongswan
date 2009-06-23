@@ -11,11 +11,12 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: eap_mschapv2.c 4896 2009-02-24 13:39:50Z martin $
  */
 
 #include "eap_mschapv2.h"
+
+#include <ctype.h>
+#include <unistd.h>
 
 #include <daemon.h>
 #include <library.h>
@@ -141,7 +142,7 @@ ENUM_END(mschapv2_error_names, ERROR_CHANGING_PASSWORD);
 /* Name we send as authenticator */
 #define MSCHAPV2_HOST_NAME "strongSwan"
 /* Message sent on success */
-#define SUCCESS_MESSAGE " M=Welcome to strongSwan"
+#define SUCCESS_MESSAGE " M=Welcome2strongSwan"
 /* Message sent on failure */
 #define FAILURE_MESSAGE "E=691 R=1 C="
 /* Length of the complete failure message */
@@ -366,7 +367,6 @@ static status_t AuthenticatorResponse(chunk_t password_hash_hash,
 	static const chunk_t magic1 = chunk_from_buf(magic1_data);
 	static const chunk_t magic2 = chunk_from_buf(magic2_data);
 	
-	status_t status = FAILED;
 	chunk_t digest = chunk_empty, concat;
 	hasher_t *hasher;
 	
@@ -456,7 +456,7 @@ static status_t GenerateMSK(chunk_t password_hash_hash,
 	hasher->allocate_hash(hasher, concat, &master_send_key);
 	master_send_key.len = 16;
 	
-	*msk = chunk_cat("cccc", master_receive_key, keypad, master_send_key, keypad);
+	*msk = chunk_cat("cccc", master_receive_key, master_send_key, keypad, keypad);
 	
 	hasher->destroy(hasher);
 	chunk_free(&master_key);
@@ -527,6 +527,24 @@ static chunk_t ascii_to_unicode(chunk_t ascii)
 }
 
 /**
+ * sanitize a string for printing
+ */
+static char* sanitize(char *str)
+{
+	char *pos = str;
+	
+	while (pos && *pos)
+	{
+		if (!isprint(*pos))
+		{
+			*pos = '?';
+		}
+		pos++;
+	}
+	return str;
+}
+
+/**
  * Returns a chunk of just the username part of the given user identity.
  * Note: the chunk points to internal data of the identification.
  */
@@ -535,7 +553,7 @@ static chunk_t extract_username(identification_t* identification)
 	char *has_domain;
 	chunk_t id;
 	id = identification->get_encoding(identification);
-	has_domain = (char*)memrchr(id.ptr, '\\', id.len);
+	has_domain = (char*)memchr(id.ptr, '\\', id.len);
 	if (has_domain)
 	{
 		int len;
@@ -546,6 +564,14 @@ static chunk_t extract_username(identification_t* identification)
 	return id;
 }
 
+/**
+ * Set the ms_length field using aligned write
+ */
+static void set_ms_length(eap_mschapv2_header_t *eap, u_int16_t len)
+{
+	len = htons(len - 5);
+	memcpy(&eap->ms_length, &len, sizeof(u_int16_t));
+}
 
 /**
  * Implementation of eap_method_t.initiate for the peer
@@ -567,8 +593,6 @@ static status_t initiate_server(private_eap_mschapv2_t *this, eap_payload_t **ou
 	const char *name = MSCHAPV2_HOST_NAME;
 	u_int16_t len = CHALLENGE_PAYLOAD_LEN + sizeof(MSCHAPV2_HOST_NAME) - 1;
 	
-	DBG1(DBG_IKE, "initiating EAP-MS-CHAPv2");
-	
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (!rng)
 	{
@@ -585,7 +609,7 @@ static status_t initiate_server(private_eap_mschapv2_t *this, eap_payload_t **ou
 	eap->type = EAP_MSCHAPV2;
 	eap->opcode = MSCHAPV2_CHALLENGE;
 	eap->ms_chapv2_id = this->mschapv2id;
-	eap->ms_length = htons(len - 5);
+	set_ms_length(eap, len);
 	
 	cha = (eap_mschapv2_challenge_t*)eap->data;
 	cha->value_size = CHALLENGE_LEN;
@@ -625,7 +649,8 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 			
 	if (cha->value_size != CHALLENGE_LEN)
 	{
-		DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: invalid challenge size");
+		DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: "
+			 "invalid challenge size");
 		return FAILED;
 	}
 			
@@ -643,11 +668,11 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	rng->destroy(rng);
 			
 	shared = charon->credentials->get_shared(charon->credentials,
-											 SHARED_EAP, this->peer, this->server);
+										SHARED_EAP, this->peer, this->server);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for hosts '%D' - '%D'",
-				this->server, this->peer);
+		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
+			 this->server, this->peer);
 		return NOT_FOUND;
 	}
 	
@@ -672,7 +697,7 @@ static status_t process_peer_challenge(private_eap_mschapv2_t *this,
 	eap->type = EAP_MSCHAPV2;
 	eap->opcode = MSCHAPV2_RESPONSE;
 	eap->ms_chapv2_id = this->mschapv2id;
-	eap->ms_length = htons(len - 5);
+	set_ms_length(eap, len);
 	
 	res = (eap_mschapv2_response_t*)eap->data;
 	res->value_size = RESPONSE_LEN;
@@ -725,7 +750,8 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 			token += 2;
 			if (strlen(token) != AUTH_RESPONSE_LEN - 2)
 			{
-				DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: invalid auth string");
+				DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: "
+					 "invalid auth string");
 				goto error;
 			}
 			hex = chunk_create(token, AUTH_RESPONSE_LEN - 2);
@@ -741,7 +767,8 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 			
 	if (auth_string.ptr == NULL)	
 	{
-		DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: auth string missing");
+		DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: "
+			 "auth string missing");
 		goto error;
 	}
 	
@@ -751,7 +778,7 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 		goto error;
 	}
 	
-	DBG1(DBG_IKE, "EAP-MS-CHAPv2 succeeded: '%s'", msg);
+	DBG1(DBG_IKE, "EAP-MS-CHAPv2 succeeded: '%s'", sanitize(msg));
 	
 	eap = alloca(len);
 	eap->code = EAP_RESPONSE;
@@ -780,7 +807,6 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	char *message, *token, *msg = NULL;
 	int message_len, error, retryable;
 	chunk_t challenge = chunk_empty;
-	u_int16_t len = SHORT_HEADER_LEN;
 	
 	data = in->get_data(in);
 	eap = (eap_mschapv2_header_t*)data.ptr;
@@ -816,7 +842,8 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 			token += 2;
 			if (strlen(token) != 2 * CHALLENGE_LEN)
 			{
-				DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: invalid challenge");
+				DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message:"
+					 "invalid challenge");
 				goto error;
 			}
 			hex = chunk_create(token, 2 * CHALLENGE_LEN);
@@ -836,7 +863,8 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	}
 	enumerator->destroy(enumerator);
 			
-	DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed with error %N: '%s'", mschapv2_error_names, error, msg);
+	DBG1(DBG_IKE, "EAP-MS-CHAPv2 failed with error %N: '%s'",
+		 mschapv2_error_names, error, sanitize(msg));
 			
 	/**
 	 * at this point, if the error is retryable, we MAY retry the authentication
@@ -898,8 +926,8 @@ static status_t process_peer(private_eap_mschapv2_t *this, eap_payload_t *in,
 		}
 		default:
 		{
-			DBG1(DBG_IKE, "EAP-MS-CHAPv2 received packet with unsupported OpCode (%N)!",
-					mschapv2_opcode_names, eap->opcode);
+			DBG1(DBG_IKE, "EAP-MS-CHAPv2 received packet with unsupported "
+				 "OpCode (%N)!", mschapv2_opcode_names, eap->opcode);
 			break;
 		}
 	}
@@ -925,7 +953,8 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 		 * so, to clean up our state we just fail with an EAP-Failure.
 		 * this gives an unknown error on the windows side, but is also fine
 		 * with the standard. */
-		DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed: maximum number of retries reached");
+		DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed: "
+			 "maximum number of retries reached");
 		return FAILED;
 	}
 	
@@ -951,7 +980,7 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 	eap->type = EAP_MSCHAPV2;
 	eap->opcode = MSCHAPV2_FAILURE;
 	eap->ms_chapv2_id = this->mschapv2id++; /* increase for each retry */
-	eap->ms_length = htons(len - 5);
+	set_ms_length(eap, len);
 	
 	hex = chunk_to_hex(this->challenge, NULL, TRUE);
 	snprintf(msg, FAILURE_MESSAGE_LEN, "%s%s", FAILURE_MESSAGE, hex.ptr);
@@ -977,6 +1006,7 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	identification_t *userid;
 	shared_key_t *shared;
 	int name_len;
+	char buf[256];
 	
 	data = in->get_data(in);
 	eap = (eap_mschapv2_header_t*)data.ptr;
@@ -991,16 +1021,16 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	peer_challenge = chunk_create(res->response.peer_challenge, CHALLENGE_LEN);
 	
 	name_len = min(data.len - RESPONSE_PAYLOAD_LEN, 255);
-	userid = identification_create_from_encoding(ID_EAP,
-												 chunk_create(res->name, name_len));
+	snprintf(buf, sizeof(buf), "%.*s", name_len, res->name);
+	userid = identification_create_from_string(buf);
+	DBG2(DBG_IKE, "EAP-MS-CHAPv2 username: '%Y'", userid);
 	username = extract_username(userid);
-	DBG2(DBG_IKE, "EAP-MS-CHAPv2 username: '%.*s'", name_len, res->name);
 	
 	shared = charon->credentials->get_shared(charon->credentials,
 											 SHARED_EAP, this->server, userid);
 	if (shared == NULL)
 	{
-		DBG1(DBG_IKE, "no EAP key found for hosts '%D' - '%D'",
+		DBG1(DBG_IKE, "no EAP key found for hosts '%Y' - '%Y'",
 					  this->server, userid);
 		/* FIXME: windows 7 always sends the username that is first entered in
 		 * the username box, even, if the user changes it during retries (probably
@@ -1015,7 +1045,8 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	password = ascii_to_unicode(shared->get_key(shared));
 	shared->destroy(shared);
 	
-	if (GenerateStuff(this, this->challenge, peer_challenge, username, password) != SUCCESS)
+	if (GenerateStuff(this, this->challenge, peer_challenge,
+					  username, password) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "EAP-MS-CHAPv2 verification failed");	
 		userid->destroy(userid);
@@ -1038,7 +1069,7 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 		eap->type = EAP_MSCHAPV2;
 		eap->opcode = MSCHAPV2_SUCCESS;
 		eap->ms_chapv2_id = this->mschapv2id;
-		eap->ms_length = htons(len - 5);
+		set_ms_length(eap, len);
 		
 		hex = chunk_to_hex(this->auth_response, NULL, TRUE);
 		snprintf(msg, AUTH_RESPONSE_LEN + sizeof(SUCCESS_MESSAGE),
@@ -1063,7 +1094,8 @@ static status_t process_server(private_eap_mschapv2_t *this, eap_payload_t *in,
 	
 	if (this->identifier != in->get_identifier(in))
 	{
-		DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: unexpected identifier");
+		DBG1(DBG_IKE, "received invalid EAP-MS-CHAPv2 message: "
+			 "unexpected identifier");
 		return FAILED;
 	}
 	
@@ -1092,8 +1124,8 @@ static status_t process_server(private_eap_mschapv2_t *this, eap_payload_t *in,
 		}
 		default:
 		{
-			DBG1(DBG_IKE, "EAP-MS-CHAPv2 received packet with unsupported OpCode (%N)!",
-					mschapv2_opcode_names, eap->opcode);
+			DBG1(DBG_IKE, "EAP-MS-CHAPv2 received packet with unsupported "
+				 "OpCode (%N)!", mschapv2_opcode_names, eap->opcode);
 			break;
 		}
 	}

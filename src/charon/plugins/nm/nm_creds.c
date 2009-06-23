@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "nm_creds.h"
@@ -259,9 +257,7 @@ static void set_username_password(private_nm_creds_t *this, identification_t *id
 {
 	this->lock->write_lock(this->lock);
 	DESTROY_IF(this->user);
-	/* for EAP authentication, we use always use ID_EAP type */
-	this->user = identification_create_from_encoding(ID_EAP,
-													 id->get_encoding(id));
+	this->user = id->clone(id);
 	free(this->pass);
 	this->pass = password ? strdup(password) : NULL;
 	this->lock->unlock(this->lock);

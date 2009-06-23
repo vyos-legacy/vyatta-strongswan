@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: private_key.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -81,6 +79,14 @@ struct private_key_t {
 	 */
 	public_key_t* (*get_public_key)(private_key_t *this);
 	
+	/**
+	 * Check if two private keys are equal.
+	 * 
+	 * @param other		other private key
+	 * @return			TRUE, if equality
+	 */
+	bool (*equals) (private_key_t *this, private_key_t *other);
+
 	/**
 	 * Check if a private key belongs to a public key.
 	 * 

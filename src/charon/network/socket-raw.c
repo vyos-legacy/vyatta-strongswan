@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: socket-raw.c 4646 2008-11-13 07:15:45Z martin $
  */
 
 /* for struct in6_pktinfo */
@@ -374,7 +372,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	msg.msg_iovlen = 1;
 	msg.msg_flags = 0;
 	
-	if (!dst->is_anyaddr(dst))
+	if (!src->is_anyaddr(src))
 	{
 		if (family == AF_INET)
 		{

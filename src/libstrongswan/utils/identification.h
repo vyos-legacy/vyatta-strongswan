@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Tobias Brunner
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: identification.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -29,6 +27,7 @@
 typedef enum id_type_t id_type_t;
 typedef struct identification_t identification_t;
 typedef enum id_match_t id_match_t;
+typedef enum id_part_t id_part_t;
 
 #include <library.h>
 
@@ -80,7 +79,8 @@ enum id_type_t {
 	 * An example of an ID_RFC822_ADDR is "jsmith@example.com".
 	 * The string MUST NOT contain any terminators.
 	 */
-	ID_RFC822_ADDR = 3,
+	ID_USER_FQDN   = 3,    /* IKEv1 only */
+	ID_RFC822_ADDR = 3,    /* IKEv2 only */
 
 	/**
 	 * ID data is an IPv4 subnet (IKEv1 only)
@@ -143,22 +143,72 @@ enum id_type_t {
 	 * SHA1 hash of the binary DER encoding of a certificate
 	 */
 	ID_CERT_DER_SHA1 = 204,
-	
-	/**
-	 * Generic EAP identity
-	 */
-	ID_EAP = 205,
 
 	/**
 	 * IETF Attribute Syntax String (RFC 3281)
 	 */
-	ID_IETF_ATTR_STRING = 206,
+	ID_IETF_ATTR_STRING = 205,
+
+	/**
+	 * Private ID used by the pluto daemon for opportunistic encryption
+	 */
+	ID_MYID = 206,
 };
 
 /**
  * enum names for id_type_t.
  */
 extern enum_name_t *id_type_names;
+
+/**
+ * Type of an ID sub part.
+ */
+enum id_part_t {
+	/** Username part of an RFC822_ADDR */
+	ID_PART_USERNAME,
+	/** Domain part of an RFC822_ADDR */
+	ID_PART_DOMAIN,
+	
+	/** Top-Level domain of a FQDN */
+	ID_PART_TLD,
+	/** Second-Level domain of a FQDN */
+	ID_PART_SLD,
+	/** Another Level domain of a FQDN */
+	ID_PART_ALD,
+	
+	/** Country RDN of a DN */
+	ID_PART_RDN_C,
+	/** CommonName RDN of a DN */
+	ID_PART_RDN_CN,
+	/** Description RDN of a DN */
+	ID_PART_RDN_D,
+	/** Email RDN of a DN */
+	ID_PART_RDN_E,
+	/** EmployeeNumber RDN of a DN */
+	ID_PART_RDN_EN,
+	/** GivenName RDN of a DN */
+	ID_PART_RDN_G,
+	/** Initials RDN of a DN */
+	ID_PART_RDN_I,
+	/** UniqueIdentifier RDN of a DN */
+	ID_PART_RDN_ID,
+	/** Locality RDN of a DN */
+	ID_PART_RDN_L,
+	/** Name RDN of a DN */
+	ID_PART_RDN_N,
+	/** Organization RDN of a DN */
+	ID_PART_RDN_O,
+	/** OrganizationUnit RDN of a DN */
+	ID_PART_RDN_OU,
+	/** Surname RDN of a DN */
+	ID_PART_RDN_S,
+	/** SerialNumber RDN of a DN */
+	ID_PART_RDN_SN,
+	/** StateOrProvince RDN of a DN */
+	ID_PART_RDN_ST,
+	/** Title RDN of a DN */
+	ID_PART_RDN_T,
+};
 
 /**
  * Generic identification, such as used in ID payload.
@@ -225,6 +275,19 @@ struct identification_t {
 	bool (*contains_wildcards) (identification_t *this);
 	
 	/**
+	 * Create an enumerator over subparts of an identity.
+	 *
+	 * Some identities are built from several parts, e.g. an E-Mail consists
+	 * of a username and a domain part, or a DistinguishedName contains several
+	 * RDNs.
+	 * For identity without subtypes (support), an empty enumerator is
+	 * returned.
+	 *
+	 * @return			an enumerator over (id_part_t type, chunk_t data)
+	 */
+	enumerator_t* (*create_part_enumerator)(identification_t *this);
+	
+	/**
 	 * Clone a identification_t instance.
 	 * 
 	 * @return 			clone of this
@@ -257,16 +320,16 @@ struct identification_t {
  * N, G, I, ID, EN, EmployeeNumber, E, Email, emailAddress, UN, 
  * unstructuredName, TCGID.
  * 
+ * This constructor never returns NULL. If it does not find a suitable
+ * conversion function, it will copy the string to an ID_KEY_ID.
+ * 
  * @param string	input string, which will be converted
- * @return			created identification_t, NULL if not supported.
+ * @return			identification_t
  */
 identification_t * identification_create_from_string(char *string);
 
 /**
  * Creates an identification_t object from an encoded chunk.
- *
- * In contrast to identification_create_from_string(), this constructor never
- * returns NULL, even when the conversion to a string representation fails.
  * 
  * @param type		type of this id, such as ID_IPV4_ADDR
  * @param encoded	encoded bytes, such as from identification_t.get_encoding

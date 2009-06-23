@@ -22,12 +22,15 @@ asn1/pem.c asn1/pem.h \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/pkcs9.c crypto/pkcs9.h \
+crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords.h \
 crypto/prfs/prf.c crypto/prfs/prf.h \
 crypto/rngs/rng.c crypto/rngs/rng.h \
 crypto/prf_plus.h crypto/prf_plus.c \
 crypto/signers/signer.c crypto/signers/signer.h \
-crypto/diffie_hellman.c crypto/diffie_hellman.h \
 crypto/crypto_factory.c crypto/crypto_factory.h \
+crypto/crypto_tester.c crypto/crypto_tester.h \
+crypto/diffie_hellman.c crypto/diffie_hellman.h \
+crypto/transform.c crypto/transform.h \
 credentials/credential_factory.c credentials/credential_factory.h \
 credentials/builder.c credentials/builder.h \
 credentials/keys/private_key.c credentials/keys/private_key.h \
@@ -39,8 +42,9 @@ credentials/certificates/ac.h \
 credentials/certificates/crl.h credentials/certificates/crl.c \
 credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_response.h credentials/certificates/ocsp_response.c \
-fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 database/database.h database/database_factory.h database/database_factory.c \
+fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
+pgp/pgp.c pgp/pgp.h \
 utils.h utils.c \
 utils/host.c utils/host.h \
 utils/identification.c utils/identification.h \
@@ -54,15 +58,17 @@ utils/mutex.c utils/mutex.h \
 utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
-libstrongswan_la_LIBADD = -lpthread -ldl
+libstrongswan_la_LIBADD = -lpthread $(DLLIB)
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
-AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
-			-DIPSEC_PLUGINDIR=\"${plugindir}\"
+AM_CFLAGS = \
+-DIPSEC_DIR=\"${ipsecdir}\" \
+-DIPSEC_PLUGINDIR=\"${plugindir}\"
 
 if USE_LEAK_DETECTIVE
   AM_CFLAGS += -DLEAK_DETECTIVE
-  libstrongswan_la_SOURCES += utils/leak_detective.c utils/leak_detective.h
+  libstrongswan_la_SOURCES += \
+    utils/leak_detective.c utils/leak_detective.h
 endif
 
 if USE_LOCK_PROFILER
@@ -78,15 +84,28 @@ if USE_VSTR
   libstrongswan_la_LIBADD += -lvstr
 endif
 
-EXTRA_DIST = asn1/oid.txt asn1/oid.pl
-BUILT_SOURCES = asn1/oid.c asn1/oid.h
-MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
+EXTRA_DIST = \
+asn1/oid.txt asn1/oid.pl \
+crypto/proposal/proposal_keywords.txt
 
-asn1/oid.c :	asn1/oid.pl asn1/oid.txt
-		(cd `dirname $<` && $(PERL) `basename $<`)
+BUILT_SOURCES = \
+$(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
+$(srcdir)/crypto/proposal/proposal_keywords.c
 
-asn1/oid.h :	asn1/oid.pl asn1/oid.txt
-		(cd `dirname $<` && $(PERL) `basename $<`)
+MAINTAINERCLEANFILES = \
+$(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
+$(srcdir)/crypto/proposal/proposal_keywords.c
+
+$(srcdir)/asn1/oid.c :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
+		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
+
+$(srcdir)/asn1/oid.h :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
+		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
+
+$(srcdir)/crypto/proposal/proposal_keywords.c:	$(srcdir)/crypto/proposal/proposal_keywords.txt \
+												$(srcdir)/crypto/proposal/proposal_keywords.h
+		$(GPERF) -N proposal_get_token -m 10 -C -G -c -t -D < \
+												$(srcdir)/crypto/proposal/proposal_keywords.txt > $@
 
 
 # build plugins with their own Makefile
@@ -100,6 +119,10 @@ endif
 
 if USE_DES
   SUBDIRS += plugins/des
+endif
+
+if USE_BLOWFISH
+  SUBDIRS += plugins/blowfish
 endif
 
 if USE_MD4
@@ -170,8 +193,16 @@ if USE_OPENSSL
   SUBDIRS += plugins/openssl
 endif
 
+if USE_GCRYPT
+  SUBDIRS += plugins/gcrypt
+endif
+
 if USE_AGENT
   SUBDIRS += plugins/agent
+endif
+
+if USE_TEST_VECTORS
+  SUBDIRS += plugins/test_vectors
 endif
 
 if USE_INTEGRITY_TEST

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: aes_plugin.c 3488 2008-02-21 15:10:02Z martin $
  */
 
 #include "aes_plugin.h"

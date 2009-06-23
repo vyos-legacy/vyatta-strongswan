@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 /**
@@ -23,6 +21,7 @@
 #ifndef NM_CREDS_H_
 #define NM_CREDS_H_
 
+#include <credentials/keys/private_key.h>
 #include <credentials/credential_set.h>
 
 typedef struct nm_creds_t nm_creds_t;

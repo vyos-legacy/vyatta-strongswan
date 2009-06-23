@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: mutex.c 4803 2008-12-15 09:13:43Z martin $
  */
 
 #define _GNU_SOURCE
@@ -315,7 +313,7 @@ mutex_t *mutex_create(mutex_type_t type)
 /**
  * Implementation of condvar_t.wait.
  */
-static void wait(private_condvar_t *this, private_mutex_t *mutex)
+static void _wait(private_condvar_t *this, private_mutex_t *mutex)
 {
 	if (mutex->recursive)
 	{
@@ -389,7 +387,7 @@ static bool timed_wait(private_condvar_t *this, private_mutex_t *mutex,
 /**
  * Implementation of condvar_t.signal.
  */
-static void signal(private_condvar_t *this)
+static void _signal(private_condvar_t *this)
 {
 	pthread_cond_signal(&this->condvar);
 }
@@ -423,10 +421,10 @@ condvar_t *condvar_create(condvar_type_t type)
 		{
 			private_condvar_t *this = malloc_thing(private_condvar_t);
 		
-			this->public.wait = (void(*)(condvar_t*, mutex_t *mutex))wait;
+			this->public.wait = (void(*)(condvar_t*, mutex_t *mutex))_wait;
 			this->public.timed_wait = (bool(*)(condvar_t*, mutex_t *mutex, u_int timeout))timed_wait;
 			this->public.timed_wait_abs = (bool(*)(condvar_t*, mutex_t *mutex, timeval_t time))timed_wait_abs;
-			this->public.signal = (void(*)(condvar_t*))signal;
+			this->public.signal = (void(*)(condvar_t*))_signal;
 			this->public.broadcast = (void(*)(condvar_t*))broadcast;
 			this->public.destroy = (void(*)(condvar_t*))condvar_destroy;
 		

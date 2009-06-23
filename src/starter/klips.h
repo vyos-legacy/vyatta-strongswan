@@ -10,8 +10,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: klips.h 4618 2008-11-11 09:22:00Z tobias $
  */
 
 #ifndef _STARTER_KLIPS_H_

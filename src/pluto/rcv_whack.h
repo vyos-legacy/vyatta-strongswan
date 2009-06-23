@@ -10,8 +10,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: rcv_whack.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 extern void whack_handle(int kernelfd);

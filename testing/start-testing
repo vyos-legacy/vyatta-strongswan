@@ -13,8 +13,6 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-#
-# RCSID $Id: start-testing 3517 2008-03-01 10:25:52Z andreas $
 
 DIR=`dirname $0`
 
@@ -33,10 +31,10 @@ else
 fi
 
 #####################################################
-# start the uml switches
+# start the uml bridges
 #
-cecho "Start the uml switches  (scripts/start-switches)"
-$DIR/scripts/start-switches
+cecho "Start the uml bridges  (scripts/start-bridges)"
+$DIR/scripts/start-bridges
 
 
 #####################################################

@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "keymat.h"
@@ -415,17 +413,18 @@ static bool derive_child_keys(private_keymat_t *this,
 		/* to bytes */
 		enc_size /= 8;
 		
-	 	/* CCM/GCM needs additional bytes */
+		/* CCM/GCM/CTR needs additional bytes */
 		switch (enc_alg)
 		{
 			case ENCR_AES_CCM_ICV8:
 			case ENCR_AES_CCM_ICV12:
 			case ENCR_AES_CCM_ICV16:
 				enc_size += 3;
-				break;		
+				break;
 			case ENCR_AES_GCM_ICV8:
 			case ENCR_AES_GCM_ICV12:
 			case ENCR_AES_GCM_ICV16:
+			case ENCR_AES_CTR:
 				enc_size += 4;
 				break;
 			default:
@@ -463,6 +462,16 @@ static bool derive_child_keys(private_keymat_t *this,
 	
 	prf_plus->destroy(prf_plus);
 	
+	if (enc_size)
+	{
+		DBG4(DBG_CHD, "encryption initiator key %B", encr_i);
+		DBG4(DBG_CHD, "encryption responder key %B", encr_r);
+	}
+	if (int_size)
+	{
+		DBG4(DBG_CHD, "integrity initiator key %B", integ_i);
+		DBG4(DBG_CHD, "integrity responder key %B", integ_r);
+	}
 	return TRUE;
 }
 

@@ -10,15 +10,13 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: cookie.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
 #include <freeswan.h>
 
-extern const u_char zero_cookie[COOKIE_SIZE];	/* guaranteed 0 */
+extern const u_char zero_cookie[COOKIE_SIZE];   /* guaranteed 0 */
 
-extern void get_cookie(bool initiator, u_int8_t *cookie, int length
-    , const ip_address *addr);
+extern void get_cookie(bool initiator, u_int8_t *cookie, int length,
+					   ip_address *addr);
 
 #define is_zero_cookie(cookie) all_zero((cookie), COOKIE_SIZE)

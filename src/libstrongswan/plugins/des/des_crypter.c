@@ -56,13 +56,11 @@
  * derivative of this code cannot be changed.  i.e. this code cannot simply be
  * copied and put under another distribution licence
  * [including the GNU Public Licence.]
- *
- * $Id: des_crypter.c 4938 2009-03-12 18:38:13Z tobias $
  */
 
 #include "des_crypter.h"
 
-typedef u_char des_cblock[8];
+typedef u_char des_cblock[DES_BLOCK_SIZE];
 
 typedef struct des_ks_struct {
 	des_cblock _;

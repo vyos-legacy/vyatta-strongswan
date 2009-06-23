@@ -10,11 +10,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: foodgroups.h 3252 2007-10-06 21:24:50Z andreas $
  */
 
-struct connection;	/* forward declaration */
+struct connection;      /* forward declaration */
 extern void add_group(struct connection *c);
 extern void route_group(struct connection *c);
 extern void unroute_group(struct connection *c);

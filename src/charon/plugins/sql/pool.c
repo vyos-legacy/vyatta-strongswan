@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- * 
- * $Id$
  */
 
 #define _GNU_SOURCE
@@ -24,6 +22,7 @@
 #include <debug.h>
 #include <library.h>
 #include <utils/host.h>
+#include <utils/identification.h>
 
 /**
  * global database handle
@@ -401,11 +400,6 @@ static enumerator_t *create_lease_query(char *filter)
 				{
 					id = identification_create_from_string(value);
 				}
-				if (!id)
-				{
-					fprintf(stderr, "invalid 'id' in filter string.\n");
-					exit(-1);
-				}
 				break;
 			case FIL_ADDR:
 				if (value)
@@ -567,7 +561,7 @@ static void leases(char *filter, bool utc)
 				printf("    ");
 			}
 		}
-		printf("%D\n", identity);
+		printf("%Y\n", identity);
 		DESTROY_IF(address);
 		identity->destroy(identity);
 	}

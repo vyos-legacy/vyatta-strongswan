@@ -11,14 +11,12 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "rng.h"
 
-ENUM(rng_quality_names, RNG_WEAK, RNG_REAL,
+ENUM(rng_quality_names, RNG_WEAK, RNG_TRUE,
 	"RNG_WEAK",
 	"RNG_STRONG",
-	"RNG_REAL",
+	"RNG_TRUE",
 );

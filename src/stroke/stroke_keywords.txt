@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * RCSID $Id: stroke_keywords.txt 4783 2008-12-10 13:00:02Z martin $
  */
 
 #include <string.h>
@@ -57,4 +55,5 @@ rereadacerts,    STROKE_REREAD_ACERTS
 rereadcrls,      STROKE_REREAD_CRLS
 rereadall,       STROKE_REREAD_ALL
 purgeocsp,       STROKE_PURGE_OCSP
+purgeike,        STROKE_PURGE_IKE
 leases,          STROKE_LEASES

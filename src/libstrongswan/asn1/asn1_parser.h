@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: asn1_parser.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -27,7 +25,9 @@
 
 #include <stdarg.h>
 
-#include <library.h>
+#include <utils.h>
+#include <chunk.h>
+#include <asn1/asn1.h>
 
 /**
  * Definition of ASN.1 flags

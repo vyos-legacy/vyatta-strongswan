@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "padlock_plugin.h"
@@ -159,7 +157,7 @@ plugin_t *plugin_create()
 	
 	if (this->features & PADLOCK_RNG_ENABLED)
 	{
-		lib->crypto->add_rng(lib->crypto, RNG_REAL,
+		lib->crypto->add_rng(lib->crypto, RNG_TRUE,
 						(rng_constructor_t)padlock_rng_create);
 		lib->crypto->add_rng(lib->crypto, RNG_STRONG,
 						(rng_constructor_t)padlock_rng_create);

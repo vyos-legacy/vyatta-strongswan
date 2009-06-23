@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "eap_sim_file_card.h"
@@ -52,13 +50,13 @@ static bool get_triplet(private_eap_sim_file_card_t *this,
 	identification_t *id;
 	char *c_rand, *c_sres, *c_kc;
 	
-	
-	DBG1(DBG_CFG, "looking for rand: %b", rand, RAND_LEN);
+	DBG2(DBG_CFG, "looking for rand: %b", rand, RAND_LEN);
 	
 	enumerator = this->triplets->create_enumerator(this->triplets);
 	while (enumerator->enumerate(enumerator, &id, &c_rand, &c_sres, &c_kc))
 	{
-		DBG1(DBG_CFG, "found triplet: %b %b %b", c_rand, RAND_LEN, c_sres, SRES_LEN, c_kc, KC_LEN);
+		DBG2(DBG_CFG, "found triplet: rand %b\nsres %b\n kc %b",
+			 c_rand, RAND_LEN, c_sres, SRES_LEN, c_kc, KC_LEN);
 		if (memeq(c_rand, rand, RAND_LEN))
 		{
 			memcpy(sres, c_sres, SRES_LEN);

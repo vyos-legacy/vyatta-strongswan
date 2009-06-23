@@ -16,10 +16,8 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.2.14)
+AC_INIT(strongSwan,4.3.2)
 AM_INIT_AUTOMAKE(tar-ustar)
-AC_CONFIG_MACRO_DIR([m4])
-AC_C_BIGENDIAN
 AC_SUBST(confdir, '${sysconfdir}')
 PKG_PROG_PKG_CONFIG
 
@@ -48,7 +46,7 @@ AC_ARG_WITH(
 )
 AC_ARG_WITH(
 	[resolv-conf],
-	AS_HELP_STRING([--with-resolv-conf=file],[set the file to store DNS server information other than "sysconfdir/resolv.conf"]),
+	AS_HELP_STRING([--with-resolv-conf=file],[set the file to use in DNS handler plugin other than "sysconfdir/resolv.conf"]),
 	[AC_SUBST(resolv_conf, "$withval")],
 	[AC_SUBST(resolv_conf, "${sysconfdir}/resolv.conf")]
 )
@@ -186,6 +184,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[blowfish],
+	AS_HELP_STRING([--enable-blowfish],[enable Blowfish software implementation plugin (default is NO).]),
+	[if test x$enableval = xyes; then
+		blowfish=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[md4],
 	AS_HELP_STRING([--enable-md4],[enable MD4 software implementation plugin (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -301,6 +307,14 @@ AC_ARG_ENABLE(
 		xcbc=false
 	fi],
 	xcbc=true
+)
+
+AC_ARG_ENABLE(
+	[test-vectors],
+	AS_HELP_STRING([--enable-test-vectors],[enable plugin providing crypto test vectors (default is NO).]),
+	[if test x$enableval = xyes; then
+		test_vectors=true
+	fi]
 )
 
 AC_ARG_ENABLE(
@@ -494,6 +508,14 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[kernel-pfroute],
+	AS_HELP_STRING([--enable-kernel-pfroute],[enable the PF_ROUTE kernel interface. (default is NO).]),
+	[if test x$enableval = xyes; then
+		kernel_pfroute=true
+	fi]
+)
+
+AC_ARG_ENABLE(
 	[kernel-klips],
 	AS_HELP_STRING([--enable-kernel-klips],[enable the KLIPS kernel interface. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -573,17 +595,6 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
-	[self-test],
-	AS_HELP_STRING([--disable-self-test],[disable the self-test of the crypto library (default is NO).]),
-	[if test x$enableval = xyes; then
-		self_test=true
-	 else
-		self_test=false
-	fi],
-	self_test=true
-)
-
-AC_ARG_ENABLE(
 	[pluto],
 	AS_HELP_STRING([--disable-pluto],[disable the IKEv1 keying daemon pluto. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -639,6 +650,28 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[attr],
+	AS_HELP_STRING([--disable-attr],[disable strongswan.conf based configuration attribute plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		attr=true
+	 else
+		attr=false
+	fi],
+	attr=true
+)
+
+AC_ARG_ENABLE(
+	[resolv-conf],
+	AS_HELP_STRING([--disable-resolv-conf],[disable resolv.conf DNS handler plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		resolvconf=true
+	 else
+		resolvconf=false
+	fi],
+	resolvconf=true
+)
+
+AC_ARG_ENABLE(
 	[padlock],
 	AS_HELP_STRING([--enable-padlock],[enables VIA Padlock crypto plugin. (default is NO).]),
 	[if test x$enableval = xyes; then
@@ -655,6 +688,16 @@ AC_ARG_ENABLE(
 		openssl=true
 	 else
 		openssl=false
+	fi],
+)
+
+AC_ARG_ENABLE(
+	[gcrypt],
+	AS_HELP_STRING([--enable-gcrypt],[enables the libgcrypt plugin. (default is NO).]),
+	[if test x$enableval = xyes; then
+		gcrypt=true
+	 else
+		gcrypt=false
 	fi],
 )
 
@@ -684,6 +727,24 @@ AC_ARG_ENABLE(
 	fi]
 )
 
+AC_ARG_ENABLE(
+	[vstr],
+	AS_HELP_STRING([--enable-vstr],[enforce using the Vstr string library to replace glibc-like printf hooks (default is NO).]),
+	[if test x$enableval = xyes; then
+	 	vstr=true
+	fi]
+)
+
+dnl =========================
+dnl  set up compiler and flags
+dnl =========================
+
+if test -z "$CFLAGS"; then
+	AC_SUBST(CFLAGS, "-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing")
+fi
+AC_PROG_CC
+AC_C_BIGENDIAN
+
 dnl =========================
 dnl  check required programs
 dnl =========================
@@ -692,7 +753,6 @@ AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 AC_PROG_LEX
 AC_PROG_YACC
-AC_PROG_CC()
 AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 
@@ -700,8 +760,18 @@ dnl =========================
 dnl  dependency calculation
 dnl =========================
 
-if test x$pluto = xtrue; then
+if test x$eap_aka = xtrue; then
 	gmp=true;
+	fips_prf=true;
+	sha1=true;
+fi
+
+if test x$eap_sim = xtrue; then
+	fips_prf=true;
+fi
+
+if test x$fips_prf = xtrue; then
+	sha1=true;
 fi
 
 if test x$tools = xtrue; then
@@ -725,13 +795,84 @@ if test x$medcli = xtrue; then
 	me=true
 fi
 
-dnl ==========================================
+dnl ===========================================
 dnl  check required libraries and header files
-dnl ==========================================
+dnl ===========================================
 
-AC_HAVE_LIBRARY(dl)
+AC_HEADER_STDBOOL
+
+saved_LIBS=$LIBS
+LIBS=""
+AC_SEARCH_LIBS(dlopen, dl, [DLLIB=$LIBS])
+LIBS=$saved_LIBS
+AC_SUBST(DLLIB)
+
+AC_MSG_CHECKING(for dladdr)
+AC_TRY_COMPILE(
+	[#define _GNU_SOURCE
+	 #include <dlfcn.h>],
+	[Dl_info* info = 0;
+	 dladdr(0, info);],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_DLADDR])],
+	[AC_MSG_RESULT([no])]
+)
+
 AC_CHECK_FUNCS(backtrace)
-AC_CHECK_FUNCS(dladdr)
+AC_CHECK_FUNCS(prctl)
+AC_CHECK_FUNCS(gethostbyname_r)
+
+AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h)
+
+AC_CHECK_MEMBERS([struct sockaddr.sa_len], [], [],
+[
+	#include <sys/types.h>
+	#include <sys/socket.h>
+])
+
+AC_CHECK_MEMBERS([struct sadb_x_policy.sadb_x_policy_priority], [], [],
+[
+	#include <sys/types.h>
+	#ifdef HAVE_NET_PFKEYV2_H
+	#include <net/pfkeyv2.h>
+	#else
+	#include <stdint.h>
+	#include <linux/pfkeyv2.h>
+	#endif
+])
+
+AC_MSG_CHECKING([for IPSEC_MODE_BEET])
+AC_TRY_COMPILE(
+	[#include <sys/types.h>
+	#ifdef HAVE_NETIPSEC_IPSEC_H
+	#include <netipsec/ipsec.h>
+	#elif defined(HAVE_NETINET6_IPSEC_H)
+	#include <netinet6/ipsec.h>
+	#else
+	#include <stdint.h>
+	#include <linux/ipsec.h>
+	#endif],
+	[int mode = IPSEC_MODE_BEET;
+	 return mode;],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IPSEC_MODE_BEET])],
+	[AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([for IPSEC_DIR_FWD])
+AC_TRY_COMPILE(
+	[#include <sys/types.h>
+	#ifdef HAVE_NETIPSEC_IPSEC_H
+	#include <netipsec/ipsec.h>
+	#elif defined(HAVE_NETINET6_IPSEC_H)
+	#include <netinet6/ipsec.h>
+	#else
+	#include <stdint.h>
+	#include <linux/ipsec.h>
+	#endif],
+	[int dir = IPSEC_DIR_FWD;
+	 return dir;],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IPSEC_DIR_FWD])],
+	[AC_MSG_RESULT([no])]
+)
 
 AC_MSG_CHECKING([for gcc atomic operations])
 AC_TRY_RUN(
@@ -754,8 +895,14 @@ AC_CHECK_FUNC(
 	[AC_DEFINE(HAVE_PRINTF_HOOKS)],
 	[
 		AC_MSG_NOTICE([printf does not support custom format specifiers!])
-		AC_HAVE_LIBRARY([vstr],[LIBS="$LIBS"]; vstr=true,[AC_MSG_ERROR([Vstr string library not found])])
-	])
+		vstr=true
+	]
+)
+
+if test x$vstr = xtrue; then
+	AC_HAVE_LIBRARY([vstr],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])])
+	AC_DEFINE(USE_VSTR)
+fi
 
 if test x$gmp = xtrue; then
 	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
@@ -792,6 +939,30 @@ if test x$dumm = xtrue; then
 	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
 	AC_SUBST(gtk_CFLAGS)
 	AC_SUBST(gtk_LIBS)
+	AC_CHECK_PROGS(RUBY, ruby)
+	AC_MSG_CHECKING([for Ruby header files])
+	if test -n "$RUBY"; then
+		RUBYDIR=`($RUBY -rmkmf -e 'print Config::CONFIG[["archdir"]] || $archdir') 2>/dev/null`
+		if test -n "$RUBYDIR"; then
+			dirs="$RUBYDIR"
+			RUBYINCLUDE=none
+			for i in $dirs; do
+				if test -r $i/ruby.h; then
+					AC_MSG_RESULT([$i])
+					RUBYINCLUDE="-I$i"
+					break;
+				fi
+			done
+			if test x"$RUBYINCLUDE" = xnone; then
+				AC_MSG_ERROR([ruby.h not found])
+			fi
+			AC_SUBST(RUBYINCLUDE)
+		else
+			AC_MSG_ERROR([unable to determine ruby configuration])
+		fi
+	else
+		AC_MSG_ERROR([don't know how to run ruby])
+	fi
 fi
 
 if test x$fast = xtrue; then
@@ -836,6 +1007,17 @@ if test x$openssl = xtrue; then
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
+if test x$gcrypt = xtrue; then
+	AM_PATH_LIBGCRYPT(,,[AC_MSG_ERROR([libgcrypt not found!])])
+	AC_MSG_CHECKING([gcrypt CAMELLIA cipher])
+	AC_TRY_COMPILE(
+		[#include <gcrypt.h>],
+		[enum gcry_cipher_algos alg = GCRY_CIPHER_CAMELLIA128;],
+		[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_GCRY_CIPHER_CAMELLIA])],
+		[AC_MSG_RESULT([no])]
+	)
+fi
+
 if test x$uci = xtrue; then
 	AC_HAVE_LIBRARY([uci],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
@@ -862,48 +1044,60 @@ dnl  collect all plugins for libstrongswan
 dnl ======================================
 
 libstrongswan_plugins=
+pluto_plugins=
 
+if test x$test_vectors = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" test-vectors"
+	pluto_plugins=${pluto_plugins}" test-vectors"
+fi
 if test x$curl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" curl"
+	pluto_plugins=${pluto_plugins}" curl"
 fi
 if test x$ldap = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" ldap"
+	pluto_plugins=${pluto_plugins}" ldap"
 fi
 if test x$aes = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" aes"
+	pluto_plugins=${pluto_plugins}" aes"
 fi
 if test x$des = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" des"
+	pluto_plugins=${pluto_plugins}" des"
+fi
+if test x$blowfish = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" blowfish"
+	pluto_plugins=${pluto_plugins}" blowfish"
 fi
 if test x$sha1 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha1"
+	pluto_plugins=${pluto_plugins}" sha1"
 fi
 if test x$sha2 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
+	pluto_plugins=${pluto_plugins}" sha2"
 fi
 if test x$md4 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md4"
 fi
 if test x$md5 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md5"
+	pluto_plugins=${pluto_plugins}" md5"
 fi
 if test x$fips_prf = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
 fi
 if test x$random = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" random"
+	pluto_plugins=${pluto_plugins}" random"
 fi
 if test x$x509 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" x509"
 fi
 if test x$pubkey = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
-fi
-if test x$xcbc = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
-fi
-if test x$hmac = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
+	pluto_plugins=${pluto_plugins}" pubkey"
 fi
 if test x$mysql = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
@@ -916,15 +1110,29 @@ if test x$padlock = xtrue; then
 fi
 if test x$openssl = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
+	pluto_plugins=${pluto_plugins}" openssl"
+fi
+if test x$gcrypt = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" gcrypt"
+	pluto_plugins=${pluto_plugins}" gcrypt"
+fi
+if test x$xcbc = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
+fi
+if test x$hmac = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
+	pluto_plugins=${pluto_plugins}" hmac"
 fi
 if test x$agent = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" agent"
 fi
 if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
+	pluto_plugins=${pluto_plugins}" gmp"
 fi
 
 AC_SUBST(libstrongswan_plugins)
+AC_SUBST(pluto_plugins)
 
 dnl =========================
 dnl  set Makefile.am vars
@@ -932,10 +1140,12 @@ dnl =========================
 
 dnl libstrongswan plugins
 dnl =====================
+AM_CONDITIONAL(USE_TEST_VECTORS, test x$test_vectors = xtrue)
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
 AM_CONDITIONAL(USE_DES, test x$des = xtrue)
+AM_CONDITIONAL(USE_BLOWFISH, test x$blowfish = xtrue)
 AM_CONDITIONAL(USE_MD4, test x$md4 = xtrue)
 AM_CONDITIONAL(USE_MD5, test x$md5 = xtrue)
 AM_CONDITIONAL(USE_SHA1, test x$sha1 = xtrue)
@@ -951,6 +1161,7 @@ AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
+AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 
 dnl charon plugins
@@ -963,6 +1174,8 @@ AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
+AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
+AM_CONDITIONAL(USE_RESOLV_CONF, test x$resolvconf = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTS, test x$loadtest = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
@@ -975,6 +1188,7 @@ AM_CONDITIONAL(USE_EAP_MSCHAPV2, test x$eap_mschapv2 = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
+AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
 
 dnl other options
@@ -991,13 +1205,12 @@ AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$me = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
-AM_CONDITIONAL(USE_SELF_TEST, test x$self_test = xtrue)
 AM_CONDITIONAL(USE_CAPABILITIES, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
-AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$tools = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 
@@ -1023,6 +1236,7 @@ AC_OUTPUT(
 	src/libstrongswan/Makefile
 	src/libstrongswan/plugins/aes/Makefile
 	src/libstrongswan/plugins/des/Makefile
+	src/libstrongswan/plugins/blowfish/Makefile
 	src/libstrongswan/plugins/md4/Makefile
 	src/libstrongswan/plugins/md5/Makefile
 	src/libstrongswan/plugins/sha1/Makefile
@@ -1040,9 +1254,10 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/sqlite/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
+	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
+	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/fips/Makefile
-	src/libcrypto/Makefile
 	src/libfreeswan/Makefile
 	src/pluto/Makefile
 	src/whack/Makefile
@@ -1057,6 +1272,7 @@ AC_OUTPUT(
 	src/charon/plugins/eap_radius/Makefile
 	src/charon/plugins/kernel_netlink/Makefile
 	src/charon/plugins/kernel_pfkey/Makefile
+	src/charon/plugins/kernel_pfroute/Makefile
 	src/charon/plugins/kernel_klips/Makefile
 	src/charon/plugins/smp/Makefile
 	src/charon/plugins/sql/Makefile
@@ -1066,6 +1282,8 @@ AC_OUTPUT(
 	src/charon/plugins/uci/Makefile
 	src/charon/plugins/stroke/Makefile
 	src/charon/plugins/updown/Makefile
+	src/charon/plugins/attr/Makefile
+	src/charon/plugins/resolv_conf/Makefile
 	src/charon/plugins/unit_tester/Makefile
 	src/charon/plugins/load_tester/Makefile
 	src/stroke/Makefile
@@ -1077,6 +1295,7 @@ AC_OUTPUT(
 	src/openac/Makefile
 	src/scepclient/Makefile
 	src/dumm/Makefile
+	src/dumm/ext/extconf.rb
 	src/libfast/Makefile
 	src/manager/Makefile
 	src/medsrv/Makefile

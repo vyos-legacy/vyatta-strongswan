@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: eap_mschapv2_plugin.c 4882 2009-02-18 19:57:15Z tobias $
  */
 
 #include "eap_mschapv2_plugin.h"

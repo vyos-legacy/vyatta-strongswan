@@ -13,8 +13,6 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
-#
-# RCSID $Id: stop-testing 3517 2008-03-01 10:25:52Z andreas $
 
 DIR=`dirname $0`
 
@@ -42,10 +40,9 @@ done
 cgecho "done"
 
 #####################################################
-# Shutting down the uml switches
+# Shutting down the uml bridhges
 #
-cecho-n " * Stopping the UML switches.."
-killall uml_switch &> /dev/null
-rm -f /tmp/umlswitch[012] &> /dev/null 2>&1
-cgecho "done"
+cecho "Stop the uml bridges  (scripts/stop-bridges)"
+$DIR/scripts/stop-bridges
+
 

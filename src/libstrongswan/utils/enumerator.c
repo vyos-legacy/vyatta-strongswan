@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: enumerator.c 4744 2008-12-03 10:03:59Z tobias $
  */
 
 #include "enumerator.h"
@@ -21,9 +19,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <limits.h>
 #include <stdio.h>
 #include <dirent.h>
 #include <errno.h>
+#include <string.h>
 
 #include <debug.h>
 

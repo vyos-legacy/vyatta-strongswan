@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: eap_sim.c 4755 2008-12-04 10:10:37Z martin $
  */
 
 #include "eap_sim.h"
@@ -571,7 +569,7 @@ static bool get_card_triplet(private_eap_sim_t *this,
 	enumerator->destroy(enumerator);
 	if (!card)
 	{
-		DBG1(DBG_IKE, "no SIM card found matching '%D'", this->peer);
+		DBG1(DBG_IKE, "no SIM card found matching '%Y'", this->peer);
 	}
 	return success;
 }
@@ -775,7 +773,7 @@ static bool get_provider_triplet(private_eap_sim_t *this,
 		tried++;
 	}
 	enumerator->destroy(enumerator);
-	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%D'",
+	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%Y'",
 		 tried, this->peer);
 	return FALSE;
 }

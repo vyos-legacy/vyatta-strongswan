@@ -13,8 +13,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 #include "uci_creds.h"
@@ -81,10 +79,6 @@ static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 		if (me)
 		{
 			local = identification_create_from_string(local_id);
-			if (!local)
-			{
-				continue;
-			}
 			*me = this->me ? this->me->matches(this->me, local)
 						   : ID_MATCH_ANY;
 			local->destroy(local);
@@ -96,10 +90,6 @@ static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 		if (other)
 		{
 			remote = identification_create_from_string(remote_id);
-			if (!remote)
-			{
-				continue;
-			}
 			*other = this->other ? this->other->matches(this->other, remote)
 								 : ID_MATCH_ANY;
 			remote->destroy(remote);

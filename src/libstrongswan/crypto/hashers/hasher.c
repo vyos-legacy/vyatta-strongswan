@@ -13,24 +13,22 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: hasher.c 4880 2009-02-18 19:45:46Z tobias $
  */
 
 #include "hasher.h"
 
 #include <asn1/oid.h>
 
-ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_MD4,
+ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 	"HASH_UNKNOWN",
 	"HASH_PREFERRED",
 	"HASH_MD2",
+	"HASH_MD4",
 	"HASH_MD5",
 	"HASH_SHA1",
 	"HASH_SHA256",
 	"HASH_SHA384",
-	"HASH_SHA512",
-	"HASH_MD4"
+	"HASH_SHA512"
 );
 
 /*

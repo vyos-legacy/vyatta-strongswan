@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id$
  */
 
 /**
@@ -24,26 +22,31 @@
 #define ATTRIBUTE_MANAGER_H_
 
 #include <config/attributes/attribute_provider.h>
+#include <config/attributes/attribute_handler.h>
 
 typedef struct attribute_manager_t attribute_manager_t;
 
 /**
- * Provide configuration attributes to include in CFG Payloads.
+ * The attribute manager hands out attributes or handles them.
+ *
+ * The attribute manager manages both, attribute providers and attribute
+ * handlers. Attribute providers are responsible to hand out attributes if
+ * a connecting peer requests them. Handlers handle such attributes if they
+ * are received on the requesting peer.
  */
 struct attribute_manager_t {
-
+	
 	/**
 	 * Acquire a virtual IP address to assign to a peer.
 	 *
 	 * @param pool			pool name to acquire address from
-	 * @param id			peer identity to get address for
-	 * @param auth			authorization infos of peer
+	 * @param id			peer identity to get address forua
 	 * @param requested		IP in configuration request
 	 * @return				allocated address, NULL to serve none
 	 */
 	host_t* (*acquire_address)(attribute_manager_t *this,
 							   char *pool, identification_t *id,
-							   auth_info_t *auth, host_t *requested);
+							   host_t *requested);
 	
 	/**
 	 * Release a previously acquired address.
@@ -54,6 +57,15 @@ struct attribute_manager_t {
 	 */
 	void (*release_address)(attribute_manager_t *this,
 							char *pool, host_t *address, identification_t *id);
+	
+	/**
+	 * Create an enumerator over attributes to hand out to a peer.
+	 *
+	 * @param id			peer identity to hand out attributes to
+	 * @return				enumerator (configuration_attribute_type_t, chunk_t)
+	 */
+	enumerator_t* (*create_attribute_enumerator)(attribute_manager_t *this,
+												 identification_t *id);
 	
 	/**
 	 * Register an attribute provider to the manager.
@@ -69,10 +81,50 @@ struct attribute_manager_t {
 	 */
 	void (*remove_provider)(attribute_manager_t *this,
 							attribute_provider_t *provider);
+	
 	/**
-     * Destroy a attribute_manager instance.
-     */
-    void (*destroy)(attribute_manager_t *this);
+	 * Handle a configuration attribute by passing them to the handlers.
+	 *
+	 * @param ike_sa		IKE_SA where attribute was received
+	 * @param type			type of configuration attribute
+	 * @param data			associated attribute data
+	 * @return				handler which handled this attribute, NULL if none
+	 */
+	attribute_handler_t* (*handle)(attribute_manager_t *this, ike_sa_t *ike_sa,
+							configuration_attribute_type_t type, chunk_t data);
+	
+	/**
+	 * Release an attribute previously handle()d by a handler.
+	 *
+	 * @param handler		handler returned by handle() for this attribute
+	 * @param ike_sa		IKE_SA owning the attribute
+	 * @param type			type of attribute to release
+	 * @param data			associated attribute data
+	 */
+	void (*release)(attribute_manager_t *this, attribute_handler_t *handler,
+						ike_sa_t *ike_sa, configuration_attribute_type_t type,
+						chunk_t data);
+	
+	/**
+	 * Register an attribute handler to the manager.
+	 *
+	 * @param handler		attribute handler to register
+	 */
+	void (*add_handler)(attribute_manager_t *this,
+						attribute_handler_t *handler);
+	
+	/**
+	 * Unregister an attribute handler from the manager.
+	 *
+	 * @param handler		attribute handler to unregister
+	 */
+	void (*remove_handler)(attribute_manager_t *this,
+						   attribute_handler_t *handler);
+	
+	/**
+	 * Destroy a attribute_manager instance.
+	 */
+	void (*destroy)(attribute_manager_t *this);
 };
 
 /**

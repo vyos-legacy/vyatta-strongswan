@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: kernel_ipsec.c 4430 2008-10-14 08:46:31Z tobias $
  */
 
 #include "kernel_ipsec.h"

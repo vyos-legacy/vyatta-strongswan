@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: tests.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -25,8 +23,7 @@ DEFINE_TEST("simple enumerator", test_enumerate, FALSE)
 DEFINE_TEST("nested enumerator", test_enumerate_nested, FALSE)
 DEFINE_TEST("filtered enumerator", test_enumerate_filtered, FALSE)
 DEFINE_TEST("token enumerator", test_enumerate_token, FALSE)
-DEFINE_TEST("auth info", test_auth_info, FALSE)
-DEFINE_TEST("FIPS PRF", fips_prf_test, FALSE)
+DEFINE_TEST("auth cfg", test_auth_cfg, FALSE)
 DEFINE_TEST("CURL get", test_curl_get, FALSE)
 DEFINE_TEST("MySQL operations", test_mysql, FALSE)
 DEFINE_TEST("SQLite operations", test_sqlite, FALSE)
@@ -35,11 +32,9 @@ DEFINE_TEST("RSA key generation", test_rsa_gen, FALSE)
 DEFINE_TEST("RSA subjectPublicKeyInfo loading", test_rsa_load_any, FALSE)
 DEFINE_TEST("X509 certificate", test_cert_x509, FALSE)
 DEFINE_TEST("Mediation database key fetch", test_med_db, FALSE)
-DEFINE_TEST("AES-128 encryption", test_aes128, FALSE)
-DEFINE_TEST("AES-XCBC", test_aes_xcbc, FALSE)
 DEFINE_TEST("Base64 converter", test_chunk_base64, FALSE)
 DEFINE_TEST("IP pool", test_pool, FALSE)
 DEFINE_TEST("SSH agent", test_agent, FALSE)
-DEFINE_TEST("RNG quality", test_rng, FALSE)
+DEFINE_TEST("ID parts", test_id_parts, FALSE)
 
 /** @}*/

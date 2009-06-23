@@ -36,8 +36,8 @@
 #include "mconsole.h"
 #include "cowfs.h"
 
-#define PERME (S_IRWXU | S_IRWXG)
-#define PERM (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
+#define PERME (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
+#define PERM (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH)
 
 #define MASTER_DIR "master"
 #define DIFF_DIR "diff"
@@ -300,7 +300,6 @@ static bool load_template(private_guest_t *this, char *path)
 {
 	char dir[PATH_MAX];
 	size_t len;
-	iface_t *iface;
 	
 	if (path == NULL)
 	{
@@ -323,10 +322,6 @@ static bool load_template(private_guest_t *this, char *path)
 	if (!this->cowfs->set_overlay(this->cowfs, dir))
 	{
 		return FALSE;
-	}
-	while (this->ifaces->remove_last(this->ifaces, (void**)&iface) == SUCCESS)
-	{
-		iface->destroy(iface);
 	}
 	return TRUE;
 }

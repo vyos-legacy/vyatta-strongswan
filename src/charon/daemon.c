@@ -1,7 +1,7 @@
 /* 
  * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -17,7 +17,9 @@
  */
 
 #include <stdio.h>
+#ifdef HAVE_PRCTL
 #include <sys/prctl.h>
+#endif
 #include <signal.h>
 #include <pthread.h>
 #include <sys/stat.h>
@@ -178,6 +180,7 @@ static void destroy(private_daemon_t *this)
 #ifdef CAPABILITIES
 	cap_free(this->caps);
 #endif /* CAPABILITIES */
+	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
 	DESTROY_IF(this->public.scheduler);
@@ -240,8 +243,10 @@ static void kill_daemon(private_daemon_t *this, char *reason)
  * drop daemon capabilities
  */
 static void drop_capabilities(private_daemon_t *this)
-{	
+{
+#ifdef HAVE_PRCTL
 	prctl(PR_SET_KEEPCAPS, 1);
+#endif
 
 	if (setgid(charon->gid) != 0)
 	{
@@ -314,6 +319,7 @@ static void print_plugins()
 	int len = 0;
 	enumerator_t *enumerator;
 	
+	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
 	{
@@ -461,7 +467,7 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	initialize_loggers(this, !syslog, levels);
 	
-	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
+	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
 	/* load secrets, ca certificates and crls */
 	this->public.processor = processor_create();
@@ -474,15 +480,13 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	this->public.attributes = attribute_manager_create();
 	this->public.kernel_interface = kernel_interface_create();
 	this->public.socket = socket_create();
+	this->public.traps = trap_manager_create();
 	
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
 	
 	print_plugins();
-	
-	/* create the kernel interfaces */
-	this->public.kernel_interface->create_interfaces(this->public.kernel_interface);
 	
 #ifdef INTEGRITY_TEST
 	DBG1(DBG_DMN, "integrity test of libstrongswan code");
@@ -552,6 +556,7 @@ private_daemon_t *daemon_create(void)
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
 	this->public.ike_sa_manager = NULL;
+	this->public.traps = NULL;
 	this->public.credentials = NULL;
 	this->public.backends = NULL;
 	this->public.attributes = NULL;
@@ -604,6 +609,48 @@ private_daemon_t *daemon_create(void)
 }
 
 /**
+ * Check/create PID file, return TRUE if already running 
+ */
+static bool check_pidfile()
+{
+	struct stat stb;
+	FILE *file;
+	
+	if (stat(PID_FILE, &stb) == 0)
+	{
+		file = fopen(PID_FILE, "r");
+		if (file)
+		{
+			char buf[64];
+			pid_t pid = 0;
+			
+			memset(buf, 0, sizeof(buf));
+			if (fread(buf, 1, sizeof(buf), file))
+			{
+				pid = atoi(buf);
+			}
+			fclose(file);
+			if (pid && kill(pid, 0) == 0)
+			{	/* such a process is running */
+				return TRUE;
+			}
+		}
+		DBG1(DBG_DMN, "removing pidfile '"PID_FILE"', process not running");
+		unlink(PID_FILE);
+	}
+	
+	/* create new pidfile */
+	file = fopen(PID_FILE, "w");
+	if (file)
+	{
+		fprintf(file, "%d\n", getpid());
+		ignore_result(fchown(fileno(file), charon->uid, charon->gid));
+		fclose(file);
+	}
+	return FALSE;
+}
+
+/**
  * print command line usage and exit
  */
 static void usage(const char *msg)
@@ -631,10 +678,7 @@ static void usage(const char *msg)
 int main(int argc, char *argv[])
 {
 	bool use_syslog = FALSE;
-
 	private_daemon_t *private_charon;
-	FILE *pid_file;
-	struct stat stb;
 	level_t levels[DBG_MAX];
 	int group;
 	
@@ -715,20 +759,12 @@ int main(int argc, char *argv[])
 		destroy(private_charon);
 		exit(-1);
 	}
-
-	/* check/setup PID file */
-	if (stat(PID_FILE, &stb) == 0)
+	
+	if (check_pidfile())
 	{
 		DBG1(DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
 		destroy(private_charon);
 		exit(-1);
-	}
-	pid_file = fopen(PID_FILE, "w");
-	if (pid_file)
-	{
-		fprintf(pid_file, "%d\n", getpid());
-		ignore_result(fchown(fileno(pid_file), charon->uid, charon->gid));
-		fclose(pid_file);
 	}
 	
 	/* drop the capabilities we won't need */

@@ -28,8 +28,9 @@
 
 #include "dumm.h"
 
-#define PERME (S_IRWXU | S_IRWXG)
+#define PERME (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
 #define GUEST_DIR "guests"
+#define TEMPLATE_DIR "templates"
 
 typedef struct private_dumm_t private_dumm_t;
 
@@ -133,10 +134,10 @@ static void clear_template(private_dumm_t *this)
 {
 	enumerator_t *enumerator;
 	guest_t *guest;
-
+	
 	free(this->template);
 	this->template = NULL;
-
+	
 	enumerator = this->guests->create_enumerator(this->guests);
 	while (enumerator->enumerate(enumerator, (void**)&guest))
 	{
@@ -165,7 +166,11 @@ static bool load_template(private_dumm_t *this, char *dir)
 		return FALSE;
 	}
 	
-	this->template = strdup(dir);
+	if (asprintf(&this->template, "%s/%s", TEMPLATE_DIR, dir) < 0)
+	{
+		this->template = NULL;
+		return FALSE;
+	}
 	if (access(this->template, F_OK) != 0)
 	{	/* does not exist, create template */
 		if (!mkdir_p(this->template, PERME))
@@ -189,13 +194,66 @@ static bool load_template(private_dumm_t *this, char *dir)
 }
 
 /**
+ * Template directory enumerator
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** directory enumerator */
+	enumerator_t *inner;
+} template_enumerator_t;
+
+/**
+ * Implementation of template_enumerator_t.enumerate
+ */
+static bool template_enumerate(template_enumerator_t *this, char **template)
+{
+	struct stat st;
+	char *rel;
+	
+	while (this->inner->enumerate(this->inner, &rel, NULL, &st))
+	{
+		if (S_ISDIR(st.st_mode) && *rel != '.')
+		{
+			*template = rel;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Implementation of template_enumerator_t.destroy
+ */
+static void template_enumerator_destroy(template_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
+/**
+ * Implementation of dumm_t.create_template_enumerator
+ */
+static enumerator_t* create_template_enumerator(private_dumm_t *this)
+{
+	template_enumerator_t *enumerator;
+	
+	enumerator = malloc_thing(template_enumerator_t);
+	enumerator->public.enumerate = (void*)template_enumerate;
+	enumerator->public.destroy = (void*)template_enumerator_destroy;
+	enumerator->inner = enumerator_create_directory(TEMPLATE_DIR);
+	
+	return &enumerator->public;
+}
+
+/**
  * Implementation of dumm_t.destroy
  */
 static void destroy(private_dumm_t *this)
 {
 	enumerator_t *enumerator;
 	guest_t *guest;
-
+	
 	this->bridges->destroy_offset(this->bridges, offsetof(bridge_t, destroy));
 	
 	enumerator = this->guests->create_enumerator(this->guests);
@@ -233,8 +291,8 @@ static void load_guests(private_dumm_t *this)
 	
 	while ((ent = readdir(dir)))
 	{
-		if (streq(ent->d_name, ".") ||  streq(ent->d_name, ".."))
-		{
+		if (*ent->d_name == '.')
+		{	/* skip ".", ".." and hidden files (such as ".svn") */
 			continue;
 		}
 		guest = guest_load(this->guest_dir, ent->d_name);
@@ -265,6 +323,7 @@ dumm_t *dumm_create(char *dir)
 	this->public.create_bridge_enumerator = (enumerator_t*(*)(dumm_t*))create_bridge_enumerator;
 	this->public.delete_bridge = (void(*)(dumm_t*,bridge_t*))delete_bridge;
 	this->public.load_template = (bool(*)(dumm_t*, char *name))load_template;
+	this->public.create_template_enumerator = (enumerator_t*(*)(dumm_t*))create_template_enumerator;
 	this->public.destroy = (void(*)(dumm_t*))destroy;
 	
 	if (dir && *dir == '/')
@@ -273,11 +332,11 @@ dumm_t *dumm_create(char *dir)
 	}
 	else
 	{
-	 	if (getcwd(cwd, sizeof(cwd)) == NULL)
-	 	{
-	 		free(this);
-	 		return NULL;
-	 	}
+		if (getcwd(cwd, sizeof(cwd)) == NULL)
+		{
+			free(this);
+			return NULL;
+		}
 		if (dir)
 		{
 			if (asprintf(&this->dir, "%s/%s", cwd, dir) < 0)

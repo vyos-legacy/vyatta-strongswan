@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: kernel_netlink_shared.h 4660 2008-11-14 14:23:11Z martin $
  */
 
 #ifndef KERNEL_NETLINK_SHARED_H_

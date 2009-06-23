@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: configuration_attribute.c 4844 2009-01-20 22:55:13Z andreas $
  */
 
 #include <stddef.h>

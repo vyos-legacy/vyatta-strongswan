@@ -12,8 +12,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: crypter.h 5003 2009-03-24 17:43:01Z martin $
  */
  
 /**
@@ -33,27 +31,41 @@ typedef struct crypter_t crypter_t;
  * Encryption algorithm, as in IKEv2 RFC 3.3.2.
  */
 enum encryption_algorithm_t {
-	ENCR_UNDEFINED = 1024,
-	ENCR_DES_IV64 = 1,
-	ENCR_DES = 2,
-	ENCR_3DES = 3,
-	ENCR_RC5 = 4,
-	ENCR_IDEA = 5,
-	ENCR_CAST = 6,
-	ENCR_BLOWFISH = 7,
-	ENCR_3IDEA = 8,
-	ENCR_DES_IV32 = 9,
-	ENCR_NULL = 11,
-	ENCR_AES_CBC = 12,
-	ENCR_AES_CTR = 13,
-	ENCR_AES_CCM_ICV8 = 14,
-    ENCR_AES_CCM_ICV12 = 15,
-    ENCR_AES_CCM_ICV16 = 16,
-    ENCR_AES_GCM_ICV8 = 18,
-    ENCR_AES_GCM_ICV12 = 19,
-    ENCR_AES_GCM_ICV16 = 20,
-    ENCR_DES_ECB = 1025
+	ENCR_DES_IV64 =            1,
+	ENCR_DES =                 2,
+	ENCR_3DES =                3,
+	ENCR_RC5 =                 4,
+	ENCR_IDEA =                5,
+	ENCR_CAST =                6,
+	ENCR_BLOWFISH =            7,
+	ENCR_3IDEA =               8,
+	ENCR_DES_IV32 =            9,
+	ENCR_NULL =               11,
+	ENCR_AES_CBC =            12,
+	ENCR_AES_CTR =            13,
+	ENCR_AES_CCM_ICV8 =       14,
+	ENCR_AES_CCM_ICV12 =      15,
+	ENCR_AES_CCM_ICV16 =      16,
+	ENCR_AES_GCM_ICV8 =       18,
+	ENCR_AES_GCM_ICV12 =      19,
+	ENCR_AES_GCM_ICV16 =      20,
+	ENCR_NULL_AUTH_AES_GMAC = 21,
+	ENCR_CAMELLIA_CBC =       23,
+	ENCR_CAMELLIA_CTR =       24,
+	ENCR_CAMELLIA_CCM_ICV8 =  25,
+	ENCR_CAMELLIA_CCM_ICV12 = 26,
+	ENCR_CAMELLIA_CCM_ICV16 = 27,
+	ENCR_UNDEFINED =        1024,
+    ENCR_DES_ECB =          1025,
+	ENCR_SERPENT_CBC =      1026,
+    ENCR_TWOFISH_CBC =      1027
 };
+
+#define DES_BLOCK_SIZE			 8
+#define BLOWFISH_BLOCK_SIZE		 8
+#define AES_BLOCK_SIZE			16
+#define SERPENT_BLOCK_SIZE		16
+#define TWOFISH_BLOCK_SIZE		16
 
 /**
  * enum name for encryption_algorithm_t.
@@ -121,5 +133,23 @@ struct crypter_t {
 	 */
 	void (*destroy) (crypter_t *this);
 };
+
+/**
+ * Conversion of ASN.1 OID to encryption algorithm.
+ * 
+ * @param oid			ASN.1 OID
+ * @param key_size		returns size of encryption key in bits
+ * @return				encryption algorithm, ENCR_UNDEFINED if OID unsupported
+ */
+encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size);
+
+/**
+ * Conversion of encryption algorithm to ASN.1 OID.
+ * 
+ * @param alg			encryption algorithm
+ * @param key_size		size of encryption key in bits
+ * @return				ASN.1 OID, OID_UNKNOWN if OID is unknown
+ */
+int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size);
 
 #endif /** CRYPTER_H_ @}*/

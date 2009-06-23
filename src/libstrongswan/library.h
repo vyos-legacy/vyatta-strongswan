@@ -11,8 +11,6 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
- *
- * $Id: library.h 5003 2009-03-24 17:43:01Z martin $
  */
 
 /**
@@ -63,9 +61,9 @@
 #include <settings.h>
 #include <plugins/plugin_loader.h>
 #include <crypto/crypto_factory.h>
-#include <credentials/credential_factory.h>
 #include <fetcher/fetcher_manager.h>
 #include <database/database_factory.h>
+#include <credentials/credential_factory.h>
 
 typedef struct library_t library_t;
 
