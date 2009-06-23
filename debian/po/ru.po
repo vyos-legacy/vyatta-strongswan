@@ -97,9 +97,6 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
-#| msgid ""
-#| "If you don't restart strongSwan now, you should do so manually at the "
-#| "first  opportunity."
 msgid ""
 "If you don't restart strongSwan now, you should do so manually at the first "
 "opportunity."
@@ -233,10 +230,6 @@ msgstr "Длина ключа RSA:"
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:10001
-#| msgid ""
-#| "Please enter the length of RSA key you wish to generate. A value of less "
-#| "than  1024 bits is not considered secure. A value of more than 2048 bits "
-#| "will  probably affect performance."
 msgid ""
 "Please enter the length of RSA key you wish to generate. A value of less "
 "than 1024 bits is not considered secure. A value of more than 2048 bits will "
@@ -280,10 +273,6 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:11001
-#| msgid ""
-#| "If you do not accept this option, only the RSA private key will be "
-#| "created, along with a certificate request which you will need to have "
-#| "signed by a  certificate authority."
 msgid ""
 "If you do not accept this option, only the RSA private key will be created, "
 "along with a certificate request which you will need to have signed by a "
@@ -371,9 +360,6 @@ msgstr "Название структурной единицы организа�
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:16001
-#| msgid ""
-#| "Please enter the organizational unit name (often a department)  that "
-#| "should be used in the certificate request."
 msgid ""
 "Please enter the organizational unit name (often a department) that should "
 "be used in the certificate request."
