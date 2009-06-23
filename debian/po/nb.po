@@ -1,44 +1,44 @@
-# Vietnamese translation for StrongSwan.
-# Copyright © 2009 Free Software Foundation, Inc.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
 #
-# Clytie Siddall <clytie@riverland.net.au>, 2005-2009, 2009.
+# Bjørn Steensrud <bjornst@skogkatt.homelinux.org>, 2009.
 msgid ""
 msgstr ""
-"Project-Id-Version: strongswan 4.2.14-20\n"
+"Project-Id-Version: nb\n"
 "Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
 "POT-Creation-Date: 2009-05-25 14:44+0100\n"
-"PO-Revision-Date: 2009-05-25 15:01+0100\n"
-"Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
-"Language-Team: Vietnamese <vi-VN@googlegroups.com>\n"
+"PO-Revision-Date: 2009-05-25 14:59+0100\n"
+"Last-Translator: Bjørn Steensrud <bjornst@skogkatt.homelinux.org>\n"
+"Language-Team: Norwegian Bokmål <i18n-nb@lister.ping.uio.no>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: LocFactoryEditor 1.8\n"
+"X-Generator: Lokalize 0.3\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. Type: select
 #. Choices
 #: ../strongswan-starter.templates:2001
 msgid "earliest"
-msgstr "sớm nhất"
+msgstr "tidligst"
 
 #. Type: select
 #. Choices
 #: ../strongswan-starter.templates:2001
 msgid "after NFS"
-msgstr "sau NFS"
+msgstr "etter NFS"
 
 #. Type: select
 #. Choices
 #: ../strongswan-starter.templates:2001
 msgid "after PCMCIA"
-msgstr "sau PCMCIA"
+msgstr "etter PCMCIA"
 
 #. Type: select
 #. Description
 #: ../strongswan-starter.templates:2002
 msgid "When to start strongSwan:"
-msgstr "StrongSwan nên khởi chạy khi nào :"
+msgstr "Når strongSwan skal startes:"
 
 #. Type: select
 #. Description
@@ -47,8 +47,8 @@ msgid ""
 "StrongSwan starts during system startup so that it can protect filesystems "
 "that are automatically mounted."
 msgstr ""
-"StrongSwan khởi chạy trong tiến trình khởi động hệ thống, để bảo vệ những hệ "
-"thống tập tin được tự động gắn kết."
+"StrongSwan starter under systemoppstart, slik at det kan beskytte "
+"filsystemer som monteres automatisk."
 
 #. Type: select
 #. Description
@@ -64,21 +64,20 @@ msgid ""
 "DNS\n"
 "   server with DNSSec support."
 msgstr ""
-" • sớm nhất\tNếu /usr không phải được gắn kết thông qua NFS,\n"
-"\t\t\tvà máy này không dùng bo mạch mạng PCMCIA,\n"
-"\t\t\tthì strongSwan nên khởi chạy sớm nhất có thể,\n"
-"\t\t\tđể IPSec bảo mật những điểm lắp NFS.\n"
-" • sau NFS\tNếu /usr có phải được gắn kết thông qua NFS,\n"
-"\t\t\tvà máy này không dùng bo mạch mạng PCMCIA.\n"
-" • sau PCMCIA\t\tNếu kết nối IPSec dùng bo mạch mạng PCMCIA,\n"
-"\t\t\t\thoặc nếu nó cần lấy khoá từ một trình phục vụ DNS\n"
-"\t\t\t\tchạy cục bộ có hỗ trợ DNSSec."
+" * tidligst: hvis /usr ikke monteres via NFS og du ikke bruker et\n"
+"   PCMCIA nettverkskort, så er det best å starte strongSwan\n"
+"   snarest mulig, slik at NFS-montering kan sikres med IPSec;\n"
+"    * etter NFS: anbefales når /usr monteres via NFS og det ikke\n"
+"    brukes noe PCMCIA nettverkskort.\n"
+" * etter PCMCIA: anbefales hvis IPSec-tilkoblingen bruker et PCMCIA\n"
+"    nettverkskort eller om den trenger å hente nøkler fra en lokal\n"
+"    DNS-tjener med DNSSec-støtte. "
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
 msgid "Restart strongSwan now?"
-msgstr "Khởi chạy lại strongSwan ngay bây giờ ?"
+msgstr "Start strongSwan på nytt nå"
 
 #. Type: boolean
 #. Description
@@ -88,9 +87,10 @@ msgid ""
 "will not be applied until the daemon restarts. However, this might close "
 "existing connections and then bring them back up."
 msgstr ""
-"Khuyên khởi chạy lại strongSwan, vì phần mềm giải quyết vấn đề bảo mật (nếu "
-"có) chỉ được hiệu lực khi trình nền khởi chạy lại. Ghi chú : hành vi khởi "
-"chạy lại cũng có thể đóng và mở lại kết nối đã có."
+"Det anbefales å starte strongSwan på nytt nå, for om det var en "
+"sikkerhetsrettelse, så får den ikke effekt før daemonen startes på nytt. "
+"Imidlertid kan dette lukke eksisterende forbindelser og deretter koble dem "
+"opp igjen."
 
 #. Type: boolean
 #. Description
@@ -102,14 +102,14 @@ msgid ""
 "If you don't restart strongSwan now, you should do so manually at the first "
 "opportunity."
 msgstr ""
-"Không khởi chạy lại strongSwan ngay bây giờ thì quản trị nên tự làm sớm nhất "
-"có thể."
+"Hvis du ikke gjør en omstart på strongSwan nå, så bør du gjøre det manuelt "
+"ved første anledning."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:4001
 msgid "Start strongSwan's IKEv1 daemon?"
-msgstr "Khởi chạy trình nền IKEv1 của strongSwan ?"
+msgstr "Skal strongSwans IKEv1-daemon startes?"
 
 #. Type: boolean
 #. Description
@@ -118,14 +118,14 @@ msgid ""
 "The pluto daemon must be running to support version 1 of the Internet Key "
 "Exchange protocol."
 msgstr ""
-"Đồng thời cũng cần phải chạy trình nền pluto, để hỗ trợ phiên bản 1 của giao "
-"thức Trao Đổi Khoá Internet (IKE)."
+"Pluto-daemonen må kjøre for å kunne støtte versjon 1 av Internet Key "
+"Exchange-protokollen."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:5001
 msgid "Start strongSwan's IKEv2 daemon?"
-msgstr "Khởi chạy trình nền IKEv2 của strongSwan ?"
+msgstr "Skal strongSwans IKEv2-daemon startes?"
 
 #. Type: boolean
 #. Description
@@ -134,14 +134,14 @@ msgid ""
 "The charon daemon must be running to support version 2 of the Internet Key "
 "Exchange protocol."
 msgstr ""
-"Đồng thời cũng cần phải chạy trình nền charon, để hỗ trợ phiên bản 2 của "
-"giao thức Trao Đổi Khoá Internet (IKE)."
+"Charon-daemonen må kjøre for å kunne støtte versjon 2 av Internet Key "
+"Exchange-protokollen."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:6001
 msgid "Create an RSA public/private keypair for this host?"
-msgstr "Tạo một cặp khoá công/riêng RSA cho máy này ?"
+msgstr "Skal det lages et offentlig/privat RSA-nøkkelpar for denne verten?"
 
 #. Type: boolean
 #. Description
@@ -152,10 +152,10 @@ msgid ""
 "more secure and is easier to administer. You can use PSK and RSA "
 "authentication simultaneously."
 msgstr ""
-"StrongSwan có khả năng sử dụng một khoá chia sẻ sẵn (PSK) hay một cặp khoá "
-"RSA, để xác thức kết nối IPSec tới máy khác. Quá trình xác thức RSA thường "
-"được xem là bảo mật hơn, cũng dễ hơn quản trị. Có thể dùng đồng thời hai quá "
-"trình xác thực PSK và RSA."
+"StrongSwan kan bruke en delt nøkkel (PSK) eller et RSA-nøkkelpar for å "
+"autentisere IPSec-forbindelser til andre verter. RSA-autentisering betraktes "
+"for det meste som sikrere og lettere å administrere. Du kan bruke PSK og RSA-"
+"autentisering samtidig."
 
 #. Type: boolean
 #. Description
@@ -164,14 +164,14 @@ msgid ""
 "If you do not want to create a new public/private keypair, you can choose to "
 "use an existing one in the next step."
 msgstr ""
-"Không muốn tạo một cặp khóa công/riêng mới thì bước kế tiếp cho bạn sử dụng "
-"một khoá đã có."
+"Hvis du ikke vil lage et nytt offentlig/privat nøkkelpar, så kan du velge å "
+"bruke et eksisterende nøkkelpar i neste steg."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:7001
 msgid "Use an existing X.509 certificate for strongSwan?"
-msgstr "Với strongSwan, dùng một chứng nhận X.509 đã có ?"
+msgstr "Skal et eksisterende X.509-sertifikat brukes for strongSwan?"
 
 #. Type: boolean
 #. Description
@@ -183,17 +183,16 @@ msgid ""
 "an existing certificate and key file and want to use it for authenticating "
 "IPSec connections."
 msgstr ""
-"Thông tin yêu cầu có thể được tự động trích ra một chứng nhận X.509 đã tồn "
-"tại mà có một cặp khoá RSA riêng tương ứng. Cả hai phần có thể nằm trong "
-"cùng một tập tin theo định dạng PEM. Nếu bạn có tập tin như vậy chứa chứng "
-"nhận và khoá, và muốn dùng nó để xác thực kết nối IPSec, thì có nên bật tuỳ "
-"chọn này."
+"Den informasjonen som trengs kan hentes automatisk fra et eksisterende X.509-"
+"sertifikat med tilhørende privat RSA-nøkkel. Begge deler kan være i én fil, "
+"hvis den er i PEM-format. Du bør velge dette hvis du har et slikt sertifikat "
+"og vil bruke det til å autentisere IPSec-forbindelser."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:8001
 msgid "File name of your X.509 certificate in PEM format:"
-msgstr "Tên tập tin chứng nhận X.509 có dạng PEM:"
+msgstr "Filnavn for ditt X.509-sertifikat i PEM-format:"
 
 #. Type: string
 #. Description
@@ -202,14 +201,13 @@ msgid ""
 "Please enter the full location of the file containing your X.509 certificate "
 "in PEM format."
 msgstr ""
-"Hãy nhập đường dẫn đầy đủ đến tập tin chứa chứng nhận X.509 của bạn, theo "
-"định dạng PEM."
+"Oppgi full sti til fila som inneholder ditt X.509-sertifikat i PEM-format."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:9001
 msgid "File name of your existing X.509 private key in PEM format:"
-msgstr "Tên tập tin khoá riêng X.509 có dạng PEM:"
+msgstr "Filnavn for din eksisterende private X.509-nøkkel i PEM-format:"
 
 #. Type: string
 #. Description
@@ -219,15 +217,15 @@ msgid ""
 "matching your X.509 certificate in PEM format. This can be the same file as "
 "the X.509 certificate."
 msgstr ""
-"Hãy nhập đường dẫn đầy đủ đến tập tin chứa khoá RSA riêng tương ứng với "
-"chứng nhận X.509 của bạn, theo định dạng PEM. (Đây có thể là cùng một tập "
-"tin với nó chứa chứng nhận X.509.)"
+"Oppgi full sti til fila som inneholder den private nøkkelen som tilsvarer "
+"ditt X.509-sertifikat i PEM-format. Dette kan være den samme fila som X.509-"
+"sertifikatet."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:10001
 msgid "RSA key length:"
-msgstr "Độ dài khoá RSA:"
+msgstr "RSA nøkkellengde:"
 
 #. Type: string
 #. Description
@@ -241,15 +239,15 @@ msgid ""
 "than 1024 bits is not considered secure. A value of more than 2048 bits will "
 "probably affect performance."
 msgstr ""
-"Hãy nhập chiều dài của khoá RSA bạn muốn tạo. Giá trị này nên nằm giữa 1024 "
-"và 2048 bit. Giá trị nhỏ hơn 1024 không phải được xem là bảo mật. Giá trị "
-"lớn hơn 2048 sẽ rất có thể giảm tốc độ chạy máy tính."
+"Oppgi lengde for RSA-nøkkelen du vil opprette. Kortere nøkler enn 1024 bit "
+"betraktes ikke som sikre. En nøkkellengde på mer enn 2048 bit vil antakelig "
+"gå ut over ytelsen."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:11001
 msgid "Create a self-signed X.509 certificate?"
-msgstr "Tạo một chứng nhận X.509 tự ký ?"
+msgstr "Skal det lages et selvsignert X.509-sertifikat?"
 
 #. Type: boolean
 #. Description
@@ -258,8 +256,8 @@ msgid ""
 "Only self-signed X.509 certificates can be created automatically, because "
 "otherwise a certificate authority is needed to sign the certificate request."
 msgstr ""
-"Chỉ chứng nhận X.509 tự ký có thể được tự động tạo, vì chứng nhận loại khác "
-"yêu cầu chữ ký của một nhà cầm quyền cấp chứng nhận (CA)."
+"Bare selvsignerte X.509-sertifikater kan lages automatisk, for ellers må en "
+"sertifikatutsteder signere sertifikatsøknaden."
 
 #. Type: boolean
 #. Description
@@ -270,11 +268,10 @@ msgid ""
 "certificate. However, using strongSwan's PKI features requires a trust path "
 "to be created by having all X.509 certificates signed by a single authority."
 msgstr ""
-"Bật tùy chọn này thì chứng nhận đã tạo có thể được sử dụng ngay lập tức để "
-"kết nối tới máy IPSec khác mà hỗ trợ xác thực thông qua một chứng nhận "
-"X.509. Tuy nhiên, để sử dụng tính năng PKI của strongSwan cũng cần phải tạo "
-"một đường dẫn tin cậy (tất cả các chứng nhận X.509 được ký bởi cùng một nhà "
-"cầm quyền)."
+"Hvis du godtar dette, så kan det sertifikatet som lages bli brukt straks til "
+"å kople til andre IPSec-verter som støtter autentisering via et X.509-"
+"sertifikat. Men om strongSwans PKI-del skal brukes, må det lages en "
+"tillitskjede ved at alle X.509-sertifikatene signeres av en enkelt utsteder."
 
 #. Type: boolean
 #. Description
@@ -288,15 +285,15 @@ msgid ""
 "along with a certificate request which you will need to have signed by a "
 "certificate authority."
 msgstr ""
-"Không bật tuỳ chọn này thì chỉ khoá riêng RSA sẽ được tạo, cùng với một lời "
-"yêu cầu chứng nhận cho bạn xin chữ ký của một nhà cầm quyền cấp chứng nhận "
-"(CA)."
+"Hvis du ikke godtar dette, så blir bare en privat RSA-nøkkel opprettet, "
+"sammen med en sertifikatsøknad som du må få en sertifikatutsteder til å "
+"signere."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:12001
 msgid "Country code for the X.509 certificate request:"
-msgstr "Mã quốc gia cho lời yêu cầu chứng nhận X.509:"
+msgstr "Landskode for X.509-sertifikatsøknaden:"
 
 #. Type: string
 #. Description
@@ -305,20 +302,20 @@ msgid ""
 "Please enter the two-letter ISO3166 country code that should be used in the "
 "certificate request."
 msgstr ""
-"Hãy nhập mã quốc gia hai chữ ISO-3166 (v.d. « vn ») của chỗ bạn, cho lời yêu "
-"cầu chứng nhận."
+"Oppgi tobokstavers ISO3166 landskode som skal brukes i sertifikatsøknaden."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:12001
 msgid "This field is mandatory; otherwise a certificate cannot be generated."
-msgstr "Không điền vào trường này thì không thể tạo chứng nhận."
+msgstr ""
+"Dette feltet er obligatorisk, uten det kan det ikke lages et sertifikat."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:13001
 msgid "State or province name for the X.509 certificate request:"
-msgstr "Tên của bảng hay tỉnh cho lời yêu cầu chứng nhận X.509:"
+msgstr "Stat eller provinsnavn for X.509-sertifikatsøknaden:"
 
 #. Type: string
 #. Description
@@ -327,14 +324,13 @@ msgid ""
 "Please enter the full name of the state or province to include in the "
 "certificate request."
 msgstr ""
-"Hãy nhập tên đầy đủ của bang hay tỉnh nơi bạn ở, để bao gồm trong lời yêu "
-"cầu chứng nhận."
+"Oppgi fullt navn på stat eller provins som skal tas med i sertifikatsøknaden."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
 msgid "Locality name for the X.509 certificate request:"
-msgstr "Tên vùng cho lời yêu cầu chứng nhận X.509:"
+msgstr "Stedsnavn for X.509-sertifikatsøknaden:"
 
 #. Type: string
 #. Description
@@ -342,14 +338,13 @@ msgstr "Tên vùng cho lời yêu cầu chứng nhận X.509:"
 msgid ""
 "Please enter the locality name (often a city) that should be used in the "
 "certificate request."
-msgstr ""
-"Hãy nhập tên vùng (v.d. thành phố) nên dùng trong lời yêu cầu chứng nhận."
+msgstr "Oppgi stedsnavn (ofte en by) som skal brukes i sertifikatsøknaden."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:15001
 msgid "Organization name for the X.509 certificate request:"
-msgstr "Tên tổ chức cho lời yêu cầu chứng nhận X.509:"
+msgstr "Organisasjonsnavn for X.509-sertifikatsøknaden:"
 
 #. Type: string
 #. Description
@@ -358,14 +353,13 @@ msgid ""
 "Please enter the organization name (often a company) that should be used in "
 "the certificate request."
 msgstr ""
-"Hãy nhập tên tổ chức (v.d. công ty, trường học) nên dùng trong yêu cầu chứng "
-"nhận."
+"Oppgi organisasjonsnavn (ofte et firma) som skal brukes i sertifikatsøknaden."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:16001
 msgid "Organizational unit for the X.509 certificate request:"
-msgstr "Tên đơn vị tổ chức cho lời yêu cầu chứng nhận X.509:"
+msgstr "Organisasjonsenhet for X.509-sertifikatsøknaden:"
 
 #. Type: string
 #. Description
@@ -377,14 +371,14 @@ msgid ""
 "Please enter the organizational unit name (often a department) that should "
 "be used in the certificate request."
 msgstr ""
-"Hãy nhập đơn vị tổ chức (v.d. phòng ban, khoa) nên dùng trong yêu cầu chứng "
-"nhận."
+"Oppgi organisasjonsenhet (ofte en avdeling som skal brukes i "
+"sertifikatsøknaden."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:17001
 msgid "Common name for the X.509 certificate request:"
-msgstr "Tên chung cho lời yêu cầu chứng nhận X.509:"
+msgstr "Vanlig navn for X.509-sertifikatsøknaden:"
 
 #. Type: string
 #. Description
@@ -393,14 +387,14 @@ msgid ""
 "Please enter the common name (such as the host name of this machine) that "
 "should be used in the certificate request."
 msgstr ""
-"Hãy nhập tên chung (v.d. tên máy của máy tính này) nên dùng trong yêu cầu "
-"chứng nhận."
+"Oppgi vanlig navn (slik som vertsnavnet på denne maskinen) som skal brukes i "
+"sertifikatsøknaden."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:18001
 msgid "Email address for the X.509 certificate request:"
-msgstr "Địa chỉ thư cho lời yêu cầu chứng nhận X.509:"
+msgstr "E-postadresse for X.509-sertifikatsøknaden:"
 
 #. Type: string
 #. Description
@@ -409,14 +403,14 @@ msgid ""
 "Please enter the email address (for the individual or organization "
 "responsible) that should be used in the certificate request."
 msgstr ""
-"Hãy nhập địa chỉ thư điện tử (của người hay tổ chức chịu trách nhiệm về yêu "
-"cầu này) nên dùng trong yêu cầu chứng nhận."
+"Oppgi e-postadressen (for ansvarlig person eller organisasjon) som skal "
+"brukes i sertifikatsøknaden."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:19001
 msgid "Enable opportunistic encryption?"
-msgstr "Bật mật mã cơ hội chủ nghĩa ?"
+msgstr "Slå på opportunistisk kryptering?"
 
 #. Type: boolean
 #. Description
@@ -427,9 +421,10 @@ msgid ""
 "deployed, activating it will cause a significant delay for every new "
 "outgoing connection."
 msgstr ""
-"Phiên bản strongSwan này hỗ trợ mật mã cơ hội chủ nghĩa (OE) mà cất giữ "
-"thông tin xác thực IPSec trong mục ghi DNS. Chức năng này chưa phổ biến thì "
-"vẫn còn làm trễ mỗi kết nối mới gửi đi."
+"Denne versjonen av strongSwan støtter opportunistisk kryptering (OE), som "
+"lagrer autentiseringsinformasjon for IPSec i DNS-data. Inntil dette er tatt "
+"i vanlig bruk vil det gi en betydelig forsinkelse for hver ny utgående "
+"tilkobling hvis dette er aktivert."
 
 #. Type: boolean
 #. Description
@@ -439,6 +434,6 @@ msgid ""
 "It may break the Internet connection (default route) as the pluto daemon "
 "starts."
 msgstr ""
-"Chưa chắc thì không nên hiệu lực chức năng mật mã cơ hội chủ nghĩa. Nó cũng "
-"có thể đóng kết nối Internet (đường dẫn mặc định) do trình nền pluto khởi "
-"chạy."
+"Du bør bare slå på opportunistisk kryptering hvis du er sikker på at du vil "
+"ha det. Det kan koble ut Internett-forbindelsen (standardruten) når pluto."
+"nissen starter."

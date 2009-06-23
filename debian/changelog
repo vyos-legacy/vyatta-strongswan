@@ -1,9 +1,59 @@
-strongswan (4.2.14-2) unstable; urgency=low
+strongswan (4.2.14-2) unstable; urgency=HIGH
 
+  Urgency high because of security issue and FTBFS.
   * Fix padlock handling for i386 in debian/rules.
+    Closes: #525652
+  * Acknowledge NMUs by security team.
+    Closes: #533837, #531612
+  * Add "Conflicts: strongswan (< 4.2.12-1)" to libstrongswan, 
+    strongswan-starter, strongswan-ikev1, and strongswan-ikev2 to force
+    update of the strongswan package on installation and avoid conflicts
+    caused by package restructuring.
+    Closes: #526037: strongswan-ikev2 and strongswan: error when trying to 
+                     install together
+    Closes: #526486: strongswan and libstrongswan: error when trying to 
+                     install together
+    Closes: #526487: strongswan-ikev1 and strongswan: error when trying to 
+                     install together
+    Closes: #526488: strongswan-starter and strongswan: error when trying to 
+                     install together
+  * Debconf templates and debian/control reviewed by the debian-l10n-
+    english team as part of the Smith review project. Closes: #528073
+  * Debconf translation updates:
+    Closes: #525234: [INTL:ja] Update po-debconf template translation (ja.po) 
+    Closes: #528323: [INTL:sv] po-debconf file for strongswan 
+    Closes: #528370: [INTL:vi] Vietnamese debconf templates translation update 
+    Closes: #529027: [INTL:pt] Updated Portuguese translation for debconf messages
+    Closes: #529071: [INTL:fr] French debconf templates translation update 
+    Closes: #529592: nb translation of debconf PO for strongSWAN 
+    Closes: #529638: [INTL:ru] Russian debconf templates translation 
+    Closes: #529661: Updated Czech translation of strongswan debconf messages 
+    Closes: #529742: [INTL:eu] strongswan debconf basque translation 
+    Closes: #530273: [INTL:fi] Finnish translation of the debconf templates
+    Closes: #529063: [INTL:gl] strongswan 4.2.14-2 debconf translation update
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sat, 18 Apr 2009 20:28:51 +0200
 
+strongswan (4.2.14-1.2) unstable; urgency=high
+
+  * Non-maintainer upload.
+  * Fix build on i386 
+    Closes: #525652: FTBFS on i386: 
+    libstrongswan-padlock.so*': No such file or directory 
+  * Fix Two Denial of Service Vulnerabilities
+    Closes: #533837: strongSwan Two Denial of Service Vulnerabilities
+
+ -- Ruben Puettmann <ruben@puettmann.net>  Sun, 21 Jun 2009 17:50:02 +0200
+ 
+strongswan (4.2.14-1.1) unstable; urgency=high
+ 
+  * Non-maintainer upload by the Security Team.
+  * Fix two possible null pointer dereferences leading to denial
+    of service via crafted IKE_SA_INIT, CREATE_CHILD_SA or
+    IKE_AUTH request (CVE-2009-1957; CVE-2009-1958; Closes: #531612).
+
+ -- Nico Golde <nion@debian.org>  Mon, 15 Jun 2009 13:06:05 +0200
+ 
 strongswan (4.2.14-1) unstable; urgency=low
 
   * New upstream release, which incorporates the fix. Removed dpatch for it.
