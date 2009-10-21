@@ -31,14 +31,41 @@ typedef enum rwlock_type_t rwlock_type_t;
 
 #include <library.h>
 
+#ifdef __APPLE__
+/* on Mac OS X 10.5 several system calls we use are no cancellation points.
+ * fortunately, select isn't one of them, so we wrap some of the others with
+ * calls to select(2).
+ */
+#include <sys/socket.h>
+#include <sys/select.h>
+
+#define WRAP_WITH_SELECT(func, socket, ...)\
+	fd_set rfds; FD_ZERO(&rfds); FD_SET(socket, &rfds);\
+	if (select(socket + 1, &rfds, NULL, NULL, NULL) <= 0) { return -1; }\
+	return func(socket, __VA_ARGS__)
+
+static inline int cancellable_accept(int socket, struct sockaddr *address,
+									 socklen_t *address_len)
+{
+	WRAP_WITH_SELECT(accept, socket, address, address_len);
+}
+#define accept cancellable_accept
+static inline int cancellable_recvfrom(int socket, void *buffer, size_t length,
+				int flags, struct sockaddr *address, socklen_t *address_len)
+{
+	WRAP_WITH_SELECT(recvfrom, socket, buffer, length, flags, address, address_len);
+}
+#define recvfrom cancellable_recvfrom
+#endif /* __APPLE__ */
+
 /**
  * Type of mutex.
  */
 enum mutex_type_t {
 	/** default mutex */
-	MUTEX_DEFAULT	= 0,
+	MUTEX_TYPE_DEFAULT	= 0,
 	/** allow recursive locking of the mutex */
-	MUTEX_RECURSIVE	= 1,
+	MUTEX_TYPE_RECURSIVE	= 1,
 };
 
 /**
@@ -46,7 +73,7 @@ enum mutex_type_t {
  */
 enum condvar_type_t {
 	/** default condvar */
-	CONDVAR_DEFAULT	= 0,
+	CONDVAR_TYPE_DEFAULT	= 0,
 };
 
 /**
@@ -54,7 +81,7 @@ enum condvar_type_t {
  */
 enum rwlock_type_t {
 	/** default condvar */
-	RWLOCK_DEFAULT	= 0,
+	RWLOCK_TYPE_DEFAULT	= 0,
 };
 
 /**

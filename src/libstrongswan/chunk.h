@@ -26,6 +26,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#ifdef HAVE_ALLOCA_H
+#include <alloca.h>
+#endif
 
 typedef struct chunk_t chunk_t;
 
@@ -83,8 +86,9 @@ chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...);
 void chunk_split(chunk_t chunk, const char *mode, ...);
 
 /**
-  * Write the binary contents of a chunk_t to a file
-  *
+ * Write the binary contents of a chunk_t to a file
+ *
+ * @param chunk			contents to write to file
  * @param path			path where file is written to
  * @param label			label specifying file type 
  * @param mask			file mode creation mask
@@ -99,6 +103,7 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
  * The resulting string is '\\0' terminated, but the chunk does not include
  * the '\\0'. If buf is supplied, it must hold at least (chunk.len * 2 + 1).
  *
+ * @param chunk			data to convert to hex encoding
  * @param buf			buffer to write to, NULL to malloc
  * @param uppercase		TRUE to use uppercase letters
  * @return				chunk of encoded data
@@ -230,6 +235,19 @@ static inline bool chunk_equals(chunk_t a, chunk_t b)
 	return a.ptr != NULL  && b.ptr != NULL &&
 			a.len == b.len && memeq(a.ptr, b.ptr, a.len);
 }
+
+/**
+ * Check if a chunk has printable characters only.
+ *
+ * If sane is given, chunk is cloned into sane and all non printable characters
+ * get replaced by "replace".
+ *
+ * @param chunk			chunk to check for printability
+ * @param sane			pointer where sane version is allocated, or NULL
+ * @param replace		character to use for replaceing unprintable characters
+ * @return				TRUE if all characters in chunk are printable
+ */
+bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
 
 /**
  * Computes a 32 bit hash of the given chunk.

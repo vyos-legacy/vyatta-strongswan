@@ -984,16 +984,20 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			break;
 		case ENCR_AES_CCM_ICV16:
 		case ENCR_AES_GCM_ICV16:
+		case ENCR_CAMELLIA_CCM_ICV16:
 			icv_size += 32;
 			/* FALL */
 		case ENCR_AES_CCM_ICV12:
 		case ENCR_AES_GCM_ICV12:
+		case ENCR_CAMELLIA_CCM_ICV12:
 			icv_size += 32;
 			/* FALL */
 		case ENCR_AES_CCM_ICV8:
 		case ENCR_AES_GCM_ICV8:
+		case ENCR_CAMELLIA_CCM_ICV8:
 		{
-			rthdr->rta_type = XFRMA_ALG_AEAD;
+			struct xfrm_algo_aead *algo;
+
 			alg_name = lookup_algorithm(encryption_algs, enc_alg);
 			if (alg_name == NULL)
 			{
@@ -1004,6 +1008,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 			
+			rthdr->rta_type = XFRMA_ALG_AEAD;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + enc_key.len);
 			hdr->nlmsg_len += rthdr->rta_len;
 			if (hdr->nlmsg_len > sizeof(request))
@@ -1011,7 +1016,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 				return FAILED;
 			}
 			
-			struct xfrm_algo_aead* algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
+			algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
 			algo->alg_key_len = enc_key.len * 8;
 			algo->alg_icv_len = icv_size;
 			strcpy(algo->alg_name, alg_name);
@@ -1022,7 +1027,8 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 		}
 		default:
 		{
-			rthdr->rta_type = XFRMA_ALG_CRYPT;
+			struct xfrm_algo *algo;
+
 			alg_name = lookup_algorithm(encryption_algs, enc_alg);
 			if (alg_name == NULL)
 			{
@@ -1033,6 +1039,7 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 			
+			rthdr->rta_type = XFRMA_ALG_CRYPT;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_key.len);
 			hdr->nlmsg_len += rthdr->rta_len;
 			if (hdr->nlmsg_len > sizeof(request))
@@ -1040,13 +1047,12 @@ static status_t add_sa(private_kernel_netlink_ipsec_t *this,
 				return FAILED;
 			}
 			
-			struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
+			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
 			algo->alg_key_len = enc_key.len * 8;
 			strcpy(algo->alg_name, alg_name);
 			memcpy(algo->alg_key, enc_key.ptr, enc_key.len);
 			
 			rthdr = XFRM_RTA_NEXT(rthdr);
-			break;
 		}
 	}
 		
@@ -1229,6 +1235,74 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 	return FAILED;
 }
 
+/**
+ * Implementation of kernel_interface_t.query_sa.
+ */
+static status_t query_sa(private_kernel_netlink_ipsec_t *this, host_t *src,
+						 host_t *dst, u_int32_t spi, protocol_id_t protocol,
+						 u_int64_t *bytes)
+{
+	netlink_buf_t request;
+	struct nlmsghdr *out = NULL, *hdr;
+	struct xfrm_usersa_id *sa_id;
+	struct xfrm_usersa_info *sa = NULL;
+	size_t len;
+	
+	memset(&request, 0, sizeof(request));
+
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(spi));
+
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = XFRM_MSG_GETSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
+
+	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	host2xfrm(dst, &sa_id->daddr);
+	sa_id->spi = spi;
+	sa_id->proto = proto_ike2kernel(protocol);
+	sa_id->family = dst->get_family(dst);
+	
+	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
+	{
+		hdr = out;
+		while (NLMSG_OK(hdr, len))
+		{
+			switch (hdr->nlmsg_type)
+			{
+				case XFRM_MSG_NEWSA:
+				{
+					sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
+					break;
+				}
+				case NLMSG_ERROR:
+				{
+					struct nlmsgerr *err = NLMSG_DATA(hdr);
+					DBG1(DBG_KNL, "querying SAD entry with SPI %.8x failed: %s (%d)",
+						 ntohl(spi), strerror(-err->error), -err->error);
+					break;
+				}
+				default:
+					hdr = NLMSG_NEXT(hdr, len);
+					continue;
+				case NLMSG_DONE:
+					break;
+			}
+			break;
+		}
+	}
+	
+	if (sa == NULL)
+	{
+		DBG2(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
+		free(out);
+		return FAILED;
+	}
+	*bytes = sa->curlft.bytes;
+	
+	free(out);
+	return SUCCESS;
+}
 /**
  * Implementation of kernel_interface_t.del_sa.
  */
@@ -1888,6 +1962,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
 	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
+	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
@@ -1897,7 +1972,7 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	/* private members */
 	this->policies = hashtable_create((hashtable_hash_t)policy_hash,
 									  (hashtable_equals_t)policy_equals, 32);
-	this->mutex = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings,
 					"charon.install_routes", TRUE);
 	

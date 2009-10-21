@@ -29,6 +29,16 @@
 #include <enum.h>
 
 /**
+ * strongSwan program return codes
+ */
+#define SS_RC_LIBSTRONGSWAN_INTEGRITY	64
+#define SS_RC_DAEMON_INTEGRITY			65
+#define SS_RC_INITIALIZATION_FAILED		66
+
+#define SS_RC_FIRST	SS_RC_LIBSTRONGSWAN_INTEGRITY
+#define SS_RC_LAST	SS_RC_INITIALIZATION_FAILED
+
+/**
  * Number of bits in a byte
  */
 #define BITS_PER_BYTE 8
@@ -133,6 +143,19 @@
 #ifndef TRUE
 # define TRUE  true
 #endif /* TRUE */
+
+/**
+ * define some missing fixed width int types on OpenSolaris.
+ * TODO: since the uintXX_t types are defined by the C99 standard we should
+ * probably use those anyway
+ */
+#ifdef __sun
+        #include <stdint.h>
+        typedef uint8_t         u_int8_t;
+        typedef uint16_t        u_int16_t;
+        typedef uint32_t        u_int32_t;
+        typedef uint64_t        u_int64_t;
+#endif
 
 typedef enum status_t status_t;
 

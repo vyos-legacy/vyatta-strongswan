@@ -42,6 +42,7 @@ host_triplet = @host@
 @USE_FAST_TRUE@am__append_9 = libfast
 @USE_MANAGER_TRUE@am__append_10 = manager
 @USE_MEDSRV_TRUE@am__append_11 = medsrv
+@USE_INTEGRITY_TEST_TRUE@am__append_12 = checksum
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -65,15 +66,17 @@ ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = . include libstrongswan libfreeswan starter ipsec \
 	_copyright pluto whack charon stroke _updown _updown_espmark \
-	openac scepclient dumm libfast manager medsrv
+	openac scepclient dumm libfast manager medsrv checksum
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
+ALLOCA = @ALLOCA@
 AMTAR = @AMTAR@
 AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BTLIB = @BTLIB@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -138,6 +141,7 @@ RUBYINCLUDE = @RUBYINCLUDE@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 VERSION = @VERSION@
 YACC = @YACC@
@@ -178,7 +182,9 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
+ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
@@ -215,7 +221,7 @@ xml_LIBS = @xml_LIBS@
 SUBDIRS = . include $(am__append_1) $(am__append_2) $(am__append_3) \
 	$(am__append_4) $(am__append_5) $(am__append_6) \
 	$(am__append_7) $(am__append_8) $(am__append_9) \
-	$(am__append_10) $(am__append_11)
+	$(am__append_10) $(am__append_11) $(am__append_12)
 EXTRA_DIST = strongswan.conf
 all: all-recursive
 
@@ -532,7 +538,7 @@ uninstall-am:
 
 install-exec-local :	
 		test -e "$(DESTDIR)${sysconfdir}" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)"
-		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -o ${ipsecuser} -g ${ipsecgroup} -m 640 strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true
+		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

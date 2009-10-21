@@ -20,11 +20,14 @@
 
 #include <utils.h>
 #include <chunk.h>
+#include <debug.h>
 #include <utils/identification.h>
 #include <utils/host.h>
 #ifdef LEAK_DETECTIVE
 #include <utils/leak_detective.h>
 #endif
+
+#define CHECKSUM_LIBRARY IPSEC_DIR"/libchecksum.so"
 
 typedef struct private_library_t private_library_t;
 
@@ -65,6 +68,10 @@ void library_deinit()
 	this->public.fetcher->destroy(this->public.fetcher);
 	this->public.db->destroy(this->public.db);
 	this->public.printf_hook->destroy(this->public.printf_hook);
+	if (this->public.integrity)
+	{
+		this->public.integrity->destroy(this->public.integrity);
+	}
 	
 #ifdef LEAK_DETECTIVE
 	if (this->detective)
@@ -79,7 +86,7 @@ void library_deinit()
 /*
  * see header file
  */
-void library_init(char *settings)
+bool library_init(char *settings)
 {
 	printf_hook_t *pfh;
 	private_library_t *this = malloc_thing(private_library_t);
@@ -119,5 +126,23 @@ void library_init(char *settings)
 	this->public.fetcher = fetcher_manager_create();
 	this->public.db = database_factory_create();
 	this->public.plugins = plugin_loader_create();
+	this->public.integrity = NULL;
+	
+	if (lib->settings->get_bool(lib->settings,
+								"libstrongswan.integrity_test", FALSE))
+	{
+#ifdef INTEGRITY_TEST
+		this->public.integrity = integrity_checker_create(CHECKSUM_LIBRARY);
+		if (!lib->integrity->check(lib->integrity, "libstrongswan", library_init))
+		{
+			DBG1("integrity check of libstrongswan failed");
+			return FALSE;
+		}
+#else /* !INTEGRITY_TEST */
+		DBG1("integrity test enabled, but not supported");
+		return FALSE;
+#endif /* INTEGRITY_TEST */
+	}
+	return TRUE;
 }
 

@@ -260,7 +260,7 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 {
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
-	time_t use_time;
+	time_t use_time, current;
 	
 	if (inbound)
 	{
@@ -273,7 +273,8 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
-		use_time = max(use_time, child_sa->get_usetime(child_sa, inbound));
+		child_sa->get_usestats(child_sa, inbound, &current, NULL);
+		use_time = max(use_time, current);
 	}
 	enumerator->destroy(enumerator);
 	
@@ -1169,7 +1170,8 @@ static status_t initiate(private_ike_sa_t *this,
 #endif /* ME */
 	{
 		/* normal IKE_SA with CHILD_SA */
-		task = (task_t*)child_create_create(&this->public, child_cfg, tsi, tsr);
+		task = (task_t*)child_create_create(&this->public, child_cfg, FALSE,
+											tsi, tsr);
 		child_cfg->destroy(child_cfg);
 		if (reqid)
 		{
@@ -1747,6 +1749,7 @@ static status_t roam(private_ike_sa_t *this, bool address)
 	{
 		case IKE_CREATED:
 		case IKE_DELETING:
+		case IKE_DESTROYING:
 		case IKE_PASSIVE:
 			return SUCCESS;
 		default:
@@ -1775,10 +1778,46 @@ static status_t roam(private_ike_sa_t *this, bool address)
 			DBG2(DBG_IKE, "keeping connection path %H - %H",
 				 src, this->other_host);
 			src->destroy(src);
+			set_condition(this, COND_STALE, FALSE);
+			return SUCCESS;
+		}
+		src->destroy(src);
+		
+	}
+	else
+	{
+		/* check if we find a route at all */
+		enumerator_t *enumerator;
+		host_t *addr;
+		
+		src = charon->kernel_interface->get_source_addr(charon->kernel_interface,
+														this->other_host, NULL);
+		if (!src)
+		{
+			enumerator = this->additional_addresses->create_enumerator(
+													this->additional_addresses);
+			while (enumerator->enumerate(enumerator, &addr))
+			{
+				DBG1(DBG_IKE, "looking for a route to %H ...", addr);
+				src = charon->kernel_interface->get_source_addr(
+										charon->kernel_interface, addr, NULL);
+				if (src)
+				{
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		if (!src)
+		{
+			DBG1(DBG_IKE, "no route found to reach %H, MOBIKE update deferred",
+				 this->other_host);
+			set_condition(this, COND_STALE, TRUE);
 			return SUCCESS;
 		}
 		src->destroy(src);
 	}
+	set_condition(this, COND_STALE, FALSE);
 	
 	/* update addresses with mobike, if supported ... */
 	if (supports_extension(this, EXT_MOBIKE))

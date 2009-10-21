@@ -1,14 +1,6 @@
 lib_LTLIBRARIES = libstrongswan.la
 
-if USE_INTEGRITY_TEST
-  libstrongswan_la_SOURCES = \
-  fips/fips_canister_start.c \
-  fips/fips.c fips/fips.h
-else
-  libstrongswan_la_SOURCES =
-endif
-
-libstrongswan_la_SOURCES += \
+libstrongswan_la_SOURCES = \
 library.c library.h \
 chunk.c chunk.h \
 debug.c debug.h \
@@ -58,7 +50,7 @@ utils/mutex.c utils/mutex.h \
 utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
-libstrongswan_la_LIBADD = -lpthread $(DLLIB)
+libstrongswan_la_LIBADD = -lpthread $(DLLIB) $(BTLIB) $(SOCKLIB)
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
@@ -76,8 +68,9 @@ if USE_LOCK_PROFILER
 endif
 
 if USE_INTEGRITY_TEST
+  AM_CFLAGS += -DINTEGRITY_TEST
   libstrongswan_la_SOURCES += \
-  fips/fips_canister_end.c
+    integrity_checker.c integrity_checker.h
 endif
 
 if USE_VSTR
@@ -203,8 +196,4 @@ endif
 
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
-endif
-
-if USE_INTEGRITY_TEST
-  SUBDIRS += fips
 endif

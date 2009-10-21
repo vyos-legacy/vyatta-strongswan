@@ -637,8 +637,19 @@ int main(int argc, char *argv[])
 	} operation = OP_USAGE;
 
 	dbg = dbg_stderr;
-	library_init(STRONGSWAN_CONF);
 	atexit(library_deinit);
+
+	/* initialize library */
+	if (!library_init(STRONGSWAN_CONF))
+	{
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "pool", argv[0]))
+	{
+		fprintf(stderr, "integrity check of pool failed\n");
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR,
 		lib->settings->get_str(lib->settings, "pool.load", PLUGINS));
 	

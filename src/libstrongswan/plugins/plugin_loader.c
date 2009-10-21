@@ -22,6 +22,7 @@
 #include <stdio.h>
 
 #include <debug.h>
+#include <integrity_checker.h>
 #include <utils/linked_list.h>
 #include <plugins/plugin.h>
 
@@ -61,27 +62,45 @@ static plugin_t* load_plugin(private_plugin_loader_t *this,
 	
 	snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path, name);
 	
+	if (lib->integrity)
+	{
+		if (!lib->integrity->check_file(lib->integrity, name, file))
+		{
+			DBG1("plugin '%s': failed file integrity test of '%s'", name, file);
+			return NULL;
+		}
+	}
 	handle = dlopen(file, RTLD_LAZY);
 	if (handle == NULL)
 	{
-		DBG1("loading plugin '%s' failed: %s", name, dlerror());
+		DBG1("plugin '%s': failed to load '%s' - %s", name, file, dlerror());
 		return NULL;
 	}
 	constructor = dlsym(handle, "plugin_create");
 	if (constructor == NULL)
 	{
-		DBG1("loading plugin '%s' failed: no plugin_create() function", name);
+		DBG1("plugin '%s': failed to load - no plugin_create() function", name);
 		dlclose(handle);
 		return NULL;
+	}
+	if (lib->integrity)
+	{
+		if (!lib->integrity->check_segment(lib->integrity, name, constructor))
+		{
+			DBG1("plugin '%s': failed segment integrity test", name);
+			dlclose(handle);
+			return NULL;
+		}
+		DBG1("plugin '%s': passed file and segment integrity tests", name);
 	}
 	plugin = constructor();
 	if (plugin == NULL)
 	{
-		DBG1("loading plugin '%s' failed: plugin_create() returned NULL", name);
+		DBG1("plugin '%s': failed to load - plugin_create() returned NULL", name);
 		dlclose(handle);
 		return NULL;
 	}
-	DBG2("plugin '%s' loaded successfully", name);
+	DBG2("plugin '%s': loaded successfully", name);
 	
 	/* we do not store or free dlopen() handles, leak_detective requires
 	 * the modules to keep loaded until leak report */

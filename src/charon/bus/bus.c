@@ -117,7 +117,7 @@ static entry_t *entry_create(listener_t *listener, bool blocker)
 	this->listener = listener;
 	this->blocker = blocker;
 	this->calling = 0;
-	this->condvar = condvar_create(CONDVAR_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	
 	return this;
 }
@@ -351,6 +351,41 @@ static void unregister_listener(private_bus_t *this, entry_t *entry,
 }
 
 /**
+ * Implementation of bus_t.alert
+ */
+static void alert(private_bus_t *this, alert_t alert, ...)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	va_list args;
+	bool keep;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->alert)
+		{
+			continue;
+		}
+		entry->calling++;
+		va_start(args, alert);
+		keep = entry->listener->alert(entry->listener, ike_sa, alert, args);
+		va_end(args);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
  * Implementation of bus_t.ike_state_change
  */
 static void ike_state_change(private_bus_t *this, ike_sa_t *ike_sa,
@@ -374,7 +409,6 @@ static void ike_state_change(private_bus_t *this, ike_sa_t *ike_sa,
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -409,7 +443,6 @@ static void child_state_change(private_bus_t *this, child_sa_t *child_sa,
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -443,7 +476,6 @@ static void message(private_bus_t *this, message_t *message, bool incoming)
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -476,7 +508,6 @@ static void ike_keys(private_bus_t *this, ike_sa_t *ike_sa,
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -511,7 +542,143 @@ static void child_keys(private_bus_t *this, child_sa_t *child_sa,
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of bus_t.child_updown
+ */
+static void child_updown(private_bus_t *this, child_sa_t *child_sa, bool up)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->child_updown)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->child_updown(entry->listener,
+											 ike_sa, child_sa, up);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of bus_t.child_rekey
+ */
+static void child_rekey(private_bus_t *this, child_sa_t *old, child_sa_t *new)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep;
+	
+	ike_sa = pthread_getspecific(this->thread_sa);
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->child_rekey)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->child_rekey(entry->listener, ike_sa, old, new);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+/**
+ * Implementation of bus_t.ike_updown
+ */
+static void ike_updown(private_bus_t *this, ike_sa_t *ike_sa, bool up)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_updown)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_updown(entry->listener, ike_sa, up);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+	
+	/* a down event for IKE_SA implicitly downs all CHILD_SAs */
+	if (!up)
+	{
+		iterator_t *iterator;
+		child_sa_t *child_sa;
+		
+		iterator = ike_sa->create_child_sa_iterator(ike_sa);
+		while (iterator->iterate(iterator, (void**)&child_sa))
+		{
+			child_updown(this, child_sa, FALSE);
+		}
+		iterator->destroy(iterator);
+	}
+}
+
+/**
+ * Implementation of bus_t.ike_rekey
+ */
+static void ike_rekey(private_bus_t *this, ike_sa_t *old, ike_sa_t *new)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+	
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_rekey)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_rekey(entry->listener, old, new);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -545,7 +712,6 @@ static bool authorize(private_bus_t *this, linked_list_t *auth, bool final)
 		if (!keep)
 		{
 			unregister_listener(this, entry, enumerator);
-			break;
 		}
 		if (!success)
 		{
@@ -580,16 +746,21 @@ bus_t *bus_create()
 	this->public.set_sa = (void(*)(bus_t*,ike_sa_t*))set_sa;
 	this->public.log = (void(*)(bus_t*,debug_t,level_t,char*,...))log_;
 	this->public.vlog = (void(*)(bus_t*,debug_t,level_t,char*,va_list))vlog;
+	this->public.alert = (void(*)(bus_t*, alert_t alert, ...))alert;
 	this->public.ike_state_change = (void(*)(bus_t*,ike_sa_t*,ike_sa_state_t))ike_state_change;
 	this->public.child_state_change = (void(*)(bus_t*,child_sa_t*,child_sa_state_t))child_state_change;
 	this->public.message = (void(*)(bus_t*, message_t *message, bool incoming))message;
 	this->public.ike_keys = (void(*)(bus_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
 	this->public.child_keys = (void(*)(bus_t*, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
+	this->public.ike_updown = (void(*)(bus_t*, ike_sa_t *ike_sa, bool up))ike_updown;
+	this->public.ike_rekey = (void(*)(bus_t*, ike_sa_t *old, ike_sa_t *new))ike_rekey;
+	this->public.child_updown = (void(*)(bus_t*, child_sa_t *child_sa, bool up))child_updown;
+	this->public.child_rekey = (void(*)(bus_t*, child_sa_t *old, child_sa_t *new))child_rekey;
 	this->public.authorize = (bool(*)(bus_t*, linked_list_t *auth, bool final))authorize;
 	this->public.destroy = (void(*)(bus_t*)) destroy;
 	
 	this->listeners = linked_list_create();
-	this->mutex = mutex_create(MUTEX_RECURSIVE);
+	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	pthread_key_create(&this->thread_id, NULL);
 	pthread_key_create(&this->thread_sa, NULL);
 	

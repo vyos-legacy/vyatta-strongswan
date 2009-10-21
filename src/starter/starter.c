@@ -66,46 +66,66 @@
 
 static unsigned int _action_ = 0;
 
-static void
-fsig(int signal)
+static void fsig(int signal)
 {
 	switch (signal)
 	{
 		case SIGCHLD:
 		{
-			int status;
+			int status, exit_status = 0;
 			pid_t pid;
 			char *name = NULL;
 
 			while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 			{
 				if (pid == starter_pluto_pid())
+				{
 					name = " (Pluto)";
+				}
 				if (pid == starter_charon_pid())
+				{
 					name = " (Charon)";
+				}
 				if (WIFSIGNALED(status))
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has been killed by sig %d\n",
 								pid, name?name:"", WTERMSIG(status))
 					   )
+				}
 				else if (WIFSTOPPED(status))
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has been stopped by sig %d\n",
 								pid, name?name:"", WSTOPSIG(status))
 					   )
+				}
 				else if (WIFEXITED(status))
+				{
+					exit_status =  WEXITSTATUS(status);
+					if (exit_status >= SS_RC_FIRST && exit_status <= SS_RC_LAST)
+					{
+						_action_ =  FLAG_ACTION_QUIT;
+					}
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has quit (exit code %d)\n",
-								pid, name?name:"", WEXITSTATUS(status))
+								pid, name?name:"", exit_status)
 					   )
+				}
 				else
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has quit", pid, name?name:"")
 					   )
+				}
 				if (pid == starter_pluto_pid())
-					starter_pluto_sigchild(pid);
+				{
+					starter_pluto_sigchild(pid, exit_status);
+				}
 				if (pid == starter_charon_pid())
-					starter_charon_sigchild(pid);
+				{
+					starter_charon_sigchild(pid, exit_status);
+				}
 			}
 		}
 		break;
@@ -196,8 +216,7 @@ static void generate_selfcert()
 		}
 }
 
-static void
-usage(char *name)
+static void usage(char *name)
 {
 	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>] "
 			"[--debug|--debug-more|--debug-all]\n");
@@ -392,9 +411,13 @@ int main (int argc, char **argv)
 		if (_action_ & FLAG_ACTION_QUIT)
 		{
 			if (starter_pluto_pid())
+			{
 				starter_stop_pluto();
+			}
 			if (starter_charon_pid())
+			{
 				starter_stop_charon();
+			}
 			starter_netkey_cleanup();
 			confread_free(cfg);
 			unlink(STARTER_PID_FILE);
