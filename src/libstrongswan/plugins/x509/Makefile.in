@@ -75,12 +75,14 @@ ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
+ALLOCA = @ALLOCA@
 AMTAR = @AMTAR@
 AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BTLIB = @BTLIB@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -145,6 +147,7 @@ RUBYINCLUDE = @RUBYINCLUDE@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 VERSION = @VERSION@
 YACC = @YACC@
@@ -185,7 +188,9 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
+ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
@@ -230,7 +235,7 @@ libstrongswan_x509_la_SOURCES = x509_plugin.h x509_plugin.c \
   x509_ocsp_response.h x509_ocsp_response.c \
   ietf_attr_list.h ietf_attr_list.c
 
-libstrongswan_x509_la_LDFLAGS = -module
+libstrongswan_x509_la_LDFLAGS = -module -avoid-version
 all: all-am
 
 .SUFFIXES:

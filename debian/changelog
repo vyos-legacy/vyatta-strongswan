@@ -1,3 +1,19 @@
+strongswan (4.3.4-1) unstable; urgency=low
+
+  * New upstream release.
+  * This release supports integrity checking of libraries, which is
+    now enabled at build-time and can be enabled at run-time using 
+        libstrongswan {
+          integrity_test = yes
+        }
+    in /etc/strongswan.conf.
+  * Don't disable internal crypto libraries for pluto. They might be
+    required when working with older ipsec.conf files.
+  * charon now supports "include" directives in ipsec.secrets for
+    compatibility with how the maintainer script includes RSA private keys.
+
+ -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Wed, 21 Oct 2009 11:14:56 +0000
+
 strongswan (4.3.2-1) unstable; urgency=HIGH
 
   Urgency high because of security issue and FTBFS.

@@ -19,6 +19,9 @@
  * @defgroup asn1 asn1
  * @ingroup libstrongswan
  *
+ * @defgroup pgp pgp
+ * @ingroup libstrongswan
+ *
  * @defgroup credentials credentials
  * @ingroup libstrongswan
  *
@@ -30,19 +33,16 @@
  *
  * @defgroup crypto crypto
  * @ingroup libstrongswan
- 
+ *
  * @defgroup database database
  * @ingroup libstrongswan
- 
+ *
  * @defgroup fetcher fetcher
  * @ingroup libstrongswan
- 
- * @defgroup fips fips
- * @ingroup libstrongswan
- 
+ *
  * @defgroup plugins plugins
  * @ingroup libstrongswan
- 
+ *
  * @defgroup utils utils
  * @ingroup libstrongswan
  */
@@ -59,6 +59,7 @@
 #include <utils.h>
 #include <chunk.h>
 #include <settings.h>
+#include <integrity_checker.h>
 #include <plugins/plugin_loader.h>
 #include <crypto/crypto_factory.h>
 #include <fetcher/fetcher_manager.h>
@@ -108,6 +109,11 @@ struct library_t {
 	settings_t *settings;
 	
 	/**
+	 * integrity checker to verify code integrity
+	 */
+	integrity_checker_t *integrity;
+	
+	/**
 	 * is leak detective running?
 	 */
 	bool leak_detective;
@@ -117,8 +123,9 @@ struct library_t {
  * Initialize library, creates "lib" instance.
  *
  * @param settings		file to read settings from, may be NULL for none
+ * @return				FALSE if integrity check failed
  */
-void library_init(char *settings);
+bool library_init(char *settings);
 
 /**
  * Deinitialize library, destroys "lib" instance.

@@ -20,9 +20,7 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-openssl --enable-agent \
 		--enable-eap-radius --enable-eap-identity --enable-eap-md5 \
 		--enable-eap-gtc --enable-eap-aka --enable-eap-mschapv2 \
-		--enable-sql \
-		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
-		--disable-md5 --disable-sha1 --disable-sha2 \
+		--enable-sql --enable-integrity-test \
 		--enable-nm
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!

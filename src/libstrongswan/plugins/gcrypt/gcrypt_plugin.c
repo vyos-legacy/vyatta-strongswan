@@ -47,7 +47,7 @@ struct private_gcrypt_plugin_t {
  */
 static int mutex_init(void **lock)
 {
-	*lock = mutex_create(MUTEX_DEFAULT);
+	*lock = mutex_create(MUTEX_TYPE_DEFAULT);
 	return 0;
 }
 
@@ -147,6 +147,8 @@ plugin_t *plugin_create()
 	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
 					(hasher_constructor_t)gcrypt_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+					(hasher_constructor_t)gcrypt_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
 					(hasher_constructor_t)gcrypt_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
 					(hasher_constructor_t)gcrypt_hasher_create);

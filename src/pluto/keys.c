@@ -1,5 +1,6 @@
 /* mechanisms for preshared keys (public, private, and preshared secrets)
  * Copyright (C) 1998-2001  D. Hugh Redelmeier.
+ * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -551,7 +552,7 @@ static err_t process_keyfile(private_key_t **key, key_type_t type, int whackfd)
 	}
 	*key = load_private_key(filename, &pass, type);
 
-	return key ? NULL : "Private key file -- could not be loaded";
+	return *key ? NULL : "Private key file -- could not be loaded";
 }
 
 /**

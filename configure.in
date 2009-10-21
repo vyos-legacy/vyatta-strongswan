@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.3.2)
+AC_INIT(strongSwan,4.3.4)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_SUBST(confdir, '${sysconfdir}')
 PKG_PROG_PKG_CONFIG
@@ -125,14 +125,14 @@ AC_ARG_WITH(
 
 AC_ARG_WITH(
 	[user],
-	AS_HELP_STRING([--with-user=user],[change user of the daemons to "user" after startup (default is 0).]),
+	AS_HELP_STRING([--with-user=user],[change user of the daemons to "user" after startup (default is "root").]),
 	[AC_DEFINE_UNQUOTED(IPSEC_USER, "$withval") AC_SUBST(ipsecuser, "$withval")],
 	[AC_SUBST(ipsecuser, "root")]
 )
 
 AC_ARG_WITH(
 	[group],
-	AS_HELP_STRING([--with-group=group],[change group of the daemons to "group" after startup (default is 0).]),
+	AS_HELP_STRING([--with-group=group],[change group of the daemons to "group" after startup (default is "root").]),
 	[AC_DEFINE_UNQUOTED(IPSEC_GROUP, "$withval") AC_SUBST(ipsecgroup, "$withval")],
 	[AC_SUBST(ipsecgroup, "root")]
 )
@@ -588,7 +588,7 @@ AC_ARG_ENABLE(
 
 AC_ARG_ENABLE(
 	[integrity-test],
-	AS_HELP_STRING([--enable-integrity-test],[enable the integrity test of the crypto library (default is NO).]),
+	AS_HELP_STRING([--enable-integrity-test],[enable integrity testing of libstrongswan and plugins (default is NO).]),
 	[if test x$enableval = xyes; then
 		integrity_test=true 
 	fi]
@@ -636,6 +636,17 @@ AC_ARG_ENABLE(
 		tools=false
 	fi],
 	tools=true
+)
+
+AC_ARG_ENABLE(
+	[scripts],
+	AS_HELP_STRING([--disable-scripts],[disable additional utilities (found in directory scripts). (default is NO).]),
+	[if test x$enableval = xyes; then
+		scripts=true
+	 else
+		scripts=false
+	fi],
+	scripts=true
 )
 
 AC_ARG_ENABLE(
@@ -740,9 +751,10 @@ dnl  set up compiler and flags
 dnl =========================
 
 if test -z "$CFLAGS"; then
-	AC_SUBST(CFLAGS, "-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing")
+	CFLAGS="-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing"
 fi
 AC_PROG_CC
+AC_LIB_PREFIX
 AC_C_BIGENDIAN
 
 dnl =========================
@@ -751,10 +763,42 @@ dnl =========================
 
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
+AC_PROG_EGREP
+AC_PROG_AWK
 AC_PROG_LEX
 AC_PROG_YACC
-AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+
+dnl because gperf is not needed by end-users we just report it but do not abort on failure
+AC_MSG_CHECKING([gperf version >= 3.0.0])
+if test -x "$GPERF"; then
+	if test "`$GPERF --version | $AWK -F' ' '/^GNU gperf/ { print $3 }' | $AWK -F. '{ print $1 }'`" -ge "3"; then
+		AC_MSG_RESULT([yes])
+	else
+		AC_MSG_RESULT([no])
+	fi
+else
+	AC_MSG_RESULT([not found])
+fi
+
+dnl translate user/group to numercial ids
+AC_MSG_CHECKING([for uid of user "$ipsecuser"])
+ipsecuid=`id -u $ipsecuser 2>/dev/null`
+if test -n "$ipsecuid"; then
+	AC_MSG_RESULT([$ipsecuid])
+	AC_SUBST(ipsecuid)
+else
+	AC_MSG_ERROR([not found])
+fi
+AC_MSG_CHECKING([for gid of group "$ipsecgroup"])
+ipsecgid=`$EGREP "^$ipsecgroup:" /etc/group | $AWK -F: '{ print $3 }'`
+if test -n "$ipsecgid"; then
+	AC_MSG_RESULT([$ipsecgid])
+	AC_SUBST(ipsecgid)
+else
+	AC_MSG_ERROR([not found])
+fi
 
 dnl =========================
 dnl  dependency calculation
@@ -800,12 +844,32 @@ dnl  check required libraries and header files
 dnl ===========================================
 
 AC_HEADER_STDBOOL
+AC_FUNC_ALLOCA
 
+dnl libraries needed on some platforms but not on others
+dnl ====================================================
 saved_LIBS=$LIBS
+
+dnl FreeBSD and Mac OS X have dlopen integrated in libc, Linux needs libdl
 LIBS=""
 AC_SEARCH_LIBS(dlopen, dl, [DLLIB=$LIBS])
-LIBS=$saved_LIBS
 AC_SUBST(DLLIB)
+
+dnl glibc's backtrace() can be replicated on FreeBSD with libexecinfo
+LIBS=""
+AC_SEARCH_LIBS(backtrace, execinfo, [BTLIB=$LIBS])
+AC_CHECK_FUNCS(backtrace)
+AC_SUBST(BTLIB)
+
+dnl OpenSolaris needs libsocket and libnsl for socket()
+LIBS=""
+AC_SEARCH_LIBS(socket, socket, [SOCKLIB=$LIBS],
+	[AC_CHECK_LIB(nsl, socket, [SOCKLIB="-lsocket -lnsl"], [], [-lsocket])]
+)
+AC_SUBST(SOCKLIB)
+
+LIBS=$saved_LIBS
+dnl ======================
 
 AC_MSG_CHECKING(for dladdr)
 AC_TRY_COMPILE(
@@ -817,11 +881,10 @@ AC_TRY_COMPILE(
 	[AC_MSG_RESULT([no])]
 )
 
-AC_CHECK_FUNCS(backtrace)
 AC_CHECK_FUNCS(prctl)
-AC_CHECK_FUNCS(gethostbyname_r)
 
-AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h)
+AC_CHECK_HEADERS(sys/sockio.h)
+AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
 
 AC_CHECK_MEMBERS([struct sockaddr.sa_len], [], [],
 [
@@ -1039,6 +1102,25 @@ if test x$capabilities = xlibcap; then
 	AC_CHECK_HEADER([sys/capability.h],,[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
 fi
 
+if test x$integrity_test = xtrue; then
+	AC_MSG_CHECKING([for dladdr()])
+	AC_TRY_COMPILE(
+		[#define _GNU_SOURCE
+		 #include <dlfcn.h>],
+		[Dl_info info; dladdr(main, &info);], 
+		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
+		 AC_MSG_ERROR([dladdr() not supported, required by integrity-test!])]
+	)
+	AC_MSG_CHECKING([for dl_iterate_phdr()])
+	AC_TRY_COMPILE(
+		[#define _GNU_SOURCE
+		 #include <link.h>],
+		[dl_iterate_phdr((void*)0, (void*)0);], 
+		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
+		 AC_MSG_ERROR([dl_iterate_phdr() not supported, required by integrity-test!])]
+	)
+fi
+
 dnl ======================================
 dnl  collect all plugins for libstrongswan
 dnl ======================================
@@ -1210,6 +1292,7 @@ AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
+AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
@@ -1257,7 +1340,6 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
-	src/libstrongswan/fips/Makefile
 	src/libfreeswan/Makefile
 	src/pluto/Makefile
 	src/whack/Makefile
@@ -1299,6 +1381,7 @@ AC_OUTPUT(
 	src/libfast/Makefile
 	src/manager/Makefile
 	src/medsrv/Makefile
+	src/checksum/Makefile
 	scripts/Makefile
 	testing/Makefile
 )

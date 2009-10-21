@@ -52,11 +52,8 @@ ipsec_PROGRAMS = pluto$(EXEEXT) _pluto_adns$(EXEEXT)
 
 # This compile option activates smartcard support
 @USE_SMARTCARD_TRUE@am__append_5 = -DSMARTCARD
-
-# This compile option activates the integrity test of libstrongswan
-@USE_INTEGRITY_TEST_TRUE@am__append_6 = -DINTEGRITY_TEST
-@USE_CAPABILITIES_TRUE@am__append_7 = -lcap
-@USE_THREADS_TRUE@am__append_8 = -DTHREADS
+@USE_CAPABILITIES_TRUE@am__append_6 = -lcap
+@USE_THREADS_TRUE@am__append_7 = -DTHREADS
 subdir = src/pluto
 DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -116,12 +113,14 @@ ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
+ALLOCA = @ALLOCA@
 AMTAR = @AMTAR@
 AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BTLIB = @BTLIB@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -186,6 +185,7 @@ RUBYINCLUDE = @RUBYINCLUDE@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 VERSION = @VERSION@
 YACC = @YACC@
@@ -226,7 +226,9 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
+ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
@@ -325,11 +327,10 @@ AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" \
 	-DSTRONGSWAN_CONF=\"${strongswan_conf}\" -DKERNEL26_SUPPORT \
 	-DKERNEL26_HAS_KAME_DUPLICATES -DPLUTO -DKLIPS -DDEBUG \
 	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5) $(am__append_6) \
-	$(am__append_8)
+	$(am__append_4) $(am__append_5) $(am__append_7)
 pluto_LDADD = $(LIBSTRONGSWANDIR)/libstrongswan.la \
 	$(LIBFREESWANDIR)/libfreeswan.a -lresolv -lpthread $(DLLIB) \
-	$(am__append_7)
+	$(am__append_6)
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)

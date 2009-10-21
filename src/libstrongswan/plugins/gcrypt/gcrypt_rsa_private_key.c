@@ -61,12 +61,14 @@ struct private_gcrypt_rsa_private_key_t {
 public_key_t *gcrypt_rsa_public_key_create_from_sexp(gcry_sexp_t key);
 
 /**
- * find a token in a S-expression
+ * find a token in a S-expression. If a key is given, its length is used to
+ * pad the output to a given length.
  */
-chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name)
+chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name, gcry_sexp_t key)
 {
 	gcry_sexp_t token;
-	chunk_t data = chunk_empty;
+	chunk_t data = chunk_empty, tmp;
+	size_t len = 0;
 	
 	token = gcry_sexp_find_token(sexp, name, 1);
 	if (token)
@@ -76,7 +78,36 @@ chunk_t gcrypt_rsa_find_token(gcry_sexp_t sexp, char *name)
 		{
 			data.len = 0;
 		}
-		data = chunk_clone(data);
+		else
+		{
+			if (key)
+			{
+				/* gcrypt might return more bytes than necessary. Truncate
+				 * to key lenght if key given, or prepend zeros if needed  */
+				len = gcry_pk_get_nbits(key);
+				len = len / 8 + (len % 8 ? 1 : 0);
+				if (len > data.len)
+				{
+					tmp = chunk_alloc(len);
+					len -= data.len;
+					memset(tmp.ptr, 0, tmp.len - len);
+					memcpy(tmp.ptr + len, data.ptr, data.len);
+					data = tmp;
+				}
+				else if (len < data.len)
+				{
+					data = chunk_clone(chunk_skip(data, data.len - len));
+				}
+				else
+				{
+					data = chunk_clone(data);
+				}
+			}
+			else
+			{
+				data = chunk_clone(data);
+			}
+		}
 		gcry_sexp_release(token);
 	}
 	return data;
@@ -124,7 +155,7 @@ static bool sign_raw(private_gcrypt_rsa_private_key_t *this,
 		DBG1("creating pkcs1 signature failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
-	*signature = gcrypt_rsa_find_token(out, "s");
+	*signature = gcrypt_rsa_find_token(out, "s", this->key);
 	gcry_sexp_release(out);
 	return !!signature->len;
 }
@@ -170,7 +201,7 @@ static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
 		DBG1("creating pkcs1 signature failed: %s", gpg_strerror(err));
 		return FALSE;
 	}
-	*signature = gcrypt_rsa_find_token(out, "s");
+	*signature = gcrypt_rsa_find_token(out, "s", this->key);
 	gcry_sexp_release(out);
 	return !!signature->len;
 }
@@ -195,6 +226,8 @@ static bool sign(private_gcrypt_rsa_private_key_t *this, signature_scheme_t sche
 			return sign_raw(this, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return sign_pkcs1(this, HASH_SHA1, "sha1", data, sig);
+		case SIGN_RSA_EMSA_PKCS1_SHA224:
+			return sign_pkcs1(this, HASH_SHA224, "sha224", data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA256:
 			return sign_pkcs1(this, HASH_SHA256, "sha256", data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA384:
@@ -353,9 +386,9 @@ static chunk_t get_encoding(private_gcrypt_rsa_private_key_t *this)
 	gcry_error_t err;
 	
 	/* p and q are swapped, gcrypt expects p < q */
-	cp = gcrypt_rsa_find_token(this->key, "q");
-	cq = gcrypt_rsa_find_token(this->key, "p");
-	cd = gcrypt_rsa_find_token(this->key, "d");
+	cp = gcrypt_rsa_find_token(this->key, "q", NULL);
+	cq = gcrypt_rsa_find_token(this->key, "p", NULL);
+	cd = gcrypt_rsa_find_token(this->key, "d", NULL);
 	
 	err = gcry_mpi_scan(&p, GCRYMPI_FMT_USG, cp.ptr, cp.len, NULL)
 		| gcry_mpi_scan(&q, GCRYMPI_FMT_USG, cq.ptr, cq.len, NULL)
@@ -401,14 +434,14 @@ static chunk_t get_encoding(private_gcrypt_rsa_private_key_t *this)
 	}
 	
 	return asn1_wrap(ASN1_SEQUENCE, "cmmmmmmmm", ASN1_INTEGER_0,
-			asn1_integer("m", gcrypt_rsa_find_token(this->key, "n")),
-			asn1_integer("m", gcrypt_rsa_find_token(this->key, "e")),
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "n", NULL)),
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "e", NULL)),
 			asn1_integer("m", cd),
 			asn1_integer("m", cp),
 			asn1_integer("m", cq),
 			asn1_integer("m", cexp1),
 			asn1_integer("m", cexp2),
-			asn1_integer("m", gcrypt_rsa_find_token(this->key, "u")));
+			asn1_integer("m", gcrypt_rsa_find_token(this->key, "u", NULL)));
 }
 
 /**
@@ -477,8 +510,8 @@ bool gcrypt_rsa_build_keyids(gcry_sexp_t key, identification_t **keyid,
 		return FALSE;
 	}
 	publicKey = asn1_wrap(ASN1_SEQUENCE, "mm",
-				 asn1_integer("m", gcrypt_rsa_find_token(key, "n")),
-				 asn1_integer("m", gcrypt_rsa_find_token(key, "e")));
+				 asn1_integer("m", gcrypt_rsa_find_token(key, "n", NULL)),
+				 asn1_integer("m", gcrypt_rsa_find_token(key, "e", NULL)));
 	hasher->allocate_hash(hasher, publicKey, &hash);
 	*keyid = identification_create_from_encoding(ID_PUBKEY_SHA1, hash);
 	chunk_free(&hash);

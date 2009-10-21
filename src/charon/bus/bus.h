@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
 
 typedef enum debug_t debug_t;
 typedef enum level_t level_t;
-typedef struct listener_t listener_t;
+typedef enum alert_t alert_t;
 typedef struct bus_t bus_t;
 
 #include <stdarg.h>
@@ -31,6 +31,7 @@ typedef struct bus_t bus_t;
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
 #include <processing/jobs/job.h>
+#include <bus/listeners/listener.h>
 
 /**
  * Debug message group.
@@ -126,105 +127,12 @@ enum level_t {
 # define DBG4(...) {}
 #endif /* DBG4 */
 
-
 /**
- * Listener interface, listens to events if registered to the bus.
+ * Kind of alerts to raise.
  */
-struct listener_t {
-	
-	/**
-	 * Log a debugging message.
-	 *
-	 * The implementing signal function returns TRUE to stay registered
-	 * to the bus, or FALSE to unregister itself.
-	 * Calling bus_t.log() inside of a registered listener is possible,
-	 * but the bus does not invoke listeners recursively.
-	 *
-	 * @param singal	kind of the signal (up, down, rekeyed, ...)
-	 * @param level		verbosity level of the signal
-	 * @param thread	ID of the thread raised this signal
-	 * @param ike_sa	IKE_SA associated to the event
-	 * @param format	printf() style format string
-	 * @param args		vprintf() style va_list argument list
-	 " @return			TRUE to stay registered, FALSE to unregister
-	 */
-	bool (*log) (listener_t *this, debug_t group, level_t level, int thread,
-				 ike_sa_t *ike_sa, char* format, va_list args);
-	
-	/**
-	 * Handle state changes in an IKE_SA.
-	 *
-	 * @param ike_sa	IKE_SA which changes its state
-	 * @param state		new IKE_SA state this IKE_SA changes to
-	 * @return			TRUE to stay registered, FALSE to unregister
-	 */
-	bool (*ike_state_change)(listener_t *this, ike_sa_t *ike_sa,
-							 ike_sa_state_t state);
-	
-	/**
-	 * Handle state changes in a CHILD_SA.
-	 *
-	 * @param ike_sa	IKE_SA containing the affected CHILD_SA
-	 * @param child_sa	CHILD_SA which changes its state
-	 * @param state		new CHILD_SA state this CHILD_SA changes to
-	 * @return			TRUE to stay registered, FALSE to unregister
-	 */
-	bool (*child_state_change)(listener_t *this, ike_sa_t *ike_sa,
-							   child_sa_t *child_sa, child_sa_state_t state);
-	
-	/**
-	 * Hook called for received/sent messages of an IKE_SA.
-	 *
-	 * @param ike_sa	IKE_SA sending/receving a message
-	 * @param message	message object
-	 * @param incoming	TRUE for incoming messages, FALSE for outgoing
-	 * @return			TRUE to stay registered, FALSE to unregister
-	 */
-	bool (*message)(listener_t *this, ike_sa_t *ike_sa, message_t *message,
-					bool incoming);
-	
-	/**
-	 * Hook called with IKE_SA key material.
-	 *
-	 * @param ike_sa	IKE_SA this keymat belongs to
-	 * @param dh		diffie hellman shared secret
-	 * @param nonce_i	initiators nonce
-	 * @param nonce_r	responders nonce
-	 * @param rekey		IKE_SA we are rekeying, if any
-	 * @return			TRUE to stay registered, FALSE to unregister
-	 */
-	bool (*ike_keys)(listener_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
-					 chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey);
-	
-	/**
-	 * Hook called with CHILD_SA key material.
-	 *
-	 * @param ike_sa	IKE_SA the child sa belongs to
-	 * @param child_sa	CHILD_SA this keymat is used for
-	 * @param dh		diffie hellman shared secret
-	 * @param nonce_i	initiators nonce
-	 * @param nonce_r	responders nonce
-	 * @return			TRUE to stay registered, FALSE to unregister
-	 */
-	bool (*child_keys)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
-	
-	/**
-	 * Hook called to invoke additional authorization rules.
-	 *
-	 * An authorization hook gets invoked several times: After each
-	 * authentication round, the hook gets invoked with with final = FALSE.
-	 * After authentication is complete and the peer configuration is selected,
-	 * it is invoked again, but with final = TRUE.
-	 *
-	 * @param ike_sa	IKE_SA to authorize
-	 * @param auth		list of auth_cfg_t, done in peers authentication rounds
-	 * @param final		TRUE if this is the final hook invocation
-	 * @param success	set to TRUE to complete IKE_SA, FALSE abort
-	 * @return			TRUE to stay registered, FALSE to unregister
-	 */
-	bool (*authorize)(listener_t *this, ike_sa_t *ike_sa, linked_list_t *auth,
-					  bool final, bool *success);
+enum alert_t {
+	/* a RADIUS server did not respond, no additional arguments */
+	ALERT_RADIUS_NOT_RESPONDING,
 };
 
 /**
@@ -307,6 +215,15 @@ struct bus_t {
 	 */
 	void (*vlog)(bus_t *this, debug_t group, level_t level,
 				 char* format, va_list args);
+	
+	/**
+	 * Raise an alert over the bus.
+	 *
+	 * @param alert		kind of alert
+	 * @param ...		alert specific attributes
+	 */
+	void (*alert)(bus_t *this, alert_t alert, ...);
+	
 	/**
 	 * Send a IKE_SA state change event to the bus.
 	 *
@@ -361,6 +278,39 @@ struct bus_t {
 	 */
 	void (*child_keys)(bus_t *this, child_sa_t *child_sa, diffie_hellman_t *dh,
 					   chunk_t nonce_i, chunk_t nonce_r);
+	
+	/**
+	 * IKE_SA up/down hook.
+	 *
+	 * @param ike_sa	IKE_SA coming up/going down
+	 * @param up		TRUE for an up event, FALSE for a down event
+	 */
+	void (*ike_updown)(bus_t *this, ike_sa_t *ike_sa, bool up);
+	
+	/**
+	 * IKE_SA rekeying hook.
+	 *
+	 * @param old		rekeyed and obsolete IKE_SA
+	 * @param new		new IKE_SA replacing old
+	 */
+	void (*ike_rekey)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
+	
+	/**
+	 * CHILD_SA up/down hook.
+	 *
+	 * @param child_sa	CHILD_SA coming up/going down
+	 * @param up		TRUE for an up event, FALSE for a down event
+	 */
+	void (*child_updown)(bus_t *this, child_sa_t *child_sa, bool up);
+	
+	/**
+	 * CHILD_SA rekeying hook.
+	 *
+	 * @param old		rekeyed and obsolete CHILD_SA
+	 * @param new		new CHILD_SA replacing old
+	 */
+	void (*child_rekey)(bus_t *this, child_sa_t *old, child_sa_t *new);
+	
 	/**
 	 * Destroy the event bus.
 	 */

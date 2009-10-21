@@ -40,11 +40,6 @@
 #include <credentials/keys/private_key.h>
 #include <utils/optionsfrom.h>
 
-#ifdef INTEGRITY_TEST
-#include <fips/fips.h>
-#include <fips_signature.h>
-#endif /* INTEGRITY_TEST */
-
 #define OPENAC_PATH   		IPSEC_CONFDIR "/openac"
 #define OPENAC_SERIAL 		IPSEC_CONFDIR "/openac/serial"
 
@@ -223,15 +218,16 @@ static void openac_dbg(int level, char *fmt, ...)
 	
 	if (level <= debug_level)
 	{
-		va_start(args, fmt);
-
 		if (!stderr_quiet)
 		{
+			va_start(args, fmt);
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
+			va_end(args);
 		}
 
 		/* write in memory buffer first */
+		va_start(args, fmt);
 		vsnprintf(buffer, sizeof(buffer), fmt, args);
 		va_end(args);
 
@@ -287,7 +283,18 @@ int main(int argc, char **argv)
 	openlog("openac", 0, LOG_AUTHPRIV);
 
 	/* initialize library */
-	library_init(STRONGSWAN_CONF);
+	if (!library_init(STRONGSWAN_CONF))
+	{
+		library_deinit();
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "openac", argv[0]))
+	{
+		fprintf(stderr, "integrity check of openac failed\n");
+		library_deinit();
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "openac.load", PLUGINS));
 
@@ -481,20 +488,6 @@ int main(int argc, char **argv)
 	}
 
 	DBG1("starting openac (strongSwan Version %s)", VERSION);
-
-#ifdef INTEGRITY_TEST
-	DBG1("integrity test of libstrongswan code");
-	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
-	{
-		DBG1("  integrity test passed");
-	}
-	else
-	{
-		DBG1("  integrity test failed");
-		status = 3;
-		goto end;
-	}
-#endif /* INTEGRITY_TEST */
 
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)

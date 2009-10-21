@@ -84,7 +84,7 @@ static struct CRYPTO_dynlock_value *create_function(const char *file, int line)
 	struct CRYPTO_dynlock_value *lock;
 	
 	lock = malloc_thing(struct CRYPTO_dynlock_value);
-	lock->mutex = mutex_create(MUTEX_DEFAULT);
+	lock->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	return lock;
 }
 
@@ -140,7 +140,7 @@ static void threading_init()
 	mutex = malloc(sizeof(mutex_t*) * num_locks);
 	for (i = 0; i < num_locks; i++)
 	{
-		mutex[i] = mutex_create(MUTEX_DEFAULT);
+		mutex[i] = mutex_create(MUTEX_TYPE_DEFAULT);
 	}
 }
 
@@ -212,6 +212,8 @@ plugin_t *plugin_create()
 	/* crypter */
 	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
 					(crypter_constructor_t)openssl_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC,
+					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
 					(crypter_constructor_t)openssl_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_RC5,
@@ -237,6 +239,8 @@ plugin_t *plugin_create()
 	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+					(hasher_constructor_t)openssl_hasher_create);
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
 					(hasher_constructor_t)openssl_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
 					(hasher_constructor_t)openssl_hasher_create);

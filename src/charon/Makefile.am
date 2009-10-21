@@ -2,6 +2,7 @@ ipsec_PROGRAMS = charon
 
 charon_SOURCES = \
 bus/bus.c bus/bus.h \
+bus/listeners/listener.h \
 bus/listeners/file_logger.c bus/listeners/file_logger.h \
 bus/listeners/sys_logger.c bus/listeners/sys_logger.h \
 config/backend_manager.c config/backend_manager.h config/backend.h \
@@ -107,7 +108,7 @@ AM_CFLAGS = -rdynamic \
   -DIPSEC_PIDDIR=\"${piddir}\" \
   -DIPSEC_PLUGINDIR=\"${plugindir}\" \
   -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm $(DLLIB)
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm $(DLLIB) $(SOCKLIB)
 
 # compile options
 #################
@@ -126,10 +127,6 @@ if USE_ME
     sa/connect_manager.c sa/connect_manager.h \
     sa/mediation_manager.c sa/mediation_manager.h \
     sa/tasks/ike_me.c sa/tasks/ike_me.h
-endif
-
-if USE_INTEGRITY_TEST
-  AM_CFLAGS += -DINTEGRITY_TEST
 endif
 
 if USE_CAPABILITIES

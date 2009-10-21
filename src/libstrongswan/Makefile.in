@@ -37,31 +37,34 @@ host_triplet = @host@
 @USE_LEAK_DETECTIVE_TRUE@    utils/leak_detective.c utils/leak_detective.h
 
 @USE_LOCK_PROFILER_TRUE@am__append_3 = -DLOCK_PROFILER
-@USE_VSTR_TRUE@am__append_4 = -lvstr
-@USE_AES_TRUE@am__append_5 = plugins/aes
-@USE_DES_TRUE@am__append_6 = plugins/des
-@USE_BLOWFISH_TRUE@am__append_7 = plugins/blowfish
-@USE_MD4_TRUE@am__append_8 = plugins/md4
-@USE_MD5_TRUE@am__append_9 = plugins/md5
-@USE_SHA1_TRUE@am__append_10 = plugins/sha1
-@USE_SHA2_TRUE@am__append_11 = plugins/sha2
-@USE_FIPS_PRF_TRUE@am__append_12 = plugins/fips_prf
-@USE_GMP_TRUE@am__append_13 = plugins/gmp
-@USE_RANDOM_TRUE@am__append_14 = plugins/random
-@USE_HMAC_TRUE@am__append_15 = plugins/hmac
-@USE_XCBC_TRUE@am__append_16 = plugins/xcbc
-@USE_X509_TRUE@am__append_17 = plugins/x509
-@USE_PUBKEY_TRUE@am__append_18 = plugins/pubkey
-@USE_CURL_TRUE@am__append_19 = plugins/curl
-@USE_LDAP_TRUE@am__append_20 = plugins/ldap
-@USE_MYSQL_TRUE@am__append_21 = plugins/mysql
-@USE_SQLITE_TRUE@am__append_22 = plugins/sqlite
-@USE_PADLOCK_TRUE@am__append_23 = plugins/padlock
-@USE_OPENSSL_TRUE@am__append_24 = plugins/openssl
-@USE_GCRYPT_TRUE@am__append_25 = plugins/gcrypt
-@USE_AGENT_TRUE@am__append_26 = plugins/agent
-@USE_TEST_VECTORS_TRUE@am__append_27 = plugins/test_vectors
-@USE_INTEGRITY_TEST_TRUE@am__append_28 = fips
+@USE_INTEGRITY_TEST_TRUE@am__append_4 = -DINTEGRITY_TEST
+@USE_INTEGRITY_TEST_TRUE@am__append_5 = \
+@USE_INTEGRITY_TEST_TRUE@    integrity_checker.c integrity_checker.h
+
+@USE_VSTR_TRUE@am__append_6 = -lvstr
+@USE_AES_TRUE@am__append_7 = plugins/aes
+@USE_DES_TRUE@am__append_8 = plugins/des
+@USE_BLOWFISH_TRUE@am__append_9 = plugins/blowfish
+@USE_MD4_TRUE@am__append_10 = plugins/md4
+@USE_MD5_TRUE@am__append_11 = plugins/md5
+@USE_SHA1_TRUE@am__append_12 = plugins/sha1
+@USE_SHA2_TRUE@am__append_13 = plugins/sha2
+@USE_FIPS_PRF_TRUE@am__append_14 = plugins/fips_prf
+@USE_GMP_TRUE@am__append_15 = plugins/gmp
+@USE_RANDOM_TRUE@am__append_16 = plugins/random
+@USE_HMAC_TRUE@am__append_17 = plugins/hmac
+@USE_XCBC_TRUE@am__append_18 = plugins/xcbc
+@USE_X509_TRUE@am__append_19 = plugins/x509
+@USE_PUBKEY_TRUE@am__append_20 = plugins/pubkey
+@USE_CURL_TRUE@am__append_21 = plugins/curl
+@USE_LDAP_TRUE@am__append_22 = plugins/ldap
+@USE_MYSQL_TRUE@am__append_23 = plugins/mysql
+@USE_SQLITE_TRUE@am__append_24 = plugins/sqlite
+@USE_PADLOCK_TRUE@am__append_25 = plugins/padlock
+@USE_OPENSSL_TRUE@am__append_26 = plugins/openssl
+@USE_GCRYPT_TRUE@am__append_27 = plugins/gcrypt
+@USE_AGENT_TRUE@am__append_28 = plugins/agent
+@USE_TEST_VECTORS_TRUE@am__append_29 = plugins/test_vectors
 subdir = src/libstrongswan
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -81,6 +84,7 @@ libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libstrongswan_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 	chunk.h debug.c debug.h enum.c enum.h settings.h settings.c \
@@ -123,51 +127,20 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 	utils/backtrace.h plugins/plugin_loader.c \
 	plugins/plugin_loader.h plugins/plugin.h \
 	utils/leak_detective.c utils/leak_detective.h \
-	fips/fips_canister_start.c fips/fips.c fips/fips.h \
-	fips/fips_canister_end.c
+	integrity_checker.c integrity_checker.h
 @USE_LEAK_DETECTIVE_TRUE@am__objects_1 = leak_detective.lo
-@USE_INTEGRITY_TEST_FALSE@am_libstrongswan_la_OBJECTS = library.lo \
-@USE_INTEGRITY_TEST_FALSE@	chunk.lo debug.lo enum.lo \
-@USE_INTEGRITY_TEST_FALSE@	settings.lo printf_hook.lo asn1.lo \
-@USE_INTEGRITY_TEST_FALSE@	asn1_parser.lo oid.lo pem.lo \
-@USE_INTEGRITY_TEST_FALSE@	crypter.lo hasher.lo pkcs9.lo \
-@USE_INTEGRITY_TEST_FALSE@	proposal_keywords.lo prf.lo rng.lo \
-@USE_INTEGRITY_TEST_FALSE@	prf_plus.lo signer.lo \
-@USE_INTEGRITY_TEST_FALSE@	crypto_factory.lo crypto_tester.lo \
-@USE_INTEGRITY_TEST_FALSE@	diffie_hellman.lo transform.lo \
-@USE_INTEGRITY_TEST_FALSE@	credential_factory.lo builder.lo \
-@USE_INTEGRITY_TEST_FALSE@	private_key.lo public_key.lo \
-@USE_INTEGRITY_TEST_FALSE@	shared_key.lo certificate.lo x509.lo \
-@USE_INTEGRITY_TEST_FALSE@	crl.lo ocsp_response.lo \
-@USE_INTEGRITY_TEST_FALSE@	database_factory.lo \
-@USE_INTEGRITY_TEST_FALSE@	fetcher_manager.lo pgp.lo utils.lo \
-@USE_INTEGRITY_TEST_FALSE@	host.lo identification.lo \
-@USE_INTEGRITY_TEST_FALSE@	lexparser.lo linked_list.lo \
-@USE_INTEGRITY_TEST_FALSE@	hashtable.lo enumerator.lo \
-@USE_INTEGRITY_TEST_FALSE@	optionsfrom.lo mutex.lo backtrace.lo \
-@USE_INTEGRITY_TEST_FALSE@	plugin_loader.lo $(am__objects_1)
-@USE_INTEGRITY_TEST_TRUE@am_libstrongswan_la_OBJECTS =  \
-@USE_INTEGRITY_TEST_TRUE@	fips_canister_start.lo fips.lo \
-@USE_INTEGRITY_TEST_TRUE@	library.lo chunk.lo debug.lo enum.lo \
-@USE_INTEGRITY_TEST_TRUE@	settings.lo printf_hook.lo asn1.lo \
-@USE_INTEGRITY_TEST_TRUE@	asn1_parser.lo oid.lo pem.lo \
-@USE_INTEGRITY_TEST_TRUE@	crypter.lo hasher.lo pkcs9.lo \
-@USE_INTEGRITY_TEST_TRUE@	proposal_keywords.lo prf.lo rng.lo \
-@USE_INTEGRITY_TEST_TRUE@	prf_plus.lo signer.lo \
-@USE_INTEGRITY_TEST_TRUE@	crypto_factory.lo crypto_tester.lo \
-@USE_INTEGRITY_TEST_TRUE@	diffie_hellman.lo transform.lo \
-@USE_INTEGRITY_TEST_TRUE@	credential_factory.lo builder.lo \
-@USE_INTEGRITY_TEST_TRUE@	private_key.lo public_key.lo \
-@USE_INTEGRITY_TEST_TRUE@	shared_key.lo certificate.lo x509.lo \
-@USE_INTEGRITY_TEST_TRUE@	crl.lo ocsp_response.lo \
-@USE_INTEGRITY_TEST_TRUE@	database_factory.lo \
-@USE_INTEGRITY_TEST_TRUE@	fetcher_manager.lo pgp.lo utils.lo \
-@USE_INTEGRITY_TEST_TRUE@	host.lo identification.lo \
-@USE_INTEGRITY_TEST_TRUE@	lexparser.lo linked_list.lo \
-@USE_INTEGRITY_TEST_TRUE@	hashtable.lo enumerator.lo \
-@USE_INTEGRITY_TEST_TRUE@	optionsfrom.lo mutex.lo backtrace.lo \
-@USE_INTEGRITY_TEST_TRUE@	plugin_loader.lo $(am__objects_1) \
-@USE_INTEGRITY_TEST_TRUE@	fips_canister_end.lo
+@USE_INTEGRITY_TEST_TRUE@am__objects_2 = integrity_checker.lo
+am_libstrongswan_la_OBJECTS = library.lo chunk.lo debug.lo enum.lo \
+	settings.lo printf_hook.lo asn1.lo asn1_parser.lo oid.lo \
+	pem.lo crypter.lo hasher.lo pkcs9.lo proposal_keywords.lo \
+	prf.lo rng.lo prf_plus.lo signer.lo crypto_factory.lo \
+	crypto_tester.lo diffie_hellman.lo transform.lo \
+	credential_factory.lo builder.lo private_key.lo public_key.lo \
+	shared_key.lo certificate.lo x509.lo crl.lo ocsp_response.lo \
+	database_factory.lo fetcher_manager.lo pgp.lo utils.lo host.lo \
+	identification.lo lexparser.lo linked_list.lo hashtable.lo \
+	enumerator.lo optionsfrom.lo mutex.lo backtrace.lo \
+	plugin_loader.lo $(am__objects_1) $(am__objects_2)
 libstrongswan_la_OBJECTS = $(am_libstrongswan_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -199,15 +172,17 @@ DIST_SUBDIRS = . plugins/aes plugins/des plugins/blowfish plugins/md4 \
 	plugins/gmp plugins/random plugins/hmac plugins/xcbc \
 	plugins/x509 plugins/pubkey plugins/curl plugins/ldap \
 	plugins/mysql plugins/sqlite plugins/padlock plugins/openssl \
-	plugins/gcrypt plugins/agent plugins/test_vectors fips
+	plugins/gcrypt plugins/agent plugins/test_vectors
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
+ALLOCA = @ALLOCA@
 AMTAR = @AMTAR@
 AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BTLIB = @BTLIB@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -272,6 +247,7 @@ RUBYINCLUDE = @RUBYINCLUDE@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 VERSION = @VERSION@
 YACC = @YACC@
@@ -312,7 +288,9 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
+ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
@@ -347,154 +325,52 @@ top_srcdir = @top_srcdir@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 lib_LTLIBRARIES = libstrongswan.la
-@USE_INTEGRITY_TEST_FALSE@libstrongswan_la_SOURCES = library.c \
-@USE_INTEGRITY_TEST_FALSE@	library.h chunk.c chunk.h debug.c \
-@USE_INTEGRITY_TEST_FALSE@	debug.h enum.c enum.h settings.h \
-@USE_INTEGRITY_TEST_FALSE@	settings.c printf_hook.c \
-@USE_INTEGRITY_TEST_FALSE@	printf_hook.h asn1/asn1.c \
-@USE_INTEGRITY_TEST_FALSE@	asn1/asn1.h asn1/asn1_parser.c \
-@USE_INTEGRITY_TEST_FALSE@	asn1/asn1_parser.h asn1/oid.c \
-@USE_INTEGRITY_TEST_FALSE@	asn1/oid.h asn1/pem.c asn1/pem.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/crypters/crypter.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/crypters/crypter.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/hashers/hasher.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/hashers/hasher.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/pkcs9.c crypto/pkcs9.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/proposal/proposal_keywords.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/proposal/proposal_keywords.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/prfs/prf.c crypto/prfs/prf.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/rngs/rng.c crypto/rngs/rng.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/prf_plus.h crypto/prf_plus.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/signers/signer.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/signers/signer.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/crypto_factory.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/crypto_factory.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/crypto_tester.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/crypto_tester.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/diffie_hellman.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/diffie_hellman.h \
-@USE_INTEGRITY_TEST_FALSE@	crypto/transform.c \
-@USE_INTEGRITY_TEST_FALSE@	crypto/transform.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/credential_factory.c \
-@USE_INTEGRITY_TEST_FALSE@	credentials/credential_factory.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/builder.c \
-@USE_INTEGRITY_TEST_FALSE@	credentials/builder.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/keys/private_key.c \
-@USE_INTEGRITY_TEST_FALSE@	credentials/keys/private_key.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/keys/public_key.c \
-@USE_INTEGRITY_TEST_FALSE@	credentials/keys/public_key.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/keys/shared_key.c \
-@USE_INTEGRITY_TEST_FALSE@	credentials/keys/shared_key.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/certificate.c \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/certificate.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/x509.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/x509.c \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/ac.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/crl.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/crl.c \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/ocsp_request.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/ocsp_response.h \
-@USE_INTEGRITY_TEST_FALSE@	credentials/certificates/ocsp_response.c \
-@USE_INTEGRITY_TEST_FALSE@	database/database.h \
-@USE_INTEGRITY_TEST_FALSE@	database/database_factory.h \
-@USE_INTEGRITY_TEST_FALSE@	database/database_factory.c \
-@USE_INTEGRITY_TEST_FALSE@	fetcher/fetcher.h \
-@USE_INTEGRITY_TEST_FALSE@	fetcher/fetcher_manager.h \
-@USE_INTEGRITY_TEST_FALSE@	fetcher/fetcher_manager.c pgp/pgp.c \
-@USE_INTEGRITY_TEST_FALSE@	pgp/pgp.h utils.h utils.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/host.c utils/host.h \
-@USE_INTEGRITY_TEST_FALSE@	utils/identification.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/identification.h \
-@USE_INTEGRITY_TEST_FALSE@	utils/iterator.h utils/lexparser.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/lexparser.h \
-@USE_INTEGRITY_TEST_FALSE@	utils/linked_list.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/linked_list.h \
-@USE_INTEGRITY_TEST_FALSE@	utils/hashtable.c utils/hashtable.h \
-@USE_INTEGRITY_TEST_FALSE@	utils/enumerator.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/enumerator.h \
-@USE_INTEGRITY_TEST_FALSE@	utils/optionsfrom.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/optionsfrom.h utils/mutex.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/mutex.h utils/backtrace.c \
-@USE_INTEGRITY_TEST_FALSE@	utils/backtrace.h \
-@USE_INTEGRITY_TEST_FALSE@	plugins/plugin_loader.c \
-@USE_INTEGRITY_TEST_FALSE@	plugins/plugin_loader.h \
-@USE_INTEGRITY_TEST_FALSE@	plugins/plugin.h $(am__append_2)
-@USE_INTEGRITY_TEST_TRUE@libstrongswan_la_SOURCES =  \
-@USE_INTEGRITY_TEST_TRUE@	fips/fips_canister_start.c \
-@USE_INTEGRITY_TEST_TRUE@	fips/fips.c fips/fips.h library.c \
-@USE_INTEGRITY_TEST_TRUE@	library.h chunk.c chunk.h debug.c \
-@USE_INTEGRITY_TEST_TRUE@	debug.h enum.c enum.h settings.h \
-@USE_INTEGRITY_TEST_TRUE@	settings.c printf_hook.c \
-@USE_INTEGRITY_TEST_TRUE@	printf_hook.h asn1/asn1.c asn1/asn1.h \
-@USE_INTEGRITY_TEST_TRUE@	asn1/asn1_parser.c asn1/asn1_parser.h \
-@USE_INTEGRITY_TEST_TRUE@	asn1/oid.c asn1/oid.h asn1/pem.c \
-@USE_INTEGRITY_TEST_TRUE@	asn1/pem.h crypto/crypters/crypter.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/crypters/crypter.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/hashers/hasher.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/hashers/hasher.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/pkcs9.c crypto/pkcs9.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/proposal/proposal_keywords.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/proposal/proposal_keywords.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/prfs/prf.c crypto/prfs/prf.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/rngs/rng.c crypto/rngs/rng.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/prf_plus.h crypto/prf_plus.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/signers/signer.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/signers/signer.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/crypto_factory.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/crypto_factory.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/crypto_tester.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/crypto_tester.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/diffie_hellman.c \
-@USE_INTEGRITY_TEST_TRUE@	crypto/diffie_hellman.h \
-@USE_INTEGRITY_TEST_TRUE@	crypto/transform.c crypto/transform.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/credential_factory.c \
-@USE_INTEGRITY_TEST_TRUE@	credentials/credential_factory.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/builder.c \
-@USE_INTEGRITY_TEST_TRUE@	credentials/builder.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/keys/private_key.c \
-@USE_INTEGRITY_TEST_TRUE@	credentials/keys/private_key.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/keys/public_key.c \
-@USE_INTEGRITY_TEST_TRUE@	credentials/keys/public_key.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/keys/shared_key.c \
-@USE_INTEGRITY_TEST_TRUE@	credentials/keys/shared_key.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/certificate.c \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/certificate.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/x509.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/x509.c \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/ac.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/crl.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/crl.c \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/ocsp_request.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/ocsp_response.h \
-@USE_INTEGRITY_TEST_TRUE@	credentials/certificates/ocsp_response.c \
-@USE_INTEGRITY_TEST_TRUE@	database/database.h \
-@USE_INTEGRITY_TEST_TRUE@	database/database_factory.h \
-@USE_INTEGRITY_TEST_TRUE@	database/database_factory.c \
-@USE_INTEGRITY_TEST_TRUE@	fetcher/fetcher.h \
-@USE_INTEGRITY_TEST_TRUE@	fetcher/fetcher_manager.h \
-@USE_INTEGRITY_TEST_TRUE@	fetcher/fetcher_manager.c pgp/pgp.c \
-@USE_INTEGRITY_TEST_TRUE@	pgp/pgp.h utils.h utils.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/host.c utils/host.h \
-@USE_INTEGRITY_TEST_TRUE@	utils/identification.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/identification.h \
-@USE_INTEGRITY_TEST_TRUE@	utils/iterator.h utils/lexparser.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/lexparser.h utils/linked_list.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/linked_list.h utils/hashtable.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/hashtable.h utils/enumerator.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/enumerator.h \
-@USE_INTEGRITY_TEST_TRUE@	utils/optionsfrom.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/optionsfrom.h utils/mutex.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/mutex.h utils/backtrace.c \
-@USE_INTEGRITY_TEST_TRUE@	utils/backtrace.h \
-@USE_INTEGRITY_TEST_TRUE@	plugins/plugin_loader.c \
-@USE_INTEGRITY_TEST_TRUE@	plugins/plugin_loader.h \
-@USE_INTEGRITY_TEST_TRUE@	plugins/plugin.h $(am__append_2) \
-@USE_INTEGRITY_TEST_TRUE@	fips/fips_canister_end.c
-libstrongswan_la_LIBADD = -lpthread $(DLLIB) $(am__append_4)
+libstrongswan_la_SOURCES = library.c library.h chunk.c chunk.h debug.c \
+	debug.h enum.c enum.h settings.h settings.c printf_hook.c \
+	printf_hook.h asn1/asn1.c asn1/asn1.h asn1/asn1_parser.c \
+	asn1/asn1_parser.h asn1/oid.c asn1/oid.h asn1/pem.c asn1/pem.h \
+	crypto/crypters/crypter.c crypto/crypters/crypter.h \
+	crypto/hashers/hasher.h crypto/hashers/hasher.c crypto/pkcs9.c \
+	crypto/pkcs9.h crypto/proposal/proposal_keywords.c \
+	crypto/proposal/proposal_keywords.h crypto/prfs/prf.c \
+	crypto/prfs/prf.h crypto/rngs/rng.c crypto/rngs/rng.h \
+	crypto/prf_plus.h crypto/prf_plus.c crypto/signers/signer.c \
+	crypto/signers/signer.h crypto/crypto_factory.c \
+	crypto/crypto_factory.h crypto/crypto_tester.c \
+	crypto/crypto_tester.h crypto/diffie_hellman.c \
+	crypto/diffie_hellman.h crypto/transform.c crypto/transform.h \
+	credentials/credential_factory.c \
+	credentials/credential_factory.h credentials/builder.c \
+	credentials/builder.h credentials/keys/private_key.c \
+	credentials/keys/private_key.h credentials/keys/public_key.c \
+	credentials/keys/public_key.h credentials/keys/shared_key.c \
+	credentials/keys/shared_key.h \
+	credentials/certificates/certificate.c \
+	credentials/certificates/certificate.h \
+	credentials/certificates/x509.h \
+	credentials/certificates/x509.c credentials/certificates/ac.h \
+	credentials/certificates/crl.h credentials/certificates/crl.c \
+	credentials/certificates/ocsp_request.h \
+	credentials/certificates/ocsp_response.h \
+	credentials/certificates/ocsp_response.c database/database.h \
+	database/database_factory.h database/database_factory.c \
+	fetcher/fetcher.h fetcher/fetcher_manager.h \
+	fetcher/fetcher_manager.c pgp/pgp.c pgp/pgp.h utils.h utils.c \
+	utils/host.c utils/host.h utils/identification.c \
+	utils/identification.h utils/iterator.h utils/lexparser.c \
+	utils/lexparser.h utils/linked_list.c utils/linked_list.h \
+	utils/hashtable.c utils/hashtable.h utils/enumerator.c \
+	utils/enumerator.h utils/optionsfrom.c utils/optionsfrom.h \
+	utils/mutex.c utils/mutex.h utils/backtrace.c \
+	utils/backtrace.h plugins/plugin_loader.c \
+	plugins/plugin_loader.h plugins/plugin.h $(am__append_2) \
+	$(am__append_5)
+libstrongswan_la_LIBADD = -lpthread $(DLLIB) $(BTLIB) $(SOCKLIB) \
+	$(am__append_6)
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
 	-DIPSEC_PLUGINDIR=\"${plugindir}\" $(am__append_1) \
-	$(am__append_3)
+	$(am__append_3) $(am__append_4)
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
 crypto/proposal/proposal_keywords.txt
@@ -510,14 +386,14 @@ $(srcdir)/crypto/proposal/proposal_keywords.c
 
 # build plugins with their own Makefile
 #######################################
-SUBDIRS = . $(am__append_5) $(am__append_6) $(am__append_7) \
-	$(am__append_8) $(am__append_9) $(am__append_10) \
-	$(am__append_11) $(am__append_12) $(am__append_13) \
-	$(am__append_14) $(am__append_15) $(am__append_16) \
-	$(am__append_17) $(am__append_18) $(am__append_19) \
-	$(am__append_20) $(am__append_21) $(am__append_22) \
-	$(am__append_23) $(am__append_24) $(am__append_25) \
-	$(am__append_26) $(am__append_27) $(am__append_28)
+SUBDIRS = . $(am__append_7) $(am__append_8) $(am__append_9) \
+	$(am__append_10) $(am__append_11) $(am__append_12) \
+	$(am__append_13) $(am__append_14) $(am__append_15) \
+	$(am__append_16) $(am__append_17) $(am__append_18) \
+	$(am__append_19) $(am__append_20) $(am__append_21) \
+	$(am__append_22) $(am__append_23) $(am__append_24) \
+	$(am__append_25) $(am__append_26) $(am__append_27) \
+	$(am__append_28) $(am__append_29)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -605,13 +481,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enum.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enumerator.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fetcher_manager.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips_canister_end.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips_canister_start.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hasher.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hashtable.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/host.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/identification.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/integrity_checker.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/leak_detective.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lexparser.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/library.Plo@am__quote@
@@ -931,27 +805,6 @@ leak_detective.lo: utils/leak_detective.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utils/leak_detective.c' object='leak_detective.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o leak_detective.lo `test -f 'utils/leak_detective.c' || echo '$(srcdir)/'`utils/leak_detective.c
-
-fips_canister_start.lo: fips/fips_canister_start.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fips_canister_start.lo -MD -MP -MF $(DEPDIR)/fips_canister_start.Tpo -c -o fips_canister_start.lo `test -f 'fips/fips_canister_start.c' || echo '$(srcdir)/'`fips/fips_canister_start.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/fips_canister_start.Tpo $(DEPDIR)/fips_canister_start.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fips/fips_canister_start.c' object='fips_canister_start.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fips_canister_start.lo `test -f 'fips/fips_canister_start.c' || echo '$(srcdir)/'`fips/fips_canister_start.c
-
-fips.lo: fips/fips.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fips.lo -MD -MP -MF $(DEPDIR)/fips.Tpo -c -o fips.lo `test -f 'fips/fips.c' || echo '$(srcdir)/'`fips/fips.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/fips.Tpo $(DEPDIR)/fips.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fips/fips.c' object='fips.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fips.lo `test -f 'fips/fips.c' || echo '$(srcdir)/'`fips/fips.c
-
-fips_canister_end.lo: fips/fips_canister_end.c
-@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fips_canister_end.lo -MD -MP -MF $(DEPDIR)/fips_canister_end.Tpo -c -o fips_canister_end.lo `test -f 'fips/fips_canister_end.c' || echo '$(srcdir)/'`fips/fips_canister_end.c
-@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/fips_canister_end.Tpo $(DEPDIR)/fips_canister_end.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fips/fips_canister_end.c' object='fips_canister_end.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fips_canister_end.lo `test -f 'fips/fips_canister_end.c' || echo '$(srcdir)/'`fips/fips_canister_end.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

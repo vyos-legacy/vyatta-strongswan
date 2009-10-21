@@ -20,7 +20,9 @@
 #ifdef HAVE_PRCTL
 #include <sys/prctl.h>
 #endif
+#define _POSIX_PTHREAD_SEMANTICS /* for two param sigwait on OpenSolaris */
 #include <signal.h>
+#undef _POSIX_PTHREAD_SEMANTICS
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -42,10 +44,9 @@
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
 
-#ifdef INTEGRITY_TEST
-#include <fips/fips.h>
-#include <fips/fips_signature.h>
-#endif /* INTEGRITY_TEST */
+#ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
+#define LOG_AUTHPRIV LOG_AUTH
+#endif
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -469,6 +470,13 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 	
 	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
+	if (lib->integrity)
+	{
+		DBG1(DBG_DMN, "integrity tests enabled:");
+		DBG1(DBG_DMN, "lib    'libstrongswan': passed file and segment integrity tests");
+		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
+	}
+
 	/* load secrets, ca certificates and crls */
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();
@@ -487,19 +495,6 @@ static bool initialize(private_daemon_t *this, bool syslog, level_t levels[])
 		lib->settings->get_str(lib->settings, "charon.load", PLUGINS));
 	
 	print_plugins();
-	
-#ifdef INTEGRITY_TEST
-	DBG1(DBG_DMN, "integrity test of libstrongswan code");
-	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
-	{
-		DBG1(DBG_DMN, "  integrity test passed");
-	}
-	else
-	{
-		DBG1(DBG_DMN, "  integrity test failed");
-		return FALSE;
-	}
-#endif /* INTEGRITY_TEST */
 
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	if (this->public.ike_sa_manager == NULL)
@@ -686,7 +681,20 @@ int main(int argc, char *argv[])
 	dbg = dbg_stderr;
 	
 	/* initialize library */
-	library_init(STRONGSWAN_CONF);
+	if (!library_init(STRONGSWAN_CONF))
+	{
+		library_deinit();
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
+	
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "charon", argv[0]))
+	{
+		dbg_stderr(1, "integrity check of charon failed");
+		library_deinit();
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
+	
 	lib->printf_hook->add_handler(lib->printf_hook, 'R',
 								  traffic_selector_printf_hook,
 								  PRINTF_HOOK_ARGTYPE_POINTER,
@@ -757,7 +765,7 @@ int main(int argc, char *argv[])
 	{
 		DBG1(DBG_DMN, "initialization failed - aborting charon");
 		destroy(private_charon);
-		exit(-1);
+		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	
 	if (check_pidfile())

@@ -74,12 +74,14 @@ ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
+ALLOCA = @ALLOCA@
 AMTAR = @AMTAR@
 AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BTLIB = @BTLIB@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -144,6 +146,7 @@ RUBYINCLUDE = @RUBYINCLUDE@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 VERSION = @VERSION@
 YACC = @YACC@
@@ -184,7 +187,9 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
+ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
@@ -224,7 +229,7 @@ plugin_LTLIBRARIES = libstrongswan-random.la
 libstrongswan_random_la_SOURCES = random_plugin.h random_plugin.c \
   random_rng.c random_rng.h
 
-libstrongswan_random_la_LDFLAGS = -module
+libstrongswan_random_la_LDFLAGS = -module -avoid-version
 all: all-am
 
 .SUFFIXES:

@@ -17,6 +17,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#ifdef __FreeBSD__
+#include <limits.h> /* for LONG_MAX */
+#endif
+
 #ifdef HAVE_NET_PFKEYV2_H
 #include <net/pfkeyv2.h>
 #else
@@ -37,11 +41,11 @@
 #endif
 
 #ifdef HAVE_NATT
-#ifdef HAVE_NETINET_UDP_H
-#include <netinet/udp.h>
-#else
+#ifdef HAVE_LINUX_UDP_H
 #include <linux/udp.h>
-#endif /*HAVE_NETINET_UDP_H*/
+#else
+#include <netinet/udp.h>
+#endif /*HAVE_LINUX_UDP_H*/
 #endif /*HAVE_NATT*/
 
 #include <unistd.h>
@@ -89,7 +93,7 @@
 #define IP_IPSEC_POLICY 16
 #endif
 
-/* missing on uclibc */
+/** missing on uclibc */
 #ifndef IPV6_IPSEC_POLICY
 #define IPV6_IPSEC_POLICY 34
 #endif
@@ -97,6 +101,17 @@
 /** default priority of installed policies */
 #define PRIO_LOW 3000
 #define PRIO_HIGH 2000
+
+#ifdef __APPLE__
+/** from xnu/bsd/net/pfkeyv2.h */
+#define SADB_X_EXT_NATT 0x002
+	struct sadb_sa_2 {
+		struct sadb_sa	sa;
+		u_int16_t		sadb_sa_natt_port;
+		u_int16_t		sadb_reserved0;
+		u_int32_t		sadb_reserved1;
+	};
+#endif
 
 /** buffer size for PF_KEY messages */
 #define PFKEY_BUFFER_SIZE 4096
@@ -467,7 +482,7 @@ static u_int8_t dir2kernel(policy_dir_t dir)
 			return IPSEC_DIR_FWD;
 #endif
 		default:
-			return dir;
+			return IPSEC_DIR_INVALID;
 	}
 }
 
@@ -693,7 +708,7 @@ static status_t parse_pfkey_message(struct sadb_msg *msg, pfkey_msg_t *out)
 	
 	while (len >= PFKEY_LEN(sizeof(struct sadb_ext)))
 	{
-		DBG2(DBG_KNL, "  %N", sadb_ext_type_names, ext->sadb_ext_type);
+		DBG3(DBG_KNL, "  %N", sadb_ext_type_names, ext->sadb_ext_type);
 		if (ext->sadb_ext_len < PFKEY_LEN(sizeof(struct sadb_ext)) ||
 			ext->sadb_ext_len > len)
 		{
@@ -740,6 +755,8 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 	
 	this->mutex_pfkey->lock(this->mutex_pfkey);
 
+	/* FIXME: our usage of sequence numbers is probably wrong. check RFC 2367,
+	 * in particular the behavior in response to an SADB_ACQUIRE. */
 	in->sadb_msg_seq = ++this->seq;
 	in->sadb_msg_pid = getpid();
 
@@ -801,14 +818,23 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 		}
 		if (msg->sadb_msg_seq != this->seq)
 		{
-			DBG1(DBG_KNL, "received PF_KEY message with invalid sequence number, "
-					"was %d expected %d", msg->sadb_msg_seq, this->seq);
-			if (msg->sadb_msg_seq < this->seq)
+			DBG1(DBG_KNL, "received PF_KEY message with unexpected sequence "
+				 "number, was %d expected %d", msg->sadb_msg_seq, this->seq);
+			if (msg->sadb_msg_seq == 0)
+			{
+				/* FreeBSD and Mac OS X do this for the response to
+				 * SADB_X_SPDGET (but not for the response to SADB_GET).
+				 * FreeBSD: 'key_spdget' in /usr/src/sys/netipsec/key.c. */
+			}
+			else if (msg->sadb_msg_seq < this->seq)
 			{
 				continue;
 			}
-			this->mutex_pfkey->unlock(this->mutex_pfkey);
-			return FAILED;
+			else
+			{
+				this->mutex_pfkey->unlock(this->mutex_pfkey);
+				return FAILED;
+			}
 		}
 		if (msg->sadb_msg_type != in->sadb_msg_type)
 		{
@@ -1223,10 +1249,25 @@ static status_t add_sa(private_kernel_pfkey_ipsec_t *this,
 	msg->sadb_msg_type = inbound ? SADB_UPDATE : SADB_ADD;
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
-	
-	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
+
+#ifdef __APPLE__
+	if (encap)
+	{
+		struct sadb_sa_2 *sa_2;
+		sa_2 = (struct sadb_sa_2*)PFKEY_EXT_ADD_NEXT(msg);
+		sa_2->sadb_sa_natt_port = dst->get_port(dst);
+		sa = &sa_2->sa;
+		sa->sadb_sa_flags |= SADB_X_EXT_NATT;
+		len = sizeof(struct sadb_sa_2);
+	}
+	else
+#endif
+	{
+		sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
+		len = sizeof(struct sadb_sa);
+	}
 	sa->sadb_sa_exttype = SADB_EXT_SA;
-	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
+	sa->sadb_sa_len = PFKEY_LEN(len);
 	sa->sadb_sa_spi = spi;
 	sa->sadb_sa_replay = (protocol == IPPROTO_COMP) ? 0 : 32;
 	sa->sadb_sa_auth = lookup_algorithm(integrity_algs, int_alg);
@@ -1403,7 +1444,21 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	msg->sadb_msg_satype = proto_ike2satype(protocol);
 	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
 	
+#ifdef __APPLE__
+	{
+		struct sadb_sa_2 *sa_2;
+		sa_2 = (struct sadb_sa_2*)PFKEY_EXT_ADD_NEXT(msg);
+		sa_2->sa.sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa_2));
+		memcpy(&sa_2->sa, response.sa, sizeof(struct sadb_sa));
+		if (encap)
+		{
+			sa_2->sadb_sa_natt_port = new_dst->get_port(new_dst);
+			sa_2->sa.sadb_sa_flags |= SADB_X_EXT_NATT;
+		}
+	}
+#else
 	PFKEY_EXT_COPY(msg, response.sa);
+#endif
 	PFKEY_EXT_COPY(msg, response.x_sa2);
 	
 	PFKEY_EXT_COPY(msg, response.src);
@@ -1421,7 +1476,7 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	{
 		PFKEY_EXT_COPY(msg, response.key_auth);
 	}
-
+	
 #ifdef HAVE_NATT
 	if (new_encap)
 	{
@@ -1445,6 +1500,65 @@ static status_t update_sa(private_kernel_pfkey_ipsec_t *this,
 	}
 	free(out);
 	
+	return SUCCESS;
+}
+
+/**
+ * Implementation of kernel_interface_t.query_sa.
+ */
+static status_t query_sa(private_kernel_pfkey_ipsec_t *this, host_t *src,
+						 host_t *dst, u_int32_t spi, protocol_id_t protocol,
+						 u_int64_t *bytes)
+{
+	unsigned char request[PFKEY_BUFFER_SIZE];
+	struct sadb_msg *msg, *out;
+	struct sadb_sa *sa;
+	pfkey_msg_t response;
+	size_t len;
+	
+	memset(&request, 0, sizeof(request));
+	
+	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(spi));
+	
+	msg = (struct sadb_msg*)request;
+	msg->sadb_msg_version = PF_KEY_V2;
+	msg->sadb_msg_type = SADB_GET;
+	msg->sadb_msg_satype = proto_ike2satype(protocol);
+	msg->sadb_msg_len = PFKEY_LEN(sizeof(struct sadb_msg));
+	
+	sa = (struct sadb_sa*)PFKEY_EXT_ADD_NEXT(msg);
+	sa->sadb_sa_exttype = SADB_EXT_SA;
+	sa->sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa));
+	sa->sadb_sa_spi = spi;
+	PFKEY_EXT_ADD(msg, sa);
+	
+	/* the Linux Kernel doesn't care for the src address, but other systems do
+	 * (e.g. FreeBSD)
+	 */
+	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
+	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
+	
+	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
+		return FAILED;
+	}
+	else if (out->sadb_msg_errno)
+	{
+		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x: %s (%d)",
+				ntohl(spi), strerror(out->sadb_msg_errno), out->sadb_msg_errno);
+		free(out);
+		return FAILED;
+	}
+	else if (parse_pfkey_message(out, &response) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
+		free(out);
+		return FAILED;
+	}
+	*bytes = response.lft_current->sadb_lifetime_bytes;
+
+	free(out);
 	return SUCCESS;
 }
 
@@ -1476,7 +1590,9 @@ static status_t del_sa(private_kernel_pfkey_ipsec_t *this, host_t *src,
 	sa->sadb_sa_spi = spi;
 	PFKEY_EXT_ADD(msg, sa);
 	
-	/* the Linux Kernel doesn't care for the src address, but other systems do (e.g. FreeBSD) */
+	/* the Linux Kernel doesn't care for the src address, but other systems do
+	 * (e.g. FreeBSD)
+	 */
 	add_addr_ext(msg, src, SADB_EXT_ADDRESS_SRC, 0, 0);
 	add_addr_ext(msg, dst, SADB_EXT_ADDRESS_DST, 0, 0);
 	
@@ -1517,6 +1633,12 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 	policy_entry_t *policy, *found = NULL;
 	pfkey_msg_t response;
 	size_t len;
+	
+	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
+	{
+		/* FWD policies are not supported on all platforms */
+		return SUCCESS;
+	}
 	
 	/* create a policy */
 	policy = create_policy_entry(src_ts, dst_ts, direction, reqid);
@@ -1593,6 +1715,18 @@ static status_t add_policy(private_kernel_pfkey_ipsec_t *this,
 				 policy->src.mask);
 	add_addr_ext(msg, policy->dst.net, SADB_EXT_ADDRESS_DST, policy->dst.proto,
 				 policy->dst.mask);
+	
+#ifdef __FreeBSD__
+	{	/* on FreeBSD a lifetime has to be defined to be able to later query
+		 * the current use time. */
+		struct sadb_lifetime *lft;
+		lft = (struct sadb_lifetime*)PFKEY_EXT_ADD_NEXT(msg);
+		lft->sadb_lifetime_exttype = SADB_EXT_LIFETIME_HARD;
+		lft->sadb_lifetime_len = PFKEY_LEN(sizeof(struct sadb_lifetime));
+		lft->sadb_lifetime_addtime = LONG_MAX;
+		PFKEY_EXT_ADD(msg, lft);
+	}
+#endif
 	
 	this->mutex->unlock(this->mutex);
 	
@@ -1700,6 +1834,12 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 	pfkey_msg_t response;
 	size_t len;
 	
+	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
+	{
+		/* FWD policies are not supported on all platforms */
+		return NOT_FOUND;
+	}
+	
 	DBG2(DBG_KNL, "querying policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
 
@@ -1764,6 +1904,13 @@ static status_t query_policy(private_kernel_pfkey_ipsec_t *this,
 		free(out);
 		return FAILED;
 	}
+	else if (response.lft_current == NULL)
+	{
+		DBG1(DBG_KNL, "unable to query policy %R === %R %N: kernel reports no "
+			 "use time", src_ts, dst_ts, policy_dir_names, direction);
+		free(out);
+		return FAILED;
+	}
 	
 	*use_time = response.lft_current->sadb_lifetime_usetime;
 	
@@ -1786,6 +1933,12 @@ static status_t del_policy(private_kernel_pfkey_ipsec_t *this,
 	policy_entry_t *policy, *found = NULL;
 	route_entry_t *route;
 	size_t len;
+	
+	if (dir2kernel(direction) == IPSEC_DIR_INVALID)
+	{
+		/* FWD policies are not supported on all platforms */
+		return SUCCESS;
+	}
 	
 	DBG2(DBG_KNL, "deleting policy %R === %R %N", src_ts, dst_ts,
 				   policy_dir_names, direction);
@@ -1995,6 +2148,7 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
 	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
+	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
 	this->public.interface.add_policy = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t,protocol_id_t,u_int32_t,ipsec_mode_t,u_int16_t,u_int16_t,bool))add_policy;
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
@@ -2004,8 +2158,8 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 
 	/* private members */
 	this->policies = linked_list_create();
-	this->mutex = mutex_create(MUTEX_DEFAULT);
-	this->mutex_pfkey = mutex_create(MUTEX_DEFAULT);
+	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->mutex_pfkey = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->install_routes = lib->settings->get_bool(lib->settings,
 												"charon.install_routes", TRUE);
 	this->seq = 0;

@@ -18,6 +18,10 @@
 
 /* for struct in6_pktinfo */
 #define _GNU_SOURCE
+#ifdef __sun
+#define _XPG4_2
+#define __EXTENSIONS__
+#endif
 
 #include <pthread.h>
 #include <sys/types.h>
@@ -34,6 +38,9 @@
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
 #include <net/if.h>
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#endif
 
 #include "socket.h"
 
@@ -431,7 +438,6 @@ status_t sender(private_socket_t *this, packet_t *packet)
 static int open_socket(private_socket_t *this, int family, u_int16_t port)
 {
 	int on = TRUE;
-	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	u_int sol, pktinfo = 0;
@@ -502,13 +508,18 @@ static int open_socket(private_socket_t *this, int family, u_int16_t port)
 			return 0;
 		}
 	}
-	
-	/* enable UDP decapsulation globally, only for one socket needed */
-	if (family == AF_INET && port == IKEV2_NATT_PORT &&
-		setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+
+#ifndef __APPLE__
 	{
-		DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
+		/* enable UDP decapsulation globally, only for one socket needed */
+		int type = UDP_ENCAP_ESPINUDP;
+		if (family == AF_INET && port == IKEV2_NATT_PORT &&
+			setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+		{
+			DBG1(DBG_NET, "unable to set UDP_ENCAP: %s", strerror(errno));
+		}
 	}
+#endif
 	return skt;
 }
 
@@ -611,6 +622,18 @@ socket_t *socket_create()
 	this->ipv6 = 0;
 	this->ipv4_natt = 0;
 	this->ipv6_natt = 0;
+
+#ifdef __APPLE__
+	{
+		int natt_port = IKEV2_NATT_PORT;
+		if (sysctlbyname("net.inet.ipsec.esp_port", NULL, NULL, &natt_port,
+						 sizeof(natt_port)) != 0)
+		{
+			DBG1(DBG_NET, "could not set net.inet.ipsec.esp_port to %d: %s",
+				 natt_port, strerror(errno));
+		}
+	}
+#endif
 	
 	this->ipv4 = open_socket(this, AF_INET, IKEV2_UDP_PORT);
 	if (this->ipv4 == 0)

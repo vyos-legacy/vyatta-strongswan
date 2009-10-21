@@ -260,25 +260,32 @@ size_t asn1_length(chunk_t *blob)
 	u_char n;
 	size_t len;
 	
-	/* advance from tag field on to length field */
-	blob->ptr++;
-	blob->len--;
+	if (blob->len < 2)
+	{
+		DBG2("insufficient number of octets to parse ASN.1 length");
+		return ASN1_INVALID_LENGTH;
+	}
 	
-	/* read first octet of length field */
-	n = *blob->ptr++;
-	blob->len--;
+	/* read length field, skip tag and length */
+	n = blob->ptr[1];
+	*blob = chunk_skip(*blob, 2);
 	
 	if ((n & 0x80) == 0) 
-	{/* single length octet */
+	{	/* single length octet */
+		if (n > blob->len)
+		{
+			DBG2("length is larger than remaining blob size");
+			return ASN1_INVALID_LENGTH;
+		}
 		return n;
 	}
 	
 	/* composite length, determine number of length octets */
 	n &= 0x7f;
 	
-	if (n > blob->len)
+	if (n == 0 || n > blob->len)
 	{
-		DBG2("number of length octets is larger than ASN.1 object");
+		DBG2("number of length octets invalid");
 		return ASN1_INVALID_LENGTH;
 	}
 	
@@ -302,6 +309,53 @@ size_t asn1_length(chunk_t *blob)
 		return ASN1_INVALID_LENGTH;
 	}
 	return len;
+}
+
+/*
+ * See header.
+ */
+int asn1_unwrap(chunk_t *blob, chunk_t *inner)
+{
+	chunk_t res;
+	u_char len;
+	int type;
+	
+	if (blob->len < 2)
+	{
+		return ASN1_INVALID;
+	}
+	type = blob->ptr[0];
+	len = blob->ptr[1];
+	*blob = chunk_skip(*blob, 2);
+	
+	if ((len & 0x80) == 0)
+	{	/* single length octet */
+		res.len = len;
+	}
+	else
+	{	/* composite length, determine number of length octets */
+		len &= 0x7f;
+		if (len == 0 || len > sizeof(res.len))
+		{
+			return ASN1_INVALID;
+		}
+		res.len = 0;
+		while (len-- > 0)
+		{
+			res.len = 256 * res.len + blob->ptr[0];
+			*blob = chunk_skip(*blob, 1);
+		}
+	}
+	if (res.len > blob->len)
+	{
+		return ASN1_INVALID;
+	}
+	res.ptr = blob->ptr;
+	*blob = chunk_skip(*blob, res.len);
+	/* updating inner not before we are finished allows a caller to pass
+	 * blob = inner */
+	*inner = res;
+	return type;
 }
 
 #define TIME_MAX	0x7fffffff

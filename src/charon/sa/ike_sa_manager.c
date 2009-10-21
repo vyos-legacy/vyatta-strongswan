@@ -133,7 +133,7 @@ static entry_t *entry_create()
 	entry_t *this = malloc_thing(entry_t);
 	
 	this->waiting_threads = 0;
-	this->condvar = condvar_create(CONDVAR_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 	
 	/* we set checkout flag when we really give it out */
 	this->checked_out = FALSE;
@@ -1050,7 +1050,8 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 	enumerator_t *enumerator;
 	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
-	peer_cfg_t *current_cfg;
+	peer_cfg_t *current_peer;
+	ike_cfg_t *current_ike;
 	u_int segment;
 	
 	if (!this->reuse_ikesa)
@@ -1072,14 +1073,18 @@ static ike_sa_t* checkout_by_config(private_ike_sa_manager_t *this,
 			continue;
 		}
 		
-		current_cfg = entry->ike_sa->get_peer_cfg(entry->ike_sa);
-		if (current_cfg && current_cfg->equals(current_cfg, peer_cfg))
+		current_peer = entry->ike_sa->get_peer_cfg(entry->ike_sa);
+		if (current_peer && current_peer->equals(current_peer, peer_cfg))
 		{
-			DBG2(DBG_MGR, "found an existing IKE_SA with a '%s' config",
-				 current_cfg->get_name(current_cfg));
-			entry->checked_out = TRUE;
-			ike_sa = entry->ike_sa;
-			break;
+			current_ike = current_peer->get_ike_cfg(current_peer);
+			if (current_ike->equals(current_ike, peer_cfg->get_ike_cfg(peer_cfg)))
+			{
+				DBG2(DBG_MGR, "found an existing IKE_SA with a '%s' config",
+					 current_peer->get_name(current_peer));
+				entry->checked_out = TRUE;
+				ike_sa = entry->ike_sa;
+				break;
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -1554,6 +1559,17 @@ static void flush(private_ike_sa_manager_t *this)
 	while (enumerator->enumerate(enumerator, &entry, &segment))
 	{
 		charon->bus->set_sa(charon->bus, entry->ike_sa);
+		/* as the delete never gets processed, fire down events */
+		switch (entry->ike_sa->get_state(entry->ike_sa))
+		{
+			case IKE_ESTABLISHED:
+			case IKE_REKEYING:
+			case IKE_DELETING:
+				charon->bus->ike_updown(charon->bus, entry->ike_sa, FALSE);
+				break;
+			default:
+				break;
+		}
 		entry->ike_sa->delete(entry->ike_sa);
 	}
 	enumerator->destroy(enumerator);
@@ -1695,7 +1711,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->segments = (segment_t*)calloc(this->segment_count, sizeof(segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
-		this->segments[i].mutex = mutex_create(MUTEX_RECURSIVE);
+		this->segments[i].mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 		this->segments[i].count = 0;
 	}
 	
@@ -1704,7 +1720,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->half_open_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
-		this->half_open_segments[i].lock = rwlock_create(RWLOCK_DEFAULT);
+		this->half_open_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		this->half_open_segments[i].count = 0;
 	}
 	
@@ -1713,7 +1729,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->connected_peers_segments = calloc(this->segment_count, sizeof(shareable_segment_t));
 	for (i = 0; i < this->segment_count; ++i)
 	{
-		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_DEFAULT);
+		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		this->connected_peers_segments[i].count = 0;
 	}
 	

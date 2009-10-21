@@ -43,11 +43,6 @@
 #include <utils/enumerator.h>
 #include <utils/optionsfrom.h>
 
-#ifdef INTEGRITY_TEST
-#include <fips/fips.h>
-#include <fips/fips_signature.h>
-#endif /* INTEGRITY_TEST */
-
 #include <pfkeyv2.h>
 #include <pfkey.h>
 
@@ -265,7 +260,18 @@ int main(int argc, char **argv)
 #endif /* CAPABILITIES */
 
 	/* initialize library and optionsfrom */
-	library_init(STRONGSWAN_CONF);
+	if (!library_init(STRONGSWAN_CONF))
+	{
+		library_deinit();
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "pluto", argv[0]))
+	{
+		fprintf(stderr, "integrity check of pluto failed\n");
+		library_deinit();
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
 	options = options_create();
 
 	/* handle arguments */
@@ -637,31 +643,28 @@ int main(int argc, char **argv)
 	plog("Starting IKEv1 pluto daemon (strongSwan "VERSION")%s",
 		 compile_time_interop_options);
 
+	if (lib->integrity)
+	{
+		plog("integrity tests enabled:");
+		plog("lib    'libstrongswan': passed file and segment integrity tests");
+		plog("daemon 'pluto': passed file integrity test");
+	}
+
 	/* load plugins, further infrastructure may need it */
 	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
 		lib->settings->get_str(lib->settings, "pluto.load", PLUGINS));
 	print_plugins();
 
-#ifdef INTEGRITY_TEST
-	DBG1("integrity test of libstrongswan code");
-	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
+	if (!init_secret() || !init_crypto())
 	{
-		DBG1("  integrity test passed");
+		plog("initialization failed - aborting pluto");
+		exit_pluto(SS_RC_INITIALIZATION_FAILED);
 	}
-	else
-	{
-		DBG1("  integrity test failed");
-		abort();
-	}
-#endif /* INTEGRITY_TEST */
-
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
 	init_virtual_ip(virtual_private);
 	scx_init(pkcs11_module_path, pkcs11_init_args);
 	xauth_init();
-	init_secret();
 	init_states();
-	init_crypto();
 	init_demux();
 	init_kernel();
 	init_adns();
