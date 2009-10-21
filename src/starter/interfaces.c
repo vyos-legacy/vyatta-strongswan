@@ -14,6 +14,7 @@
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
 #ifdef HAVE_SYS_SOCKIO_H
 #include <sys/sockio.h>
 #endif
@@ -32,6 +33,8 @@
 #include "interfaces.h"
 #include "exec.h"
 #include "files.h"
+
+const char* IP_ROUTE = "ip route show table default 0.0.0.0/0";
 
 /*
  * discover the default route via /proc/net/route
@@ -101,6 +104,83 @@ get_defaultroute(defaultroute_t *defaultroute)
 		}
 	}
 	fclose(fd);
+	
+	/* If there is no default route in the "main" table, also look at the "default" one. */
+	if (!defaultroute->defined)
+	{
+		plog("no default route in table 'main', checking table 'default' instead");
+		
+		pid_t pid;
+		int rv;
+		int commpipe[2];		/* This holds the fd for the input & output of the pipe */
+
+		/* Setup communication pipeline first */
+		if (pipe(commpipe))
+		{
+			plog("unable to open pipe to execute '%s' command", IP_ROUTE);
+		}
+		else 
+		{
+			/* Attempt to fork and check for errors */
+			if( (pid=fork()) == -1)
+			{
+				plog("unable to fork process, this should not happen");
+			}
+			else if (pid)
+			{
+				close(commpipe[1]);		/* Close unused side of pipe (out side from this process) */
+				setvbuf(stdout,(char*)NULL,_IONBF,0);	/* Set non-buffered output on stdout */
+				wait(&rv);				/* Wait for child process to end */
+				if (rv != 0)
+					plog("'%s' command exited with code %d", IP_ROUTE, rv);
+				else 
+				{
+					/* parse the output - it should only be one line */
+					while (fgets(line, sizeof(line), commpipe[0]) != 0)
+					{
+						char destination[19];
+						char buf1[4], buf2[4];
+						char gateway[16];
+						char iface[11];
+
+						/* parsing a single line of the output */
+						items = sscanf(line, "%s %s %s %s %s",
+							destination, buf1, gateway, buf2, iface);
+						if (items < 5)
+						{
+							plog("parsing error while scanning 'ip route' output");
+							continue;
+						}
+						
+						if (streq(destination, "default") 
+						{
+							if (defaultroute->defined)
+							{
+								plog("multiple default routes in table 'default' - cannot cope with %%defaultroute!!!");
+								defaultroute->defined = FALSE;
+								close(commpipe[0]);
+								return;
+						}
+						
+						ttoaddr(gateway, strlen(gateway), AF_INET, &defaultroute->nexthop);
+						strncpy(defaultroute->iface, iface, IFNAMSIZ);
+						defaultroute->defined = TRUE;
+					}
+				}
+				close(commpipe[0]);
+			}
+			else
+			{
+				/* A zero PID indicates that this is the child process */
+				dup2(commpipe[0],0);	/* Replace stdin with the in side of the pipe */
+				close(commpipe[1]);		/* Close unused side of pipe (out side) */
+				/* Replace the child fork with a new process */
+				if(execl("ip", IP_ROUTE, NULL) == -1){
+					plog("unable to execute '%s' command", IP_ROUTE);
+				}
+			}
+		}
+	}
 
 	if (!defaultroute->defined)
 	{
