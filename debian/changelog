@@ -11,8 +11,11 @@ strongswan (4.3.4-1) unstable; urgency=low
     required when working with older ipsec.conf files.
   * charon now supports "include" directives in ipsec.secrets for
     compatibility with how the maintainer script includes RSA private keys.
+  * Patched starter to also look at routing table "default" when table
+    "main" doesn't have a default entry. This makes dealing with
+    "%defaulroute" in ipsec.conf more flexible.
 
- -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Wed, 21 Oct 2009 11:14:56 +0000
+ -- Rene Mayrhofer <rmayr@debian.org>  Wed, 21 Oct 2009 11:14:56 +0000
 
 strongswan (4.3.2-1) unstable; urgency=HIGH
 
