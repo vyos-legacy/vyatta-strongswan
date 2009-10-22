@@ -14,6 +14,10 @@ strongswan (4.3.4-1) unstable; urgency=low
   * Patched starter to also look at routing table "default" when table
     "main" doesn't have a default entry. This makes dealing with
     "%defaulroute" in ipsec.conf more flexible.
+    Update: It seems Astaro was quicker then me sending a patch with
+    exactly that aim to upstream. Now applied this one, which will be
+    part of future upstream releases and uses netlink to read routing
+    tables.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Wed, 21 Oct 2009 11:14:56 +0000
 
