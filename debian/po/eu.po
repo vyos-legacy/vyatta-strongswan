@@ -1,0 +1,467 @@
+# translation of eu.po to Euskara
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+#
+# Piarres Beobide <pi@beobide.net>, 2009.
+msgid ""
+msgstr ""
+"Project-Id-Version: eu\n"
+"Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
+"POT-Creation-Date: 2009-05-25 14:44+0100\n"
+"PO-Revision-Date: 2009-05-21 11:16+0200\n"
+"Last-Translator: Piarres Beobide <pi@beobide.net>\n"
+"Language-Team: Euskara <debian-l10n-basque@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: eu\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: KBabel 1.11.4\n"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "earliest"
+msgstr "abioan"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "after NFS"
+msgstr "NFS ondoren"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "after PCMCIA"
+msgstr "PCMCIA ondoren"
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid "When to start strongSwan:"
+msgstr "StrongSwan abiaraztean:"
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid ""
+"StrongSwan starts during system startup so that it can protect filesystems "
+"that are automatically mounted."
+msgstr ""
+"StrongSwan sistema abioan abiarazten da horrela automatikoki muntatzen diren "
+"fitxategi-sistemak babesteko."
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid ""
+" * earliest: if /usr is not mounted through NFS and you don't use a\n"
+"   PCMCIA network card, it is best to start strongSwan as soon as\n"
+"   possible, so that NFS mounts can be secured by IPSec;\n"
+" * after NFS: recommended when /usr is mounted through NFS and no\n"
+"   PCMCIA network card is used;\n"
+" * after PCMCIA: recommended if the IPSec connection uses a PCMCIA\n"
+"   network card or if it needs keys to be fetched from a locally running "
+"DNS\n"
+"   server with DNSSec support."
+msgstr ""
+" * abioan: /usr ez badago NFS bidez muntaturik eta PCMCIA sare txartelik\n"
+"   erabiltzen ez baduzu, hobe da strongSwan ahalik eta azkarren\n"
+"   abiaraztea, horrela NFS muntatzeak IPSec bidez babestu daitezke;\n"
+" * NFS ondoren: /usr NFS bidez muntaturik dagoenean eta PCMCIA\n"
+"   sare txartelik erabiltzen ez bada gomendagarria;\n"
+" * PCMCIA ondoren: IPSec konexioak PCMCIA sare txartela bat erabiltzean\n"
+"   edo gakoak DNSSec onartzen duen DNS zerbitzari lkokaletik eskuratu behar "
+"direnean\n"
+"   gomendagarria."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid "Restart strongSwan now?"
+msgstr "StrongSwan orain berrabiarazi?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid ""
+"Restarting strongSwan is recommended, because if there is a security fix, it "
+"will not be applied until the daemon restarts. However, this might close "
+"existing connections and then bring them back up."
+msgstr ""
+"StrongSwan berrabiaraztea gomendagarria da segurtasun konpontze bat badago "
+"ez bait da ezarriko deabrua berrabiarazi artean. Hala ere, honek martxan "
+"dauden konexioak itxi eta gero berriz abiaraziko ditu."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+#, fuzzy
+#| msgid ""
+#| "If you don't restart strongSwan now, you should do so manually at the "
+#| "first  opportunity."
+msgid ""
+"If you don't restart strongSwan now, you should do so manually at the first "
+"opportunity."
+msgstr ""
+"Ez baduzu strongSwan orain berrabiarazten, eskuz egin beharko zenuke ahal "
+"bezain laster."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:4001
+msgid "Start strongSwan's IKEv1 daemon?"
+msgstr "StrongSwan-ren IKEv1 deabrua abiarazi?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:4001
+msgid ""
+"The pluto daemon must be running to support version 1 of the Internet Key "
+"Exchange protocol."
+msgstr ""
+"Pluto deabrua martxan egon behar da Internet gako trukatze (IKE) "
+"protokoloaren lehen bertsioa onartzeko."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:5001
+msgid "Start strongSwan's IKEv2 daemon?"
+msgstr "StrongSwan-ren IKEv2 deabrua abiarazi?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:5001
+msgid ""
+"The charon daemon must be running to support version 2 of the Internet Key "
+"Exchange protocol."
+msgstr ""
+"Charon deabrua martxan egon behar da Internet gako trukatze (IKE) "
+"protokoloaren lehen bertsioa onartzeko."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid "Create an RSA public/private keypair for this host?"
+msgstr "Sortu RSA publiko/pribatu gako pare bat ostalari honentzako?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid ""
+"StrongSwan can use a Pre-Shared Key (PSK) or an RSA keypair to authenticate "
+"IPSec connections to other hosts. RSA authentication is generally considered "
+"more secure and is easier to administer. You can use PSK and RSA "
+"authentication simultaneously."
+msgstr ""
+"StrongSwan-ek Pre-Shared Key (PSK) edo RSA gako-parea erabil dezake beste "
+"ostalariekiko IPSec konexioak autentifikatzeko. RSA autentifikazioa "
+"arruntean seguruago da eta errazago kudeatzen da. PSK eta RSA "
+"autentifikazioak batera erabili ditzakezu."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid ""
+"If you do not want to create a new public/private keypair, you can choose to "
+"use an existing one in the next step."
+msgstr ""
+"Ez baduzu gako-pare publiko/pribatu berririk sortu nahi. dagoeneko sorturik "
+"dagoen bat hautatu dezakezu hurrengo urratsean."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:7001
+msgid "Use an existing X.509 certificate for strongSwan?"
+msgstr "DAgoen X.509 ziurtagiria erabili strongSwan-rentzat?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:7001
+msgid ""
+"The required information can automatically be extracted from an existing "
+"X.509 certificate with a matching RSA private key. Both parts can be in one "
+"file, if it is in PEM format. You should choose this option if you have such "
+"an existing certificate and key file and want to use it for authenticating "
+"IPSec connections."
+msgstr ""
+"Beharrezko informazioa automatikoki dagoen dagokion RSA gako pribatuaz X.509 "
+"ziurtagiritik atera daiteke. Bi zatiak fitxategi bakar batean egon daitezke, "
+"PEM formatuan badago. Aukera hau hautatu beharko zenuke dagoeneko "
+"ziurtagirik eta gako fitxategia badituzu eta IPSec konexioen "
+"autentifikaziorako erabili nahi badituzu."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:8001
+msgid "File name of your X.509 certificate in PEM format:"
+msgstr "X.509 ziurtagiriaren fitxategi-izena PEM formatuan:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:8001
+msgid ""
+"Please enter the full location of the file containing your X.509 certificate "
+"in PEM format."
+msgstr ""
+"Mesedez idatzi zure X.509 ziurtagiria duen fitxategiaren kokapen osoa PEM "
+"formatuan."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:9001
+msgid "File name of your existing X.509 private key in PEM format:"
+msgstr "X.509 gako pribatuaren fitxategi-izena PEM formatuan:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:9001
+msgid ""
+"Please enter the full location of the file containing the private RSA key "
+"matching your X.509 certificate in PEM format. This can be the same file as "
+"the X.509 certificate."
+msgstr ""
+"Mesedez idatzi zure X.509 ziurtagiriaren pareko RSA gako pribatua duen "
+"fitxategiaren kokapen osoa PEM formatuan. Hau X.509 ziurtagiriaren berdina "
+"izan daiteke."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:10001
+msgid "RSA key length:"
+msgstr "RSA gako luzapena:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:10001
+#, fuzzy
+#| msgid ""
+#| "Please enter the length of RSA key you wish to generate. A value of less "
+#| "than  1024 bits is not considered secure. A value of more than 2048 bits "
+#| "will  probably affect performance."
+msgid ""
+"Please enter the length of RSA key you wish to generate. A value of less "
+"than 1024 bits is not considered secure. A value of more than 2048 bits will "
+"probably affect performance."
+msgstr ""
+"Mesedez zehaztu sortu nahi duzun RSA gakoaren luzapena. 1024 bit-etik "
+"beherako balioak ez dira segurutzat ematen. 2048 bit-tik gorako balioek "
+"ziurrenik performantzian eragingo dute."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid "Create a self-signed X.509 certificate?"
+msgstr "Sortu auto-sinatutako X.509  ziurtagiria?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"Only self-signed X.509 certificates can be created automatically, because "
+"otherwise a certificate authority is needed to sign the certificate request."
+msgstr ""
+"Auto-sinatutako X.509 ziurtagiriak bakarrik sor daitezke automatikoki, beste "
+"modu batetara ziurtagiri autoritate batek ziurtagiri eskaera sinatzea behar "
+"da eta."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"If you accept this option, the certificate created can be used immediately "
+"to connect to other IPSec hosts that support authentication via an X.509 "
+"certificate. However, using strongSwan's PKI features requires a trust path "
+"to be created by having all X.509 certificates signed by a single authority."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"If you do not accept this option, only the RSA private key will be created, "
+"along with a certificate request which you will need to have signed by a "
+"certificate authority."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+#, fuzzy
+#| msgid "Common name for the X.509 certificate request:"
+msgid "Country code for the X.509 certificate request:"
+msgstr "X.509 ziurtagiri eskaerarako izen arrunta:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+#, fuzzy
+#| msgid ""
+#| "Please enter the organizational unit name (often a department)  that "
+#| "should be used in the certificate request."
+msgid ""
+"Please enter the two-letter ISO3166 country code that should be used in the "
+"certificate request."
+msgstr ""
+"Mesedez idatzi organizazio unitate izena (ziurrenik departamentua) "
+"ziurtagiri eskaeran erabili ahal izateko."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid "This field is mandatory; otherwise a certificate cannot be generated."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+#, fuzzy
+#| msgid "Common name for the X.509 certificate request:"
+msgid "State or province name for the X.509 certificate request:"
+msgstr "X.509 ziurtagiri eskaerarako izen arrunta:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+#, fuzzy
+#| msgid ""
+#| "Please enter the organizational unit name (often a department)  that "
+#| "should be used in the certificate request."
+msgid ""
+"Please enter the full name of the state or province to include in the "
+"certificate request."
+msgstr ""
+"Mesedez idatzi organizazio unitate izena (ziurrenik departamentua) "
+"ziurtagiri eskaeran erabili ahal izateko."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+#, fuzzy
+#| msgid "Common name for the X.509 certificate request:"
+msgid "Locality name for the X.509 certificate request:"
+msgstr "X.509 ziurtagiri eskaerarako izen arrunta:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+#, fuzzy
+#| msgid ""
+#| "Please enter the organizational unit name (often a department)  that "
+#| "should be used in the certificate request."
+msgid ""
+"Please enter the locality name (often a city) that should be used in the "
+"certificate request."
+msgstr ""
+"Mesedez idatzi organizazio unitate izena (ziurrenik departamentua) "
+"ziurtagiri eskaeran erabili ahal izateko."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+#, fuzzy
+#| msgid "Organizational unit for the X.509 certificate request:"
+msgid "Organization name for the X.509 certificate request:"
+msgstr "X.509 ziurtagiri eskaerarako organizazio unitatea:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+#, fuzzy
+#| msgid ""
+#| "Please enter the organizational unit name (often a department)  that "
+#| "should be used in the certificate request."
+msgid ""
+"Please enter the organization name (often a company) that should be used in "
+"the certificate request."
+msgstr ""
+"Mesedez idatzi organizazio unitate izena (ziurrenik departamentua) "
+"ziurtagiri eskaeran erabili ahal izateko."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+msgid "Organizational unit for the X.509 certificate request:"
+msgstr "X.509 ziurtagiri eskaerarako organizazio unitatea:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+#, fuzzy
+#| msgid ""
+#| "Please enter the organizational unit name (often a department)  that "
+#| "should be used in the certificate request."
+msgid ""
+"Please enter the organizational unit name (often a department) that should "
+"be used in the certificate request."
+msgstr ""
+"Mesedez idatzi organizazio unitate izena (ziurrenik departamentua) "
+"ziurtagiri eskaeran erabili ahal izateko."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+msgid "Common name for the X.509 certificate request:"
+msgstr "X.509 ziurtagiri eskaerarako izen arrunta:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+msgid ""
+"Please enter the common name (such as the host name of this machine) that "
+"should be used in the certificate request."
+msgstr ""
+"Mesedez idatzi ziurtagiri eskaeran erabili behar den izen arrunta (makina "
+"honen ostalari izena bezalakoa)."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+msgid "Email address for the X.509 certificate request:"
+msgstr "X.509 ziurtagiri eskaerarako eposta helbidea:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+msgid ""
+"Please enter the email address (for the individual or organization "
+"responsible) that should be used in the certificate request."
+msgstr ""
+"Mesedez idatzi ziurtagiri eskaeran erabili behar den eposta helbidea "
+"(banakako edo erakunde buruarena)."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid "Enable opportunistic encryption?"
+msgstr "Aukerako enkriptazioa gaitu?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid ""
+"This version of strongSwan supports opportunistic encryption (OE), which "
+"stores IPSec authentication information in DNS records. Until this is widely "
+"deployed, activating it will cause a significant delay for every new "
+"outgoing connection."
+msgstr ""
+"StrongSwan bertsio honek aukerako enkriptatze (opportunistic encryption, OE) "
+"euskarria du, honek IPSec autentifikazio informazioa DNS erregistroetan "
+"gordetzen ditu. Hau guztiz garatua ez dagoenez gaitzeak kanporako konexio "
+"berri guztien atzerapen esanguratsu bat eragin dezake."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid ""
+"You should only enable opportunistic encryption if you are sure you want it. "
+"It may break the Internet connection (default route) as the pluto daemon "
+"starts."
+msgstr ""
+"Aukerako enkriptatzea behar duzula ziur bazaude bakarrik gaitu beharko "
+"zenuke. Internet konexioak moztuko dira (lehenetsitako atebidea) pluto "
+"deabrua abiaraztean."
+
+#~ msgid "Please enter the organization name (often a company)"
+#~ msgstr "Mesedez idatzi organizazio izena (ziurrenik konpainia)"

@@ -1,0 +1,435 @@
+# translation of strongswan debconf to Portuguese
+# Copyright (C) 2007 the strongswan's copyright holder
+# This file is distributed under the same license as the strongswan package.
+#
+# Luísa Lourenço <kikentai@gmail.com>, 2007.
+# Américo Monteiro <a_monteiro@netcabo.pt>, 2009.
+msgid ""
+msgstr ""
+"Project-Id-Version: strongswan 4.2.14-2\n"
+"Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
+"POT-Creation-Date: 2009-05-25 14:44+0100\n"
+"PO-Revision-Date: 2009-05-25 14:59+0100\n"
+"Last-Translator: Américo Monteiro <a_monteiro@netcabo.pt>\n"
+"Language-Team: Portuguese <traduz@debianpt.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.11.4\n"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "earliest"
+msgstr "mais cedo"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "after NFS"
+msgstr "após NFS"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "after PCMCIA"
+msgstr "após PCMCIA"
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid "When to start strongSwan:"
+msgstr "Quando se deve iniciar o strongSwan:"
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid ""
+"StrongSwan starts during system startup so that it can protect filesystems "
+"that are automatically mounted."
+msgstr ""
+"O strongSwan arranca durante o arranque do sistema para que possa proteger "
+"os sistemas de ficheiros que são montados automaticamente."
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid ""
+" * earliest: if /usr is not mounted through NFS and you don't use a\n"
+"   PCMCIA network card, it is best to start strongSwan as soon as\n"
+"   possible, so that NFS mounts can be secured by IPSec;\n"
+" * after NFS: recommended when /usr is mounted through NFS and no\n"
+"   PCMCIA network card is used;\n"
+" * after PCMCIA: recommended if the IPSec connection uses a PCMCIA\n"
+"   network card or if it needs keys to be fetched from a locally running "
+"DNS\n"
+"   server with DNSSec support."
+msgstr ""
+" * mais cedo: se o /usr não for montado através de NFS e você não usa uma\n"
+"   placa de rede PCMCIA, é melhor arrancar o strongSwan o mais cedo "
+"possível,\n"
+"   para que as montagens NFS sejam seguras por IPSec;\n"
+" * após NFS: recomendado quando o /usr é montado através de NFS e nenhuma\n"
+"   placa de rede PCMCIA é usada;\n"
+" * após PCMCIA: recomendado se a ligação IPSec usa uma placa de rede PCMCIA\n"
+"   ou se necessita que sejam obtidas chaves a partir dum servidor DNS que\n"
+"   corre localmente com suporte a DNSSec."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid "Restart strongSwan now?"
+msgstr "Reiniciar agora o strongSwan?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid ""
+"Restarting strongSwan is recommended, because if there is a security fix, it "
+"will not be applied until the daemon restarts. However, this might close "
+"existing connections and then bring them back up."
+msgstr ""
+"É recomendado reiniciar o strongSwan, porque se existir uma correcção de "
+"segurança, esta não será aplicada até que o daemon seja reiniciado. No "
+"entanto isto poderá fechar ligações existentes e depois ligá-las de novo."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid ""
+"If you don't restart strongSwan now, you should do so manually at the first "
+"opportunity."
+msgstr ""
+"Se você não reiniciar o strongSwan agora, deve fazê-lo manualmente na "
+"primeira oportunidade."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:4001
+msgid "Start strongSwan's IKEv1 daemon?"
+msgstr "Iniciar o daemon IKEv1 do strongSwan?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:4001
+msgid ""
+"The pluto daemon must be running to support version 1 of the Internet Key "
+"Exchange protocol."
+msgstr ""
+"O daemon pluto precisa de estar a funcionar para suportar a versão 1 do "
+"protocolo Internet Key Exchange."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:5001
+msgid "Start strongSwan's IKEv2 daemon?"
+msgstr "Iniciar o daemon IKEv2 do strongSwan?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:5001
+msgid ""
+"The charon daemon must be running to support version 2 of the Internet Key "
+"Exchange protocol."
+msgstr ""
+"O daemon charon precisa de estar a funcionar para suportar a versão 2 do "
+"protocolo Internet Key Exchange."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid "Create an RSA public/private keypair for this host?"
+msgstr "Criar um par de chaves pública/privada RSA para esta máquina?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid ""
+"StrongSwan can use a Pre-Shared Key (PSK) or an RSA keypair to authenticate "
+"IPSec connections to other hosts. RSA authentication is generally considered "
+"more secure and is easier to administer. You can use PSK and RSA "
+"authentication simultaneously."
+msgstr ""
+"O strongSwan pode usar uma chave Pré-Partilhada (PSK) ou um par de chaves "
+"RSA para autenticar ligações IPSec a outras máquinas. A autenticação RSA é "
+"geralmente considerada mais segura e mais fácil de administrar. Você pode "
+"usar autenticação PSK e RSA em simultâneo."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid ""
+"If you do not want to create a new public/private keypair, you can choose to "
+"use an existing one in the next step."
+msgstr ""
+"Se não quiser criar um novo par de chaves pública/privada, pode escolher "
+"usar um já existente no próximo passo."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:7001
+msgid "Use an existing X.509 certificate for strongSwan?"
+msgstr "Usar um certificado X.509 existente para o strongSwan?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:7001
+msgid ""
+"The required information can automatically be extracted from an existing "
+"X.509 certificate with a matching RSA private key. Both parts can be in one "
+"file, if it is in PEM format. You should choose this option if you have such "
+"an existing certificate and key file and want to use it for authenticating "
+"IPSec connections."
+msgstr ""
+"A informação necessária pode ser extraída automaticamente de um certificado "
+"X.509 existente com uma chave RSA privada coincidente. Ambas as partes podem "
+"estar num ficheiro, se estiver no formato PEM. iDeve escolher esta opção se "
+"tiver tal ficheiro de certificado e chave existente e quiser usá-lo para "
+"autenticar ligações IPSec."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:8001
+msgid "File name of your X.509 certificate in PEM format:"
+msgstr "Nome de ficheiro do seu certificado X.509 em formato PEM:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:8001
+msgid ""
+"Please enter the full location of the file containing your X.509 certificate "
+"in PEM format."
+msgstr ""
+"Por favor insira a localização completa do ficheiro que contém o seu "
+"certificado X.509 em formato PEM."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:9001
+msgid "File name of your existing X.509 private key in PEM format:"
+msgstr "Nome do ficheiro da sua chave privada X.509 existente em formato PEM:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:9001
+msgid ""
+"Please enter the full location of the file containing the private RSA key "
+"matching your X.509 certificate in PEM format. This can be the same file as "
+"the X.509 certificate."
+msgstr ""
+"Por favor insira a localização completa do ficheiro que contém a chave "
+"privada RSA que coincide com o seu certificado X.509 em formato PEM. Este "
+"pode ser o mesmo ficheiro do certificado X.509."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:10001
+msgid "RSA key length:"
+msgstr "Comprimento da chave RSA:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:10001
+msgid ""
+"Please enter the length of RSA key you wish to generate. A value of less "
+"than 1024 bits is not considered secure. A value of more than 2048 bits will "
+"probably affect performance."
+msgstr ""
+"Por favor indique o comprimento da chave RSA que deseja gerar. Um valor "
+"menor que 1024 bits não é considerado seguro. Um valor maior que 2048 bits "
+"irá provavelmente afectar as performance."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid "Create a self-signed X.509 certificate?"
+msgstr "Criar um certificado X.509 auto-assinado?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"Only self-signed X.509 certificates can be created automatically, because "
+"otherwise a certificate authority is needed to sign the certificate request."
+msgstr ""
+"Apenas certificados X.509 auto-assinados podem ser gerados automaticamente, "
+"porque de outro modo é necessário uma autoridade de certificados para "
+"assinar o pedido de certificado."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"If you accept this option, the certificate created can be used immediately "
+"to connect to other IPSec hosts that support authentication via an X.509 "
+"certificate. However, using strongSwan's PKI features requires a trust path "
+"to be created by having all X.509 certificates signed by a single authority."
+msgstr ""
+"Se aceitar esta opção, o certificado criado pode ser usado imediatamente "
+"para ligar a outros máquinas IPSec que suportam autenticação através de um "
+"certificado X.509. No entanto, usar as funcionalidades PKI do strongSwan "
+"necessita que um caminho de confiança seja criado ao ter todos os "
+"certificados X.509 assinados por uma única autoridade."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"If you do not accept this option, only the RSA private key will be created, "
+"along with a certificate request which you will need to have signed by a "
+"certificate authority."
+msgstr ""
+"Se não aceitar esta opção, apenas será criada a chave RSA privada, "
+"juntamente com um pedido de certificado o qual precisa de estar assinado por "
+"uma autoridade de certificados."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid "Country code for the X.509 certificate request:"
+msgstr "Código de país para o pedido de certificado X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid ""
+"Please enter the two-letter ISO3166 country code that should be used in the "
+"certificate request."
+msgstr ""
+"Por favor insira o código de país ISO3166 de 2 letras que será usado no "
+"pedido de certificado."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid "This field is mandatory; otherwise a certificate cannot be generated."
+msgstr ""
+"Este campo é obrigatório: de outro modo não se pode gerar um certificado."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+msgid "State or province name for the X.509 certificate request:"
+msgstr "Estado ou nome da província para o pedido do certificado X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+msgid ""
+"Please enter the full name of the state or province to include in the "
+"certificate request."
+msgstr ""
+"Por favor insira o nome completo do estado ou província a incluir no pedido "
+"de certificado."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+msgid "Locality name for the X.509 certificate request:"
+msgstr "Nome da localidade para o pedido de certificado X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+msgid ""
+"Please enter the locality name (often a city) that should be used in the "
+"certificate request."
+msgstr ""
+"Por favor insira a localidade (geralmente uma cidade) que deverá ser usada "
+"no pedido de certificado."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+msgid "Organization name for the X.509 certificate request:"
+msgstr "Nome da organização para o pedido de certificado X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+msgid ""
+"Please enter the organization name (often a company) that should be used in "
+"the certificate request."
+msgstr ""
+"Por favor insira o nome da organização (geralmente uma companhia) que deverá "
+"ser usado no pedido de certificado."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+msgid "Organizational unit for the X.509 certificate request:"
+msgstr "Unidade organizativa para o pedido de certificado X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+msgid ""
+"Please enter the organizational unit name (often a department) that should "
+"be used in the certificate request."
+msgstr ""
+"Por favor insira o nome da unidade organizativa (geralmente um departamento) "
+"que deverá ser usado no pedido de certificado."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+msgid "Common name for the X.509 certificate request:"
+msgstr "Nome comum para o pedido de certificado X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+msgid ""
+"Please enter the common name (such as the host name of this machine) that "
+"should be used in the certificate request."
+msgstr ""
+"Por favor insira o nome comum (tal como o nome desta máquina) que deverá ser "
+"usado no pedido de certificado."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+msgid "Email address for the X.509 certificate request:"
+msgstr "Endereço de email para o pedido de certificado X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+msgid ""
+"Please enter the email address (for the individual or organization "
+"responsible) that should be used in the certificate request."
+msgstr ""
+"Por favor insira o endereço de email (da pessoa ou organização responsável) "
+"que deverá ser usado no pedido de certificado."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid "Enable opportunistic encryption?"
+msgstr "Activar encriptação oportunista?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid ""
+"This version of strongSwan supports opportunistic encryption (OE), which "
+"stores IPSec authentication information in DNS records. Until this is widely "
+"deployed, activating it will cause a significant delay for every new "
+"outgoing connection."
+msgstr ""
+"Esta versão do strongSwan suporta encriptação oportunista (OE), a qual "
+"guarda informação de autenticação IPSec em registos DNS. Até que isto esteja "
+"amplamente instalado, a sua activação irá causar um atraso significante em "
+"cada nova ligação de saída."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid ""
+"You should only enable opportunistic encryption if you are sure you want it. "
+"It may break the Internet connection (default route) as the pluto daemon "
+"starts."
+msgstr ""
+"Você deverá apenas activar a encriptação oportunista se tiver a certeza que "
+"a quer. Pode quebrar a ligação à Internet (rota predefinida) assim que o "
+"daemon pluto arrancar."

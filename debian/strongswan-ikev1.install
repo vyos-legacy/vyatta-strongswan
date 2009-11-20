@@ -1,0 +1,4 @@
+usr/lib/ipsec/pluto                usr/lib/ipsec/
+usr/lib/ipsec/_pluto_adns  usr/lib/ipsec/
+usr/lib/ipsec/whack                usr/lib/ipsec/
+usr/share/man/man8/pluto.8              usr/share/man/man8/

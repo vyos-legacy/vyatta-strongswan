@@ -1,0 +1,685 @@
+# Translators, if you are not familiar with the PO format, gettext
+# documentation is worth reading, especially sections dedicated to
+# this format, e.g. by running:
+# info -n '(gettext)PO Files'
+# info -n '(gettext)Header Entry'
+# Some information specific to po-debconf are available at
+# /usr/share/doc/po-debconf/README-trans
+# or http://www.debian.org/intl/l10n/po-debconf/README-trans
+# Developers do not need to manually edit POT or PO files.
+#
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: strongswan\n"
+"Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
+"POT-Creation-Date: 2009-05-25 14:44+0100\n"
+"PO-Revision-Date: 2009-05-25 14:47+0100\n"
+"Last-Translator: Miroslav Kure <kurem@debian.cz>\n"
+"Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "earliest"
+msgstr "co nejdříve"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "after NFS"
+msgstr "po NFS"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:2001
+msgid "after PCMCIA"
+msgstr "po PCMCIA"
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid "When to start strongSwan:"
+msgstr "Kdy spustit strongSwan:"
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid ""
+"StrongSwan starts during system startup so that it can protect filesystems "
+"that are automatically mounted."
+msgstr ""
+"strongSwan se spouští při zavádění systému, takže může chránit automaticky "
+"připojované souborové systémy."
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:2002
+msgid ""
+" * earliest: if /usr is not mounted through NFS and you don't use a\n"
+"   PCMCIA network card, it is best to start strongSwan as soon as\n"
+"   possible, so that NFS mounts can be secured by IPSec;\n"
+" * after NFS: recommended when /usr is mounted through NFS and no\n"
+"   PCMCIA network card is used;\n"
+" * after PCMCIA: recommended if the IPSec connection uses a PCMCIA\n"
+"   network card or if it needs keys to be fetched from a locally running "
+"DNS\n"
+"   server with DNSSec support."
+msgstr ""
+" * co nejdříve: pokud není /usr připojeno přes NFS a nepoužíváte\n"
+"   síťovou kartu PCMCIA, je lepší spustit strongSwan co nejdříve,\n"
+"   aby bylo NFS chráněno pomocí IPSec;\n"
+" * po NFS: doporučeno, pokud je /usr připojeno přes NFS a pokud\n"
+"   nepoužíváte síťovou kartu PCMCIA;\n"
+" * po PCMCIA: doporučeno pokud IPSec spojení používá síťovou kartu\n"
+"   PCMCIA, nebo pokud vyžaduje stažení klíčů z lokálně běžícího DNS\n"
+"   serveru s podporou DNSSec."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid "Restart strongSwan now?"
+msgstr "Restartovat nyní strongSwan?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid ""
+"Restarting strongSwan is recommended, because if there is a security fix, it "
+"will not be applied until the daemon restarts. However, this might close "
+"existing connections and then bring them back up."
+msgstr ""
+"Restartování strongSwan je dobrý nápad, protože v případě, že aktualizace "
+"obsahuje bezpečnostní záplatu, nebude tato funkční, dokud se démon "
+"nerestartuje. Nicméně je možné, že existující spojení budou ukončena a poté "
+"znovu nahozena."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid ""
+"If you don't restart strongSwan now, you should do so manually at the first "
+"opportunity."
+msgstr ""
+"Pokud nerestartujete strongSwan nyní, měli byste to provést při nejbližší "
+"příležitosti."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:4001
+msgid "Start strongSwan's IKEv1 daemon?"
+msgstr "Spustit strongSwan daemon IKEv1?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:4001
+msgid ""
+"The pluto daemon must be running to support version 1 of the Internet Key "
+"Exchange protocol."
+msgstr ""
+"Pro podporu 1. verze protokolu Internet Key Exchange musí běžet daemon pluto."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:5001
+msgid "Start strongSwan's IKEv2 daemon?"
+msgstr "Spustit strongSwan daemon IKEv2?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:5001
+msgid ""
+"The charon daemon must be running to support version 2 of the Internet Key "
+"Exchange protocol."
+msgstr ""
+"Pro podporu 2. verze protokolu Internet Key Exchange musí běžet daemon "
+"charon."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid "Create an RSA public/private keypair for this host?"
+msgstr "Vytvořit veřejný/soukromý pár RSA klíčů pro tento počítač?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid ""
+"StrongSwan can use a Pre-Shared Key (PSK) or an RSA keypair to authenticate "
+"IPSec connections to other hosts. RSA authentication is generally considered "
+"more secure and is easier to administer. You can use PSK and RSA "
+"authentication simultaneously."
+msgstr ""
+"strongSwan může pro autentizaci IPSec spojení s jinými počítači používat "
+"předsdílený klíč (PSK), nebo veřejný/soukromý pár RSA klíčů. RSA autentizace "
+"se považuje za bezpečnější a jednodušší na správu. Autentizace PSK a RSA "
+"můžete používat současně."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid ""
+"If you do not want to create a new public/private keypair, you can choose to "
+"use an existing one in the next step."
+msgstr ""
+"Jestliže si nepřejete vytvořit nový pár klíčů pro tento počítač, můžete si v "
+"příštím kroku zvolit existující klíče."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:7001
+msgid "Use an existing X.509 certificate for strongSwan?"
+msgstr "Použít pro strongSwan existující certifikát X.509?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:7001
+msgid ""
+"The required information can automatically be extracted from an existing "
+"X.509 certificate with a matching RSA private key. Both parts can be in one "
+"file, if it is in PEM format. You should choose this option if you have such "
+"an existing certificate and key file and want to use it for authenticating "
+"IPSec connections."
+msgstr ""
+"Potřebné informace lze získat automaticky z existujícího certifikátu X.509 s "
+"odpovídajícím soukromým RSA klíčem. Jedná-li se o formát PEM, mohou být obě "
+"části v jednom souboru. Vlastníte-li takový certifikát a soubor s klíčem a "
+"chcete-li je použít pro autentizaci IPSec spojení, odpovězte kladně."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:8001
+msgid "File name of your X.509 certificate in PEM format:"
+msgstr "Jméno souboru s certifikátem X.509 ve formátu PEM:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:8001
+msgid ""
+"Please enter the full location of the file containing your X.509 certificate "
+"in PEM format."
+msgstr ""
+"Zadejte celou cestu k souboru obsahujícímu váš certifikát X.509 ve formátu "
+"PEM."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:9001
+msgid "File name of your existing X.509 private key in PEM format:"
+msgstr "Jméno souboru se soukromým klíčem X.509 ve formátu PEM:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:9001
+msgid ""
+"Please enter the full location of the file containing the private RSA key "
+"matching your X.509 certificate in PEM format. This can be the same file as "
+"the X.509 certificate."
+msgstr ""
+"Zadejte prosím absolutní cestu k souboru obsahujícímu soukromý RSA klíč ve "
+"formátu PEM odpovídající vašemu certifikátu X.509. Může to být stejný soubor "
+"jako ten, ve kterém se nachází certifikát X.509."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:10001
+msgid "RSA key length:"
+msgstr "Délka RSA klíče:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:10001
+msgid ""
+"Please enter the length of RSA key you wish to generate. A value of less "
+"than 1024 bits is not considered secure. A value of more than 2048 bits will "
+"probably affect performance."
+msgstr ""
+"Zadejte prosím délku vytvářeného RSA klíče. Z důvodu bezpečnosti by neměla "
+"být menší než 1024 bitů. Hodnota větší než 2048 bitů může ovlivnit výkon."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid "Create a self-signed X.509 certificate?"
+msgstr "Vytvořit certifikát X.509 podepsaný sám sebou?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"Only self-signed X.509 certificates can be created automatically, because "
+"otherwise a certificate authority is needed to sign the certificate request."
+msgstr ""
+"Automaticky lze vytvořit pouze certifikát podepsaný sám sebou, protože jinak "
+"je zapotřebí certifikační autorita, která by podepsala požadavek na "
+"certifikát."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"If you accept this option, the certificate created can be used immediately "
+"to connect to other IPSec hosts that support authentication via an X.509 "
+"certificate. However, using strongSwan's PKI features requires a trust path "
+"to be created by having all X.509 certificates signed by a single authority."
+msgstr ""
+"Odpovíte-li kladně, můžete nový certifikát ihned použít k připojení na další "
+"počítače s IPSec, které podporují autentizaci pomocí certifikátu X.509. "
+"Nicméně pro využití PKI možností ve strongSwanu je nutné, aby byly všechny "
+"certifikáty v cestě důvěry podepsány stejnou autoritou."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"If you do not accept this option, only the RSA private key will be created, "
+"along with a certificate request which you will need to have signed by a "
+"certificate authority."
+msgstr ""
+"Jestliže nechcete vytvořit certifikát podepsaný sebou samým, vytvoří se "
+"pouze soukromý RSA klíč a požadavek na certifikát. Vy potom musíte podepsat "
+"požadavek svou certifikační autoritou."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid "Country code for the X.509 certificate request:"
+msgstr "Kód země pro požadavek na certifikát X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid ""
+"Please enter the two-letter ISO3166 country code that should be used in the "
+"certificate request."
+msgstr ""
+"Zadejte dvoumístný ISO3166 kód své země. Tento kód bude umístěn do požadavku "
+"na certifikát."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid "This field is mandatory; otherwise a certificate cannot be generated."
+msgstr "Toto pole je povinné, bez něj není možné certifikát vytvořit."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+msgid "State or province name for the X.509 certificate request:"
+msgstr "Jméno státu nebo oblasti pro požadavek na certifikát X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+msgid ""
+"Please enter the full name of the state or province to include in the "
+"certificate request."
+msgstr ""
+"Zadejte celé jméno státu nebo oblasti, které se má použít v požadavku na "
+"certifikát."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+msgid "Locality name for the X.509 certificate request:"
+msgstr "Jméno lokality pro požadavek na certifikát X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+msgid ""
+"Please enter the locality name (often a city) that should be used in the "
+"certificate request."
+msgstr ""
+"Zadejte jméno lokality (např. města), které se má použít v požadavku na "
+"certifikát."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+msgid "Organization name for the X.509 certificate request:"
+msgstr "Název organizace pro požadavek na certifikát X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+msgid ""
+"Please enter the organization name (often a company) that should be used in "
+"the certificate request."
+msgstr ""
+"Zadejte název organizace (firmy), který se má použít v požadavku na "
+"certifikát."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+msgid "Organizational unit for the X.509 certificate request:"
+msgstr "Název organizační jednotky pro požadavek na certifikát X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+msgid ""
+"Please enter the organizational unit name (often a department) that should "
+"be used in the certificate request."
+msgstr ""
+"Zadejte název organizační jednotky (např. oddělení), který se má použít v "
+"požadavku na certifikát."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+msgid "Common name for the X.509 certificate request:"
+msgstr "Obvyklé jméno pro požadavek na certifikát X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+msgid ""
+"Please enter the common name (such as the host name of this machine) that "
+"should be used in the certificate request."
+msgstr ""
+"Zadejte běžné jméno (např. jméno počítače), které se má použít v požadavku "
+"na certifikát."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+msgid "Email address for the X.509 certificate request:"
+msgstr "Emailová adresa pro požadavek na certifikát X.509:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+msgid ""
+"Please enter the email address (for the individual or organization "
+"responsible) that should be used in the certificate request."
+msgstr ""
+"Zadejte emailovou adresu osoby nebo organizace, která se má použít v "
+"požadavku na certifikát."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid "Enable opportunistic encryption?"
+msgstr "Povolit oportunistické šifrování?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid ""
+"This version of strongSwan supports opportunistic encryption (OE), which "
+"stores IPSec authentication information in DNS records. Until this is widely "
+"deployed, activating it will cause a significant delay for every new "
+"outgoing connection."
+msgstr ""
+"Tato verze strongSwan podporuje oportunistické šifrování (OE), které "
+"uchovává autentizační informace IPSecu (např. veřejné RSA klíče) v DNS "
+"záznamech. Dokud nebude tato schopnost více rozšířena, způsobí její aktivace "
+"výrazné zpomalení každého nového odchozího spojení."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid ""
+"You should only enable opportunistic encryption if you are sure you want it. "
+"It may break the Internet connection (default route) as the pluto daemon "
+"starts."
+msgstr ""
+"Oportunistické šifrování byste měli povolit pouze v případě, že ho opravdu "
+"chcete. Při startu daemona pluto je možné, že se vaše probíhající spojení do "
+"Internetu přeruší (přesněji přestane fungovat výchozí cesta)."
+
+#~ msgid "earliest, \"after NFS\", \"after PCMCIA\""
+#~ msgstr "\"co nejdříve\", \"po NFS\", \"po PCMCIA\""
+
+#~ msgid ""
+#~ "There are three possibilities when strongSwan can start: before or after "
+#~ "the NFS services and after the PCMCIA services. The correct answer "
+#~ "depends on your specific setup."
+#~ msgstr ""
+#~ "Existují tři možnosti, kdy se dá strongSwan spouštět: před NFS službami, "
+#~ "po NFS službách nebo po PCMCIA službách. Správná odpověď závisí na vašem "
+#~ "konkrétním nastavení."
+
+#~ msgid ""
+#~ "If you do not have your /usr tree mounted via NFS (either you only mount "
+#~ "other, less vital trees via NFS or don't use NFS mounted trees at all) "
+#~ "and don't use a PCMCIA network card, then it's best to start strongSwan "
+#~ "at the earliest possible time, thus allowing the NFS mounts to be secured "
+#~ "by IPSec. In this case (or if you don't understand or care about this "
+#~ "issue), answer \"earliest\" to this question (the default)."
+#~ msgstr ""
+#~ "Jestliže nemáte svůj strom /usr připojen skrz NFS (buď přes NFS "
+#~ "připojujete jiné, ne tak důležité stromy, nebo NFS vůbec nepoužíváte) a "
+#~ "nepoužíváte síťovou kartu PCMCIA, je nejlepší spouštět strongSwan co "
+#~ "nejdříve, čímž umožníte aby byly NFS svazky chráněny pomocí IPSec. V "
+#~ "takovém případě (nebo pokud si nejste jisti, nebo pokud vám na tom "
+#~ "nezáleží) na otázku odpovězte „co nejdříve“ (výchozí)."
+
+#~ msgid ""
+#~ "If you have your /usr tree mounted via NFS and don't use a PCMCIA network "
+#~ "card, then you will need to start strongSwan after NFS so that all "
+#~ "necessary files are available. In this case, answer \"after NFS\" to this "
+#~ "question. Please note that the NFS mount of /usr can not be secured by "
+#~ "IPSec in this case."
+#~ msgstr ""
+#~ "Jestliže máte strom /usr připojen skrz NFS a nepoužíváte síťovou kartu "
+#~ "PCMCIA, musíte spustit strongSwan po NFS, aby byly všechny potřebné "
+#~ "soubory dostupné. V tomto případě na otázku odpovězte „po NFS“. Uvědomte "
+#~ "si prosím, že v tomto případě nemůže být NFS svazek /usr chráněn pomocí "
+#~ "IPSec."
+
+#~ msgid ""
+#~ "If you use a PCMCIA network card for your IPSec connections, then you "
+#~ "only have to choose to start it after the PCMCIA services. Answer \"after "
+#~ "PCMCIA\" in this case. This is also the correct answer if you want to "
+#~ "fetch keys from a locally running DNS server with DNSSec support."
+#~ msgstr ""
+#~ "Jestliže používáte PCMCIA síťovou kartu pro vaše IPSec připojení, pak je "
+#~ "jedinou možností jej spustit po PCMCIA službách. V tom případě odpovězte "
+#~ "„po PCMCIA“. Toto je také správná odpověď, pokud chcete získat klíče z "
+#~ "lokálního DNS serveru s podporou DNSSec."
+
+#~ msgid "Do you wish to restart strongSwan?"
+#~ msgstr "Přejete si restartovat strongSwan?"
+
+#~ msgid "Do you wish to support IKEv1?"
+#~ msgstr "Přejete si podporu IKEv1?"
+
+#~ msgid ""
+#~ "strongSwan supports both versions of the Internet Key Exchange protocol, "
+#~ "IKEv1 and IKEv2. Do you want to start the \"pluto\" daemon for IKEv1 "
+#~ "support when strongSwan is started?"
+#~ msgstr ""
+#~ "strongSwan podporuje protokol Internet Key Exchange ve verzích 1 a 2 "
+#~ "(IKEv1, IKEv2). Přejete si při startu strongSwanu spustit daemona „pluto“ "
+#~ "podporujícího IKEv1?"
+
+#~ msgid "Do you wish to support IKEv2?"
+#~ msgstr "Přejete si podporu IKEv2?"
+
+#~ msgid ""
+#~ "strongSwan supports both versions of the Internet Key Exchange protocol, "
+#~ "IKEv1 and IKEv2. Do you want to start the \"charon\" daemon for IKEv2 "
+#~ "support when strongSwan is started?"
+#~ msgstr ""
+#~ "strongSwan podporuje protokol Internet Key Exchange ve verzích 1 a 2 "
+#~ "(IKEv1, IKEv2). Přejete si při startu strongSwanu spustit daemona "
+#~ "„charon“ podporujícího IKEv2?"
+
+#, fuzzy
+#~| msgid ""
+#~| "This installer can automatically create a RSA public/private keypair for "
+#~| "this host. This keypair can be used to authenticate IPSec connections to "
+#~| "other hosts and is the preferred way for building up secure IPSec "
+#~| "connections. The other possibility would be to use shared secrets "
+#~| "(passwords that are the same on both sides of the tunnel) for "
+#~| "authenticating an connection, but for a larger number of connections RSA "
+#~| "authentication is easier to administer and more secure."
+#~ msgid ""
+#~ "This installer can automatically create a RSA public/private keypair with "
+#~ "an X.509 certificate for this host. This can be used to authenticate  "
+#~ "IPSec connections to other hosts and is the preferred way for building "
+#~ "up  secure IPSec connections. The other possibility would be to use pre-"
+#~ "shared  secrets (PSKs, passwords that are the same on both sides of the "
+#~ "tunnel) for authenticating an connection, but for a larger number of "
+#~ "connections RSA authentication is easier to administer and more secure. "
+#~ "Note that having a keypair allows to use both X.509 and PSK "
+#~ "authentication for IPsec  tunnels."
+#~ msgstr ""
+#~ "Tento instalátor může automaticky vytvořit veřejný/soukromý pár RSA klíčů "
+#~ "pro tento počítač. Pár klíčů může být využit k autentizaci IPSec spojení "
+#~ "na další počítače a je upřednostňovanou cestou pro sestavování bezpečných "
+#~ "IPSec spojení. Další možností autentizace je využití sdílených tajemství "
+#~ "(hesel, která jsou stejná na obou stranách tunelu), ale pro větší počet "
+#~ "spojení je RSA autentizace snazší pro správu a mnohem bezpečnější."
+
+#~ msgid "The length of the created RSA key (in bits):"
+#~ msgstr "Délka vytvořeného RSA klíče (v bitech):"
+
+#~ msgid ""
+#~ "Please enter the length of the created RSA key. It should not be less "
+#~ "than 1024 bits because this should be considered unsecure and you will "
+#~ "probably not need anything more than 2048 bits because it only slows the "
+#~ "authentication process down and is not needed at the moment."
+#~ msgstr ""
+#~ "Zadejte prosím délku vytvářeného RSA klíče. Kvůli bezpečnosti by neměla "
+#~ "být menší než 1024 bitů a pravděpodobně nepotřebujete víc než 2048 bitů, "
+#~ "protože to již zpomaluje proces autentizace."
+
+#, fuzzy
+#~| msgid ""
+#~| "This installer can only create self-signed X509 certificates "
+#~| "automatically, because otherwise a certificate authority is needed to "
+#~| "sign the certificate request. If you want to create a self-signed "
+#~| "certificate, you can use it immediately to connect to other IPSec hosts "
+#~| "that support X509 certificate for authentication of IPSec connections. "
+#~| "However, if you want to use the new PKI features of strongSwan >= 1.91, "
+#~| "you will need to have all X509 certificates signed by a single "
+#~| "certificate authority to create a trust path."
+#~ msgid ""
+#~ "This installer can only create self-signed X.509 certificates "
+#~ "automatically, because otherwise a certificate authority is needed to "
+#~ "sign the certificate request. If you want to create a self-signed "
+#~ "certificate, you can use it immediately to connect to other IPSec hosts "
+#~ "that support X.509 certificate for authentication of IPSec connections. "
+#~ "However, if you want to use the new PKI features of strongSwan >= 1.91, "
+#~ "you will need to have all X.509 certificates signed by a single "
+#~ "certificate authority to create a trust path."
+#~ msgstr ""
+#~ "Tento instalátor může automaticky vytvořit pouze certifikát X509 "
+#~ "podepsaný sám sebou, jelikož v opačném případě je k podpisu certifikátu "
+#~ "potřeba certifikační autorita. Tento certifikát můžete ihned použít k "
+#~ "připojení na další počítače s IPSec, které podporují autentizaci pomocí "
+#~ "certifikátu X509. Nicméně chcete-li využít nových PKI možností "
+#~ "strongSwanu >= 1.91, budete k vytvoření důvěryhodných cest potřebovat "
+#~ "všechny certifikáty X509 podepsané jedinou certifikační autoritou."
+
+#~ msgid ""
+#~ "You really need to enter a valid country code here, because openssl will "
+#~ "refuse to generate certificates without one. An empty field is allowed "
+#~ "for any other field of the X.509 certificate, but not for this one."
+#~ msgstr ""
+#~ "Je opravdu nutné, abyste vložili správný kód země, protože openssl jinak "
+#~ "odmítne vygenerování certifikátu. Prázdné pole je dovoleno ve všech "
+#~ "ostatních polích certifikátu X509 kromě tohoto."
+
+#~ msgid "Example: AT"
+#~ msgstr "Příklad: CZ"
+
+#~ msgid "Example: Upper Austria"
+#~ msgstr "Příklad: Morava"
+
+#~ msgid "Example: Vienna"
+#~ msgstr "Příklad: Olomouc"
+
+#, fuzzy
+#~| msgid ""
+#~| "Please enter the organization (e.g. company) that the X509 certificate "
+#~| "should be created for. This name will be placed in the certificate "
+#~| "request."
+#~ msgid ""
+#~ "Please enter the organization (e.g. company) that the X.509 certificate "
+#~ "should be created for. This name will be placed in the certificate "
+#~ "request."
+#~ msgstr ""
+#~ "Zadejte prosím organizaci pro kterou je certifikát vytvářen. Toto jméno "
+#~ "bude umístěno do požadavku na certifikát."
+
+#~ msgid "Example: Debian"
+#~ msgstr "Příklad: Debian"
+
+#~ msgid "Example: security group"
+#~ msgstr "Příklad: bezpečnostní oddělení"
+
+#~ msgid "Example: gateway.debian.org"
+#~ msgstr "Příklad: gateway.debian.org"
+
+#~ msgid ""
+#~ "strongSwan comes with support for opportunistic encryption (OE), which "
+#~ "stores IPSec authentication information (i.e. RSA public keys) in "
+#~ "(preferably secure) DNS records. Until this is widely deployed, "
+#~ "activating it will cause a significant slow-down for every new, outgoing "
+#~ "connection. Since version 2.0, strongSwan upstream comes with OE enabled "
+#~ "by default and is thus likely to break your existing connection to the "
+#~ "Internet (i.e. your default route) as soon as pluto (the strongSwan "
+#~ "keying daemon) is started."
+#~ msgstr ""
+#~ "strongSwan přichází s podporou pro oportunistické šifrování (OE), které "
+#~ "uchovává autentizační informace IPSecu (např. veřejné RSA klíče) v "
+#~ "(nejlépe zabezpečených) DNS záznamech. Dokud nebude tato schopnost více "
+#~ "rozšířena, způsobí její aktivace výrazné zpomalení každého nového "
+#~ "odchozího spojení. Od verze 2.0 přichází strongSwan s implicitně zapnutou "
+#~ "podporou OE čímž pravděpodobně zruší vaše probíhající spojení do "
+#~ "Internetu (tj. vaši výchozí cestu - default route) v okamžiku, kdy "
+#~ "spustíte pluto (strongSwan keying démon)."
+
+#~ msgid ""
+#~ "Please choose whether you want to enable support for OE. If unsure, do "
+#~ "not enable it."
+#~ msgstr ""
+#~ "Prosím vyberte si zda chcete povolit podporu pro OE. Nejste-li si jisti, "
+#~ "podporu nepovolujte."
+
+#~ msgid "x509, plain"
+#~ msgstr "x509, prostý"
+
+#~ msgid "The type of RSA keypair to create:"
+#~ msgstr "Typ páru RSA klíčů, který se vytvoří:"
+
+#~ msgid ""
+#~ "It is possible to create a plain RSA public/private keypair for use with "
+#~ "strongSwan or to create a X509 certificate file which contains the RSA "
+#~ "public key and additionally stores the corresponding private key."
+#~ msgstr ""
+#~ "Je možné vytvořit prostý pár RSA klíčů pro použití se strongSwanem, nebo "
+#~ "vytvořit soubor s certifikátem X509, který obsahuje veřejný RSA klíč a "
+#~ "dodatečně uchovává odpovídající soukromý klíč."
+
+#~ msgid ""
+#~ "If you only want to build up IPSec connections to hosts also running "
+#~ "strongSwan, it might be a bit easier using plain RSA keypairs. But if you "
+#~ "want to connect to other IPSec implementations, you will need a X509 "
+#~ "certificate. It is also possible to create a X509 certificate here and "
+#~ "extract the RSA public key in plain format if the other side runs "
+#~ "strongSwan without X509 certificate support."
+#~ msgstr ""
+#~ "Pokud chcete vytvořit IPSec spojení jen k počítačům, na kterých taktéž "
+#~ "běží strongSwan, může být mnohem jednodušší použít pár prostých RSA "
+#~ "klíčů. Pokud se ale chcete připojit k jiným implementacím IPSec, budete "
+#~ "potřebovat certifikát X509. Také je možné zde vytvořit certifikát X509 a "
+#~ "později, pokud druhá strana používá strongSwan bez podpory certifikátů "
+#~ "X509, z něj získat veřejný RSA klíč v prostém formátu."
+
+#~ msgid ""
+#~ "Therefore a X509 certificate is recommended since it is more flexible and "
+#~ "this installer should be able to hide the complex creation of the X509 "
+#~ "certificate and its use in strongSwan anyway."
+#~ msgstr ""
+#~ "Certifikát X509 je proto doporučován zejména díky své flexibilitě. Tento "
+#~ "instalátor by v měl být schopen skrýt komplexnost vytváření a používání "
+#~ "certifikátu ve strongSwanu."

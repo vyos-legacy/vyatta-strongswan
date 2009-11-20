@@ -1,0 +1,124 @@
+strongswan for Debian
+----------------------
+
+1) General Remarks
+
+This package has been created from the openswan package, which was again
+created from the freeswan package, which was created from scratch with some 
+ideas from the freeswan 1.3 package by Tommi Virtanen and the freeswan 1.5 
+package by Aaron Johnson merged in.
+
+The differences between the strongSwan and the Openswan packages are 
+documented at http://www.strongswan.org/ .
+
+2) Kernel Support
+
+Note: This package can make use of the in-kernel IPSec stack, which is
+available in the stock Debian kernel images (>=2.4.24 and 2.6.x). 
+
+If you want to use the strongswan utilities, you will need the appropriate
+kernel modules. The Debian default kernel native IPSec stack (which is 
+included in Linux 2.6 kernels and has been backported to Debian's 2.4 kernels) 
+can be used out-of-the-box with strongswan pluto, the key management daemon. 
+This native Linux IPSec stack is of high quality, has all of the features of 
+the latest Debian freeswan and openswan packages (i.e. support for other
+ciphers like AES and NAT Traversal support) and is well integrated into the
+kernel networking subsystem (which is not true for the freeswan kernel
+modules). This is the recommended kernel support for strongswan.
+
+If you do not want to use the in-kernel IPSec stack of newer 2.6 kernels or 
+are building a custom 2.4 kernel, then the KLIPS kernel part can be used.
+strongswan no longer ships this part, but is instead focussing on the newer
+native IPSec stack. However, strongswan is interoperable with the KLIPS part
+shipped with openswan, both for 2.4 and 2.6 series kernels. Please install 
+either the linux-patch-openswan or the openswan-modules-source packages and
+follow their respective README.Debian files when you want to use KLIPS.
+
+3) Getting Started
+
+For connecting two Debian boxes using this strongswan package, the
+simplest connection block on each side would look something like this:
+
+On host A, use
+
+conn to_hostb
+        left=%defaultroute
+	right=hostb.example.com
+	leftcert=hosta.pem
+        rightcert=hostb.pem
+        keyexchange=ikev2
+        type=transport
+        auto=add
+
+On host B, use
+conn to_hosta
+	left=%defaultroute
+	right=hosta.example.com
+	leftcert=hostb.pem
+	rightcert=hosta.pem
+	keyexchange=ikev2
+	type=transport
+	auto=add
+
+This assumes that the respective hostnames hosta.example.com and 
+hostb.example.com can be resolved and that the internal hostnames are hosta
+and hostb (and thus installing the strongswan package created the certificates
+hosta.pem and hostb.pem, respectively). 
+Then the certificates (and not the private keys!) need to be exchanged between
+the hosts, e.g. with
+	scp /etc/ipsec.d/certs/hosta.pem hostb.example.com:/etc/ipsec.d/certs/
+	scp hostb.example.com:/etc/ipsec.d/certs/hostb.com /etc/ipsec.d/certs/
+from host A. The IPSec transport connection (that is, no subnets behind these 
+hosts that should be tunneled) can be started from either side using 
+"ipsec up to_hostb" (e.g. from host A).
+Note that this example explicitly uses IKEv2 due to its nicer error messages.
+
+A more complicated example is to connect a "roadwarrior" (e.g. laptop)
+to an internal network wbile it is behind another NAT. On the gateway
+side, i.e. for the internal network the roadwarrior should connect to,
+the configuration block could look something like this:
+
+conn roadwwarrior
+        left=%defaultroute
+        leftcert=gatewayCert.pem
+        rightcert=laptopCert.pem  
+        rightrsasigkey=%cert       
+        leftrsasigkey=%cert        
+        auto=add                   
+        leftsubnet=10.0.0.0/24   
+        rightsubnetwithin=0.0.0.0/0
+        right=%any                 
+        compress=yes               
+        type=tunnel                
+        dpddelay=30                
+        dpdtimeout=120             
+        dpdaction=clear            
+
+On the laptop side, you could use something along the lines:
+
+conn %default
+        rightrsasigkey=%cert
+        leftrsasigkey=%cert 
+        authby=rsasig
+        leftcert=laptopCert.pem
+        leftsendcert=always
+        leftsubnet=
+        dpddelay=30
+        dpdtimeout=120
+        dpdaction=clear
+        esp=aes128-sha1
+        ike=aes128-sha1-modp2048
+
+conn esys
+        left=%defaultroute
+        right=gateway.example.com
+        rightsubnet=10.0.0.0/24
+        rightcert=gatewayCert.pem
+        auto=add
+
+Then load these new configuration blocks on both sides using "ipsec reload" 
+and, on the laptop, start the tunnel with "ipsec up mynetwork".
+These configuration blocks assume host names "gateway" and "laptop" and an 
+inner subnet of 10.0.0.0/24.
+
+-- Rene Mayrhofer <rmayr@debian.org>, Sun, Jul 09 12:31:00 2006

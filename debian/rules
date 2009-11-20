@@ -1,0 +1,174 @@
+#!/usr/bin/make -f
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export DH_OPTIONS
+
+# this is a security-critical package, set all the options we can
+export DEB_BUILD_HARDENING=1
+
+CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+		--libexecdir=/usr/lib \
+		--enable-ldap --enable-curl \
+		--enable-nonblocking --enable-thread \
+		--enable-smartcard --enable-cisco-quirks \
+		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
+		--enable-mediation --enable-medsrv --enable-medcli \
+		--enable-openssl --enable-agent \
+		--enable-eap-radius --enable-eap-identity --enable-eap-md5 \
+		--enable-eap-gtc --enable-eap-aka --enable-eap-mschapv2 \
+		--enable-sql \
+		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
+		--disable-md5 --disable-sha1 --disable-sha2 \
+		--enable-nm
+	# Could enable --enable-nat-transport, but this is actually insecure,
+	# so don't!
+	# And for --enable-eap-sim we would need the library, which we don't
+	# have right now.
+
+DEB_BUILD_ARCH_CPU ?=$(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
+
+ifeq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O2
+endif
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	MAKEFLAGS += -j$(NUMJOBS)
+endif
+# the padlock plugin only makes sense on i386 
+# but it actually doesn't do much, so maybe we don't need it
+ifeq ($(DEB_BUILD_ARCH_CPU),i386)
+  CONFIGUREARGS += --enable-padlock
+endif
+
+patch:
+	dh_testdir
+	#dpatch apply-all
+
+unpatch:
+	#dpatch deapply-all
+
+build: build-stamp
+build-stamp: patch
+	dh_testdir
+	./configure $(CONFIGUREARGS)
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)"
+	touch build-stamp
+
+clean: unpatch
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp
+
+	[ ! -f Makefile ] || $(MAKE) clean
+	#-$(MAKE) -C programs/fswcert/ clean
+	# after a make clean, no binaries _should_ be left, but ....
+	-find $(CURDIR) -name "*.o" | xargs --no-run-if-empty rm
+	-find $(CURDIR)/lib/libcrypto -name "*.a" | xargs --no-run-if-empty rm
+
+	# Really clean (#356716)
+	# This is a hack: should be better implemented
+	rm -f lib/libstrongswan/libstrongswan.a || true
+	rm -f lib/libstrongswan/liboswlog.a || true
+
+	# just in case something went wrong
+	rm -f $(CURDIR)/debian/ipsec.secrets
+	
+	# and make sure that template are up-to-date
+	debconf-updatepo
+
+	dh_clean
+
+install: build-stamp
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
+
+	# install files from debian/tmp into proper package dirs
+	dh_install
+	# special handling for padlock, as it is only built on i386
+ifeq ($(DEB_BUILD_ARCH_CPU),i386)
+	  install $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-padlock.so* $(CURDIR)/debian/libstrongswan/usr/lib/ipsec/plugins/
+endif
+
+	# and additional files not covered by upstream makefile...
+	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
+	# also "patch" ipsec.conf to include the debconf-managed file
+	echo >> $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
+	echo "include /var/lib/strongswan/ipsec.conf.inc" >> $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
+	# and to enable both IKEv1 and IKEv2 by default
+	sed -r 's/^[ \t]+# *plutostart=(yes|no) */\tplutostart=yes/;s/^[ \t]+# *charonstart=(yes|no) */\tcharonstart=yes/' < $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf > $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf.tmp
+	mv $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf.tmp $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
+	# set permissions on ipsec.secrets
+	chmod 600 $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
+	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
+	chmod 700 -R $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/private/
+	# don't know why they come with +x set by default...
+	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/policies/*
+	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/examples/*
+
+	# this is handled by update-rc.d
+	rm -rf $(CURDIR)/debian/strongswan-starter/etc/rc?.d
+
+	dh_installdocs -pstrongswan -n
+	# change the paths in the installed doc files (but only in regular 
+	# files, not in links to the outside of the build tree !)
+	# TODO: check if we still need this
+	( cd $(CURDIR)/debian/strongswan/; \
+	  for f in `grep "/usr/local/" --recursive --files-with-match *`; \
+	  do \
+		if [ -f $$f -a ! -L $$f ]; then \
+		    cp $$f $$f.old; \
+ 		    sed 's/\/usr\/local\//\/usr\//' $$f.old > $$f; \
+		    rm $$f.old; \
+		fi; \
+	  done )
+
+	# the logcheck ignore files
+	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.paranoid $(CURDIR)/debian/libstrongswan/etc/logcheck/ignore.d.paranoid/strongswan
+	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.server $(CURDIR)/debian/libstrongswan/etc/logcheck/ignore.d.server/strongswan
+	install -D --mode=0600 $(CURDIR)/debian/logcheck.ignore.server $(CURDIR)/debian/libstrongswan/etc/logcheck/ignore.d.workstation/strongswan
+	install -D --mode=0600 $(CURDIR)/debian/logcheck.violations.ignore $(CURDIR)/debian/libstrongswan/etc/logcheck/violations.ignore.d/strongswan
+
+	# more lintian cleanups
+	find $(CURDIR)/debian/*strongswan*/ -name ".cvsignore" | xargs --no-run-if-empty rm -f
+	find $(CURDIR)/debian/*strongswan*/ -name "/.svn/" | xargs --no-run-if-empty rm -rf
+
+	# and lintian overrides
+	install --mode=0644 $(CURDIR)/debian/strongswan.lintian-overrides $(CURDIR)/debian/libstrongswan/usr/share/lintian/overrides/strongswan
+
+binary-common:
+	dh_testdir
+	dh_testroot
+	dh_installdirs
+	dh_installinit --name=ipsec
+	dh_installdebconf
+	dh_installchangelogs NEWS
+	dh_installdocs README
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
+	dh_makeshlibs
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary-indep: 
+	$(MAKE) -f debian/rules binary-common DH_OPTIONS=-i
+
+binary-arch: install
+	$(MAKE) -f debian/rules binary-common DH_OPTIONS=-a
+
+binary-%: build-stamp install
+	make -f debian/rules binary-common DH_OPTIONS=-p$*
+
+binary: binary-indep binary-arch
+.PHONY: clean binary-indep binary-arch
