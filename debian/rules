@@ -23,8 +23,7 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-sql \
 		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
 		--disable-md5 --disable-sha1 --disable-sha2 \
-	# Could enable --enable-nat-transport, but this is actually insecure,
-	# so don't!
+    --enable-nat-transport
 	# And for --enable-eap-sim we would need the library, which we don't
 	# have right now.
 
