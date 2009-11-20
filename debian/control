@@ -9,6 +9,7 @@ Homepage: http://www.strongswan.org
 Package: strongswan
 Architecture: all
 Depends: strongswan-ikev1, strongswan-ikev2
+Provides: vyatta-ipsec
 Description: IPsec VPN solution metapackage
  The strongSwan VPN suite is based on the IPsec stack in standard Linux 2.6
  kernels. It supports both the IKEv1 and IKEv2 protocols.
