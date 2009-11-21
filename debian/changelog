@@ -1,3 +1,13 @@
+strongswan (4.3.2-1.1-vyatta2) unstable; urgency=low
+
+  * we don't need to build network-manager stuff for strongswan
+  * update .gitignore
+  * enable NAT-Traversal with IPSec Transport Mode
+  * strongswan provides vyatta-ipsec. vyatta-op-vpn and vyatta-cfg-vpn
+  * version 999.dev for locally built package
+
+ -- Mohit Mehta <mohit.mehta@vyatta.com>  Fri, 20 Nov 2009 17:52:48 -0800
+
 strongswan (4.3.2-1.1-vyatta1) unstable; urgency=low
 
   * Vyatta strongswan
