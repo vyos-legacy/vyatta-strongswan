@@ -40,7 +40,7 @@ libtool
 /debian/strongswan-starter.substvars
 /debian/tmp
 /INSTALL
-/Makefile.in
+*Makefile.in
 *Makefile
 /scripts/bin2array
 /scripts/bin2sql
