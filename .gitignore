@@ -65,3 +65,5 @@ libtool
 /src/whack/whack
 /testing/do-tests
 /src/dumm/ext/extconf.rb
+/src/newhostkey/newhostkey
+/src/rsasigkey/rsasigkey
