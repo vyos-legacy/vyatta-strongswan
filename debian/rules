@@ -43,6 +43,7 @@ ifeq ($(DEB_BUILD_ARCH_CPU),i386)
 endif
 
 patch:
+	autoreconf -i
 	dh_testdir
 	#dpatch apply-all
 
