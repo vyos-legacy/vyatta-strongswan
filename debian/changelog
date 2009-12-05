@@ -1,3 +1,19 @@
+strongswan (4.3.2-1.1-vyatta3) unstable; urgency=low
+
+  [ Mohit Mehta ]
+  * remove generated Makefile.in files from git
+  * libtoolize --copy --force
+  * ignore all derived Makefile.in files
+  * remove derived files and add autoreconf to debian/rules
+  * port raw rsa key generation from openswan
+
+  [ root ]
+  * remove derived files, update gitignore
+
+  [ Mohit Mehta ]
+
+ -- Mohit Mehta <mohit.mehta@vyatta.com>  Fri, 04 Dec 2009 19:13:13 -0800
+
 strongswan (4.3.2-1.1-vyatta2) unstable; urgency=low
 
   * we don't need to build network-manager stuff for strongswan
