@@ -25,7 +25,7 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += openac scepclient newhostkey rsasigkey
+  SUBDIRS += openac scepclient newhostkey rsasigkey barf
 endif
 
 if USE_DUMM

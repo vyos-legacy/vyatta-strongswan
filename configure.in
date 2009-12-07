@@ -1293,6 +1293,7 @@ AC_OUTPUT(
 	src/_updown_espmark/Makefile
 	src/newhostkey/Makefile
 	src/rsasigkey/Makefile
+	src/barf/Makefile
 	src/_copyright/Makefile
 	src/openac/Makefile
 	src/scepclient/Makefile

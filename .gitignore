@@ -67,3 +67,4 @@ libtool
 /src/dumm/ext/extconf.rb
 /src/newhostkey/newhostkey
 /src/rsasigkey/rsasigkey
+/src/barf/barf
