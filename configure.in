@@ -1294,6 +1294,9 @@ AC_OUTPUT(
 	src/newhostkey/Makefile
 	src/rsasigkey/Makefile
 	src/barf/Makefile
+	src/_include/Makefile
+	src/_keycensor/Makefile
+	src/_secretcensor/Makefile
 	src/_copyright/Makefile
 	src/openac/Makefile
 	src/scepclient/Makefile

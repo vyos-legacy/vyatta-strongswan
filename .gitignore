@@ -68,3 +68,6 @@ libtool
 /src/newhostkey/newhostkey
 /src/rsasigkey/rsasigkey
 /src/barf/barf
+/src/_include/_include
+/src/_keycensor/_keycensor
+/src/_secretcensor/_secretcensor

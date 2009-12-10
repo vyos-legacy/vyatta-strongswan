@@ -15,6 +15,9 @@ usr/lib/ipsec/_updown_espmark                                      usr/lib/ipsec
 usr/share/man/man8/_updown.8                                            usr/share/man/man8/
 usr/share/man/man8/_updown_espmark.8                            usr/share/man/man8/
 # tools
+usr/lib/ipsec/_include                                                      usr/lib/ipsec/
+usr/lib/ipsec/_keycensor                                                      usr/lib/ipsec/
+usr/lib/ipsec/_secretcensor                                                      usr/lib/ipsec/
 usr/lib/ipsec/barf                       usr/lib/ipsec/
 usr/lib/ipsec/newhostkey                                        usr/lib/ipsec/
 usr/lib/ipsec/rsasigkey                       usr/lib/ipsec/
@@ -25,6 +28,9 @@ usr/share/man/man8/newhostkey.8                                 usr/share/man/ma
 usr/share/man/man8/scepclient.8         usr/share/man/man8/
 usr/share/man/man8/openac.8                     usr/share/man/man8/
 usr/share/man/man8/rsasigkey.8                     usr/share/man/man8/
+usr/share/man/man8/_include.8                                            usr/share/man/man8/
+usr/share/man/man8/_keycensor.8                                            usr/share/man/man8/
+usr/share/man/man8/_secretcensor.8                                            usr/share/man/man8/
 # stroke
 usr/lib/ipsec/stroke                                                       usr/lib/ipsec/
 usr/lib/ipsec/plugins/libstrongswan-stroke.so*     usr/lib/ipsec/plugins/
