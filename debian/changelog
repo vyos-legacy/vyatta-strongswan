@@ -1,3 +1,16 @@
+strongswan (4.3.2-1.1-vyatta4) unstable; urgency=low
+
+  [ Mohit Mehta ]
+  * bring openswan 2.4.12's `ipsec barf` to strongswan
+
+  [ Andreas Steffen ]
+  * Patch to make RSA raw keys work without explicit use of id
+
+  [ Mohit Mehta ]
+  * Add missing commands used in barf. Modify barf to be ipsec specific.
+
+ -- Mohit Mehta <mohit.mehta@vyatta.com>  Wed, 09 Dec 2009 18:56:06 -0800
+
 strongswan (4.3.2-1.1-vyatta3) unstable; urgency=low
 
   [ Mohit Mehta ]
