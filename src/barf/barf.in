@@ -32,6 +32,7 @@ fi
 # message patterns that start relevant parts of logs
 pluto_start='Starting IKEv1 pluto daemon'
 charon_start='Starting IKEv2 charon daemon'
+plutolognull='no'
 
 case "$1" in
 --help)		echo "Usage: ipsec barf" ; exit 0	;;
@@ -106,6 +107,7 @@ findlog "$pluto_start" "nothing-else" messages syslog auth.log daemon.log
 if test " $findlog_file" = " /dev/null" 
 then
 echo "Unable to find IKEv1 messages, typically found in /var/log/messages or equivalent. You may need to run Strongswan for the first time; alternatively, your log files have been emptied (ie, logwatch) or we do not understand your logging configuration."
+plutolognull='yes'
 fi
 plutolog=$findlog_file
 kline=$findlog_startline
@@ -113,7 +115,12 @@ kline=$findlog_startline
 findlog "$charon_start" "nothing-else" secure auth.log daemon.log debug
 if test " $findlog_file" = " /dev/null" 
 then
+if test 'plutolognull' = 'yes'
+then
 echo "Unable to find IKEv2 messages, typically found in /var/log/secure or equivalent. You may need to run Strongswan for the first time or you may have IKEv2 turned off; alternatively, your log files have been emptied (ie, logwatch) or we do not understand your logging configuration."
+else
+echo "Unable to find IKEv2 messages. Strongswan might be running with IKEv2 turned off or alternatively, your log files have been emptied (ie, logwatch)"
+fi
 fi 
 charonlog=$findlog_file
 pline=$findlog_startline
@@ -201,14 +208,14 @@ then
 fi
 _________________________ plutolog
 sed -n $kline,'$'p $plutolog |
-	egrep -i 'ipsec|klips|pluto' |
+	egrep -i 'pluto' |
 	case "$1" in
 	--short)	tail -500	;;
 	*)		cat		;;
 	esac
 _________________________ charonlog
 sed -n $pline,'$'p $charonlog |
-	egrep -i 'pluto' |
+	egrep -i 'charon' |
 	case "$1" in
 	--short)	tail -500	;;
 	*)		cat		;;
