@@ -191,7 +191,7 @@ doroute() {
 	parms="$PLUTO_PEER_CLIENT"
 
 	parms2=
-	if [ -n "$PLUTO_NEXT_HOP" ]
+	if [ -n "$PLUTO_NEXT_HOP" ] && [ "$PLUTO_NEXT_HOP" != "$PLUTO_PEER" ]
 	then
 	   parms2="via $PLUTO_NEXT_HOP"
 	fi

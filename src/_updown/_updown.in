@@ -225,12 +225,11 @@ doroute() {
 	fi
 
 	parms1="$PLUTO_PEER_CLIENT"
-
-	if [ -n "$PLUTO_NEXT_HOP" ]
+	
+	parms2=
+	if [ -n "$PLUTO_NEXT_HOP" ] && [ "$PLUTO_NEXT_HOP" != "$PLUTO_PEER" ]
 	then
 	    parms2="via $PLUTO_NEXT_HOP"
-	else
-	    parms2="via $PLUTO_PEER"
 	fi	
 	parms2="$parms2 dev $PLUTO_INTERFACE"
 
