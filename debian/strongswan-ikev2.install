@@ -4,5 +4,3 @@ usr/lib/ipsec/plugins/libstrongswan-eap*.so*     usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-agent.so*      usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-curl.so*       usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-ldap.so*       usr/lib/ipsec/plugins/
-usr/lib/ipsec/plugins/libstrongswan-medsrv.so*       usr/lib/ipsec/plugins/
-usr/lib/ipsec/plugins/libstrongswan-medcli.so*       usr/lib/ipsec/plugins/
