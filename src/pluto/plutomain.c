@@ -98,6 +98,7 @@ static void usage(const char *mess)
 			" [--crlcheckinterval <interval>]"
 			" [--cachecrls]"
 			" [--uniqueids]"
+			" [--disableuniqreqids]"
 			" \\\n\t"
 			"[--interface <ifname>]"
 			" [--ikeport <port-number>]"
@@ -285,6 +286,7 @@ int main(int argc, char **argv)
 			{ "crlcheckinterval", required_argument, NULL, 'x'},
 			{ "cachecrls", no_argument, NULL, 'C' },
 			{ "uniqueids", no_argument, NULL, 'u' },
+      { "disableuniqreqids", no_argument, NULL, 'Z'},			
 			{ "interface", required_argument, NULL, 'i' },
 			{ "ikeport", required_argument, NULL, 'p' },
 			{ "ctlbase", required_argument, NULL, 'b' },
@@ -414,6 +416,10 @@ int main(int argc, char **argv)
 		case 'u':       /* --uniqueids */
 			uniqueIDs = TRUE;
 			continue;
+	
+	  case 'Z':       /* --disableuniqreqids */
+	    disable_uniqreqids = TRUE;
+	    continue;
 
 		case 'i':       /* --interface <ifname> */
 			if (!use_interface(optarg))

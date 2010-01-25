@@ -1027,6 +1027,14 @@ wich is identical to
 and the value
 .B keep
 to reject new IKE_SA setups and keep the duplicate established earlier.
+.TP
+.B disableuniqreqids
+disable uniqreqids for security database. May be used to get
+strongswan to work with Amazon VPC; acceptable values are
+.B no
+(the default)
+and
+.BR yes .
 .PP
 The following
 .B config section

@@ -38,6 +38,7 @@ fragicmp,          KW_FRAGICMP
 packetdefault,     KW_PACKETDEFAULT
 hidetos,           KW_HIDETOS
 uniqueids,         KW_UNIQUEIDS
+disableuniqreqids, KW_DISABLEUNIQREQIDS
 overridemtu,       KW_OVERRIDEMTU
 crlcheckinterval,  KW_CRLCHECKINTERVAL
 cachecrls,         KW_CACHECRLS

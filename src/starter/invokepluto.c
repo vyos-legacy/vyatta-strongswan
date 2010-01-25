@@ -152,6 +152,10 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 	{
 		arg[argc++] = "--uniqueids";
 	}
+	if (cfg->setup.disableuniqreqids)
+	{
+	  arg[argc++] = "--disableuniqreqids";
+	}
 	ADD_DEBUG("none")
 	ADD_DEBUG("all")
 	ADD_DEBUG("raw")

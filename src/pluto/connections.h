@@ -264,6 +264,8 @@ extern struct connection *shunt_owner(const ip_subnet *ours
 extern bool uniqueIDs;  /* --uniqueids? */
 extern void ISAKMP_SA_established(struct connection *c, so_serial_t serial);
 
+extern bool disable_uniqreqids;  /* --disableuniqreqids? */
+
 #define his_id_was_instantiated(c) ((c)->kind == CK_INSTANCE \
 	&& (id_is_ipaddr(&(c)->spd.that.id)? \
 	sameaddr(&(c)->spd.that.id.ip_addr, &(c)->spd.that.host_addr) : TRUE))

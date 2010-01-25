@@ -170,6 +170,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_config_t, setup.postpluto), NULL                  },
 	{ ARG_STR,  offsetof(starter_config_t, setup.plutostderrlog), NULL             },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_unique            },
+	{ ARG_ENUM, offsetof(starter_config_t, setup.disableuniqreqids), LST_bool      },
 	{ ARG_UINT, offsetof(starter_config_t, setup.overridemtu), NULL                },
 	{ ARG_TIME, offsetof(starter_config_t, setup.crlcheckinterval), NULL           },
 	{ ARG_ENUM, offsetof(starter_config_t, setup.cachecrls), LST_bool              },

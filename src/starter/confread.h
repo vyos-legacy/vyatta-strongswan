@@ -179,6 +179,7 @@ struct starter_config {
 				char     *postpluto;
 				char     *plutostderrlog;
 				bool     uniqueids;
+				bool     disableuniqreqids;
 				u_int    overridemtu;
 				u_int    crlcheckinterval;
 				bool     cachecrls;

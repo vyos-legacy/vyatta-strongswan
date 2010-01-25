@@ -935,11 +935,19 @@ find_connection_by_reqid(uint32_t reqid)
 	return NULL;
 }
 
+/* Always use proper reqids unless explicitly told not to by --disableuniqreqids */
+bool disable_uniqreqids = FALSE; 
+
 static uint32_t
 gen_reqid(void)
 {
 	uint32_t start;
 	static uint32_t reqid = IPSEC_MANUAL_REQID_MAX & ~3;
+
+  if (disable_uniqreqids) {
+    loglog(RC_LOG_SERIOUS, "disabling uniqreqids for security database");
+    return 0;
+  }
 
 	start = reqid;
 	do {
