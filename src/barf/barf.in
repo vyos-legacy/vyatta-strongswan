@@ -171,6 +171,10 @@ then
 fi
 _________________________ ipsec/status
 ipsec statusall
+_________________________ routing/tables
+ip rule list
+_________________________ ipsec/route
+ip route list table 220
 _________________________ ipsec/directory
 ipsec --directory
 _________________________ ps
