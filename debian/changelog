@@ -1,3 +1,10 @@
+strongswan (4.3.2-1.1-vyatta8) unstable; urgency=low
+
+  * include routing table list and output of VPN routing table in ipsec
+    barf
+
+ -- Mohit Mehta <mohit.mehta@vyatta.com>  Fri, 29 Jan 2010 16:02:38 -0800
+
 strongswan (4.3.2-1.1-vyatta7) unstable; urgency=low
 
   * Port Vyatta's disableuniqredids functionality from Openswan to work
