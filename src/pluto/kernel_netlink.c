@@ -40,6 +40,11 @@
 #include "whack.h"      /* for RC_LOG_SERIOUS */
 #include "kernel_alg.h"
 
+/** required for Linux 2.6.26 kernel and later */
+#ifndef XFRM_STATE_AF_UNSPEC
+#define XFRM_STATE_AF_UNSPEC	32
+#endif
+
 /* Minimum priority number in SPD used by pluto. */
 #define MIN_SPD_PRIORITY 1024
 
@@ -80,15 +85,15 @@ static sparse_names xfrm_type_names = {
 
 /* Authentication algorithms */
 static sparse_names aalg_list = {
-	{ SADB_X_AALG_NULL,          "digest_null" },
-	{ SADB_AALG_MD5HMAC,         "md5" },
-	{ SADB_AALG_SHA1HMAC,        "sha1" },
-	{ SADB_X_AALG_SHA2_256HMAC,  "sha256" },
-	{ SADB_X_AALG_SHA2_384HMAC,  "sha384" },
-	{ SADB_X_AALG_SHA2_512HMAC,  "sha512" },
-	{ SADB_X_AALG_RIPEMD160HMAC, "ripemd160" },
-	{ SADB_X_AALG_AES_XCBC_MAC,  "xcbc(aes)"},
-	{ SADB_X_AALG_NULL,          "null" },
+	{ SADB_X_AALG_NULL,            "digest_null" },
+	{ SADB_AALG_MD5HMAC,           "md5" },
+	{ SADB_AALG_SHA1HMAC,          "sha1" },
+	{ SADB_X_AALG_SHA2_256_96HMAC, "sha256" },
+	{ SADB_X_AALG_SHA2_256HMAC,    "hmac(sha256)" },
+	{ SADB_X_AALG_SHA2_384HMAC,    "hmac(sha384)" },
+	{ SADB_X_AALG_SHA2_512HMAC,    "hmac(sha512)" },
+	{ SADB_X_AALG_RIPEMD160HMAC,   "ripemd160" },
+	{ SADB_X_AALG_AES_XCBC_MAC,    "xcbc(aes)"},
 	{ 0, sparse_end }
 };
 
@@ -183,7 +188,7 @@ static void init_netlink(void)
  * @param hdr - Data to be sent.
  * @param rbuf - Return Buffer - contains data returned from the send.
  * @param rbuf_len - Length of rbuf
- * @param description - String - user friendly description of what is 
+ * @param description - String - user friendly description of what is
  *                      being attempted.  Used for diagnostics
  * @param text_said - String
  * @return bool True if the message was succesfully sent.
@@ -343,6 +348,7 @@ static bool netlink_policy(struct nlmsghdr *hdr, bool enoent_ok,
 	struct {
 		struct nlmsghdr n;
 		struct nlmsgerr e;
+		char data[1024];
 	} rsp;
 	int error;
 
@@ -382,7 +388,7 @@ static bool netlink_policy(struct nlmsghdr *hdr, bool enoent_ok,
  * @param proto int (Currently unused) Contains protocol (u=tcp, 17=udp, etc...)
  * @param transport_proto int (Currently unused) 0=tunnel, 1=transport
  * @param satype int
- * @param proto_info 
+ * @param proto_info
  * @param lifetime (Currently unused)
  * @param ip int
  * @return boolean True if successful
@@ -518,9 +524,9 @@ static bool netlink_raw_eroute(const ip_address *this_host
 			tmpl[i].optional =
 				proto_info[i].proto == IPPROTO_COMP && dir != XFRM_POLICY_OUT;
 			tmpl[i].aalgos = tmpl[i].ealgos = tmpl[i].calgos = ~0;
+			tmpl[i].family = that_host->u.v4.sin_family;
 			tmpl[i].mode =
 				proto_info[i].encapsulation == ENCAPSULATION_MODE_TUNNEL;
-
 			if (!tmpl[i].mode)
 			{
 				continue;
@@ -590,7 +596,7 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 		char data[1024];
 	} req;
 	struct rtattr *attr;
-	u_int16_t icv_size = 64;	
+	u_int16_t icv_size = 64;
 
 	memset(&req, 0, sizeof(req));
 	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -602,7 +608,15 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 	req.p.id.spi = sa->spi;
 	req.p.id.proto = satype2proto(sa->satype);
 	req.p.family = sa->src->u.v4.sin_family;
-	req.p.mode = (sa->encapsulation == ENCAPSULATION_MODE_TUNNEL);
+	if (sa->encapsulation == ENCAPSULATION_MODE_TUNNEL)
+	{
+		req.p.mode = XFRM_MODE_TUNNEL;
+		req.p.flags |= XFRM_STATE_AF_UNSPEC;
+	}
+	else
+	{
+		req.p.mode = XFRM_MODE_TRANSPORT;
+	}
 	req.p.replay_window = sa->replay_window;
 	req.p.reqid = sa->reqid;
 	req.p.lft.soft_byte_limit = XFRM_INF;
@@ -616,7 +630,6 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 
 	if (sa->authalg)
 	{
-		struct xfrm_algo algo;
 		const char *name;
 
 		name = sparse_name(aalg_list, sa->authalg);
@@ -632,16 +645,37 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 					sa->authkeylen * BITS_PER_BYTE)
 			)
 
-		strcpy(algo.alg_name, name);
-		algo.alg_key_len = sa->authkeylen * BITS_PER_BYTE;
+		if (sa->authalg == SADB_X_AALG_SHA2_256HMAC)
+		{
+			struct xfrm_algo_auth algo;
 
-		attr->rta_type = XFRMA_ALG_AUTH;
-		attr->rta_len = RTA_LENGTH(sizeof(algo) + sa->authkeylen);
+			/* the kernel uses SHA256 with 96 bit truncation by default,
+			 * use specified truncation size supported by newer kernels */
+			strcpy(algo.alg_name, name);
+			algo.alg_key_len = sa->authkeylen * BITS_PER_BYTE;
+			algo.alg_trunc_len = 128;
 
-		memcpy(RTA_DATA(attr), &algo, sizeof(algo));
-		memcpy((char *)RTA_DATA(attr) + sizeof(algo), sa->authkey
-			, sa->authkeylen);
+			attr->rta_type = XFRMA_ALG_AUTH_TRUNC;
+			attr->rta_len = RTA_LENGTH(sizeof(algo) + sa->authkeylen);
 
+			memcpy(RTA_DATA(attr), &algo, sizeof(algo));
+			memcpy((char *)RTA_DATA(attr) + sizeof(algo), sa->authkey
+				, sa->authkeylen);
+		}
+		else
+		{
+			struct xfrm_algo algo;
+
+			strcpy(algo.alg_name, name);
+			algo.alg_key_len = sa->authkeylen * BITS_PER_BYTE;
+
+			attr->rta_type = XFRMA_ALG_AUTH;
+			attr->rta_len = RTA_LENGTH(sizeof(algo) + sa->authkeylen);
+
+			memcpy(RTA_DATA(attr), &algo, sizeof(algo));
+			memcpy((char *)RTA_DATA(attr) + sizeof(algo), sa->authkey
+				, sa->authkeylen);
+		}
 		req.n.nlmsg_len += attr->rta_len;
 		attr = (struct rtattr *)((char *)attr + attr->rta_len);
 	}
@@ -674,19 +708,19 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 			}
 			DBG(DBG_CRYPT,
 				DBG_log("configured esp encryption algorithm %s with key size %d",
-						enum_show(&esp_transformid_names, sa->encalg),
+						enum_show(&esp_transform_names, sa->encalg),
 						sa->enckeylen * BITS_PER_BYTE)
 			)
 			attr->rta_type = XFRMA_ALG_AEAD;
 			attr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + sa->enckeylen);
 			req.n.nlmsg_len += attr->rta_len;
-			
+
 			algo = (struct xfrm_algo_aead*)RTA_DATA(attr);
 			algo->alg_key_len = sa->enckeylen * BITS_PER_BYTE;
 			algo->alg_icv_len = icv_size;
 			strcpy(algo->alg_name, name);
 			memcpy(algo->alg_key, sa->enckey, sa->enckeylen);
-			
+
 			attr = (struct rtattr *)((char *)attr + attr->rta_len);
 			break;
 		}
@@ -704,7 +738,7 @@ static bool netlink_add_sa(const struct kernel_sa *sa, bool replace)
 			}
 			DBG(DBG_CRYPT,
 				DBG_log("configured esp encryption algorithm %s with key size %d",
-						enum_show(&esp_transformid_names, sa->encalg),
+						enum_show(&esp_transform_names, sa->encalg),
 						sa->enckeylen * BITS_PER_BYTE)
 			)
 			attr->rta_type = XFRMA_ALG_CRYPT;
@@ -962,7 +996,7 @@ static void linux_pfkey_register(void)
 
 /** Create ip_address out of xfrm_address_t.
  *
- * @param family 
+ * @param family
  * @param src xfrm formatted IP address
  * @param dst ip_address formatted destination
  * @return err_t NULL if okay, otherwise an error
@@ -1001,7 +1035,7 @@ static err_t xfrm_sel_to_ip_pair(const struct xfrm_selector *sel,
 
 	if ((ugh = xfrm_to_ip_address(family, &sel->saddr, src))
 		|| (ugh = xfrm_to_ip_address(family, &sel->daddr, dst)))
-	{	
+	{
 		return ugh;
 	}
 

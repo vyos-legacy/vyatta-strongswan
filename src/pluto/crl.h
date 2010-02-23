@@ -14,47 +14,18 @@
 
 #include "constants.h"
 
-/* access structure for a revoked serial number */
-
-typedef struct revokedCert revokedCert_t;
-
-struct revokedCert{
-  revokedCert_t *next;
-  chunk_t       userCertificate;
-  time_t        revocationDate;
-  crl_reason_t  revocationReason;
-};
+#include <utils/linked_list.h>
+#include <credentials/certificates/certificate.h>
+#include <credentials/certificates/crl.h>
 
 /* storage structure for an X.509 CRL */
 
 typedef struct x509crl x509crl_t;
 
 struct x509crl {
-  x509crl_t     *next;
-  time_t         installed;
-  generalName_t *distributionPoints;
-  chunk_t        certificateList;
-  chunk_t          tbsCertList;
-  u_int              version;
-				 /*  signature */
-  int                  sigAlg;
-  chunk_t            issuer;
-  time_t             thisUpdate;
-  time_t             nextUpdate;
-  revokedCert_t      *revokedCertificates;
-				/*   v2 extensions */
-				/*   crlExtensions */
-				/*     extension */
-				/*       extnID */
-				/*       critical */
-				/*       extnValue */
-  chunk_t                authKeyID;
-  chunk_t                authKeySerialNumber;
-  chunk_t                crlNumber;
-
-				/* signatureAlgorithm */
-  int                algorithm;
-  chunk_t          signature;
+	certificate_t *crl;
+	x509crl_t     *next;
+	linked_list_t *distributionPoints;
 };
 
 /* apply a strict CRL policy
@@ -69,18 +40,14 @@ extern bool cache_crls;
 
 /*
  * check periodically for expired crls
- */ 
+ */
 extern long crl_check_interval;
-
-/* used for initialization */
-extern const x509crl_t  empty_x509crl;
-
-extern bool parse_x509crl(chunk_t blob, u_int level0, x509crl_t *crl);
 extern void load_crls(void);
 extern void check_crls(void);
-extern bool insert_crl(chunk_t blob, chunk_t crl_uri, bool cache_crl);
-extern cert_status_t verify_by_crl(const x509cert_t *cert, time_t *until
-	, time_t *revocationDate, crl_reason_t *revocationReason);
+extern bool insert_crl(x509crl_t *crl, char *crl_uri, bool cache_crl);
+extern cert_status_t verify_by_crl(cert_t *cert, time_t *until,
+								   time_t *revocationDate,
+								   crl_reason_t *revocationReason);
 extern void list_crls(bool utc, bool strict);
 extern void free_crls(void);
 extern void free_crl(x509crl_t *crl);

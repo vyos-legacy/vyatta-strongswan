@@ -27,7 +27,7 @@ struct private_load_tester_ipsec_t {
 	 * Public interface.
 	 */
 	load_tester_ipsec_t public;
-	
+
 	/**
 	 * faked SPI counter
 	 */
@@ -37,8 +37,8 @@ struct private_load_tester_ipsec_t {
 /**
  * Implementation of kernel_interface_t.get_spi.
  */
-static status_t get_spi(private_load_tester_ipsec_t *this, 
-						host_t *src, host_t *dst, 
+static status_t get_spi(private_load_tester_ipsec_t *this,
+						host_t *src, host_t *dst,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int32_t *spi)
 {
@@ -49,8 +49,8 @@ static status_t get_spi(private_load_tester_ipsec_t *this,
 /**
  * Implementation of kernel_interface_t.get_cpi.
  */
-static status_t get_cpi(private_load_tester_ipsec_t *this, 
-						host_t *src, host_t *dst, 
+static status_t get_cpi(private_load_tester_ipsec_t *this,
+						host_t *src, host_t *dst,
 						u_int32_t reqid, u_int16_t *cpi)
 {
 	return FAILED;
@@ -62,11 +62,12 @@ static status_t get_cpi(private_load_tester_ipsec_t *this,
 static status_t add_sa(private_load_tester_ipsec_t *this,
 					   host_t *src, host_t *dst, u_int32_t spi,
 					   protocol_id_t protocol, u_int32_t reqid,
-					   u_int64_t expire_soft, u_int64_t expire_hard,
+					   lifetime_cfg_t *lifetime,
 					   u_int16_t enc_alg, chunk_t enc_key,
 					   u_int16_t int_alg, chunk_t int_key,
 					   ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-					   bool encap, bool inbound)
+					   bool encap, bool inbound, traffic_selector_t *src_ts,
+					   traffic_selector_t *dst_ts)
 {
 	return SUCCESS;
 }
@@ -122,11 +123,11 @@ static status_t add_policy(private_load_tester_ipsec_t *this,
  * Implementation of kernel_interface_t.query_policy.
  */
 static status_t query_policy(private_load_tester_ipsec_t *this,
-							 traffic_selector_t *src_ts, 
+							 traffic_selector_t *src_ts,
 							 traffic_selector_t *dst_ts,
 							 policy_dir_t direction, u_int32_t *use_time)
 {
-	*use_time = time(NULL);
+	*use_time = time_monotonic(NULL);
 	return SUCCESS;
 }
 
@@ -134,7 +135,7 @@ static status_t query_policy(private_load_tester_ipsec_t *this,
  * Implementation of kernel_interface_t.del_policy.
  */
 static status_t del_policy(private_load_tester_ipsec_t *this,
-						   traffic_selector_t *src_ts, 
+						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
 						   policy_dir_t direction, bool unrouted)
 {
@@ -155,11 +156,11 @@ static void destroy(private_load_tester_ipsec_t *this)
 load_tester_ipsec_t *load_tester_ipsec_create()
 {
 	private_load_tester_ipsec_t *this = malloc_thing(private_load_tester_ipsec_t);
-	
+
 	/* public functions */
 	this->public.interface.get_spi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.interface.get_cpi = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,u_int16_t*))get_cpi;
-	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool))add_sa;
+	this->public.interface.add_sa  = (status_t(*)(kernel_ipsec_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,lifetime_cfg_t*,u_int16_t,chunk_t,u_int16_t,chunk_t,ipsec_mode_t,u_int16_t,u_int16_t,bool,bool,traffic_selector_t*,traffic_selector_t*))add_sa;
 	this->public.interface.update_sa = (status_t(*)(kernel_ipsec_t*,u_int32_t,protocol_id_t,u_int16_t,host_t*,host_t*,host_t*,host_t*,bool,bool))update_sa;
 	this->public.interface.query_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int64_t*))query_sa;
 	this->public.interface.del_sa = (status_t(*)(kernel_ipsec_t*,host_t*,host_t*,u_int32_t,protocol_id_t,u_int16_t))del_sa;
@@ -167,9 +168,9 @@ load_tester_ipsec_t *load_tester_ipsec_create()
 	this->public.interface.query_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.interface.del_policy = (status_t(*)(kernel_ipsec_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,bool))del_policy;
 	this->public.interface.destroy = (void(*)(kernel_ipsec_t*)) destroy;
-	
+
 	this->spi = 0;
-	
+
 	return &this->public;
 }
 

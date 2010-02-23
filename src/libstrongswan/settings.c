@@ -38,12 +38,12 @@ struct private_settings_t {
 	 * public functions
 	 */
 	settings_t public;
-	
+
 	/**
 	 * top level section
 	 */
 	section_t *top;
-	
+
 	/**
 	 * allocated file text
 	 */
@@ -64,7 +64,7 @@ struct section_t {
 	 * subsections, as section_t
 	 */
 	linked_list_t *sections;
-	
+
 	/**
 	 * key value pairs, as kv_t
 	 */
@@ -77,10 +77,10 @@ struct section_t {
 struct kv_t {
 
 	/**
- 	 * key string, relative
- 	 */
+	 * key string, relative
+	 */
 	char *key;
-	
+
 	/**
 	 * value as string
 	 */
@@ -95,7 +95,7 @@ static section_t *find_section(section_t *section, char *key, va_list args)
 	char name[512], *pos;
 	enumerator_t *enumerator;
 	section_t *current, *found = NULL;
-	
+
 	if (section == NULL)
 	{
 		return NULL;
@@ -104,7 +104,7 @@ static section_t *find_section(section_t *section, char *key, va_list args)
 	{
 		return NULL;
 	}
-	
+
 	pos = strchr(name, '.');
 	if (pos)
 	{
@@ -134,17 +134,17 @@ static char *find_value(section_t *section, char *key, va_list args)
 	enumerator_t *enumerator;
 	kv_t *kv;
 	section_t *current, *found = NULL;
-	
+
 	if (section == NULL)
 	{
 		return NULL;
 	}
-	
+
 	if (vsnprintf(name, sizeof(name), key, args) >= sizeof(name))
 	{
 		return NULL;
 	}
-	
+
 	pos = strchr(name, '.');
 	if (pos)
 	{
@@ -188,7 +188,7 @@ static char* get_str(private_settings_t *this, char *key, char *def, ...)
 {
 	char *value;
 	va_list args;
-	
+
 	va_start(args, def);
 	value = find_value(this->top, key, args);
 	va_end(args);
@@ -206,7 +206,7 @@ static bool get_bool(private_settings_t *this, char *key, bool def, ...)
 {
 	char *value;
 	va_list args;
-	
+
 	va_start(args, def);
 	value = find_value(this->top, key, args);
 	va_end(args);
@@ -238,7 +238,7 @@ static int get_int(private_settings_t *this, char *key, int def, ...)
 	char *value;
 	int intval;
 	va_list args;
-	
+
 	va_start(args, def);
 	value = find_value(this->top, key, args);
 	va_end(args);
@@ -255,6 +255,30 @@ static int get_int(private_settings_t *this, char *key, int def, ...)
 }
 
 /**
+ * Implementation of settings_t.get_double.
+ */
+static double get_double(private_settings_t *this, char *key, double def, ...)
+{
+	char *value;
+	double dval;
+	va_list args;
+
+	va_start(args, def);
+	value = find_value(this->top, key, args);
+	va_end(args);
+	if (value)
+	{
+		errno = 0;
+		dval = strtod(value, NULL);
+		if (errno == 0)
+		{
+			return dval;
+		}
+	}
+	return def;
+}
+
+/**
  * Implementation of settings_t.get_time.
  */
 static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def, ...)
@@ -262,7 +286,7 @@ static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def, ..
 	char *value, *endptr;
 	u_int32_t timeval;
 	va_list args;
-	
+
 	va_start(args, def);
 	value = find_value(this->top, key, args);
 	va_end(args);
@@ -310,18 +334,51 @@ static enumerator_t* create_section_enumerator(private_settings_t *this,
 {
 	section_t *section;
 	va_list args;
-	
+
 	va_start(args, key);
 	section = find_section(this->top, key, args);
 	va_end(args);
-	
+
 	if (!section)
-	{	
+	{
 		return enumerator_create_empty();
 	}
 	return enumerator_create_filter(
 					section->sections->create_enumerator(section->sections),
 					(void*)section_filter, NULL, NULL);
+}
+
+/**
+ * Enumerate key and values, not kv_t entries
+ */
+static bool kv_filter(void *null, kv_t **in, char **key,
+					  void *none, char **value)
+{
+	*key = (*in)->key;
+	*value = (*in)->value;
+	return TRUE;
+}
+
+/**
+ * Implementation of settings_t.create_key_value_enumerator
+ */
+static enumerator_t* create_key_value_enumerator(private_settings_t *this,
+												 char *key, ...)
+{
+	section_t *section;
+	va_list args;
+
+	va_start(args, key);
+	section = find_section(this->top, key, args);
+	va_end(args);
+
+	if (!section)
+	{
+		return enumerator_create_empty();
+	}
+	return enumerator_create_filter(
+					section->kv->create_enumerator(section->kv),
+					(void*)kv_filter, NULL, NULL);
 }
 
 /**
@@ -331,7 +388,7 @@ static void section_destroy(section_t *this)
 {
 	this->kv->destroy_function(this->kv, free);
 	this->sections->destroy_function(this->sections, (void*)section_destroy);
-	
+
 	free(this);
 }
 
@@ -362,7 +419,7 @@ static char parse(char **text, char *skip, char *term, char *br, char **token)
 	{
 		char *pos = *text;
 		int level = 1;
-		
+
 		/* find terminator */
 		while (*pos)
 		{
@@ -417,15 +474,15 @@ static section_t* parse_section(char **text, char *name)
 	section_t *sub, *section;
 	bool finished = FALSE;
 	char *key, *value, *inner;
-	
+
 	static int lev = 0;
 	lev++;
-	
+
 	section = malloc_thing(section_t);
 	section->name = name;
 	section->sections = linked_list_create();
 	section->kv = linked_list_create();
-	
+
 	while (!finished)
 	{
 		switch (parse(text, "\t\n ", "{=#", NULL, &key))
@@ -484,51 +541,53 @@ static void destroy(private_settings_t *this)
  */
 settings_t *settings_create(char *file)
 {
-	private_settings_t *this = malloc_thing(private_settings_t);
-	
+	private_settings_t *this;
+	char *pos;
+	FILE *fd;
+	int len;
+
+	this = malloc_thing(private_settings_t);
 	this->public.get_str = (char*(*)(settings_t*, char *key, char* def, ...))get_str;
 	this->public.get_int = (int(*)(settings_t*, char *key, int def, ...))get_int;
+	this->public.get_double = (double(*)(settings_t*, char *key, double def, ...))get_double;
 	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def, ...))get_time;
 	this->public.get_bool = (bool(*)(settings_t*, char *key, bool def, ...))get_bool;
 	this->public.create_section_enumerator = (enumerator_t*(*)(settings_t*,char *section, ...))create_section_enumerator;
+	this->public.create_key_value_enumerator = (enumerator_t*(*)(settings_t*, char *key, ...))create_key_value_enumerator;
 	this->public.destroy = (void(*)(settings_t*))destroy;
-	
+
 	this->top = NULL;
 	this->text = NULL;
-	
-	if (file)
-	{
-		FILE *fd;
-		int len;
-		char *pos;
-	
-		fd = fopen(file, "r");
-		if (fd == NULL)
-		{
-			DBG1("'%s' does not exist or is not readable", file);
-			return &this->public;
-		}
-		fseek(fd, 0, SEEK_END);
-		len = ftell(fd);
-		rewind(fd);
-		this->text = malloc(len + 1);
-		this->text[len] = '\0';
-		if (fread(this->text, 1, len, fd) != len)
-		{
-			free(this->text);
-			this->text = NULL;
-			return &this->public;
-		}
-		fclose(fd);
 
-		pos = this->text;
-		this->top = parse_section(&pos, NULL);
-		if (this->top == NULL)
-		{
-			free(this->text);
-			this->text = NULL;
-			return &this->public;
-		}
+	if (file == NULL)
+	{
+		file = STRONGSWAN_CONF;
+	}
+	fd = fopen(file, "r");
+	if (fd == NULL)
+	{
+		DBG1("'%s' does not exist or is not readable", file);
+		return &this->public;
+	}
+	fseek(fd, 0, SEEK_END);
+	len = ftell(fd);
+	rewind(fd);
+	this->text = malloc(len + 1);
+	this->text[len] = '\0';
+	if (fread(this->text, 1, len, fd) != len)
+	{
+		free(this->text);
+		this->text = NULL;
+		return &this->public;
+	}
+	fclose(fd);
+
+	pos = this->text;
+	this->top = parse_section(&pos, NULL);
+	if (this->top == NULL)
+	{
+		free(this->text);
+		this->text = NULL;
 	}
 	return &this->public;
 }

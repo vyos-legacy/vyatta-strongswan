@@ -29,7 +29,7 @@ typedef struct receiver_t receiver_t;
 
 /**
  * Receives packets from the socket and adds them to the job queue.
- * 
+ *
  * The receiver starts a thread, wich reads on the blocking socket. A received
  * packet is preparsed and a process_message_job is queued in the job queue.
  *
@@ -41,16 +41,16 @@ typedef struct receiver_t receiver_t;
  * find out wich key was used for cookie creation. Further, we can set a
  * lifetime for the cookie, which allows us to reuse the secret for a longer
  * time.
- *         COOKIE = time | sha1( IPi | SPIi | time | secret )
+ *		 COOKIE = time | sha1( IPi | SPIi | time | secret )
  *
  * The secret is changed after a certain amount of cookies sent. The old
  * secret is stored to allow a clean migration between secret changes.
- * 
+ *
  * Further, the number of half-initiated IKE_SAs is limited per peer. This
  * mades it impossible for a peer to flood the server with its real IP address.
  */
 struct receiver_t {
-	
+
 	/**
 	 * Destroys a receiver_t object.
 	 */
@@ -59,10 +59,10 @@ struct receiver_t {
 
 /**
  * Create a receiver_t object.
- * 
+ *
  * The receiver thread will start working, get data
  * from the socket and add those packets to the job queue.
- * 
+ *
  * @return	receiver_t object, NULL if initialization fails
  */
 receiver_t * receiver_create(void);

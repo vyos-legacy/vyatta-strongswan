@@ -82,7 +82,8 @@ struct starter_end {
 		char            *updown;
 		u_int16_t       port;
 		u_int8_t        protocol;
-		char            *srcip;
+		char            *sourceip;
+		int				sourceip_mask;
 };
 
 typedef struct also also_t;
@@ -112,6 +113,10 @@ struct starter_conn {
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;
 		time_t          sa_rekey_margin;
+		u_int64_t	sa_ipsec_life_bytes;
+		u_int64_t	sa_ipsec_margin_bytes;
+		u_int64_t	sa_ipsec_life_packets;
+		u_int64_t	sa_ipsec_margin_packets;
 		unsigned long   sa_keying_tries;
 		unsigned long   sa_rekey_fuzz;
 		sa_family_t     addr_family;
@@ -124,12 +129,14 @@ struct starter_conn {
 		char            *esp;
 		char            *ike;
 		char            *pfsgroup;
-		
+
 		time_t          dpd_delay;
 		time_t          dpd_timeout;
 		dpd_action_t    dpd_action;
 		int             dpd_count;
-		
+
+		time_t          inactivity;
+
 		bool            me_mediation;
 		char            *me_mediated_by;
 		char            *me_peerid;

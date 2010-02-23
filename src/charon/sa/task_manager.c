@@ -30,6 +30,7 @@
 #include <sa/tasks/ike_delete.h>
 #include <sa/tasks/ike_config.h>
 #include <sa/tasks/ike_dpd.h>
+#include <sa/tasks/ike_vendor.h>
 #include <sa/tasks/child_create.h>
 #include <sa/tasks/child_rekey.h>
 #include <sa/tasks/child_delete.h>
@@ -46,12 +47,12 @@ typedef struct exchange_t exchange_t;
  * An exchange in the air, used do detect and handle retransmission
  */
 struct exchange_t {
-	
+
 	/**
 	 * Message ID used for this transaction
 	 */
 	u_int32_t mid;
-	
+
 	/**
 	 * generated packet for retransmission
 	 */
@@ -64,17 +65,17 @@ typedef struct private_task_manager_t private_task_manager_t;
  * private data of the task manager
  */
 struct private_task_manager_t {
-	
+
 	/**
 	 * public functions
 	 */
 	task_manager_t public;
-	
+
 	/**
 	 * associated IKE_SA we are serving
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * Exchange we are currently handling as responder
 	 */
@@ -83,14 +84,14 @@ struct private_task_manager_t {
 		 * Message ID of the exchange
 		 */
 		u_int32_t mid;
-		
+
 		/**
 		 * packet for retransmission
 		 */
 		packet_t *packet;
-		
+
 	} responding;
-	
+
 	/**
 	 * Exchange we are currently handling as initiator
 	 */
@@ -99,7 +100,7 @@ struct private_task_manager_t {
 		 * Message ID of the exchange
 		 */
 		u_int32_t mid;
-		
+
 		/**
 		 * how many times we have retransmitted so far
 		 */
@@ -109,33 +110,48 @@ struct private_task_manager_t {
 		 * packet for retransmission
 		 */
 		packet_t *packet;
-		
+
 		/**
 		 * type of the initated exchange
 		 */
 		exchange_type_t type;
-	
+
 	} initiating;
-	
+
 	/**
 	 * List of queued tasks not yet in action
 	 */
 	linked_list_t *queued_tasks;
-	
+
 	/**
 	 * List of active tasks, initiated by ourselve
 	 */
 	linked_list_t *active_tasks;
-	
+
 	/**
 	 * List of tasks initiated by peer
 	 */
 	linked_list_t *passive_tasks;
-	
+
 	/**
-	 * the task manager has been reset 
+	 * the task manager has been reset
 	 */
 	bool reset;
+
+	/**
+	 * Number of times we retransmit messages before giving up
+	 */
+	u_int retransmit_tries;
+
+	/**
+	 * Retransmission timeout
+	 */
+	double retransmit_timeout;
+
+	/**
+	 * Base to calculate retransmission timeout
+	 */
+	double retransmit_base;
 };
 
 /**
@@ -143,7 +159,7 @@ struct private_task_manager_t {
  */
 static void flush(private_task_manager_t *this)
 {
-	this->queued_tasks->destroy_offset(this->queued_tasks, 
+	this->queued_tasks->destroy_offset(this->queued_tasks,
 										offsetof(task_t, destroy));
 	this->passive_tasks->destroy_offset(this->passive_tasks,
 										offsetof(task_t, destroy));
@@ -162,7 +178,7 @@ static bool activate_task(private_task_manager_t *this, task_type_t type)
 	iterator_t *iterator;
 	task_t *task;
 	bool found = FALSE;
-	
+
 	iterator = this->queued_tasks->create_iterator(this->queued_tasks, TRUE);
 	while (iterator->iterate(iterator, (void**)&task))
 	{
@@ -192,7 +208,7 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 		packet_t *packet;
 		task_t *task;
 		ike_mobike_t *mobike = NULL;
-		
+
 		/* check if we are retransmitting a MOBIKE routability check */
 		iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
 		while (iterator->iterate(iterator, (void*)&task))
@@ -211,10 +227,10 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 
 		if (mobike == NULL)
 		{
-			if (this->initiating.retransmitted <= RETRANSMIT_TRIES)
+			if (this->initiating.retransmitted <= this->retransmit_tries)
 			{
-				timeout = (u_int32_t)(RETRANSMIT_TIMEOUT *
-							pow(RETRANSMIT_BASE, this->initiating.retransmitted));
+				timeout = (u_int32_t)(this->retransmit_timeout * 1000.0 *
+					pow(this->retransmit_base, this->initiating.retransmitted));
 			}
 			else
 			{
@@ -226,13 +242,14 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 				}
 				return DESTROY_ME;
 			}
-			
+
 			if (this->initiating.retransmitted)
 			{
 				DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
 					 this->initiating.retransmitted, message_id);
 			}
 			packet = this->initiating.packet->clone(this->initiating.packet);
+			charon->sender->send(charon->sender, packet);
 		}
 		else
 		{	/* for routeability checks, we use a more aggressive behavior */
@@ -247,18 +264,15 @@ static status_t retransmit(private_task_manager_t *this, u_int32_t message_id)
 				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 				return DESTROY_ME;
 			}
-			
+
 			if (this->initiating.retransmitted)
 			{
 				DBG1(DBG_IKE, "path probing attempt %d",
 					 this->initiating.retransmitted);
 			}
-			packet = this->initiating.packet->clone(this->initiating.packet);
-			mobike->transmit(mobike, packet);
+			mobike->transmit(mobike, this->initiating.packet);
 		}
-		
-		charon->sender->send(charon->sender, packet);
-		
+
 		this->initiating.retransmitted++;
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
@@ -279,14 +293,14 @@ static status_t build_request(private_task_manager_t *this)
 	host_t *me, *other;
 	status_t status;
 	exchange_type_t exchange = 0;
-	
+
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
 	{
 		DBG2(DBG_IKE, "delaying task initiation, exchange in progress");
 		/* do not initiate if we already have a message in the air */
 		return SUCCESS;
 	}
-	
+
 	if (this->active_tasks->get_count(this->active_tasks) == 0)
 	{
 		DBG2(DBG_IKE, "activating new tasks");
@@ -297,6 +311,7 @@ static status_t build_request(private_task_manager_t *this)
 				{
 					this->initiating.mid = 0;
 					exchange = IKE_SA_INIT;
+					activate_task(this, IKE_VENDOR);
 					activate_task(this, IKE_NATD);
 					activate_task(this, IKE_CERT_PRE);
 #ifdef ME
@@ -402,17 +417,17 @@ static status_t build_request(private_task_manager_t *this)
 		}
 		iterator->destroy(iterator);
 	}
-	
+
 	if (exchange == 0)
 	{
 		DBG2(DBG_IKE, "nothing to initiate");
 		/* nothing to do yet... */
 		return SUCCESS;
 	}
-	
+
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
-	
+
 	message = message_create();
 	message->set_message_id(message, this->initiating.mid);
 	message->set_source(message, me->clone(me));
@@ -420,7 +435,7 @@ static status_t build_request(private_task_manager_t *this)
 	message->set_exchange_type(message, exchange);
 	this->initiating.type = exchange;
 	this->initiating.retransmitted = 0;
-	
+
 	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
@@ -450,10 +465,11 @@ static status_t build_request(private_task_manager_t *this)
 		}
 	}
 	iterator->destroy(iterator);
-	
+
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
-	
+
+	charon->bus->message(charon->bus, message, FALSE);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->initiating.packet);
 	if (status != SUCCESS)
@@ -465,10 +481,8 @@ static status_t build_request(private_task_manager_t *this)
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
-	
-	charon->bus->message(charon->bus, message, FALSE);
 	message->destroy(message);
-	
+
 	return retransmit(this, this->initiating.mid);
 }
 
@@ -480,7 +494,7 @@ static status_t process_response(private_task_manager_t *this,
 {
 	iterator_t *iterator;
 	task_t *task;
-	
+
 	if (message->get_exchange_type(message) != this->initiating.type)
 	{
 		DBG1(DBG_IKE, "received %N response, but expected %N",
@@ -489,7 +503,7 @@ static status_t process_response(private_task_manager_t *this,
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
-	
+
 	/* catch if we get resetted while processing */
 	this->reset = FALSE;
 	iterator = this->active_tasks->create_iterator(this->active_tasks, TRUE);
@@ -521,15 +535,15 @@ static status_t process_response(private_task_manager_t *this,
 			this->reset = FALSE;
 			iterator->destroy(iterator);
 			return build_request(this);
-		}	
+		}
 	}
 	iterator->destroy(iterator);
-	
+
 	this->initiating.mid++;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	this->initiating.packet->destroy(this->initiating.packet);
 	this->initiating.packet = NULL;
-	
+
 	return build_request(this);
 }
 
@@ -541,9 +555,9 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 	iterator_t *iterator;
 	task_t *active;
 	task_type_t type;
-	
+
 	type = task->get_type(task);
-	
+
 	/* do we have to check  */
 	if (type == IKE_REKEY || type == CHILD_REKEY ||
 		type == CHILD_DELETE || type == IKE_DELETE || type == IKE_REAUTH)
@@ -594,10 +608,10 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	host_t *me, *other;
 	bool delete = FALSE;
 	status_t status;
-	
+
 	me = request->get_destination(request);
 	other = request->get_source(request);
-	
+
 	message = message_create();
 	message->set_exchange_type(message, request->get_exchange_type(request));
 	/* send response along the path the request came in */
@@ -605,7 +619,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	message->set_destination(message, other->clone(other));
 	message->set_message_id(message, this->responding.mid);
 	message->set_request(message, FALSE);
-	
+
 	iterator = this->passive_tasks->create_iterator(this->passive_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
 	{
@@ -633,27 +647,27 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 		}
 	}
 	iterator->destroy(iterator);
-	
+
 	/* remove resonder SPI if IKE_SA_INIT failed */
 	if (delete && request->get_exchange_type(request) == IKE_SA_INIT)
 	{
 		ike_sa_id_t *id = this->ike_sa->get_id(this->ike_sa);
 		id->set_responder_spi(id, 0);
 	}
-	
+
 	/* message complete, send it */
 	DESTROY_IF(this->responding.packet);
 	this->responding.packet = NULL;
+	charon->bus->message(charon->bus, message, FALSE);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->responding.packet);
-	charon->bus->message(charon->bus, message, FALSE);
 	message->destroy(message);
 	if (status != SUCCESS)
 	{
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 		return DESTROY_ME;
 	}
-	
+
 	charon->sender->send(charon->sender,
 						 this->responding.packet->clone(this->responding.packet));
 	if (delete)
@@ -675,7 +689,7 @@ static status_t process_request(private_task_manager_t *this,
 	payload_t *payload;
 	notify_payload_t *notify;
 	delete_payload_t *delete;
-	
+
 	if (this->passive_tasks->get_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
 		switch (message->get_exchange_type(message))
@@ -684,11 +698,13 @@ static status_t process_request(private_task_manager_t *this,
 			{
 				task = (task_t*)ike_init_create(this->ike_sa, FALSE, NULL);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
+				task = (task_t*)ike_vendor_create(this->ike_sa, FALSE);
+				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t*)ike_natd_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 				task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
-#ifdef ME			
+#ifdef ME
 				task = (task_t*)ike_me_create(this->ike_sa, FALSE);
 				this->passive_tasks->insert_last(this->passive_tasks, task);
 #endif /* ME */
@@ -737,7 +753,7 @@ static status_t process_request(private_task_manager_t *this,
 					}
 				}
 				enumerator->destroy(enumerator);
-				
+
 				if (ts_found)
 				{
 					if (notify_found)
@@ -816,7 +832,7 @@ static status_t process_request(private_task_manager_t *this,
 					}
 				}
 				enumerator->destroy(enumerator);
-			
+
 				if (task == NULL)
 				{
 					task = (task_t*)ike_dpd_create(FALSE);
@@ -835,7 +851,7 @@ static status_t process_request(private_task_manager_t *this,
 				break;
 		}
 	}
-	
+
 	/* let the tasks process the message */
 	iterator = this->passive_tasks->create_iterator(this->passive_tasks, TRUE);
 	while (iterator->iterate(iterator, (void*)&task))
@@ -863,7 +879,7 @@ static status_t process_request(private_task_manager_t *this,
 		}
 	}
 	iterator->destroy(iterator);
-	
+
 	return build_response(this, message);
 }
 
@@ -873,7 +889,7 @@ static status_t process_request(private_task_manager_t *this,
 static status_t process_message(private_task_manager_t *this, message_t *msg)
 {
 	u_int32_t mid = msg->get_message_id(msg);
-	
+
 	if (msg->get_request(msg))
 	{
 		if (mid == this->responding.mid)
@@ -890,9 +906,9 @@ static status_t process_message(private_task_manager_t *this, message_t *msg)
 		{
 			packet_t *clone;
 			host_t *me, *other;
-			
+
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
-			 	 "retransmitting response", mid);
+				 "retransmitting response", mid);
 			clone = this->responding.packet->clone(this->responding.packet);
 			me = msg->get_destination(msg);
 			other = msg->get_source(msg);
@@ -935,7 +951,7 @@ static void queue_task(private_task_manager_t *this, task_t *task)
 	{	/*  there is no need to queue more than one mobike task */
 		iterator_t *iterator;
 		task_t *current;
-		
+
 		iterator = this->queued_tasks->create_iterator(this->queued_tasks, TRUE);
 		while (iterator->iterate(iterator, (void**)&current))
 		{
@@ -958,7 +974,7 @@ static void queue_task(private_task_manager_t *this, task_t *task)
 static void adopt_tasks(private_task_manager_t *this, private_task_manager_t *other)
 {
 	task_t *task;
-	
+
 	/* move queued tasks from other to this */
 	while (other->queued_tasks->remove_last(other->queued_tasks,
 												(void**)&task) == SUCCESS)
@@ -984,7 +1000,7 @@ static void reset(private_task_manager_t *this,
 				  u_int32_t initiate, u_int32_t respond)
 {
 	task_t *task;
-	
+
 	/* reset message counters and retransmit packets */
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
@@ -999,7 +1015,7 @@ static void reset(private_task_manager_t *this,
 		this->responding.mid = respond;
 	}
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-	
+
 	/* reset active tasks */
 	while (this->active_tasks->remove_last(this->active_tasks,
 										   (void**)&task) == SUCCESS)
@@ -1007,7 +1023,7 @@ static void reset(private_task_manager_t *this,
 		task->migrate(task, this->ike_sa);
 		this->queued_tasks->insert_first(this->queued_tasks, task);
 	}
-	
+
 	this->reset = TRUE;
 }
 
@@ -1017,11 +1033,11 @@ static void reset(private_task_manager_t *this,
 static void destroy(private_task_manager_t *this)
 {
 	flush(this);
-	
+
 	this->active_tasks->destroy(this->active_tasks);
 	this->queued_tasks->destroy(this->queued_tasks);
 	this->passive_tasks->destroy(this->passive_tasks);
-	
+
 	DESTROY_IF(this->responding.packet);
 	DESTROY_IF(this->initiating.packet);
 	free(this);
@@ -1033,7 +1049,7 @@ static void destroy(private_task_manager_t *this)
 task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 {
 	private_task_manager_t *this = malloc_thing(private_task_manager_t);
-	
+
 	this->public.process_message = (status_t(*)(task_manager_t*,message_t*))process_message;
 	this->public.queue_task = (void(*)(task_manager_t*,task_t*))queue_task;
 	this->public.initiate = (status_t(*)(task_manager_t*))build_request;
@@ -1042,7 +1058,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->public.adopt_tasks = (void(*)(task_manager_t*,task_manager_t*))adopt_tasks;
 	this->public.busy = (bool(*)(task_manager_t*))busy;
 	this->public.destroy = (void(*)(task_manager_t*))destroy;
-	
+
 	this->ike_sa = ike_sa;
 	this->responding.packet = NULL;
 	this->initiating.packet = NULL;
@@ -1053,6 +1069,14 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 	this->active_tasks = linked_list_create();
 	this->passive_tasks = linked_list_create();
 	this->reset = FALSE;
-	
+
+	this->retransmit_tries = lib->settings->get_int(lib->settings,
+								"charon.retransmit_tries", RETRANSMIT_TRIES);
+	this->retransmit_timeout = lib->settings->get_double(lib->settings,
+								"charon.retransmit_timeout", RETRANSMIT_TIMEOUT);
+	this->retransmit_base = lib->settings->get_double(lib->settings,
+								"charon.retransmit_base", RETRANSMIT_BASE);
+
 	return &this->public;
 }
+

@@ -11,10 +11,6 @@ config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
 config/auth_cfg.c config/auth_cfg.h \
-config/traffic_selector.c config/traffic_selector.h \
-config/attributes/attribute_provider.h \
-config/attributes/attribute_handler.h \
-config/attributes/attribute_manager.c config/attributes/attribute_manager.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \
@@ -64,6 +60,7 @@ processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
+processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
 processing/scheduler.c processing/scheduler.h \
 processing/processor.c processing/processor.h  \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
@@ -95,6 +92,7 @@ sa/tasks/ike_mobike.c sa/tasks/ike_mobike.h \
 sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
+sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
 credentials/credential_manager.c credentials/credential_manager.h \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
@@ -102,13 +100,11 @@ credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
 credentials/credential_set.h
 
-INCLUDES = -I${linuxdir} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+INCLUDES = -I${linux_headers} -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
 AM_CFLAGS = -rdynamic \
   -DIPSEC_DIR=\"${ipsecdir}\" \
-  -DIPSEC_PIDDIR=\"${piddir}\" \
-  -DIPSEC_PLUGINDIR=\"${plugindir}\" \
-  -DSTRONGSWAN_CONF=\"${strongswan_conf}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lpthread -lm $(DLLIB) $(SOCKLIB)
+  -DIPSEC_PIDDIR=\"${piddir}\"
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
 # compile options
 #################
@@ -137,10 +133,10 @@ endif
 # build optional plugins
 ########################
 
-SUBDIRS = . 
+SUBDIRS = .
 PLUGINS = ${libstrongswan_plugins}
 
-if USE_LOAD_TESTS
+if USE_LOAD_TESTER
   SUBDIRS += plugins/load_tester
   PLUGINS += load-tester
 endif
@@ -192,42 +188,57 @@ endif
 
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
-  PLUGINS += eapidentity
+  PLUGINS += eap-identity
 endif
 
 if USE_EAP_SIM
   SUBDIRS += plugins/eap_sim
-  PLUGINS += eapsim
+  PLUGINS += eap-sim
 endif
 
 if USE_EAP_SIM_FILE
   SUBDIRS += plugins/eap_sim_file
-  PLUGINS += eapsim-file
+  PLUGINS += eap-sim-file
+endif
+
+if USE_EAP_SIMAKA_PSEUDONYM
+  SUBDIRS += plugins/eap_simaka_pseudonym
+  PLUGINS += eap-simaka-pseudonym
+endif
+
+if USE_EAP_SIMAKA_REAUTH
+  SUBDIRS += plugins/eap_simaka_reauth
+  PLUGINS += eap-simaka-reauth
 endif
 
 if USE_EAP_MD5
   SUBDIRS += plugins/eap_md5
-  PLUGINS += eapmd5
+  PLUGINS += eap-md5
 endif
 
 if USE_EAP_GTC
   SUBDIRS += plugins/eap_gtc
-  PLUGINS += eapgtc
+  PLUGINS += eap-gtc
 endif
 
 if USE_EAP_AKA
   SUBDIRS += plugins/eap_aka
-  PLUGINS += eapaka
+  PLUGINS += eap-aka
+endif
+
+if USE_EAP_AKA_3GPP2
+  SUBDIRS += plugins/eap_aka_3gpp2
+  PLUGINS += eap-aka-3gpp2
 endif
 
 if USE_EAP_MSCHAPV2
   SUBDIRS += plugins/eap_mschapv2
-  PLUGINS += eapmschapv2
+  PLUGINS += eap-mschapv2
 endif
 
 if USE_EAP_RADIUS
   SUBDIRS += plugins/eap_radius
-  PLUGINS += eapradius
+  PLUGINS += eap-radius
 endif
 
 if USE_MEDSRV
@@ -245,9 +256,9 @@ if USE_NM
   PLUGINS += nm
 endif
 
-if USE_RESOLV_CONF
-  SUBDIRS += plugins/resolv_conf
-  PLUGINS += resolv-conf
+if USE_RESOLVE
+  SUBDIRS += plugins/resolve
+  PLUGINS += resolve
 endif
 
 if USE_UCI

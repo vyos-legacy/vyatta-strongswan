@@ -27,12 +27,12 @@ typedef struct private_ike_auth_lifetime_t private_ike_auth_lifetime_t;
  * Private members of a ike_auth_lifetime_t task.
  */
 struct private_ike_auth_lifetime_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	ike_auth_lifetime_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
@@ -46,11 +46,11 @@ static void add_auth_lifetime(private_ike_auth_lifetime_t *this, message_t *mess
 {
 	chunk_t chunk;
 	u_int32_t lifetime;
-	
+
 	lifetime = this->ike_sa->get_statistic(this->ike_sa, STAT_REAUTH);
 	if (lifetime)
 	{
-		lifetime -= time(NULL);
+		lifetime -= time_monotonic(NULL);
 		chunk = chunk_from_thing(lifetime);
 		*(u_int32_t*)chunk.ptr = htonl(lifetime);
 		message->add_notify(message, FALSE, AUTH_LIFETIME, chunk);
@@ -62,31 +62,17 @@ static void add_auth_lifetime(private_ike_auth_lifetime_t *this, message_t *mess
  */
 static void process_payloads(private_ike_auth_lifetime_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
-	payload_t *payload;
 	notify_payload_t *notify;
-	
-	enumerator = message->create_payload_enumerator(message);
-	while (enumerator->enumerate(enumerator, &payload))
+	chunk_t data;
+	u_int32_t lifetime;
+
+	notify = message->get_notify(message, AUTH_LIFETIME);
+	if (notify)
 	{
-		if (payload->get_type(payload) == NOTIFY)
-		{
-			notify = (notify_payload_t*)payload;
-			switch (notify->get_notify_type(notify))
-			{
-				case AUTH_LIFETIME:					
-				{
-					chunk_t data = notify->get_notification_data(notify);
-					u_int32_t lifetime = ntohl(*(u_int32_t*)data.ptr);
-					this->ike_sa->set_auth_lifetime(this->ike_sa, lifetime);
-					break;
-				}
-				default:
-					break;
-			}
-		}
+		data = notify->get_notification_data(notify);
+		lifetime = ntohl(*(u_int32_t*)data.ptr);
+		this->ike_sa->set_auth_lifetime(this->ike_sa, lifetime);
 	}
-	enumerator->destroy(enumerator);
 }
 
 /**
@@ -177,7 +163,7 @@ ike_auth_lifetime_t *ike_auth_lifetime_create(ike_sa_t *ike_sa, bool initiator)
 	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
 	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
 	this->public.task.destroy = (void(*)(task_t*))destroy;
-	
+
 	if (initiator)
 	{
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
@@ -188,9 +174,9 @@ ike_auth_lifetime_t *ike_auth_lifetime_create(ike_sa_t *ike_sa, bool initiator)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-	
+
 	this->ike_sa = ike_sa;
-	
+
 	return &this->public;
 }
 

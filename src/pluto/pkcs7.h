@@ -18,10 +18,10 @@
 #ifndef _PKCS7_H
 #define _PKCS7_H
 
+#include <utils/linked_list.h>
 #include <crypto/crypters/crypter.h>
 #include <credentials/keys/private_key.h>
-#include "defs.h"
-#include "x509.h"
+#include <credentials/certificates/certificate.h>
 
 /* Access structure for a PKCS#7 ContentInfo object */
 
@@ -35,17 +35,19 @@ struct contentInfo {
 extern const contentInfo_t empty_contentInfo;
 
 extern bool pkcs7_parse_contentInfo(chunk_t blob, u_int level0,
-	contentInfo_t *cInfo);
+									contentInfo_t *cInfo);
 extern bool pkcs7_parse_signedData(chunk_t blob, contentInfo_t *data,
-	x509cert_t **cert, chunk_t *attributes, const x509cert_t *cacert);
+								   linked_list_t *cert, chunk_t *attributes,
+								   certificate_t *cacert);
 extern bool pkcs7_parse_envelopedData(chunk_t blob, chunk_t *data,
-	chunk_t serialNumber, private_key_t *key);
+									  chunk_t serialNumber, private_key_t *key);
 extern chunk_t pkcs7_contentType_attribute(void);
 extern chunk_t pkcs7_messageDigest_attribute(chunk_t content, int digest_alg);
-extern chunk_t pkcs7_build_issuerAndSerialNumber(const x509cert_t *cert);
+extern chunk_t pkcs7_build_issuerAndSerialNumber(certificate_t *cert);
 extern chunk_t pkcs7_build_signedData(chunk_t data, chunk_t attributes,
-	const x509cert_t *cert, int digest_alg, private_key_t *key);
-extern chunk_t pkcs7_build_envelopedData(chunk_t data, const x509cert_t *cert,
-	int enc_alg);
+									  certificate_t *cert, int digest_alg,
+									  private_key_t *key);
+extern chunk_t pkcs7_build_envelopedData(chunk_t data, certificate_t *cert,
+										 int enc_alg);
 
 #endif /* _PKCS7_H */

@@ -36,6 +36,7 @@ typedef enum {
 	ARG_UINT,
 	ARG_TIME,
 	ARG_ULNG,
+	ARG_ULLI,
 	ARG_PCNT,
 	ARG_STR,
 	ARG_LST,
@@ -111,6 +112,11 @@ static const char *LST_pfsgroup[] = {
 	"modp4096",
 	"modp6144",
 	"modp8192",
+	"ecp192",
+	"ecp224",
+	"ecp256",
+	"ecp384",
+	"ecp521",
 	 NULL
 };
 
@@ -207,6 +213,10 @@ static const token_info_t token_info[] =
 	{ ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_ipsec_life_seconds), NULL              },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_rekey_margin), NULL                    },
+	{ ARG_ULLI, offsetof(starter_conn_t, sa_ipsec_life_bytes), NULL                },
+	{ ARG_ULLI, offsetof(starter_conn_t, sa_ipsec_margin_bytes), NULL              },
+	{ ARG_ULLI, offsetof(starter_conn_t, sa_ipsec_life_packets), NULL              },
+	{ ARG_ULLI, offsetof(starter_conn_t, sa_ipsec_margin_packets), NULL            },
 	{ ARG_MISC, 0, NULL  /* KW_KEYINGTRIES */                                      },
 	{ ARG_PCNT, offsetof(starter_conn_t, sa_rekey_fuzz), NULL                      },
 	{ ARG_MISC, 0, NULL  /* KW_REKEY */                                            },
@@ -217,6 +227,7 @@ static const token_info_t token_info[] =
 	{ ARG_TIME, offsetof(starter_conn_t, dpd_delay), NULL                          },
 	{ ARG_TIME, offsetof(starter_conn_t, dpd_timeout), NULL                        },
 	{ ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
+	{ ARG_TIME, offsetof(starter_conn_t, inactivity), NULL                         },
 	{ ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
 	{ ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
 	{ ARG_ENUM, offsetof(starter_conn_t, me_mediation), LST_bool                   },
@@ -241,7 +252,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR, offsetof(starter_end_t, subnet), NULL                               },
 	{ ARG_MISC, 0, NULL  /* KW_SUBNETWITHIN */                                     },
 	{ ARG_MISC, 0, NULL  /* KW_PROTOPORT */                                        },
-	{ ARG_STR, offsetof(starter_end_t, srcip), NULL                                },
+	{ ARG_MISC, 0, NULL  /* KW_SOURCEIP */		                                   },
 	{ ARG_MISC, 0, NULL  /* KW_NATIP */                                            },
 	{ ARG_ENUM, offsetof(starter_end_t, firewall), LST_bool                        },
 	{ ARG_ENUM, offsetof(starter_end_t, hostaccess), LST_bool                      },
@@ -391,7 +402,7 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 	case ARG_UINT:
 		{
 			char *endptr;
-			u_int *u = (u_int *)p; 
+			u_int *u = (u_int *)p;
 
 			*u = strtoul(kw->value, &endptr, 10);
 
@@ -427,6 +438,20 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 				}
 			}
 
+		}
+		break;
+	case ARG_ULLI:
+		{
+			char *endptr;
+			unsigned long long *ll = (unsigned long long *)p;
+
+			*ll = strtoull(kw->value, &endptr, 10);
+
+			if (*endptr != '\0')
+			{
+				plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+				return FALSE;
+			}
 		}
 		break;
 	case ARG_TIME:
@@ -490,12 +515,12 @@ bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
 			{
 				char ** lst;
 
-				for (lst = *listp; lst && *lst; lst++) 
+				for (lst = *listp; lst && *lst; lst++)
 				{
 					bool match = FALSE;
 
 					list = token_info[token].list;
-				
+
 					while (*list != NULL && !match)
 					{
 						match = streq(*lst, *list++);
@@ -654,6 +679,17 @@ bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				unsigned long *l2 = (unsigned long *)p2;
 
 				if (*l1 != *l2)
+				{
+					return FALSE;
+				}
+			}
+			break;
+		case ARG_ULLI:
+			{
+				unsigned long long *ll1 = (unsigned long long *)p1;
+				unsigned long long *ll2 = (unsigned long long *)p2;
+
+				if (*ll1 != *ll2)
 				{
 					return FALSE;
 				}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006-2009 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -30,7 +30,8 @@ typedef struct kernel_ipsec_t kernel_ipsec_t;
 
 #include <utils/host.h>
 #include <crypto/prf_plus.h>
-#include <encoding/payloads/proposal_substructure.h>
+#include <config/proposal.h>
+#include <config/child_cfg.h>
 
 /**
  * Mode of a CHILD_SA.
@@ -70,9 +71,9 @@ extern enum_name_t *policy_dir_names;
 
 /**
  * Interface to the ipsec subsystem of the kernel.
- * 
+ *
  * The kernel ipsec interface handles the communication with the kernel
- * for SA and policy management. It allows setup of these, and provides 
+ * for SA and policy management. It allows setup of these, and provides
  * further the handling of kernel events.
  * Policy information are cached in the interface. This is necessary to do
  * reference counting. The Linux kernel does not allow the same policy
@@ -80,7 +81,7 @@ extern enum_name_t *policy_dir_names;
  * when rekeying. Thats why we do reference counting of policies.
  */
 struct kernel_ipsec_t {
-	
+
 	/**
 	 * Get a SPI from the kernel.
 	 *
@@ -91,39 +92,36 @@ struct kernel_ipsec_t {
 	 * @param spi		allocated spi
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*get_spi)(kernel_ipsec_t *this, host_t *src, host_t *dst, 
+	status_t (*get_spi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
 						protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi);
-	
+
 	/**
 	 * Get a Compression Parameter Index (CPI) from the kernel.
-	 * 
+	 *
 	 * @param src		source address of SA
 	 * @param dst		destination address of SA
 	 * @param reqid		unique ID for the corresponding SA
 	 * @param cpi		allocated cpi
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*get_cpi)(kernel_ipsec_t *this, host_t *src, host_t *dst, 
+	status_t (*get_cpi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
 						u_int32_t reqid, u_int16_t *cpi);
-	
+
 	/**
 	 * Add an SA to the SAD.
-	 * 
+	 *
 	 * add_sa() may update an already allocated
 	 * SPI (via get_spi). In this case, the replace
 	 * flag must be set.
 	 * This function does install a single SA for a
-	 * single protocol in one direction. The kernel-interface
-	 * gets the keys itself from the PRF, as we don't know
-	 * his algorithms and key sizes.
-	 * 
+	 * single protocol in one direction.
+	 *
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @param reqid			unique ID for this SA
-	 * @param expire_soft	lifetime in seconds before rekeying
-	 * @param expire_hard	lifetime in seconds before delete
+	 * @param lifetime		lifetime_cfg_t for this SA
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
 	 * @param enc_key		key to use for encryption
 	 * @param int_alg		Algorithm to use for integrity protection
@@ -133,17 +131,20 @@ struct kernel_ipsec_t {
 	 * @param cpi			CPI for IPComp
 	 * @param encap			enable UDP encapsulation for NAT traversal
 	 * @param inbound		TRUE if this is an inbound SA
+	 * @param src_ts		traffic selector with BEET source address
+	 * @param dst_ts		traffic selector with BEET destination address
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*add_sa) (kernel_ipsec_t *this,
 						host_t *src, host_t *dst, u_int32_t spi,
 						protocol_id_t protocol, u_int32_t reqid,
-						u_int64_t expire_soft, u_int64_t expire_hard,
-					    u_int16_t enc_alg, chunk_t enc_key,
-					    u_int16_t int_alg, chunk_t int_key,
+						lifetime_cfg_t *lifetime,
+						u_int16_t enc_alg, chunk_t enc_key,
+						u_int16_t int_alg, chunk_t int_key,
 						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-						bool encap, bool inbound);
-	
+						bool encap, bool inbound,
+						traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
+
 	/**
 	 * Update the hosts on an installed SA.
 	 *
@@ -162,17 +163,17 @@ struct kernel_ipsec_t {
 	 * @param encap			current use of UDP encapsulation
 	 * @param new_encap		new use of UDP encapsulation
 	 * @return				SUCCESS if operation completed, NOT_SUPPORTED if
-	 *                      the kernel interface can't update the SA
+	 *					  the kernel interface can't update the SA
 	 */
 	status_t (*update_sa)(kernel_ipsec_t *this,
 						  u_int32_t spi, protocol_id_t protocol, u_int16_t cpi,
-						  host_t *src, host_t *dst, 
+						  host_t *src, host_t *dst,
 						  host_t *new_src, host_t *new_dst,
 						  bool encap, bool new_encap);
-	
+
 	/**
 	 * Query the number of bytes processed by an SA from the SAD.
-	 * 
+	 *
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
@@ -182,10 +183,10 @@ struct kernel_ipsec_t {
 	 */
 	status_t (*query_sa) (kernel_ipsec_t *this, host_t *src, host_t *dst,
 						  u_int32_t spi, protocol_id_t protocol, u_int64_t *bytes);
-	
+
 	/**
 	 * Delete a previusly installed SA from the SAD.
-	 * 
+	 *
 	 * @param src			source address for this SA
 	 * @param dst			destination address for this SA
 	 * @param spi			SPI allocated by us or remote peer
@@ -195,13 +196,13 @@ struct kernel_ipsec_t {
 	 */
 	status_t (*del_sa) (kernel_ipsec_t *this, host_t *src, host_t *dst,
 						u_int32_t spi, protocol_id_t protocol, u_int16_t cpi);
-	
+
 	/**
 	 * Add a policy to the SPD.
-	 * 
+	 *
 	 * A policy is always associated to an SA. Traffic which matches a
 	 * policy is handled by the SA with the same reqid.
-	 * 
+	 *
 	 * @param src			source address of SA
 	 * @param dst			dest address of SA
 	 * @param src_ts		traffic selector to match traffic source
@@ -224,24 +225,25 @@ struct kernel_ipsec_t {
 							protocol_id_t protocol, u_int32_t reqid,
 							ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
 							bool routed);
-	
+
 	/**
 	 * Query the use time of a policy.
 	 *
-	 * The use time of a policy is the time the policy was used
-	 * for the last time.
-	 * 
+	 * The use time of a policy is the time the policy was used for the last
+	 * time. It is not the system time, but a monotonic timestamp as returned
+	 * by time_monotonic.
+	 *
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
-	 * @param[out] use_time	the time of this SA's last use
+	 * @param[out] use_time	the monotonic timestamp of this SA's last use
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_policy) (kernel_ipsec_t *this,
-							  traffic_selector_t *src_ts, 
+							  traffic_selector_t *src_ts,
 							  traffic_selector_t *dst_ts,
 							  policy_dir_t direction, u_int32_t *use_time);
-	
+
 	/**
 	 * Remove a policy from the SPD.
 	 *
@@ -257,11 +259,11 @@ struct kernel_ipsec_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_policy) (kernel_ipsec_t *this,
-							traffic_selector_t *src_ts, 
+							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction,
 							bool unrouted);
-	
+
 	/**
 	 * Destroy the implementation.
 	 */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Copyright (C) 2007 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
@@ -39,12 +39,12 @@ struct private_x509_ocsp_request_t {
 	 * public functions
 	 */
 	x509_ocsp_request_t public;
-	
+
 	/**
 	 * CA the candidates belong to
 	 */
 	x509_t *ca;
-	
+
 	/**
 	 * Requestor name, subject of cert used if not set
 	 */
@@ -54,56 +54,50 @@ struct private_x509_ocsp_request_t {
 	 * Requestor certificate, included in request
 	 */
 	certificate_t *cert;
-	
+
 	/**
 	 * Requestor private key to sign request
 	 */
 	private_key_t *key;
-	
+
 	/**
 	 * list of certificates to check, x509_t
 	 */
 	linked_list_t *candidates;
-	
+
 	/**
 	 * nonce used in request
 	 */
 	chunk_t nonce;
-	
+
 	/**
 	 * encoded OCSP request
 	 */
 	chunk_t encoding;
-	
+
 	/**
 	 * reference count
 	 */
 	refcount_t ref;
 };
 
-static u_char ASN1_nonce_oid_str[] = {
+static const chunk_t ASN1_nonce_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2B, 0x06,
 				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x02
-};
-
-static u_char ASN1_response_oid_str[] = {
+);
+static const chunk_t ASN1_response_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2B, 0x06,
 				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x04
-};
-
-static u_char ASN1_response_content_str[] = {
+);
+static const chunk_t ASN1_response_content = chunk_from_chars(
 	0x04, 0x0D,
 		  0x30, 0x0B,
 				0x06, 0x09,
 				0x2B, 0x06,
 				0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01
-};
-
-static const chunk_t ASN1_nonce_oid = chunk_from_buf(ASN1_nonce_oid_str);
-static const chunk_t ASN1_response_oid = chunk_from_buf(ASN1_response_oid_str);
-static const chunk_t ASN1_response_content = chunk_from_buf(ASN1_response_content_str);
+);
 
 /**
  * build requestorName
@@ -120,7 +114,7 @@ static chunk_t build_requestorName(private_x509_ocsp_request_t *this)
 		return asn1_wrap(ASN1_CONTEXT_C_1, "m",
 					asn1_simple_object(ASN1_CONTEXT_C_4,
 						this->requestor->get_encoding(this->requestor)));
-	
+
 	}
 	return chunk_empty;
 }
@@ -133,7 +127,7 @@ static chunk_t build_Request(private_x509_ocsp_request_t *this,
 							 chunk_t serialNumber)
 {
 	return asn1_wrap(ASN1_SEQUENCE, "m",
-				asn1_wrap(ASN1_SEQUENCE, "cmmm",
+				asn1_wrap(ASN1_SEQUENCE, "mmmm",
 					asn1_algorithmIdentifier(OID_SHA1),
 					asn1_simple_object(ASN1_OCTET_STRING, issuerNameHash),
 					asn1_simple_object(ASN1_OCTET_STRING, issuerKeyHash),
@@ -151,7 +145,7 @@ static chunk_t build_requestList(private_x509_ocsp_request_t *this)
 	certificate_t *cert;
 	chunk_t list = chunk_empty;
 	public_key_t *public;
-	
+
 	cert = (certificate_t*)this->ca;
 	public = cert->get_public_key(cert);
 	if (public)
@@ -159,23 +153,21 @@ static chunk_t build_requestList(private_x509_ocsp_request_t *this)
 		hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 		if (hasher)
 		{
-			identification_t *keyid = public->get_id(public, ID_PUBKEY_SHA1);	
-			if (keyid)
+			if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1,
+										&issuerKeyHash))
 			{
 				enumerator_t *enumerator;
-			
-				issuerKeyHash = keyid->get_encoding(keyid);
-		
+
 				issuer = cert->get_subject(cert);
 				hasher->allocate_hash(hasher, issuer->get_encoding(issuer),
 									  &issuerNameHash);
 				hasher->destroy(hasher);
-	
+
 				enumerator = this->candidates->create_enumerator(this->candidates);
 				while (enumerator->enumerate(enumerator, &x509))
 				{
 					chunk_t request, serialNumber;
-			
+
 					serialNumber = x509->get_serial(x509);
 					request = build_Request(this, issuerNameHash, issuerKeyHash,
 											serialNumber);
@@ -204,7 +196,7 @@ static chunk_t build_requestList(private_x509_ocsp_request_t *this)
 static chunk_t build_nonce(private_x509_ocsp_request_t *this)
 {
 	rng_t *rng;
-	
+
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (rng)
 	{
@@ -232,7 +224,7 @@ static chunk_t build_acceptableResponses(private_x509_ocsp_request_t *this)
  */
 static chunk_t build_requestExtensions(private_x509_ocsp_request_t *this)
 {
-    return asn1_wrap(ASN1_CONTEXT_C_2, "m",
+	return asn1_wrap(ASN1_CONTEXT_C_2, "m",
 				asn1_wrap(ASN1_SEQUENCE, "mm",
 					build_nonce(this),
 					build_acceptableResponses(this)));
@@ -258,7 +250,7 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 	int oid;
 	signature_scheme_t scheme;
 	chunk_t certs, signature;
-	
+
 	switch (this->key->get_type(this->key))
 	{
 		/* TODO: use a generic mapping function */
@@ -268,14 +260,14 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 			break;
 		case KEY_ECDSA:
 			oid = OID_ECDSA_WITH_SHA1;
-			scheme = SIGN_ECDSA_WITH_SHA1;
+			scheme = SIGN_ECDSA_WITH_SHA1_DER;
 			break;
 		default:
 			DBG1("unable to sign OCSP request, %N signature not supported",
 				 key_type_names, this->key->get_type(this->key));
 			return chunk_empty;
 	}
-	
+
 	if (!this->key->sign(this->key, scheme, tbsRequest, &signature))
 	{
 		DBG1("creating OCSP signature failed, skipped");
@@ -288,7 +280,7 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 						this->cert->get_encoding(this->cert)));
 	}
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m",
-				asn1_wrap(ASN1_SEQUENCE, "cmm", 
+				asn1_wrap(ASN1_SEQUENCE, "cmm",
 					asn1_algorithmIdentifier(oid),
 					asn1_bitstring("m", signature),
 					certs));
@@ -301,7 +293,7 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 static chunk_t build_OCSPRequest(private_x509_ocsp_request_t *this)
 {
 	chunk_t tbsRequest, optionalSignature = chunk_empty;
-	
+
 	tbsRequest = build_tbsRequest(this);
 	if (this->key)
 	{
@@ -325,7 +317,7 @@ static certificate_type_t get_type(private_x509_ocsp_request_t *this)
 static identification_t* get_subject(private_x509_ocsp_request_t *this)
 {
 	certificate_t *ca = (certificate_t*)this->ca;
-	
+
 	if (this->requestor)
 	{
 		return this->requestor;
@@ -343,7 +335,7 @@ static identification_t* get_subject(private_x509_ocsp_request_t *this)
 static identification_t* get_issuer(private_x509_ocsp_request_t *this)
 {
 	certificate_t *ca = (certificate_t*)this->ca;
-	
+
 	return ca->get_subject(ca);
 }
 
@@ -363,11 +355,11 @@ static id_match_t has_subject(private_x509_ocsp_request_t *this,
 		match = current->has_subject(current, subject);
 		if (match > best)
 		{
-			best = match;	
+			best = match;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return best;	
+	return best;
 }
 
 /**
@@ -416,7 +408,7 @@ static bool get_validity(private_x509_ocsp_request_t *this, time_t *when,
 	}
 	return cert->get_validity(cert, when, not_before, not_after);
 }
-	
+
 /**
  * Implementation of certificate_t.get_encoding.
  */
@@ -432,7 +424,7 @@ static bool equals(private_x509_ocsp_request_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
-	
+
 	if (this == (private_x509_ocsp_request_t*)other)
 	{
 		return TRUE;
@@ -443,7 +435,7 @@ static bool equals(private_x509_ocsp_request_t *this, certificate_t *other)
 	}
 	if (other->equals == (void*)equals)
 	{	/* skip allocation if we have the same implementation */
-		return chunk_equals(this->encoding, ((private_x509_ocsp_request_t*)other)->encoding); 
+		return chunk_equals(this->encoding, ((private_x509_ocsp_request_t*)other)->encoding);
 	}
 	encoding = other->get_encoding(other);
 	equal = chunk_equals(this->encoding, encoding);
@@ -484,7 +476,7 @@ static void destroy(private_x509_ocsp_request_t *this)
 static private_x509_ocsp_request_t *create_empty()
 {
 	private_x509_ocsp_request_t *this = malloc_thing(private_x509_ocsp_request_t);
-	
+
 	this->public.interface.interface.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
 	this->public.interface.interface.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
 	this->public.interface.interface.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
@@ -497,7 +489,7 @@ static private_x509_ocsp_request_t *create_empty()
 	this->public.interface.interface.equals = (bool(*)(certificate_t*, certificate_t *other))equals;
 	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
 	this->public.interface.interface.destroy = (void (*)(certificate_t *this))destroy;
-	
+
 	this->ca = NULL;
 	this->requestor = NULL;
 	this->cert = NULL;
@@ -506,30 +498,60 @@ static private_x509_ocsp_request_t *create_empty()
 	this->encoding = chunk_empty;
 	this->candidates = linked_list_create();
 	this->ref = 1;
-	
+
 	return this;
 }
 
-typedef struct private_builder_t private_builder_t;
 /**
- * Builder implementation for certificate loading
+ * See header.
  */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** OCSP request to build */
-	private_x509_ocsp_request_t *req;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static x509_ocsp_request_t *build(private_builder_t *this)
+x509_ocsp_request_t *x509_ocsp_request_gen(certificate_type_t type, va_list args)
 {
 	private_x509_ocsp_request_t *req;
-	
-	req = this->req;
-	free(this);
+	certificate_t *cert;
+	private_key_t *private;
+	identification_t *subject;
+
+	req = create_empty();
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_CA_CERT:
+				cert = va_arg(args, certificate_t*);
+				if (cert->get_type(cert) == CERT_X509)
+				{
+					req->ca = (x509_t*)cert->get_ref(cert);
+				}
+				continue;
+			case BUILD_CERT:
+				cert = va_arg(args, certificate_t*);
+				if (cert->get_type(cert) == CERT_X509)
+				{
+					req->candidates->insert_last(req->candidates,
+												 cert->get_ref(cert));
+				}
+				continue;
+			case BUILD_SIGNING_CERT:
+				cert = va_arg(args, certificate_t*);
+				req->cert = cert->get_ref(cert);
+				continue;
+			case BUILD_SIGNING_KEY:
+				private = va_arg(args, private_key_t*);
+				req->key = private->get_ref(private);
+				continue;
+			case BUILD_SUBJECT:
+				subject = va_arg(args, identification_t*);
+				req->requestor = subject->clone(subject);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				destroy(req);
+				return NULL;
+		}
+		break;
+	}
 	if (req->ca)
 	{
 		req->encoding = build_OCSPRequest(req);
@@ -537,78 +559,5 @@ static x509_ocsp_request_t *build(private_builder_t *this)
 	}
 	destroy(req);
 	return NULL;
-}
-
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	va_list args;
-	certificate_t *cert;
-	identification_t *subject;
-	private_key_t *private;
-	
-	va_start(args, part);
-	switch (part)
-	{
-		case BUILD_CA_CERT:
-			cert = va_arg(args, certificate_t*);
-			if (cert->get_type(cert) == CERT_X509)
-			{
-				this->req->ca = (x509_t*)cert->get_ref(cert);
-			}
-			break;
-		case BUILD_CERT:
-			cert = va_arg(args, certificate_t*);
-			if (cert->get_type(cert) == CERT_X509)
-			{
-				this->req->candidates->insert_last(this->req->candidates,
-												   cert->get_ref(cert));
-			}
-			break;
-		case BUILD_SIGNING_CERT:
-			cert = va_arg(args, certificate_t*);
-			this->req->cert = cert->get_ref(cert);
-			break;
-		case BUILD_SIGNING_KEY:
-			private = va_arg(args, private_key_t*);
-			this->req->key = private->get_ref(private);
-			break;
-		case BUILD_SUBJECT:
-			subject = va_arg(args, identification_t*);
-			this->req->requestor = subject->clone(subject);
-			break;
-		default:
-			/* cancel if option not supported */
-			if (this->req)
-			{
-				destroy(this->req);
-			}
-			builder_cancel(&this->public);
-			break;
-	}
-	va_end(args);
-}
-
-/**
- * Builder construction function
- */
-builder_t *x509_ocsp_request_builder(certificate_type_t type)
-{
-	private_builder_t *this;
-	
-	if (type != CERT_X509_OCSP_REQUEST)
-	{
-		return NULL;
-	}
-	
-	this = malloc_thing(private_builder_t);
-	
-	this->req = create_empty();
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-	
-	return &this->public;
 }
 

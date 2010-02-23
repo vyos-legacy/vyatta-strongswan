@@ -25,6 +25,8 @@
 
 #include <freeswan.h>
 
+#include <attributes/attributes.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
@@ -61,20 +63,6 @@ enum_names version_names =
 		ISAKMP_MAJOR_VERSION<<ISA_MAJ_SHIFT | ISAKMP_MINOR_VERSION,
 		version_name, NULL };
 
-/* RFC 2459 CRL reason codes */
-
-ENUM(crl_reason_names, REASON_UNSPECIFIED, REASON_REMOVE_FROM_CRL,
-	"unspecified",
-	"key compromise",
-	"ca compromise",
-	"affiliation changed",
-	"superseded",
-	"cessation of operation",
-	"certificate hold",
-	"reason #7",
-	"remove from crl"
-);
-
 /* RFC 3706 Dead Peer Detection */
 
 ENUM(dpd_action_names, DPD_ACTION_NONE, DPD_ACTION_RESTART,
@@ -82,8 +70,8 @@ ENUM(dpd_action_names, DPD_ACTION_NONE, DPD_ACTION_RESTART,
 	"clear",
 	"hold",
 	"restart"
-);	
-	
+);
+
 /* Timer events */
 
 ENUM(timer_event_names, EVENT_NULL, EVENT_LOG_DAILY,
@@ -288,7 +276,7 @@ const char *const payload_name_nat_d[] = {
 
 static enum_names payload_names_nat_d =
 	{ ISAKMP_NEXT_NATD_DRAFTS, ISAKMP_NEXT_NATOA_DRAFTS, payload_name_nat_d, NULL };
-		
+
 enum_names payload_names =
 	{ ISAKMP_NEXT_NONE, ISAKMP_NEXT_NATOA_RFC, payload_name, &payload_names_nat_d };
 
@@ -364,11 +352,21 @@ static const char *const ah_transform_name[] = {
 	"HMAC_SHA2_512",
 	"HMAC_RIPEMD",
 	"AES_XCBC_96",
-	"SIG_RSA"
+	"SIG_RSA",
+	"AES_128_GMAC",
+	"AES_192_GMAC",
+	"AES_256_GMAC"
 };
 
-enum_names ah_transformid_names =
-	{ AH_MD5, AH_RSA, ah_transform_name, NULL };
+static const char *const ah_transform_name_high[] = {
+	"HMAC_SHA2_256_96"
+};
+
+enum_names ah_transform_names_high =
+	{ AH_SHA2_256_96, AH_SHA2_256_96, ah_transform_name_high, NULL };
+
+enum_names ah_transform_names =
+	{ AH_MD5, AH_AES_256_GMAC, ah_transform_name, &ah_transform_names_high };
 
 /* IPsec ESP transform values */
 
@@ -402,11 +400,11 @@ static const char *const esp_transform_name_high[] = {
 	"TWOFISH_CBC"
 };
 
-enum_names esp_transformid_names_high =
+enum_names esp_transform_names_high =
 	{ ESP_SERPENT, ESP_TWOFISH, esp_transform_name_high, NULL };
 
-enum_names esp_transformid_names =
-	{ ESP_DES_IV64, ESP_CAMELLIA, esp_transform_name, &esp_transformid_names_high };
+enum_names esp_transform_names =
+	{ ESP_DES_IV64, ESP_CAMELLIA, esp_transform_name, &esp_transform_names_high };
 
 /* IPCOMP transform values */
 
@@ -677,15 +675,17 @@ static const char *const auth_alg_name[] = {
 };
 
 static const char *const extended_auth_alg_name[] = {
-	"NULL"
-	};
+	"NULL",
+	"HMAC_SHA2_256_96"
+};
 
 enum_names extended_auth_alg_names =
-	{ AUTH_ALGORITHM_NULL, AUTH_ALGORITHM_NULL, extended_auth_alg_name, NULL };
+	{ AUTH_ALGORITHM_NULL, AUTH_ALGORITHM_HMAC_SHA2_256_96,
+		extended_auth_alg_name, NULL };
 
 enum_names auth_alg_names =
-	{ AUTH_ALGORITHM_NONE, AUTH_ALGORITHM_SIG_RSA, auth_alg_name
-		, &extended_auth_alg_names };
+	{ AUTH_ALGORITHM_NONE, AUTH_ALGORITHM_SIG_RSA,
+		auth_alg_name, &extended_auth_alg_names };
 
 /* From draft-beaulieu-ike-xauth */
 static const char *const xauth_type_name[] = {
@@ -859,7 +859,7 @@ static const char *const oakley_auth_name1[] = {
 	"ECDSA signature",
 	"ECDSA-256 signature",
 	"ECDSA-384 signature",
-	"ECDSA-521-signature",   
+	"ECDSA-521-signature",
 };
 
 static const char *const oakley_auth_name2[] = {
@@ -936,7 +936,7 @@ enum_names oakley_group_names_rfc3526 =
 			oakley_group_name_rfc3526, &oakley_group_names_rfc4753 };
 
 enum_names oakley_group_names =
-	{ MODP_768_BIT, MODP_1536_BIT, 
+	{ MODP_768_BIT, MODP_1536_BIT,
 			oakley_group_name, &oakley_group_names_rfc3526 };
 
 /* Oakley Group Type attribute */
@@ -1000,20 +1000,28 @@ static const char *const notification_dpd_name[] = {
 	"R_U_THERE_ACK",
 };
 
+static const char *const notification_juniper_name[] = {
+	"NS_NHTB_INFORM",
+};
+
+enum_names notification_juniper_names =
+	{ NS_NHTB_INFORM, NS_NHTB_INFORM,
+		notification_juniper_name, NULL };
+
 enum_names notification_dpd_names =
 	{ R_U_THERE, R_U_THERE_ACK,
-		notification_dpd_name, NULL };
+		notification_dpd_name, &notification_juniper_names };
 
 enum_names ipsec_notification_names =
 	{ IPSEC_RESPONDER_LIFETIME, IPSEC_INITIAL_CONTACT,
 		ipsec_notification_name, &notification_dpd_names };
 
 enum_names notification_status_names =
-	{ CONNECTED, CONNECTED,
+	{ ISAKMP_CONNECTED, ISAKMP_CONNECTED,
 		notification_status_name, &ipsec_notification_names };
 
 enum_names notification_names =
-	{ INVALID_PAYLOAD_TYPE, UNEQUAL_PAYLOAD_LENGTHS,
+	{ ISAKMP_INVALID_PAYLOAD_TYPE, ISAKMP_UNEQUAL_PAYLOAD_LENGTHS,
 		notification_name, &notification_status_names };
 
 /* MODECFG
@@ -1167,7 +1175,7 @@ const char *const natt_type_bitnames[] = {
 	"4",   "5",   "6",   "7",
 	"8",   "9",   "10",  "11",
 	"12",  "13",  "14",  "15",
-	"16",  "17",  "18",  "19", 
+	"16",  "17",  "18",  "19",
 	"20",  "21",  "22",  "23",
 	"24",  "25",  "26",  "27",
 	"28",  "29",
@@ -1210,8 +1218,8 @@ enum_show(enum_names *ed, unsigned long val)
 
 static char bitnamesbuf[200];   /* only one!  I hope that it is big enough! */
 
-int 
-enum_search(enum_names *ed, const char *str) 
+int
+enum_search(enum_names *ed, const char *str)
 {
 	enum_names  *p;
 	const char *ptr;

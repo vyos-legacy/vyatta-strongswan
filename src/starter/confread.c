@@ -119,7 +119,7 @@ load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 		bool assigned = FALSE;
 
 		kw_token_t token = kw->entry->token;
- 
+
 		if (token < KW_SETUP_FIRST || token > KW_SETUP_LAST)
 		{
 			plog("# unsupported keyword '%s' in config setup", kw->entry->name);
@@ -136,9 +136,8 @@ load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 	}
 }
 
-static void
-kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
-    , kw_list_t *kw, char *conn_name, starter_config_t *cfg)
+static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
+				   kw_list_t *kw, char *conn_name, starter_config_t *cfg)
 {
 	err_t ugh = NULL;
 	bool assigned = FALSE;
@@ -165,10 +164,10 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			ip_subnet net;
 			char *pos;
 			int len = 0;
-			
+
 			end->has_client = TRUE;
 			conn->tunnel_addr_family = ip_version(value);
-			
+
 			pos = strchr(value, ',');
 			if (pos)
 			{
@@ -188,31 +187,54 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			plog("# natip and sourceip cannot be defined at the same time");
 			goto err;
 		}
-		if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
-			streq(value, "%config") || streq(value, "%cfg"))
+		if (value[0] == '%')
 		{
-			free(end->srcip);
-			end->srcip = NULL;
+			if (streq(value, "%modeconfig") || streq(value, "%modecfg") ||
+				streq(value, "%config") || streq(value, "%cfg"))
+			{
+				/* request ip via config payload */
+				end->sourceip = NULL;
+				end->sourceip_mask = 1;
+			}
+			else
+			{	/* %poolname, strip %, serve ip requests */
+				end->sourceip = clone_str(value+1);
+				end->sourceip_mask = 0;
+			}
 			end->modecfg = TRUE;
 		}
 		else
 		{
+			char *pos;
 			ip_address addr;
 			ip_subnet net;
-		
+
 			conn->tunnel_addr_family = ip_version(value);
-			if (strchr(value, '/'))
+			pos = strchr(value, '/');
+
+			if (pos)
 			{	/* CIDR notation, address pool */
 				ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &net);
+				if (ugh != NULL)
+				{
+					plog("# bad subnet: %s=%s [%s]", name, value, ugh);
+					goto err;
+				 }
+				*pos = '\0';
+				end->sourceip = clone_str(value);
+				end->sourceip_mask = atoi(pos + 1);
 			}
-			else if (value[0] != '%')
-			{	/* old style fixed srcip, a %poolname otherwise */
+			else
+			{	/* fixed srcip */
 				ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
-			}
-			if (ugh != NULL)
-			{
-				plog("# bad addr: %s=%s [%s]", name, value, ugh);
-				goto err;
+				if (ugh != NULL)
+				{
+					plog("# bad addr: %s=%s [%s]", name, value, ugh);
+					goto err;
+				}
+				end->sourceip = clone_str(value);
+				end->sourceip_mask = (conn->tunnel_addr_family == AF_INET) ?
+									  32 : 128;
 			}
 		}
 		conn->policy |= POLICY_TUNNEL;
@@ -244,6 +266,10 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			{
 				end->addr    = cfg->defaultroute.addr;
 				end->nexthop = cfg->defaultroute.nexthop;
+			}
+			else if (!cfg->defaultroute.supported)
+			{
+				plog("%%defaultroute not supported, fallback to %%any");
 			}
 			else
 			{
@@ -298,7 +324,9 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		if (streq(value, "%defaultroute"))
 		{
 			if (cfg->defaultroute.defined)
+			{
 				end->nexthop = cfg->defaultroute.nexthop;
+			}
 			else
 			{
 				plog("# default route not known: %s=%s", name, value);
@@ -323,7 +351,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 	case KW_SUBNETWITHIN:
 	{
 		ip_subnet net;
-		
+
 		end->has_client = TRUE;
 		end->has_client_wildcard = TRUE;
 		conn->tunnel_addr_family = ip_version(value);
@@ -342,7 +370,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		end->has_port_wildcard = has_port_wildcard;
 		break;
 	case KW_NATIP:
-		if (end->srcip)
+		if (end->sourceip)
 		{
 			plog("# natip and sourceip cannot be defined at the same time");
 			goto err;
@@ -350,11 +378,11 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		if (streq(value, "%defaultroute"))
 		{
 			char buf[64];
-		
+
 			if (cfg->defaultroute.defined)
 			{
 				addrtot(&cfg->defaultroute.addr, 0, buf, sizeof(buf));
-				end->srcip = clone_str(buf);
+				end->sourceip = clone_str(buf);
 			}
 			else
 			{
@@ -365,7 +393,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		else
 		{
 			ip_address addr;
-			
+
 			conn->tunnel_addr_family = ip_version(value);
 			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &addr);
 			if (ugh != NULL)
@@ -373,7 +401,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);
 				goto err;
 			}
-			end->srcip = clone_str(value);
+			end->sourceip = clone_str(value);
 		}
 		end->has_natip = TRUE;
 		conn->policy |= POLICY_TUNNEL;
@@ -510,8 +538,8 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			}
 			else if (streq(kw->value, "transport_proxy"))
 			{
-				conn->policy |= POLICY_PROXY;			
-			}	
+				conn->policy |= POLICY_PROXY;
+			}
 			else if (streq(kw->value, "passthrough") || streq(kw->value, "pass"))
 			{
 				conn->policy |= POLICY_SHUNT_PASS;
@@ -535,10 +563,10 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 			break;
 		case KW_COMPRESS:
 			KW_POLICY_FLAG("yes", "no", POLICY_COMPRESS)
-			break; 
+			break;
 		case KW_AUTH:
 			KW_POLICY_FLAG("ah", "esp", POLICY_AUTHENTICATE)
-			break; 
+			break;
 		case KW_AUTHBY:
 			conn->policy &= ~(POLICY_ID_AUTH_MASK | POLICY_ENCRYPT);
 
@@ -591,7 +619,7 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 		case KW_EAP:
 		{
 			char *sep;
-		
+
 			/* check for vendor-type format */
 			sep = strchr(kw->value, '-');
 			if (sep)
@@ -922,7 +950,7 @@ confread_free_ca(starter_ca_t *ca)
 /*
  * free the memory used by a starter_config_t object
  */
-void 
+void
 confread_free(starter_config_t *cfg)
 {
 	starter_conn_t *conn = cfg->conn_first;
@@ -1046,7 +1074,7 @@ confread_load(const char *file)
 	for (ca = cfg->ca_first; ca; ca = ca->next)
 	{
 		also_t *also = ca->also;
-	
+
 		while (also != NULL)
 		{
 			kw_list_t *kw = find_also_ca(also->name, cfg->ca_first, cfg);
@@ -1080,7 +1108,7 @@ confread_load(const char *file)
 	for (sconn = cfgp->conn_first; sconn; sconn = sconn->next)
 	{
 		u_int previous_err;
-		
+
 		/* skip %default conn section */
 		if (streq(sconn->name, "%default"))
 			continue;
@@ -1093,7 +1121,7 @@ confread_load(const char *file)
 		conn_default(sconn->name, conn, &cfg->conn_default);
 		conn->kw =  sconn->kw;
 		conn->next = NULL;
-		
+
 		previous_err = cfg->err;
 		load_conn(conn, conn->kw, cfg);
 		if (cfg->err > previous_err)

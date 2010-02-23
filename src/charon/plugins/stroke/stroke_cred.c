@@ -27,8 +27,7 @@
 #include <credentials/certificates/ac.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
-#include <utils/mutex.h>
-#include <asn1/pem.h>
+#include <threading/rwlock.h>
 #include <daemon.h>
 
 /* configuration directories and files */
@@ -56,7 +55,7 @@ struct private_stroke_cred_t {
 	 * public functions
 	 */
 	stroke_cred_t public;
-	
+
 	/**
 	 * list of trusted peer/signer/CA certificates (certificate_t)
 	 */
@@ -71,12 +70,12 @@ struct private_stroke_cred_t {
 	 * list of private keys (private_key_t)
 	 */
 	linked_list_t *private;
-	
+
 	/**
 	 * read-write lock to lists
 	 */
 	rwlock_t *lock;
-	
+
 	/**
 	 * cache CRLs to disk?
 	 */
@@ -89,6 +88,7 @@ struct private_stroke_cred_t {
 typedef struct {
 	private_stroke_cred_t *this;
 	identification_t *id;
+	certificate_type_t type;
 } id_data_t;
 
 /**
@@ -106,25 +106,17 @@ static void id_data_destroy(id_data_t *data)
 static bool private_filter(id_data_t *data,
 						   private_key_t **in, private_key_t **out)
 {
-	identification_t *candidate;
-	id_type_t type;
-	
+	private_key_t *key;
+
+	key = *in;
 	if (data->id == NULL)
 	{
-		*out = *in;
+		*out = key;
 		return TRUE;
 	}
-	type = data->id->get_type(data->id);
-	if (type == ID_KEY_ID)
-	{	/* handle ID_KEY_ID as a ID_PUBKEY_SHA1 */
-		type = ID_PUBKEY_SHA1;
-	}
-	candidate = (*in)->get_id(*in, type);
-	if (candidate &&
-		chunk_equals(candidate->get_encoding(candidate),
-					 data->id->get_encoding(data->id)))
+	if (key->has_fingerprint(key, data->id->get_encoding(data->id)))
 	{
-		*out = *in;
+		*out = key;
 		return TRUE;
 	}
 	return FALSE;
@@ -141,7 +133,7 @@ static enumerator_t* create_private_enumerator(private_stroke_cred_t *this,
 	data = malloc_thing(id_data_t);
 	data->this = this;
 	data->id = id;
-	
+
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->private->create_enumerator(this->private),
 									(void*)private_filter, data,
@@ -154,72 +146,28 @@ static enumerator_t* create_private_enumerator(private_stroke_cred_t *this,
 static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **out)
 {
 	public_key_t *public;
-	identification_t *candidate;
 	certificate_t *cert = *in;
-	certificate_type_t type = cert->get_type(cert);
 
-	if (type == CERT_X509_CRL || type == CERT_X509_AC)
+	if (data->type != CERT_ANY && data->type != cert->get_type(cert))
 	{
 		return FALSE;
 	}
-
 	if (data->id == NULL || cert->has_subject(cert, data->id))
 	{
 		*out = *in;
 		return TRUE;
 	}
-	
-	public = (cert)->get_public_key(cert);
+
+	public = cert->get_public_key(cert);
 	if (public)
 	{
-		candidate = public->get_id(public, data->id->get_type(data->id));
-		if (candidate && data->id->equals(data->id, candidate))
+		if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
 		{
 			public->destroy(public);
 			*out = *in;
 			return TRUE;
 		}
 		public->destroy(public);
-	}
-	return FALSE;
-}
-
-/**
- * filter function for crl enumerator
- */
-static bool crl_filter(id_data_t *data, certificate_t **in, certificate_t **out)
-{
-	certificate_t *cert = *in;
-	
-	if (cert->get_type(cert) != CERT_X509_CRL)
-	{
-		return FALSE;
-	}
-
-	if (data->id == NULL || cert->has_issuer(cert, data->id))
-	{
-		*out = *in;
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
- * filter function for attribute certificate enumerator
- */
-static bool ac_filter(id_data_t *data, certificate_t **in, certificate_t **out)
-{
-	certificate_t *cert = *in;
-	
-	if (cert->get_type(cert) != CERT_X509_AC)
-	{
-		return FALSE;
-	}
-
-	if (data->id == NULL || cert->has_subject(cert, data->id))
-	{
-		*out = *in;
-		return TRUE;
 	}
 	return FALSE;
 }
@@ -232,30 +180,16 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 							identification_t *id, bool trusted)
 {
 	id_data_t *data;
-	
-	if (cert == CERT_X509_CRL || cert == CERT_X509_AC)
+
+	if (trusted && (cert == CERT_X509_CRL || cert == CERT_X509_AC))
 	{
-		if (trusted)
-		{
-			return NULL;
-		}
-		data = malloc_thing(id_data_t);
-		data->this = this;
-		data->id = id;
-		
-		this->lock->read_lock(this->lock);
-		return enumerator_create_filter(this->certs->create_enumerator(this->certs),
-					(cert == CERT_X509_CRL)? (void*)crl_filter : (void*)ac_filter,
-					data, (void*)id_data_destroy);
-	}
-	if (cert != CERT_X509 && cert != CERT_ANY)
-	{	/* we only have X509 certificates. TODO: ACs? */
 		return NULL;
 	}
 	data = malloc_thing(id_data_t);
 	data->this = this;
 	data->id = id;
-	
+	data->type = cert;
+
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->certs->create_enumerator(this->certs),
 									(void*)certs_filter, data,
@@ -286,7 +220,7 @@ static bool shared_filter(shared_data_t *data,
 						  void **unused1, id_match_t *me,
 						  void **unused2, id_match_t *other)
 {
-	id_match_t my_match, other_match;
+	id_match_t my_match = ID_MATCH_NONE, other_match = ID_MATCH_NONE;
 	stroke_shared_key_t *stroke = *in;
 	shared_key_t *shared = &stroke->shared;
 
@@ -294,10 +228,16 @@ static bool shared_filter(shared_data_t *data,
 	{
 		return FALSE;
 	}
-	
-	my_match = stroke->has_owner(stroke, data->me);
-	other_match = stroke->has_owner(stroke, data->other);
-	if (!my_match && !other_match)
+
+	if (data->me)
+	{
+		my_match = stroke->has_owner(stroke, data->me);
+	}
+	if (data->other)
+	{
+		other_match = stroke->has_owner(stroke, data->other);
+	}
+	if ((data->me || data->other) && (!my_match && !other_match))
 	{
 		return FALSE;
 	}
@@ -316,12 +256,12 @@ static bool shared_filter(shared_data_t *data,
 /**
  * Implements credential_set_t.create_shared_enumerator
  */
-static enumerator_t* create_shared_enumerator(private_stroke_cred_t *this, 
+static enumerator_t* create_shared_enumerator(private_stroke_cred_t *this,
 							shared_key_type_t type,	identification_t *me,
 							identification_t *other)
 {
 	shared_data_t *data = malloc_thing(shared_data_t);
-	
+
 	data->this = this;
 	data->me = me;
 	data->other = other;
@@ -339,7 +279,7 @@ static certificate_t* add_cert(private_stroke_cred_t *this, certificate_t *cert)
 {
 	certificate_t *current;
 	enumerator_t *enumerator;
-	bool new = TRUE;	
+	bool new = TRUE;
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->certs->create_enumerator(this->certs);
@@ -363,7 +303,7 @@ static certificate_t* add_cert(private_stroke_cred_t *this, certificate_t *cert)
 	this->lock->unlock(this->lock);
 	return cert;
 }
-	
+
 /**
  * Implementation of stroke_cred_t.load_ca.
  */
@@ -371,7 +311,7 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 {
 	certificate_t *cert;
 	char path[PATH_MAX];
-	
+
 	if (*filename == '/')
 	{
 		snprintf(path, sizeof(path), "%s", filename);
@@ -380,7 +320,7 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 	{
 		snprintf(path, sizeof(path), "%s/%s", CA_CERTIFICATE_DIR, filename);
 	}
-	
+
 	cert = lib->creds->create(lib->creds,
 							  CRED_CERTIFICATE, CERT_X509,
 							  BUILD_FROM_FILE, path,
@@ -388,12 +328,12 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 	if (cert)
 	{
 		x509_t *x509 = (x509_t*)cert;
-		
+
 		if (!(x509->get_flags(x509) & X509_CA))
 		{
+			DBG1(DBG_CFG, "  ca certificate \"%Y\" misses ca basic constraint, "
+				 "discarded", cert->get_subject(cert));
 			cert->destroy(cert);
-			DBG1(DBG_CFG, "  ca certificate must have ca basic constraint set, "
-				 "discarded");
 			return NULL;
 		}
 		return (certificate_t*)add_cert(this, cert);
@@ -408,7 +348,7 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 {
 	certificate_t *current, *cert = &crl->certificate;
 	enumerator_t *enumerator;
-	bool new = TRUE, found = FALSE;	
+	bool new = TRUE, found = FALSE;
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->certs->create_enumerator(this->certs);
@@ -417,12 +357,11 @@ static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
 		if (current->get_type(current) == CERT_X509_CRL)
 		{
 			crl_t *crl_c = (crl_t*)current;
-			identification_t *authkey = crl->get_authKeyIdentifier(crl);
-			identification_t *authkey_c = crl_c->get_authKeyIdentifier(crl_c);
+			chunk_t authkey = crl->get_authKeyIdentifier(crl);
+			chunk_t authkey_c = crl_c->get_authKeyIdentifier(crl_c);
 
 			/* if compare authorityKeyIdentifiers if available */
-			if (authkey != NULL && authkey_c != NULL &&
-				authkey->equals(authkey, authkey_c))
+			if (authkey.ptr && authkey_c.ptr && chunk_equals(authkey, authkey_c))
 			{
 				found = TRUE;
 			}
@@ -491,17 +430,19 @@ static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
 	{
 		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
 	}
-	
+
 	cert = lib->creds->create(lib->creds,
-							  CRED_CERTIFICATE, CERT_X509,
+							  CRED_CERTIFICATE, CERT_ANY,
 							  BUILD_FROM_FILE, path,
-							  BUILD_X509_FLAG, 0,
 							  BUILD_END);
 	if (cert)
 	{
 		cert = add_cert(this, cert);
+		DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
+					  cert->get_subject(cert), filename);
 		return cert->get_ref(cert);
 	}
+	DBG1(DBG_CFG, "  loading certificate from '%s' failed", filename);
 	return NULL;
 }
 
@@ -513,7 +454,7 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 {
 	struct stat st;
 	char *file;
-	
+
 	enumerator_t *enumerator = enumerator_create_directory(path);
 
 	if (!enumerator)
@@ -535,22 +476,33 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 		{
 			case CERT_X509:
 				if (flag & X509_CA)
-				{	/* for CA certificates, we strictly require CA
-					 * basicconstraints to be set */
+				{	/* for CA certificates, we strictly require
+					 * the CA basic constraint to be set */
 					cert = lib->creds->create(lib->creds,
 										CRED_CERTIFICATE, CERT_X509,
 										BUILD_FROM_FILE, file, BUILD_END);
 					if (cert)
 					{
 						x509_t *x509 = (x509_t*)cert;
-						
+
 						if (!(x509->get_flags(x509) & X509_CA))
 						{
-							DBG1(DBG_CFG, "  ca certificate must have ca "
-								 "basic constraint set, discarded");
+							DBG1(DBG_CFG, "  ca certificate \"%Y\" lacks "
+								 "ca basic constraint, discarded",
+								 cert->get_subject(cert));
 							cert->destroy(cert);
 							cert = NULL;
 						}
+						else
+						{
+							DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
+										  cert->get_subject(cert), file);
+						}
+					}
+					else
+					{
+						DBG1(DBG_CFG, "  loading ca certificate from '%s' "
+									  "failed", file);
 					}
 				}
 				else
@@ -559,6 +511,16 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 										CRED_CERTIFICATE, CERT_X509,
 										BUILD_FROM_FILE, file,
 										BUILD_X509_FLAG, flag, BUILD_END);
+					if (cert)
+					{
+						DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
+									  cert->get_subject(cert), file);
+					}
+					else
+					{
+						DBG1(DBG_CFG, "  loading certificate from '%s' "
+									  "failed", file);
+					}
 				}
 				if (cert)
 				{
@@ -573,6 +535,11 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 				if (cert)
 				{
 					add_crl(this, (crl_t*)cert);
+					DBG1(DBG_CFG, "  loaded crl from '%s'",  file);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "  loading crl from '%s' failed", file);
 				}
 				break;
 			case CERT_X509_AC:
@@ -583,10 +550,17 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 				if (cert)
 				{
 					add_ac(this, (ac_t*)cert);
+					DBG1(DBG_CFG, "  loaded attribute certificate from '%s'",
+								  file);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "  loading attribute certificate from '%s' "
+								  "failed", file);
 				}
 				break;
 			default:
-				break;	
+				break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -601,20 +575,18 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 	{
 		/* CRLs get written to /etc/ipsec.d/crls/<authkeyId>.crl */
 		crl_t *crl = (crl_t*)cert;
-	
+
 		cert->get_ref(cert);
 		if (add_crl(this, crl))
 		{
 			char buf[BUF_LEN];
 			chunk_t chunk, hex;
-			identification_t *id;
-			
-			id = crl->get_authKeyIdentifier(crl);
-			chunk = id->get_encoding(id);
+
+			chunk = crl->get_authKeyIdentifier(crl);
 			hex = chunk_to_hex(chunk, NULL, FALSE);
 			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex);
 			free(hex.ptr);
-			
+
 			chunk = cert->get_encoding(cert);
 			chunk_write(chunk, buf, "crl", 022, TRUE);
 			free(chunk.ptr);
@@ -669,7 +641,7 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 	}
 
 	if (quotes)
-	{	
+	{
 		/* treat as an ASCII string */
 		*secret = chunk_clone(raw_secret);
 		return NULL;
@@ -693,9 +665,54 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 }
 
 /**
+ * Data to pass to passphrase_cb
+ */
+typedef struct {
+	/** socket we use for prompting */
+	FILE *prompt;
+	/** private key file */
+	char *file;
+	/** buffer for passphrase */
+	char buf[256];
+} passphrase_cb_data_t;
+
+/**
+ * Passphrase callback to read from whack fd
+ */
+chunk_t passphrase_cb(passphrase_cb_data_t *data, int try)
+{
+	chunk_t secret = chunk_empty;;
+
+	if (try > 5)
+	{
+		fprintf(data->prompt, "invalid passphrase, too many trials\n");
+		return chunk_empty;
+	}
+	if (try == 1)
+	{
+		fprintf(data->prompt, "Private key '%s' is encrypted\n", data->file);
+	}
+	else
+	{
+		fprintf(data->prompt, "invalid passphrase\n");
+	}
+	fprintf(data->prompt, "Passphrase:\n");
+	if (fgets(data->buf, sizeof(data->buf), data->prompt))
+	{
+		secret = chunk_create(data->buf, strlen(data->buf));
+		if (secret.len)
+		{	/* trim appended \n */
+			secret.len--;
+		}
+	}
+	return secret;
+}
+
+/**
  * reload ipsec.secrets
  */
-static void load_secrets(private_stroke_cred_t *this, char *file, int level)
+static void load_secrets(private_stroke_cred_t *this, char *file, int level,
+						 FILE *prompt)
 {
 	size_t bytes;
 	int line_nr = 0;
@@ -709,7 +726,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 	fd = fopen(file, "r");
 	if (fd == NULL)
 	{
-		DBG1(DBG_CFG, "opening secrets file '%s' failed");
+		DBG1(DBG_CFG, "opening secrets file '%s' failed", file);
 		return;
 	}
 
@@ -722,9 +739,10 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 	fclose(fd);
 	src = chunk;
 
-	this->lock->write_lock(this->lock);
 	if (level == 0)
 	{
+		this->lock->write_lock(this->lock);
+
 		/* flush secrets on non-recursive invocation */
 		while (this->shared->remove_last(this->shared,
 										 (void**)&shared) == SUCCESS)
@@ -737,7 +755,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			private->destroy(private);
 		}
 	}
-	
+
 	while (fetchline(&src, &line))
 	{
 		chunk_t ids, token;
@@ -755,7 +773,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			glob_t buf;
 			char **expanded, *dir, pattern[PATH_MAX];
 			u_char *pos;
-			
+
 			if (level > MAX_SECRETS_RECURSION)
 			{
 				DBG1(DBG_CFG, "maximum level of %d includes reached, ignored",
@@ -782,7 +800,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			{	/* use directory of current file if relative */
 				dir = strdup(file);
 				dir = dirname(dir);
-				
+
 				if (line.len + 1 + strlen(dir) + 1 > sizeof(pattern))
 				{
 					DBG1(DBG_CFG, "include pattern too long, ignored");
@@ -802,13 +820,13 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			{
 				for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
 				{
-					load_secrets(this, *expanded, level + 1);
+					load_secrets(this, *expanded, level + 1, prompt);
 				}
 			}
 			globfree(&buf);
 			continue;
 		}
-		
+
 		if (line.len > 2 && strneq(": ", line.ptr, 2))
 		{
 			/* no ids, skip the ':' */
@@ -837,9 +855,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			char path[PATH_MAX];
 			chunk_t filename;
 			chunk_t secret = chunk_empty;
-			private_key_t *key;
-			bool pgp = FALSE;
-			chunk_t chunk = chunk_empty;
+			private_key_t *key = NULL;
 			key_type_t key_type = match("RSA", &token) ? KEY_RSA : KEY_ECDSA;
 
 			err_t ugh = extract_value(&filename, &line);
@@ -862,7 +878,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			else
 			{
 				/* relative path name */
-				snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR, 
+				snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR,
 						 filename.len, filename.ptr);
 			}
 
@@ -876,17 +892,35 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 					goto error;
 				}
 			}
+			if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
+			{
+				if (prompt)
+				{
+					passphrase_cb_data_t data;
 
-			if (pem_asn1_load_file(path, &secret, &chunk, &pgp))
+					data.prompt = prompt;
+					data.file = path;
+					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+											 key_type, BUILD_FROM_FILE, path,
+											 BUILD_PASSPHRASE_CALLBACK,
+											 passphrase_cb, &data, BUILD_END);
+				}
+			}
+			else
 			{
 				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
-										 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-				free(chunk.ptr);
-				if (key)
-				{
-					DBG1(DBG_CFG, "  loaded private key file '%s'", path);
-					this->private->insert_last(this->private, key);
-				}
+										 BUILD_FROM_FILE, path,
+										 BUILD_PASSPHRASE, secret, BUILD_END);
+			}
+			if (key)
+			{
+				DBG1(DBG_CFG, "  loaded %N private key from '%s'",
+					 key_type_names, key->get_type(key), path);
+				this->private->insert_last(this->private, key);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "  loading private key from '%s' failed", path);
 			}
 			chunk_clear(&secret);
 		}
@@ -896,9 +930,9 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			char smartcard[32], keyid[22], pin[32];
 			private_key_t *key;
 			u_int slot;
-			
+
 			err_t ugh = extract_value(&sc, &line);
-			
+
 			if (ugh != NULL)
 			{
 				DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
@@ -911,7 +945,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			}
 			snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
 			smartcard[sizeof(smartcard) - 1] = '\0';
-			
+
 			/* parse slot and key id. only two formats are supported.
 			 * first try %smartcard<slot>:<keyid> */
 			if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
@@ -929,7 +963,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 						" supported or invalid", line_nr);
 				goto error;
 			}
-			
+
 			if (!eat_whitespace(&line))
 			{
 				DBG1(DBG_CFG, "line %d: expected PIN", line_nr);
@@ -943,12 +977,12 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			}
 			snprintf(pin, sizeof(pin), "%.*s", secret.len, secret.ptr);
 			pin[sizeof(pin) - 1] = '\0';
-			
+
 			/* we assume an RSA key */
 			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 									 BUILD_SMARTCARD_KEYID, smartcard,
 									 BUILD_SMARTCARD_PIN, pin, BUILD_END);
-			
+
 			if (key)
 			{
 				DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
@@ -975,7 +1009,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 			DBG1(DBG_CFG, "  loaded %N secret for %s", shared_key_type_names, type,
 				 ids.len > 0 ? (char*)ids.ptr : "%any");
 			DBG4(DBG_CFG, "  secret: %#B", &secret);
-			
+
 			this->shared->insert_last(this->shared, shared_key);
 			while (ids.len > 0)
 			{
@@ -992,7 +1026,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 				{
 					continue;
 				}
-				
+
 				/* NULL terminate the ID string */
 				*(id.ptr + id.len) = '\0';
 				peer_id = identification_create_from_string(id.ptr);
@@ -1001,7 +1035,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 					peer_id->destroy(peer_id);
 					continue;
 				}
-				
+
 				shared_key->add_owner(shared_key, peer_id);
 				any = FALSE;
 			}
@@ -1019,7 +1053,10 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level)
 		}
 	}
 error:
-	this->lock->unlock(this->lock);
+	if (level == 0)
+	{
+		this->lock->unlock(this->lock);
+	}
 	chunk_clear(&chunk);
 }
 
@@ -1052,12 +1089,12 @@ static void load_certs(private_stroke_cred_t *this)
 /**
  * Implementation of stroke_cred_t.reread.
  */
-static void reread(private_stroke_cred_t *this, stroke_msg_t *msg)
+static void reread(private_stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt)
 {
 	if (msg->reread.flags & REREAD_SECRETS)
 	{
 		DBG1(DBG_CFG, "rereading secrets");
-		load_secrets(this, SECRETS_FILE, 0);
+		load_secrets(this, SECRETS_FILE, 0, prompt);
 	}
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
@@ -1110,28 +1147,28 @@ static void destroy(private_stroke_cred_t *this)
 stroke_cred_t *stroke_cred_create()
 {
 	private_stroke_cred_t *this = malloc_thing(private_stroke_cred_t);
-	
+
 	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
 	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)cache_cert;
-	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg))reread;
+	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg, FILE*))reread;
 	this->public.load_ca = (certificate_t*(*)(stroke_cred_t*, char *filename))load_ca;
 	this->public.load_peer = (certificate_t*(*)(stroke_cred_t*, char *filename))load_peer;
 	this->public.cachecrl = (void(*)(stroke_cred_t*, bool enabled))cachecrl;
 	this->public.destroy = (void(*)(stroke_cred_t*))destroy;
-	
+
 	this->certs = linked_list_create();
 	this->shared = linked_list_create();
 	this->private = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 
 	load_certs(this);
-	load_secrets(this, SECRETS_FILE, 0);
-	
+	load_secrets(this, SECRETS_FILE, 0, NULL);
+
 	this->cachecrl = FALSE;
-	
+
 	return &this->public;
 }
 

@@ -23,8 +23,6 @@
 
 #include "eap_sim_file_triplets.h"
 
-#include <sa/authenticators/eap/sim_manager.h>
-
 typedef struct eap_sim_file_provider_t eap_sim_file_provider_t;
 
 /**
@@ -36,7 +34,7 @@ struct eap_sim_file_provider_t {
 	 * Implements sim_provider_t interface.
 	 */
 	sim_provider_t provider;
-	
+
 	/**
 	 * Destroy a eap_sim_file_provider_t.
 	 */
@@ -49,4 +47,4 @@ struct eap_sim_file_provider_t {
 eap_sim_file_provider_t *eap_sim_file_provider_create(
 											eap_sim_file_triplets_t *triplets);
 
-#endif /** EAP_SIM_FILE_PROVIDER_ @}*/
+#endif /** EAP_SIM_FILE_PROVIDER_H_ @}*/

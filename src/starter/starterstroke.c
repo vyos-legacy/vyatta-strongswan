@@ -81,7 +81,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 
 	ctl_addr.sun_family = AF_UNIX;
 	strcpy(ctl_addr.sun_path, CHARON_CTL_FILE);
-	
+
 	/* starter is not called from commandline, and therefore absolutely silent */
 	msg->output_verbosity = -1;
 
@@ -173,7 +173,7 @@ static void ip_address2string(ip_address *addr, char *buffer, size_t len)
 static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, starter_end_t *conn_end)
 {
 	char buffer[INET6_ADDRSTRLEN];
-	
+
 	msg_end->auth = push_string(msg, conn_end->auth);
 	msg_end->auth2 = push_string(msg, conn_end->auth2);
 	msg_end->id = push_string(msg, conn_end->id);
@@ -187,45 +187,13 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
 	msg_end->address = push_string(msg, buffer);
 	msg_end->subnets = push_string(msg, conn_end->subnet);
+	msg_end->sourceip = push_string(msg, conn_end->sourceip);
+	msg_end->sourceip_mask = conn_end->sourceip_mask;
 	msg_end->sendcert = conn_end->sendcert;
 	msg_end->hostaccess = conn_end->hostaccess;
 	msg_end->tohost = !conn_end->has_client;
 	msg_end->protocol = conn_end->protocol;
 	msg_end->port = conn_end->port;
-	if (conn_end->srcip)
-	{
-		if (conn_end->srcip[0] == '%')
-		{	/* %poolname, strip % */
-			msg_end->sourceip_size = 0;
-			msg_end->sourceip = push_string(msg, conn_end->srcip + 1);
-		}
-		else
-		{
-			char *pos = strchr(conn_end->srcip, '/');
-			if (pos)
-			{	/* CIDR subnet definition */
-				snprintf(buffer, pos - conn_end->srcip + 1, "%s", conn_end->srcip);
-				msg_end->sourceip = push_string(msg, buffer);
-				msg_end->sourceip_size = atoi(pos + 1);
-			}
-			else
-			{	/* a single address */
-				msg_end->sourceip = push_string(msg, conn_end->srcip);
-				if (strchr(conn_end->srcip, ':'))
-				{	/* IPv6 */
-					msg_end->sourceip_size = 128;
-				}
-				else
-				{	/* IPv4 */
-					msg_end->sourceip_size = 32;
-				}
-			}
-		}
-	}
-	else if (conn_end->modecfg)
-	{
-		msg_end->sourceip_size = 1;
-	}
 }
 
 int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
@@ -237,7 +205,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
-	
+
 	/* PUBKEY is preferred to PSK and EAP */
 	if (conn->policy & POLICY_PUBKEY)
 	{
@@ -254,7 +222,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.eap_type = conn->eap_type;
 	msg.add_conn.eap_vendor = conn->eap_vendor;
 	msg.add_conn.eap_identity = push_string(&msg, conn->eap_identity);
-	
+
 	if (conn->policy & POLICY_TUNNEL)
 	{
 		msg.add_conn.mode = MODE_TUNNEL;
@@ -267,7 +235,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	{
 		msg.add_conn.mode = MODE_TRANSPORT;
 		msg.add_conn.proxy_mode = TRUE;
-	} 
+	}
 	else
 	{
 		msg.add_conn.mode = MODE_TRANSPORT;
@@ -279,12 +247,16 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 		msg.add_conn.rekey.ipsec_lifetime = conn->sa_ipsec_life_seconds;
 		msg.add_conn.rekey.ike_lifetime = conn->sa_ike_life_seconds;
 		msg.add_conn.rekey.margin = conn->sa_rekey_margin;
+		msg.add_conn.rekey.life_bytes = conn->sa_ipsec_life_bytes;
+		msg.add_conn.rekey.margin_bytes = conn->sa_ipsec_margin_bytes;
+		msg.add_conn.rekey.life_packets = conn->sa_ipsec_life_packets;
+		msg.add_conn.rekey.margin_packets = conn->sa_ipsec_margin_packets;
 		msg.add_conn.rekey.tries = conn->sa_keying_tries;
 		msg.add_conn.rekey.fuzz = conn->sa_rekey_fuzz;
 	}
-	msg.add_conn.mobike = conn->policy & POLICY_MOBIKE;
-	msg.add_conn.force_encap = conn->policy & POLICY_FORCE_ENCAP;
-	msg.add_conn.ipcomp = conn->policy & POLICY_COMPRESS;
+	msg.add_conn.mobike = (conn->policy & POLICY_MOBIKE) != 0;
+	msg.add_conn.force_encap = (conn->policy & POLICY_FORCE_ENCAP) != 0;
+	msg.add_conn.ipcomp = (conn->policy & POLICY_COMPRESS) != 0;
 	msg.add_conn.install_policy = conn->install_policy;
 	msg.add_conn.crl_policy = cfg->setup.strictcrlpolicy;
 	msg.add_conn.unique = cfg->setup.uniqueids;
@@ -292,6 +264,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.algorithms.esp = push_string(&msg, conn->esp);
 	msg.add_conn.dpd.delay = conn->dpd_delay;
 	msg.add_conn.dpd.action = conn->dpd_action;
+	msg.add_conn.inactivity = conn->inactivity;
 	msg.add_conn.ikeme.mediation = conn->me_mediation;
 	msg.add_conn.ikeme.mediated_by = push_string(&msg, conn->me_mediated_by);
 	msg.add_conn.ikeme.peerid = push_string(&msg, conn->me_peerid);
@@ -361,7 +334,7 @@ int starter_stroke_del_ca(starter_ca_t *ca)
 int starter_stroke_configure(starter_config_t *cfg)
 {
 	stroke_msg_t msg;
-    
+
 	if (cfg->setup.cachecrls)
 	{
 		msg.type = STR_CONFIG;

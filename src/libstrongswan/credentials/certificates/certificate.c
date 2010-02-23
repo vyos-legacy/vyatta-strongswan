@@ -17,16 +17,19 @@
 
 #include <credentials/certificates/x509.h>
 
-ENUM(certificate_type_names, CERT_ANY, CERT_PGP,
+ENUM(certificate_type_names, CERT_ANY, CERT_PLUTO_CRL,
 	"ANY",
 	"X509",
 	"X509_CRL",
 	"X509_OCSP_REQUEST",
 	"X509_OCSP_RESPONSE",
 	"X509_AC",
-	"X509_CHAIN",
 	"TRUSTED_PUBKEY",
+	"PKCS10_REQUEST",
 	"PGP",
+	"PLUTO_CERT",
+	"PLUTO_AC",
+	"PLUTO_CRL",
 );
 
 ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_REVOKED,

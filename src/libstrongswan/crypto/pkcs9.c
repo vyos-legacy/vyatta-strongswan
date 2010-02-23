@@ -68,7 +68,7 @@ struct attribute_t {
 
 	/**
 	 * Destroys the attribute.
-	 * 
+	 *
 	 * @param this			attribute to destroy
 	 */
 	void (*destroy) (attribute_t *this);
@@ -78,48 +78,30 @@ struct attribute_t {
 /**
  * PKCS#9 attribute type OIDs
  */
-static u_char ASN1_contentType_oid_str[] = {
+static chunk_t ASN1_contentType_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x03
-};
-
-static u_char ASN1_messageDigest_oid_str[] = {
+);
+static chunk_t ASN1_messageDigest_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x04
-};
-
-static u_char ASN1_signingTime_oid_str[] = {
+);
+static chunk_t ASN1_signingTime_oid = chunk_from_chars(
 	0x06, 0x09,
 		  0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x05
-};
-
-static char ASN1_messageType_oid_str[] = {
+);
+static chunk_t ASN1_messageType_oid = chunk_from_chars(
 	0x06, 0x0A,
 		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x02
-};
-
-static char ASN1_senderNonce_oid_str[] = {
+);
+static chunk_t ASN1_senderNonce_oid = chunk_from_chars(
 	0x06, 0x0A,
 		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x05
-};
-
-static char ASN1_transId_oid_str[] = {
+);
+static chunk_t ASN1_transId_oid = chunk_from_chars(
 	0x06, 0x0A,
 		  0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x07
-};
-
-static const chunk_t ASN1_contentType_oid =
-						chunk_from_buf(ASN1_contentType_oid_str);
-static const chunk_t ASN1_messageDigest_oid =
-						chunk_from_buf(ASN1_messageDigest_oid_str);
-static const chunk_t ASN1_signingTime_oid =
-						chunk_from_buf(ASN1_signingTime_oid_str);
-static const chunk_t ASN1_messageType_oid =
-						chunk_from_buf(ASN1_messageType_oid_str);
-static const chunk_t ASN1_senderNonce_oid =
-						chunk_from_buf(ASN1_senderNonce_oid_str);
-static const chunk_t ASN1_transId_oid =
-						chunk_from_buf(ASN1_transId_oid_str);
+);
 
 /**
  * return the ASN.1 encoded OID of a PKCS#9 attribute
@@ -243,14 +225,14 @@ static void build_encoding(private_pkcs9_t *this)
 	/* allocate memory for the attributes and build the encoding */
 	{
 		u_char *pos = asn1_build_object(&this->encoding, ASN1_SET, attributes_len);
-		
+
 		iterator = this->attributes->create_iterator(this->attributes, TRUE);
 
 		while (iterator->iterate(iterator, (void**)&attribute))
 		{
 			memcpy(pos, attribute->encoding.ptr, attribute->encoding.len);
-            pos += attribute->encoding.len;
- 		}
+			pos += attribute->encoding.len;
+		}
 		iterator->destroy(iterator);
 	}
 }
@@ -346,7 +328,7 @@ static void destroy(private_pkcs9_t *this)
 static private_pkcs9_t *pkcs9_create_empty(void)
 {
 	private_pkcs9_t *this = malloc_thing(private_pkcs9_t);
-	
+
 	/* initialize */
 	this->encoding = chunk_empty;
 	this->attributes = linked_list_create();
@@ -428,7 +410,7 @@ static bool parse_attributes(chunk_t chunk, int level0, private_pkcs9_t* this)
 
 					if (type != ASN1_EOC)
 					{
-				    	if (!asn1_parse_simple_object(&object, type,
+						if (!asn1_parse_simple_object(&object, type,
 										parser->get_level(parser)+1,
 										oid_names[oid].name))
 						{
@@ -452,7 +434,7 @@ end:
 pkcs9_t *pkcs9_create_from_chunk(chunk_t chunk, u_int level)
 {
 	private_pkcs9_t *this = pkcs9_create_empty();
-	
+
 	this->encoding = chunk_clone(chunk);
 
 	if (!parse_attributes(chunk, level, this))

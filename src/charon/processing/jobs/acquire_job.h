@@ -24,12 +24,12 @@
 typedef struct acquire_job_t acquire_job_t;
 
 #include <library.h>
-#include <config/traffic_selector.h>
+#include <selectors/traffic_selector.h>
 #include <processing/jobs/job.h>
 
 /**
  * Class representing an ACQUIRE Job.
- * 
+ *
  * This job initiates a CHILD SA on kernel request.
  */
 struct acquire_job_t {

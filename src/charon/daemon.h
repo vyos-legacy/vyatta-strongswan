@@ -21,7 +21,7 @@
  *
  * @defgroup bus bus
  * @ingroup charon
- * 
+ *
  * @defgroup listeners listeners
  * @ingroup bus
  *
@@ -84,13 +84,13 @@
  * from the processor. Work is delegated to the processor by queueing jobs
  * to it.
    @verbatim
-   
+
       +---------------------------------+       +----------------------------+
       |           controller            |       |          config            |
-      +---------------------------------+       +----------------------------+  
-               |      |      |                           ^     ^    ^           
-               V      V      V                           |     |    |           
-                                                                                
+      +---------------------------------+       +----------------------------+
+               |      |      |                           ^     ^    ^
+               V      V      V                           |     |    |
+
        +----------+  +-----------+   +------+            +----------+    +----+
        | receiver |  |           |   |      |  +------+  | CHILD_SA |    | K  |
        +---+------+  | Scheduler |   | IKE- |  | IKE- |--+----------+    | e  |
@@ -100,43 +100,43 @@
     +------+---+     +-----------+   | ager |  +------+  +----------+    | l  |
            |         |           |   |      |  | IKE- |--| CHILD_SA |    | -  |
        +---+------+  | Processor |---|      |--| SA   |  +----------+    | I  |
-       |  sender  |  |           |   |      |  +------+                  | f  |    
+       |  sender  |  |           |   |      |  +------+                  | f  |
        +----------+  +-----------+   +------+                            +----+
-                                                                                
-               |      |      |                        |      |      |           
-               V      V      V                        V      V      V           
-      +---------------------------------+       +----------------------------+  
-      |               Bus               |       |         credentials        |  
-      +---------------------------------+       +----------------------------+                                                              
+
+               |      |      |                        |      |      |
+               V      V      V                        V      V      V
+      +---------------------------------+       +----------------------------+
+      |               Bus               |       |         credentials        |
+      +---------------------------------+       +----------------------------+
 
    @endverbatim
- * The scheduler is responsible to execute timed events. Jobs may be queued to 
- * the scheduler to get executed at a defined time (e.g. rekeying). The 
+ * The scheduler is responsible to execute timed events. Jobs may be queued to
+ * the scheduler to get executed at a defined time (e.g. rekeying). The
  * scheduler does not execute the jobs itself, it queues them to the processor.
- * 
- * The IKE_SA manager managers all IKE_SA. It further handles the 
+ *
+ * The IKE_SA manager managers all IKE_SA. It further handles the
  * synchronization:
- * Each IKE_SA must be checked out strictly and checked in again after use. The 
- * manager guarantees that only one thread may check out a single IKE_SA. This 
+ * Each IKE_SA must be checked out strictly and checked in again after use. The
+ * manager guarantees that only one thread may check out a single IKE_SA. This
  * allows us to write the (complex) IKE_SAs routines non-threadsave.
- * The IKE_SA contain the state and the logic of each IKE_SA and handle the 
+ * The IKE_SA contain the state and the logic of each IKE_SA and handle the
  * messages.
- * 
+ *
  * The CHILD_SA contains state about a IPsec security association and manages
- * them. An IKE_SA may have multiple CHILD_SAs. Communication to the kernel 
+ * them. An IKE_SA may have multiple CHILD_SAs. Communication to the kernel
  * takes place here through the kernel interface.
- * 
+ *
  * The kernel interface installs IPsec security associations, policies, routes
- * and virtual addresses. It further provides methods to enumerate interfaces 
+ * and virtual addresses. It further provides methods to enumerate interfaces
  * and may notify the daemon about state changes at lower layers.
- * 
- * The bus receives signals from the different threads and relais them to interested 
- * listeners. Debugging signals, but also important state changes or error 
- * messages are sent over the bus. 
- * It's listeners are not only for logging, but also to track the state of an
+ *
+ * The bus receives signals from the different threads and relays them to
+ * interested listeners. Debugging signals, but also important state changes or
+ * error messages are sent over the bus.
+ * Its listeners are not only for logging, but also to track the state of an
  * IKE_SA.
  *
- * The controller, credential_manager, bus and backend_manager (config) are 
+ * The controller, credential_manager, bus and backend_manager (config) are
  * places where a plugin ca register itself to privide information or observe
  * and control the daemon.
  */
@@ -159,7 +159,6 @@ typedef struct daemon_t daemon_t;
 #include <sa/ike_sa_manager.h>
 #include <sa/trap_manager.h>
 #include <config/backend_manager.h>
-#include <config/attributes/attribute_manager.h>
 #include <credentials/credential_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
@@ -199,104 +198,99 @@ typedef struct daemon_t daemon_t;
  * Main class of daemon, contains some globals.
  */
 struct daemon_t {
-	
+
 	/**
 	 * A socket_t instance.
 	 */
 	socket_t *socket;
-	
+
 	/**
 	 * A ike_sa_manager_t instance.
 	 */
 	ike_sa_manager_t *ike_sa_manager;
-	
+
 	/**
 	 * Manager for triggering policies, called traps
 	 */
 	trap_manager_t *traps;
-	
+
 	/**
 	 * Manager for the different configuration backends.
 	 */
 	backend_manager_t *backends;
-	
-	/**
-	 * Manager for IKEv2 cfg payload attributes
-	 */
-	attribute_manager_t *attributes;
-	
+
 	/**
 	 * Manager for the credential backends
 	 */
 	credential_manager_t *credentials;
-	
+
 	/**
 	 * The Sender-Thread.
- 	 */
+	 */
 	sender_t *sender;
-	
+
 	/**
 	 * The Receiver-Thread.
 	 */
 	receiver_t *receiver;
-	
+
 	/**
 	 * The Scheduler-Thread.
 	 */
 	scheduler_t *scheduler;
-	
+
 	/**
 	 * Job processing using a thread pool.
 	 */
 	processor_t *processor;
-	
+
 	/**
 	 * The signaling bus.
 	 */
 	bus_t *bus;
-	
+
 	/**
 	 * A list of installed file_logger_t's
 	 */
 	linked_list_t *file_loggers;
-	
+
 	/**
 	 * A list of installed sys_logger_t's
 	 */
 	linked_list_t *sys_loggers;
-	
+
 	/**
 	 * Kernel Interface to communicate with kernel
 	 */
 	kernel_interface_t *kernel_interface;
-	
+
 	/**
 	 * Controller to control the daemon
 	 */
 	controller_t *controller;
-	
+
 	/**
 	 * EAP manager to maintain registered EAP methods
 	 */
 	eap_manager_t *eap;
-	
+
 	/**
-	 * SIM manager to maintain SIM cards/providers
+	 * SIM manager to maintain (U)SIM cards/providers
 	 */
 	sim_manager_t *sim;
-	
+
 #ifdef ME
 	/**
 	 * Connect manager
 	 */
 	connect_manager_t *connect_manager;
-	
+
 	/**
 	 * Mediation manager
 	 */
 	mediation_manager_t *mediation_manager;
 #endif /* ME */
-	
+
 	/**
 	 * User ID the daemon will user after initialization
 	 */
@@ -306,12 +300,7 @@ struct daemon_t {
 	 * Group ID the daemon will use after initialization
 	 */
 	gid_t gid;
-	
-	/** 
-	 * The thread_id of main-thread.
-	 */
-	pthread_t main_thread_id;
-	
+
 	/**
 	 * Do not drop a given capability after initialization.
 	 *
@@ -320,10 +309,10 @@ struct daemon_t {
 	 * drop these.
 	 */
 	void (*keep_cap)(daemon_t *this, u_int cap);
-	
+
 	/**
 	 * Shut down the daemon.
-	 * 
+	 *
 	 * @param reason		describtion why it will be killed
 	 */
 	void (*kill) (daemon_t *this, char *reason);

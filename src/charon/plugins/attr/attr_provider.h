@@ -21,7 +21,7 @@
 #ifndef ATTR_PROVIDER_H_
 #define ATTR_PROVIDER_H_
 
-#include <config/attributes/attribute_provider.h>
+#include <attributes/attribute_provider.h>
 
 typedef struct attr_provider_t attr_provider_t;
 
@@ -29,12 +29,12 @@ typedef struct attr_provider_t attr_provider_t;
  * Provide configuration attributes through static strongswan.conf definition.
  */
 struct attr_provider_t {
-	
+
 	/**
 	 * Implements attribute provider interface
 	 */
 	attribute_provider_t provider;
-	
+
 	/**
 	 * Destroy a attr_provider instance.
 	 */

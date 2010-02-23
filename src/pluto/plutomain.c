@@ -48,7 +48,7 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
+#include "myid.h"
 #include "ca.h"
 #include "certs.h"
 #include "ac.h"
@@ -73,6 +73,7 @@
 #include "virtual.h"
 #include "timer.h"
 #include "vendor.h"
+#include "builder.h"
 
 static void usage(const char *mess)
 {
@@ -128,7 +129,7 @@ static void usage(const char *mess)
 			" [--debug-private]"
 			" [--debug-natt]"
 #endif
- 		    " \\\n\t"
+		    " \\\n\t"
 			"[--nat_traversal] [--keep_alive <delay_sec>]"
 			" \\\n\t"
 			"[--force_keepalive] [--disable_port_floating]"
@@ -233,8 +234,8 @@ static void print_plugins()
 	char buf[BUF_LEN], *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
-	
-	buf[0] = '\0';	
+
+	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{
@@ -260,7 +261,7 @@ int main(int argc, char **argv)
 #endif /* CAPABILITIES */
 
 	/* initialize library and optionsfrom */
-	if (!library_init(STRONGSWAN_CONF))
+	if (!library_init(NULL))
 	{
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
@@ -651,10 +652,14 @@ int main(int argc, char **argv)
 	}
 
 	/* load plugins, further infrastructure may need it */
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "pluto.load", PLUGINS));
+	if (!lib->plugins->load(lib->plugins, NULL,
+			lib->settings->get_str(lib->settings, "pluto.load", PLUGINS)))
+	{
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
 	print_plugins();
 
+	init_builder();
 	if (!init_secret() || !init_crypto())
 	{
 		plog("initialization failed - aborting pluto");
@@ -668,12 +673,13 @@ int main(int argc, char **argv)
 	init_demux();
 	init_kernel();
 	init_adns();
-	init_id();
-	init_fetch();
+	init_myid();
+	fetch_initialize();
+	ac_initialize();
 
 	/* drop unneeded capabilities and change UID/GID */
 	prctl(PR_SET_KEEPCAPS, 1);
-		
+
 #ifdef IPSEC_GROUP
 	{
 		struct group group, *grp;
@@ -715,15 +721,15 @@ int main(int argc, char **argv)
 #endif /* CAPABILITIES */
 
 	/* loading X.509 CA certificates */
-	load_authcerts("CA cert", CA_CERT_PATH, AUTH_CA);
+	load_authcerts("ca", CA_CERT_PATH, X509_CA);
 	/* loading X.509 AA certificates */
-	load_authcerts("AA cert", AA_CERT_PATH, AUTH_AA);
+	load_authcerts("aa", AA_CERT_PATH, X509_AA);
 	/* loading X.509 OCSP certificates */
-	load_authcerts("OCSP cert", OCSP_CERT_PATH, AUTH_OCSP);
+	load_authcerts("ocsp", OCSP_CERT_PATH, X509_OCSP_SIGNER);
 	/* loading X.509 CRLs */
 	load_crls();
 	/* loading attribute certificates (experimental) */
-	load_acerts();
+	ac_load_certs();
 
 	daily_log_event();
 	call_server();
@@ -744,22 +750,24 @@ void exit_pluto(int status)
 	free_preshared_secrets();
 	free_remembered_public_keys();
 	delete_every_connection();
+	fetch_finalize();           /* stop fetching thread */
 	free_crl_fetch();           /* free chain of crl fetch requests */
 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */
 	free_authcerts();           /* free chain of X.509 authority certificates */
 	free_crls();                /* free chain of X.509 CRLs */
-	free_acerts();              /* free chain of X.509 attribute certificates */
 	free_ca_infos();            /* free chain of X.509 CA information records */
 	free_ocsp();                /* free ocsp cache */
 	free_ifaces();
+	ac_finalize();              /* free X.509 attribute certificates */
 	scx_finalize();             /* finalize and unload PKCS #11 module */
 	xauth_finalize();           /* finalize and unload XAUTH module */
 	stop_adns();
 	free_md_pool();
 	free_crypto();
-	free_id();                  /* free myids */
+	free_myid();                /* free myids */
 	free_events();              /* free remaining events */
-	free_vendorid();			/* free all vendor id records */
+	free_vendorid();            /* free all vendor id records */
+	free_builder();
 	delete_lock();
 	options->destroy(options);
 	library_deinit();

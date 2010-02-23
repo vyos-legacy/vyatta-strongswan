@@ -27,12 +27,12 @@ typedef struct private_updown_listener_t private_updown_listener_t;
  * Private data of an updown_listener_t object.
  */
 struct private_updown_listener_t {
-	
+
 	/**
 	 * Public updown_listener_t interface.
 	 */
 	updown_listener_t public;
-	
+
 	/**
 	 * List of cached interface names
 	 */
@@ -58,10 +58,10 @@ static void cache_iface(private_updown_listener_t *this, u_int32_t reqid,
 						char *iface)
 {
 	cache_entry_t *entry = malloc_thing(cache_entry_t);
-	
+
 	entry->reqid = reqid;
 	entry->iface = strdup(iface);
-	
+
 	this->iface_cache->insert_first(this->iface_cache, entry);
 }
 
@@ -73,7 +73,7 @@ static char* uncache_iface(private_updown_listener_t *this, u_int32_t reqid)
 	enumerator_t *enumerator;
 	cache_entry_t *entry;
 	char *iface = NULL;
-	
+
 	enumerator = this->iface_cache->create_enumerator(this->iface_cache);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
@@ -89,35 +89,34 @@ static char* uncache_iface(private_updown_listener_t *this, u_int32_t reqid)
 	return iface;
 }
 
-/**
- * Run the up/down script
- */
-static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
-				   child_sa_t *child_sa, bool up)
+METHOD(listener_t, child_updown, bool,
+	private_updown_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	bool up)
 {
 	traffic_selector_t *my_ts, *other_ts;
 	enumerator_t *enumerator;
 	child_cfg_t *config;
 	host_t *vip, *me, *other;
 	char *script;
-	
+
 	config = child_sa->get_config(child_sa);
 	vip = ike_sa->get_virtual_ip(ike_sa, TRUE);
 	script = config->get_updown(config);
 	me = ike_sa->get_my_host(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
-	
+
 	if (script == NULL)
 	{
-		return;
+		return TRUE;
 	}
-	
+
 	enumerator = child_sa->create_policy_enumerator(child_sa);
 	while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 	{
 		char command[1024];
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
 		char *pos, *virtual_ip, *iface;
+		bool is_host, is_ipv6;
 		FILE *shell;
 
 		/* get subnet/bits from string */
@@ -160,7 +159,7 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 				virtual_ip = NULL;
 			}
 		}
-		
+
 		if (up)
 		{
 			iface = charon->kernel_interface->get_interface(
@@ -174,7 +173,12 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		{
 			iface = uncache_iface(this, child_sa->get_reqid(child_sa));
 		}
-		
+
+		/* determine IPv4/IPv6 and client/host situation */
+		is_host = my_ts->is_host(my_ts, me);
+		is_ipv6 = is_host ? (me->get_family(me) == AF_INET6) :
+							(my_ts->get_type(my_ts) == TS_IPV6_ADDR_RANGE);
+
 		/* build the command with all env variables.
 		 * TODO: PLUTO_PEER_CA and PLUTO_NEXT_HOP are currently missing
 		 */
@@ -203,8 +207,8 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 				"%s"
 				"%s",
 				 up ? "up" : "down",
-				 my_ts->is_host(my_ts, me) ? "-host" : "-client",
-				 me->get_family(me) == AF_INET ? "" : "-v6",
+				 is_host ? "-host" : "-client",
+				 is_ipv6 ? "-v6" : "",
 				 config->get_name(config),
 				 iface ? iface : "unknown",
 				 child_sa->get_reqid(child_sa),
@@ -225,31 +229,27 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		free(other_client);
 		free(virtual_ip);
 		free(iface);
-		
+
 		DBG3(DBG_CHD, "running updown script: %s", command);
 		shell = popen(command, "r");
 
 		if (shell == NULL)
 		{
 			DBG1(DBG_CHD, "could not execute updown script '%s'", script);
-			return;
+			return TRUE;
 		}
-		
+
 		while (TRUE)
 		{
 			char resp[128];
-			
+
 			if (fgets(resp, sizeof(resp), shell) == NULL)
 			{
 				if (ferror(shell))
 				{
 					DBG1(DBG_CHD, "error reading output from updown script");
-					return;
 				}
-				else
-				{
-					break;
-				}
+				break;
 			}
 			else
 			{
@@ -264,37 +264,11 @@ static void updown(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		pclose(shell);
 	}
 	enumerator->destroy(enumerator);
-}
-
-/**
- * Listener implementation
- */
-static bool child_state_change(private_updown_listener_t *this, ike_sa_t *ike_sa,
-							   child_sa_t *child_sa, child_sa_state_t state)
-{
-	child_sa_state_t old;
-	
-	if (ike_sa)
-	{
-		old = child_sa->get_state(child_sa);
-		
-		if ((old == CHILD_INSTALLED && state != CHILD_REKEYING ) ||
-			(old == CHILD_DELETING && state == CHILD_DESTROYING))
-		{
-			updown(this, ike_sa, child_sa, FALSE);
-		}
-		else if (state == CHILD_INSTALLED)
-		{
-			updown(this, ike_sa, child_sa, TRUE);
-		}
-	}
 	return TRUE;
 }
 
-/**
- * Implementation of updown_listener_t.destroy.
- */
-static void destroy(private_updown_listener_t *this)
+METHOD(updown_listener_t, destroy, void,
+	private_updown_listener_t *this)
 {
 	this->iface_cache->destroy(this->iface_cache);
 	free(this);
@@ -305,14 +279,16 @@ static void destroy(private_updown_listener_t *this)
  */
 updown_listener_t *updown_listener_create()
 {
-	private_updown_listener_t *this = malloc_thing(private_updown_listener_t);
-	
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.child_state_change = (void*)child_state_change;
-	this->public.destroy = (void(*)(updown_listener_t*))destroy;
-	
-	this->iface_cache = linked_list_create();
-	
+	private_updown_listener_t *this;
+
+	INIT(this,
+		.public = {
+			.listener.child_updown = _child_updown,
+			.destroy = _destroy,
+		},
+		.iface_cache = linked_list_create(),
+	);
+
 	return &this->public;
 }
 

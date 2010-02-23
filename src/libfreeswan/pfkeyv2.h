@@ -182,7 +182,7 @@ struct sadb_x_satype {
   uint8_t sadb_x_satype_satype;
   uint8_t sadb_x_satype_reserved[3];
 };
-  
+
 struct sadb_x_policy {
   uint16_t sadb_x_policy_len;
   uint16_t sadb_x_policy_exttype;
@@ -192,7 +192,7 @@ struct sadb_x_policy {
   uint32_t sadb_x_policy_id;
   uint32_t sadb_x_policy_reserved2;
 };
- 
+
 struct sadb_x_debug {
   uint16_t sadb_x_debug_len;
   uint16_t sadb_x_debug_exttype;
@@ -318,7 +318,8 @@ struct sadb_protocol {
 #define SADB_X_AALG_RIPEMD160HMAC	8
 #define SADB_X_AALG_AES_XCBC_MAC	9
 #define SADB_X_AALG_NULL			251	/* kame */
-#define SADB_AALG_MAX				251
+#define SADB_X_AALG_SHA2_256_96HMAC	252
+#define SADB_AALG_MAX				252
 
 /* Encryption algorithms */
 #define SADB_EALG_NONE				0

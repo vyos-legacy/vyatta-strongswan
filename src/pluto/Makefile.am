@@ -20,7 +20,6 @@ demux.c demux.h \
 dnskey.c dnskey.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
-id.c id.h \
 ike_alg.c ike_alg.h \
 ipsec_doi.c ipsec_doi.h \
 kameipsec.h \
@@ -32,12 +31,11 @@ kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
 log.c log.h \
+myid.c myid.h \
 modecfg.c modecfg.h \
 nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
-pem.c pem.h \
-pgpcert.c pgpcert.h \
 pkcs7.c pkcs7.h \
 plutomain.c \
 rcv_whack.c rcv_whack.h \
@@ -50,6 +48,7 @@ vendor.c vendor.h \
 virtual.c virtual.h \
 xauth.c xauth.h \
 x509.c x509.h \
+builder.c builder.h \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h
@@ -58,26 +57,25 @@ LIBSTRONGSWANDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
 
 INCLUDES = \
--I${linuxdir} \
+-I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
 -I$(top_srcdir)/src/whack
 
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
--DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
--DIPSEC_PLUGINDIR=\"${plugindir}\" \
+-DSHARED_SECRETS_FILE=\"${sysconfdir}/ipsec.secrets\" \
 -DPLUGINS=\""${pluto_plugins}\"" \
--DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
+-DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
--lresolv -lpthread $(DLLIB)
+-lresolv $(PTHREADLIB) $(DLLIB)
 
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \

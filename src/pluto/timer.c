@@ -143,7 +143,7 @@ void event_schedule(enum event_type type, time_t tm, struct state *st)
 bool init_secret(void)
 {
 	rng_t *rng;
-	 
+
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 
 	if (rng == NULL)
@@ -166,7 +166,7 @@ void handle_timer_event(void)
 	struct event *ev = evlist;
 	int type;
 	struct state *st;
-	struct connection *c = NULL;
+	connection_t *c = NULL;
 	ip_address peer;
 
 	if (ev == (struct event *) NULL)    /* Just paranoid */
@@ -216,7 +216,7 @@ void handle_timer_event(void)
 			passert(st->st_dpd_event == ev);
 			st->st_dpd_event = NULL;
 		}
-		else 
+		else
 		{
 			passert(st->st_event == ev);
 			st->st_event = NULL;

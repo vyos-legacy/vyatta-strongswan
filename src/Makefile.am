@@ -4,6 +4,10 @@ if USE_LIBSTRONGSWAN
   SUBDIRS += libstrongswan
 endif
 
+if USE_SIMAKA
+  SUBDIRS += libsimaka
+endif
+
 if USE_FILE_CONFIG
   SUBDIRS += libfreeswan starter ipsec _copyright
 endif
@@ -25,7 +29,7 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += openac scepclient
+  SUBDIRS += openac scepclient pki
 endif
 
 if USE_DUMM
@@ -50,6 +54,6 @@ endif
 
 EXTRA_DIST = strongswan.conf
 
-install-exec-local :	
+install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)"
 		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true

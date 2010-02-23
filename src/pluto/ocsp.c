@@ -67,19 +67,19 @@ static const char *const response_status_names[] = {
 typedef struct response response_t;
 
 struct response {
-	chunk_t  tbs;
-	chunk_t  responder_id_name;
-	chunk_t  responder_id_key;
-	time_t   produced_at;
-	chunk_t  responses;
-	chunk_t  nonce;
-	int      algorithm;
-	chunk_t  signature;
+	chunk_t          tbs;
+	identification_t *responder_id_name;
+	chunk_t           responder_id_key;
+	time_t            produced_at;
+	chunk_t           responses;
+	chunk_t           nonce;
+	int               algorithm;
+	chunk_t           signature;
 };
 
 const response_t empty_response = {
 	{ NULL, 0 }   ,     /* tbs */
-	{ NULL, 0 }   ,     /* responder_id_name */
+	  NULL        ,     /* responder_id_name */
 	{ NULL, 0 }   ,     /* responder_id_key */
 	UNDEFINED_TIME,     /* produced_at */
 	{ NULL, 0 }   ,     /* single_response */
@@ -105,16 +105,16 @@ struct single_response {
 };
 
 const single_response_t empty_single_response = {
-	  NULL            , /* *next */
-	OID_UNKNOWN       , /* hash_algorithm */
-	{ NULL, 0 }       , /* issuer_name_hash */
-	{ NULL, 0 }       , /* issuer_key_hash */
-	{ NULL, 0 }       , /* serial_number */
-	CERT_UNDEFINED    , /* status */
-	UNDEFINED_TIME    , /* revocationTime */
-	REASON_UNSPECIFIED, /* revocationReason */
-	UNDEFINED_TIME    , /* this_update */
-	UNDEFINED_TIME      /* next_update */
+	  NULL                , /* *next */
+	OID_UNKNOWN           , /* hash_algorithm */
+	{ NULL, 0 }           , /* issuer_name_hash */
+	{ NULL, 0 }           , /* issuer_key_hash */
+	{ NULL, 0 }           , /* serial_number */
+	CERT_UNDEFINED        , /* status */
+	UNDEFINED_TIME        , /* revocationTime */
+	CRL_REASON_UNSPECIFIED, /* revocationReason */
+	UNDEFINED_TIME        , /* this_update */
+	UNDEFINED_TIME          /* next_update */
 };
 
 
@@ -126,26 +126,17 @@ struct request_list {
 };
 
 /* some OCSP specific prefabricated ASN.1 constants */
-
-static u_char ASN1_nonce_oid_str[] = {
+static const chunk_t ASN1_nonce_oid = chunk_from_chars(
 	0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x02
-};
-
-static const chunk_t ASN1_nonce_oid = chunk_from_buf(ASN1_nonce_oid_str);
-
-static u_char ASN1_response_oid_str[] = {
+);
+static const chunk_t ASN1_response_oid = chunk_from_chars(
 	0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x04
-};
-
-static const chunk_t ASN1_response_oid = chunk_from_buf(ASN1_response_oid_str);
-
-static u_char ASN1_response_content_str[] = {
+);
+static const chunk_t ASN1_response_content = chunk_from_chars(
 	0x04, 0x0D,
 		  0x30, 0x0B,
 				0x06, 0x09, 0x2B, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01
-};
-
-static const chunk_t ASN1_response_content = chunk_from_buf(ASN1_response_content_str);
+);
 
 /* default OCSP uri */
 static chunk_t ocsp_default_uri;
@@ -154,7 +145,7 @@ static chunk_t ocsp_default_uri;
 static ocsp_location_t *ocsp_cache = NULL;
 
 /* static temporary storage for ocsp requestor information */
-static x509cert_t *ocsp_requestor_cert = NULL;
+static cert_t *ocsp_requestor_cert = NULL;
 
 static smartcard_t *ocsp_requestor_sc = NULL;
 
@@ -290,27 +281,38 @@ static const asn1Object_t singleResponseObjects[] = {
  * Build an ocsp location from certificate information
  * without unsharing its contents
  */
-static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *location)
+static bool build_ocsp_location(const cert_t *cert, ocsp_location_t *location)
 {
+	certificate_t *certificate = cert->cert;
+	identification_t *issuer = certificate->get_issuer(certificate);
+	x509_t *x509 = (x509_t*)certificate;
+	chunk_t issuer_dn = issuer->get_encoding(issuer);
+	chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
 	hasher_t *hasher;
 	static u_char digest[HASH_SIZE_SHA1];  /* temporary storage */
-	
-	location->uri = cert->accessLocation;
 
-	if (location->uri.ptr == NULL)
+	enumerator_t *enumerator = x509->create_ocsp_uri_enumerator(x509);
+
+	location->uri = NULL;
+	while (enumerator->enumerate(enumerator, &location->uri))
 	{
-		ca_info_t *ca = get_ca_info(cert->issuer, cert->authKeySerialNumber
-				, cert->authKeyID);
-		if (ca != NULL && ca->ocspuri != NULL)
+		break;
+	}
+	enumerator->destroy(enumerator);
+
+	if (location->uri == NULL)
+	{
+		ca_info_t *ca = get_ca_info(issuer, authKeyID);
+		if (ca && ca->ocspuri)
 		{
-			location->uri = chunk_create(ca->ocspuri, strlen(ca->ocspuri));
+			location->uri = ca->ocspuri;
 		}
 		else
 		{   /* abort if no ocsp location uri is defined */
 			return FALSE;
 		}
 	}
-	
+
 	/* compute authNameID from as SHA-1 hash of issuer DN */
 	location->authNameID = chunk_create(digest, HASH_SIZE_SHA1);
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
@@ -318,23 +320,22 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
 	{
 		return FALSE;
 	}
- 	hasher->get_hash(hasher, cert->issuer, digest);
+	hasher->get_hash(hasher, issuer_dn, digest);
 	hasher->destroy(hasher);
 
 	location->next = NULL;
-	location->issuer = cert->issuer;
-	location->authKeyID = cert->authKeyID;
-	location->authKeySerialNumber = cert->authKeySerialNumber;
-	
-	if (cert->authKeyID.ptr == NULL) 
-	{
-		x509cert_t *authcert = get_authcert(cert->issuer
-				, cert->authKeySerialNumber, cert->authKeyID, AUTH_CA);
+	location->issuer = issuer;
+	location->authKeyID = authKeyID;
 
-		if (authcert != NULL)
+	if (authKeyID.ptr == NULL)
+	{
+		cert_t *authcert = get_authcert(issuer, authKeyID, X509_CA);
+
+		if (authcert)
 		{
-			location->authKeyID = authcert->subjectKeyID;
-			location->authKeySerialNumber = authcert->serialNumber;
+			x509_t *x509 = (x509_t*)authcert->cert;
+
+			location->authKeyID = x509->get_subjectKeyIdentifier(x509);
 		}
 	}
 
@@ -349,11 +350,10 @@ static bool build_ocsp_location(const x509cert_t *cert, ocsp_location_t *locatio
  */
 static bool same_ocsp_location(const ocsp_location_t *a, const ocsp_location_t *b)
 {
-	return ((a->authKeyID.ptr != NULL)
+	return ((a->authKeyID.ptr)
 				? same_keyid(a->authKeyID, b->authKeyID)
-				: (same_dn(a->issuer, b->issuer)
-					&& same_serial(a->authKeySerialNumber, b->authKeySerialNumber)))
-			&& chunk_equals(a->uri, b->uri);
+				: a->issuer->equals(a->issuer, b->issuer))
+			&& streq(a->uri, b->uri);
 }
 
 /**
@@ -362,7 +362,7 @@ static bool same_ocsp_location(const ocsp_location_t *a, const ocsp_location_t *
 ocsp_location_t* get_ocsp_location(const ocsp_location_t * loc, ocsp_location_t *chain)
 {
 
-	while (chain != NULL)
+	while (chain)
 	{
 		if (same_ocsp_location(loc, chain))
 			return chain;
@@ -393,7 +393,7 @@ static cert_status_t get_ocsp_status(const ocsp_location_t *loc,
 	certinfop = &location->certinfo;
 	certinfo = *certinfop;
 
-	while (certinfo != NULL)
+	while (certinfo)
 	{
 		cmp = chunk_compare(serialNumber, certinfo->serialNumber);
 		if (cmp <= 0)
@@ -416,30 +416,34 @@ static cert_status_t get_ocsp_status(const ocsp_location_t *loc,
 /**
  * Verify the ocsp status of a certificate
  */
-cert_status_t verify_by_ocsp(const x509cert_t *cert, time_t *until,
+cert_status_t verify_by_ocsp(const cert_t *cert, time_t *until,
 							 time_t *revocationDate,
 							 crl_reason_t *revocationReason)
 {
+	x509_t *x509 = (x509_t*)cert->cert;
+	chunk_t serialNumber = x509->get_serial(x509);
 	cert_status_t status;
 	ocsp_location_t location;
-	time_t nextUpdate = 0;
+	time_t nextUpdate = UNDEFINED_TIME;
 
 	*revocationDate = UNDEFINED_TIME;
-	*revocationReason = REASON_UNSPECIFIED;
-	
+	*revocationReason = CRL_REASON_UNSPECIFIED;
+
 	/* is an ocsp location defined? */
 	if (!build_ocsp_location(cert, &location))
+	{
 		return CERT_UNDEFINED;
+	}
 
 	lock_ocsp_cache("verify_by_ocsp");
-	status = get_ocsp_status(&location, cert->serialNumber, &nextUpdate
+	status = get_ocsp_status(&location, serialNumber, &nextUpdate
 		, revocationDate, revocationReason);
 	unlock_ocsp_cache("verify_by_ocsp");
 
 	if (status == CERT_UNDEFINED || nextUpdate < time(NULL))
 	{
 		plog("ocsp status is stale or not in cache");
-		add_ocsp_fetch_request(&location, cert->serialNumber);
+		add_ocsp_fetch_request(&location, serialNumber);
 
 		/* inititate fetching of ocsp status */
 		wake_fetch_thread("verify_by_ocsp");
@@ -457,14 +461,14 @@ void check_ocsp(void)
 
 	lock_ocsp_cache("check_ocsp");
 	location = ocsp_cache;
-	
-	while (location != NULL)
+
+	while (location)
 	{
 		char buf[BUF_LEN];
 		bool first = TRUE;
 		ocsp_certinfo_t *certinfo = location->certinfo;
 
-		while (certinfo != NULL)
+		while (certinfo)
 		{
 			if (!certinfo->once)
 			{
@@ -473,9 +477,8 @@ void check_ocsp(void)
 				DBG(DBG_CONTROL,
 					if (first)
 					{
-						dntoa(buf, BUF_LEN, location->issuer);
-						DBG_log("issuer: '%s'", buf);
-						if (location->authKeyID.ptr != NULL)
+						DBG_log("issuer: \"%Y\"", location->issuer);
+						if (location->authKeyID.ptr)
 						{
 							datatot(location->authKeyID.ptr, location->authKeyID.len
 								, ':', buf, BUF_LEN);
@@ -514,7 +517,7 @@ static void free_certinfos(ocsp_certinfo_t *chain)
 {
 	ocsp_certinfo_t *certinfo;
 
-	while (chain != NULL)
+	while (chain)
 	{
 		certinfo = chain;
 		chain = chain->next;
@@ -527,11 +530,10 @@ static void free_certinfos(ocsp_certinfo_t *chain)
  */
 static void free_ocsp_location(ocsp_location_t* location)
 {
-	free(location->issuer.ptr);
+	DESTROY_IF(location->issuer);
 	free(location->authNameID.ptr);
 	free(location->authKeyID.ptr);
-	free(location->authKeySerialNumber.ptr);
-	free(location->uri.ptr);
+	free(location->uri);
 	free_certinfos(location->certinfo);
 	free(location);
 }
@@ -541,7 +543,7 @@ static void free_ocsp_location(ocsp_location_t* location)
  */
 void free_ocsp_locations(ocsp_location_t **chain)
 {
-	while (*chain != NULL)
+	while (*chain)
 	{
 		ocsp_location_t *location = *chain;
 		*chain = location->next;
@@ -576,73 +578,55 @@ void list_ocsp_locations(ocsp_location_t *location, bool requests,
 {
 	bool first = TRUE;
 
-	while (location != NULL)
+	while (location)
 	{
 		ocsp_certinfo_t *certinfo = location->certinfo;
 
-		if (certinfo != NULL)
+		if (certinfo)
 		{
-			u_char buf[BUF_LEN];
-
 			if (first)
 			{
 				whack_log(RC_COMMENT, " ");
-				whack_log(RC_COMMENT, "List of OCSP %s:", requests?
-					"fetch requests":"responses");
+				whack_log(RC_COMMENT, "List of OCSP %s:", requests ?
+					"Fetch Requests" : "Responses");
 				first = FALSE;
 			}
 			whack_log(RC_COMMENT, " ");
-			if (location->issuer.ptr != NULL)
+			if (location->issuer)
 			{
-				dntoa(buf, BUF_LEN, location->issuer);
-				whack_log(RC_COMMENT, "       issuer:  '%s'", buf);
+				whack_log(RC_COMMENT, "  issuer:   \"%Y\"", location->issuer);
 			}
-			whack_log(RC_COMMENT, "       uri:     '%.*s'", (int)location->uri.len
-				, location->uri.ptr);
-			if (location->authNameID.ptr != NULL)
+			whack_log(RC_COMMENT, "  uri:      '%s'", location->uri);
+			if (location->authNameID.ptr)
 			{
-				datatot(location->authNameID.ptr, location->authNameID.len, ':'
-					, buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       authname: %s", buf);
+				whack_log(RC_COMMENT, "  authname:  %#B", &location->authNameID);
 			}
-			if (location->authKeyID.ptr != NULL)
+			if (location->authKeyID.ptr)
 			{
-				datatot(location->authKeyID.ptr, location->authKeyID.len, ':'
-					, buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       authkey:  %s", buf);
+				whack_log(RC_COMMENT, "  authkey:   %#B", &location->authKeyID);
 			}
-			if (location->authKeySerialNumber.ptr != NULL)
+			while (certinfo)
 			{
-				datatot(location->authKeySerialNumber.ptr
-					, location->authKeySerialNumber.len, ':', buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       aserial:  %s", buf);
-			}
-			while (certinfo != NULL)
-			{
-				char thisUpdate[BUF_LEN];
-
-				snprintf(thisUpdate, BUF_LEN, "%T", &certinfo->thisUpdate, utc);
-
 				if (requests)
 				{
-					whack_log(RC_COMMENT, "%s, trials: %d", thisUpdate
-						, certinfo->trials);
+					whack_log(RC_COMMENT, "  serial:    %#B, %d trials",
+						 &certinfo->serialNumber, certinfo->trials);
 				}
 				else if (certinfo->once)
 				{
-					whack_log(RC_COMMENT, "%s, onetime use%s", thisUpdate
-						, (certinfo->nextUpdate < time(NULL))? " (expired)": "");
+					whack_log(RC_COMMENT, "  serial:    %#B, %s, once%s",
+						&certinfo->serialNumber,
+						cert_status_names[certinfo->status],
+						(certinfo->nextUpdate < time(NULL))? " (expired)": "");
 				}
 				else
 				{
-					whack_log(RC_COMMENT, "%s, until %T %s", thisUpdate
-						, &certinfo->nextUpdate, utc
-						, check_expiry(certinfo->nextUpdate, OCSP_WARNING_INTERVAL, strict));
+					whack_log(RC_COMMENT, "  serial:    %#B, %s, until %T %s", 
+						&certinfo->serialNumber,
+						cert_status_names[certinfo->status],
+ 						&certinfo->nextUpdate, utc,
+						check_expiry(certinfo->nextUpdate, OCSP_WARNING_INTERVAL, strict));
 				}
-				datatot(certinfo->serialNumber.ptr, certinfo->serialNumber.len, ':'
-					, buf, BUF_LEN);
-				whack_log(RC_COMMENT, "       serial:   %s, %s", buf
-					, cert_status_names[certinfo->status]);
 				certinfo = certinfo->next;
 			}
 		}
@@ -662,7 +646,7 @@ void list_ocsp_cache(bool utc, bool strict)
 
 static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 {
-	x509cert_t *cert = NULL;
+	cert_t *cert = NULL;
 
 	/* initialize temporary static storage */
 	ocsp_requestor_cert = NULL;
@@ -671,17 +655,17 @@ static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 
 	for (;;)
 	{
-		char buf[BUF_LEN];
+		certificate_t *certificate;
 
 		/* looking for a certificate from the same issuer */
-		cert = get_x509cert(location->issuer, location->authKeySerialNumber
-					,location->authKeyID, cert);
+		cert = get_x509cert(location->issuer, location->authKeyID, cert);
 		if (cert == NULL)
+		{
 			break;
-
+		}
+		certificate = cert->cert;
 		DBG(DBG_CONTROL,
-			dntoa(buf, BUF_LEN, cert->subject);
-			DBG_log("candidate: '%s'", buf);
+			DBG_log("candidate: '%Y'", certificate->get_subject(certificate));
 		)
 
 		if (cert->smartcard)
@@ -689,7 +673,7 @@ static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 			/* look for a matching private key on a smartcard */
 			smartcard_t *sc = scx_get(cert);
 
-			if (sc != NULL)
+			if (sc)
 			{
 				DBG(DBG_CONTROL,
 					DBG_log("matching smartcard found")
@@ -708,7 +692,7 @@ static bool get_ocsp_requestor_cert(ocsp_location_t *location)
 			/* look for a matching private key in the chained list */
 			private_key_t *private = get_x509_private_key(cert);
 
-			if (private != NULL)
+			if (private)
 			{
 				DBG(DBG_CONTROL,
 					DBG_log("matching private key found")
@@ -726,8 +710,7 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
 {
 	hasher_t *hasher;
 	u_char *pos;
-	u_char digest_buf[HASH_SIZE_SHA1];
-	chunk_t digest = chunk_from_buf(digest_buf);
+	chunk_t digest;
 	chunk_t digest_info, sigdata;
 	size_t siglen = 0;
 
@@ -756,15 +739,15 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
 	{
 		return chunk_empty;
 	}
- 	hasher->get_hash(hasher, tbs, digest_buf);
+	hasher->allocate_hash(hasher, tbs, &digest);
 	hasher->destroy(hasher);
 
 	/* according to PKCS#1 v2.1 digest must be packaged into
 	 * an ASN.1 structure for encryption
 	 */
-	digest_info = asn1_wrap(ASN1_SEQUENCE, "cm"
+	digest_info = asn1_wrap(ASN1_SEQUENCE, "mm"
 		, asn1_algorithmIdentifier(OID_SHA1)
-		, asn1_simple_object(ASN1_OCTET_STRING, digest));
+		, asn1_wrap(ASN1_OCTET_STRING, "m", digest));
 
 	pos = asn1_build_object(&sigdata, ASN1_BIT_STRING, 1 + siglen);
 	*pos++ = 0x00;
@@ -784,9 +767,9 @@ static chunk_t sc_build_sha1_signature(chunk_t tbs, smartcard_t *sc)
  */
 static chunk_t build_signature(chunk_t tbsRequest)
 {
-	chunk_t sigdata, certs;
+	chunk_t sigdata, cert, certs;
 
-	if (ocsp_requestor_sc != NULL)
+	if (ocsp_requestor_sc)
 	{
 		/* RSA signature is done on smartcard */
 		sigdata = sc_build_sha1_signature(tbsRequest, ocsp_requestor_sc);
@@ -803,15 +786,13 @@ static chunk_t build_signature(chunk_t tbsRequest)
 	}
 
 	/* include our certificate */
-	certs = asn1_wrap(ASN1_CONTEXT_C_0, "m"
-				, asn1_simple_object(ASN1_SEQUENCE
-					, ocsp_requestor_cert->certificate
-				  )
-			);
+	cert = ocsp_requestor_cert->cert->get_encoding(ocsp_requestor_cert->cert);
+	certs = asn1_wrap(ASN1_CONTEXT_C_0, "m",
+				asn1_wrap(ASN1_SEQUENCE, "m", cert));
 
 	/* build signature comprising algorithm, signature and cert */
 	return asn1_wrap(ASN1_CONTEXT_C_0, "m"
-				, asn1_wrap(ASN1_SEQUENCE, "cmm"
+				, asn1_wrap(ASN1_SEQUENCE, "mmm"
 					, asn1_algorithmIdentifier(OID_SHA1_WITH_RSA)
 					, sigdata
 					, certs
@@ -825,7 +806,7 @@ static chunk_t build_signature(chunk_t tbsRequest)
  */
 static chunk_t build_request(ocsp_location_t *location, ocsp_certinfo_t *certinfo)
 {
-	chunk_t reqCert = asn1_wrap(ASN1_SEQUENCE, "cmmm"
+	chunk_t reqCert = asn1_wrap(ASN1_SEQUENCE, "mmmm"
 				, asn1_algorithmIdentifier(OID_SHA1)
 				, asn1_simple_object(ASN1_OCTET_STRING, location->authNameID)
 				, asn1_simple_object(ASN1_OCTET_STRING, location->authKeyID)
@@ -847,7 +828,7 @@ static chunk_t build_request_list(ocsp_location_t *location)
 	size_t datalen = 0;
 
 	/* build content */
-	while (certinfo != NULL)
+	while (certinfo)
 	{
 		/* build request for every certificate in list
 		 * and store them in a chained list
@@ -865,7 +846,7 @@ static chunk_t build_request_list(ocsp_location_t *location)
 	pos = asn1_build_object(&requestList, ASN1_SEQUENCE, datalen);
 
 	/* copy all in chained list, free list afterwards */
-	while (reqs != NULL)
+	while (reqs)
 	{
 		request_list_t *req = reqs;
 
@@ -882,9 +863,12 @@ static chunk_t build_request_list(ocsp_location_t *location)
  */
 static chunk_t build_requestor_name(void)
 {
+	certificate_t *certificate = ocsp_requestor_cert->cert;
+	identification_t *subject = certificate->get_subject(certificate);
+
 	return asn1_wrap(ASN1_CONTEXT_C_1, "m"
 				, asn1_simple_object(ASN1_CONTEXT_C_4
-					, ocsp_requestor_cert->subject));
+					, subject->get_encoding(subject)));
 }
 
 /**
@@ -944,17 +928,13 @@ chunk_t build_ocsp_request(ocsp_location_t *location)
 {
 	bool has_requestor_cert;
 	chunk_t tbsRequest, signature;
-	char buf[BUF_LEN];
 
 	DBG(DBG_CONTROL,
 		DBG_log("assembling ocsp request");
-		dntoa(buf, BUF_LEN, location->issuer);
-		DBG_log("issuer: '%s'", buf);
-		if (location->authKeyID.ptr != NULL)
+		DBG_log("issuer: \"%Y\"", location->issuer);
+		if (location->authKeyID.ptr)
 		{
-			datatot(location->authKeyID.ptr, location->authKeyID.len, ':'
-				, buf, BUF_LEN);
-			DBG_log("authkey: %s", buf);
+			DBG_log("authkey: %#B", &location->authKeyID);
 		}
 	)
 	lock_certs_and_keys("build_ocsp_request");
@@ -981,14 +961,13 @@ chunk_t build_ocsp_request(ocsp_location_t *location)
  */
 static bool valid_ocsp_response(response_t *res)
 {
-	int pathlen;
-	x509cert_t *authcert;
+	int pathlen, pathlen_constraint;
+	cert_t *authcert;
 
 	lock_authcert_list("valid_ocsp_response");
 
-	authcert = get_authcert(res->responder_id_name, chunk_empty
-					, res->responder_id_key, AUTH_OCSP | AUTH_CA);
-
+	authcert = get_authcert(res->responder_id_name, res->responder_id_key,
+							X509_OCSP_SIGNER | X509_CA);
 	if (authcert == NULL)
 	{
 		plog("no matching ocsp signer cert found");
@@ -999,7 +978,8 @@ static bool valid_ocsp_response(response_t *res)
 		DBG_log("ocsp signer cert found")
 	)
 
-	if (!x509_check_signature(res->tbs, res->signature, res->algorithm, authcert))
+	if (!x509_check_signature(res->tbs, res->signature, res->algorithm,
+							  authcert->cert))
 	{
 		plog("signature of ocsp response is invalid");
 		unlock_authcert_list("valid_ocsp_response");
@@ -1010,43 +990,38 @@ static bool valid_ocsp_response(response_t *res)
 	)
 
 
-	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
+	for (pathlen = -1; pathlen <= X509_MAX_PATH_LEN; pathlen++)
 	{
-		u_char buf[BUF_LEN];
-		err_t ugh = NULL;
-		time_t until;
-
-		x509cert_t *cert = authcert;
+		cert_t *cert = authcert;
+		certificate_t *certificate = cert->cert;
+		x509_t *x509 = (x509_t*)certificate;
+		identification_t *subject = certificate->get_subject(certificate);
+		identification_t *issuer  = certificate->get_issuer(certificate);
+		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
+		time_t not_before, not_after;
 
 		DBG(DBG_CONTROL,
-			dntoa(buf, BUF_LEN, cert->subject);
-			DBG_log("subject: '%s'",buf);
-			dntoa(buf, BUF_LEN, cert->issuer);
-			DBG_log("issuer:  '%s'",buf);
-			if (cert->authKeyID.ptr != NULL)
+			DBG_log("subject: '%Y'", subject);
+			DBG_log("issuer:  '%Y'", issuer);
+			if (authKeyID.ptr)
 			{
-				datatot(cert->authKeyID.ptr, cert->authKeyID.len, ':'
-					, buf, BUF_LEN);
-				DBG_log("authkey:  %s", buf);
+				DBG_log("authkey:  %#B", &authKeyID);
 			}
 		)
 
-		ugh = check_validity(authcert, &until);
-
-		if (ugh != NULL)
+		if (!certificate->get_validity(certificate, NULL, &not_before, &not_after))
 		{
-			plog("%s", ugh);
+			plog("certificate is invalid (valid from %T to %T)",
+				 &not_before, FALSE, &not_after, FALSE);
+			
 			unlock_authcert_list("valid_ocsp_response");
 			return FALSE;
 		}
-		
 		DBG(DBG_CONTROL,
 			DBG_log("certificate is valid")
 		)
-		
-		authcert = get_authcert(cert->issuer, cert->authKeySerialNumber
-			, cert->authKeyID, AUTH_CA);
 
+		authcert = get_authcert(issuer, authKeyID, X509_CA);
 		if (authcert == NULL)
 		{
 			plog("issuer cacert not found");
@@ -1057,8 +1032,7 @@ static bool valid_ocsp_response(response_t *res)
 			DBG_log("issuer cacert found")
 		)
 
-		if (!x509_check_signature(cert->tbsCertificate, cert->signature,
-								  cert->algorithm, authcert))
+		if (!certificate->issued_by(certificate, authcert->cert))
 		{
 			plog("certificate signature is invalid");
 			unlock_authcert_list("valid_ocsp_response");
@@ -1068,17 +1042,28 @@ static bool valid_ocsp_response(response_t *res)
 			DBG_log("certificate signature is valid")
 		)
 
+		/* check path length constraint */
+		pathlen_constraint = x509->get_pathLenConstraint(x509);
+		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
+			pathlen > pathlen_constraint)
+		{
+			plog("path length of %d violates constraint of %d",
+				 pathlen, pathlen_constraint);
+			return FALSE;
+		}
+
 		/* check if cert is self-signed */
-		if (same_dn(cert->issuer, cert->subject))
+		if (x509->get_flags(x509) & X509_SELF_SIGNED)
 		{
 			DBG(DBG_CONTROL,
-				DBG_log("reached self-signed root ca")
+				DBG_log("reached self-signed root ca with a path length of %d",
+						pathlen)
 			)
 			unlock_authcert_list("valid_ocsp_response");
 			return TRUE;
 		}
 	}
-	plog("maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	plog("maximum path length of %d exceeded", X509_MAX_PATH_LEN);
 	unlock_authcert_list("valid_ocsp_response");
 	return FALSE;
 }
@@ -1091,7 +1076,6 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 	asn1_parser_t *parser;
 	chunk_t object;
 	u_int version;
-	u_char buf[BUF_LEN];
 	int objectID;
 	int extn_oid = OID_UNKNOWN;
 	bool success = FALSE;
@@ -1116,10 +1100,10 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 			}
 			break;
 		case BASIC_RESPONSE_ID_BY_NAME:
-			res->responder_id_name = object;
+			res->responder_id_name = identification_create_from_encoding(
+										ID_DER_ASN1_DN, object);
 			DBG(DBG_PARSING,
-				dntoa(buf, BUF_LEN, object);
-				DBG_log("  '%s'",buf)
+				DBG_log("  '%Y'", res->responder_id_name)
 			)
 			break;
 		case BASIC_RESPONSE_ID_BY_KEY:
@@ -1153,23 +1137,35 @@ static bool parse_basic_ocsp_response(chunk_t blob, int level0, response_t *res)
 			break;
 		case BASIC_RESPONSE_CERTIFICATE:
 			{
-				chunk_t blob = chunk_clone(object);
-				x509cert_t *cert = malloc_thing(x509cert_t);
+				cert_t *cert = malloc_thing(cert_t);
+				x509_t *x509;
 
-				*cert = empty_x509cert;
-
-				if (parse_x509cert(blob, parser->get_level(parser)+1, cert)
-				&& cert->isOcspSigner
-				&& trust_authcert_candidate(cert, NULL))
+				*cert = cert_empty;
+				cert->cert = lib->creds->create(lib->creds,
+								  		  CRED_CERTIFICATE, CERT_X509,
+								  		  BUILD_BLOB_ASN1_DER, object,
+								  		  BUILD_END);
+				if (cert->cert == NULL)
 				{
-					add_authcert(cert, AUTH_OCSP);
+					DBG(DBG_CONTROL | DBG_PARSING,
+						DBG_log("parsing of embedded ocsp certificate failed")
+					)
+					cert_free(cert);
+					break;
+				}
+				x509 = (x509_t*)cert->cert;
+				
+				if ((x509->get_flags(x509) & X509_OCSP_SIGNER) &&
+					trust_authcert_candidate(cert, NULL))
+				{
+					add_authcert(cert, X509_OCSP_SIGNER);
 				}
 				else
 				{
 					DBG(DBG_CONTROL | DBG_PARSING,
 						DBG_log("embedded ocsp certificate rejected")
 					)
-					free_x509cert(cert);
+					cert_free(cert);
 				}
 			}
 			break;
@@ -1292,7 +1288,7 @@ static bool parse_ocsp_single_response(chunk_t blob, int level0,
 			break;
 		case SINGLE_RESPONSE_CERT_STATUS_CRL_REASON:
 			sres->revocationReason = (object.len == 1)
-				? *object.ptr : REASON_UNSPECIFIED;
+				? *object.ptr : CRL_REASON_UNSPECIFIED;
 			break;
 		case SINGLE_RESPONSE_CERT_STATUS_UNKNOWN:
 			sres->status = CERT_UNKNOWN;
@@ -1329,11 +1325,10 @@ ocsp_location_t* add_ocsp_location(const ocsp_location_t *loc,
 	ocsp_location_t *location = malloc_thing(ocsp_location_t);
 
 	/* unshare location fields */
-	location->issuer = chunk_clone(loc->issuer);
+	location->issuer = loc->issuer->clone(loc->issuer);
 	location->authNameID = chunk_clone(loc->authNameID);
 	location->authKeyID = chunk_clone(loc->authKeyID);
-	location->authKeySerialNumber = chunk_clone(loc->authKeySerialNumber);
-	location->uri = chunk_clone(loc->uri);
+	location->uri = strdup(loc->uri);
 	location->certinfo = NULL;
 
 	/* insert new ocsp location in front of chain */
@@ -1369,7 +1364,7 @@ void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
 	certinfop = &location->certinfo;
 	certinfo = *certinfop;
 
-	while (certinfo != NULL)
+	while (certinfo)
 	{
 		cmp = chunk_compare(info->serialNumber, certinfo->serialNumber);
 		if (cmp <= 0)
@@ -1385,10 +1380,11 @@ void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
 
 		cnew->serialNumber = chunk_clone(info->serialNumber);
 		cnew->next = certinfo;
+		cnew->trials = 0;
 		*certinfop = cnew;
 		certinfo = cnew;
 	}
-		
+
 	DBG(DBG_CONTROL,
 		datatot(info->serialNumber.ptr, info->serialNumber.len, ':'
 			, buf, BUF_LEN);
@@ -1403,7 +1399,7 @@ void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
 	if (request)
 	{
 		certinfo->status = CERT_UNDEFINED;
-		
+
 		if (cmp != 0)
 		{
 			certinfo->thisUpdate = now;
@@ -1415,7 +1411,7 @@ void add_certinfo(ocsp_location_t *loc, ocsp_certinfo_t *info,
 		certinfo->status = info->status;
 		certinfo->revocationTime = info->revocationTime;
 		certinfo->revocationReason = info->revocationReason;
-		
+
 		certinfo->thisUpdate = (info->thisUpdate != UNDEFINED_TIME)?
 			info->thisUpdate : now;
 
@@ -1446,12 +1442,12 @@ static void process_single_response(ocsp_location_t *location,
 		plog("ocsp single response has wrong issuer");
 		return;
 	}
-	
+
 	/* traverse list of certinfos in increasing order */
 	certinfop = &location->certinfo;
 	certinfo = *certinfop;
 
-	while (certinfo != NULL)
+	while (certinfo)
 	{
 		cmp = chunk_compare(sres->serialNumber, certinfo->serialNumber);
 		if (cmp <= 0)
@@ -1468,14 +1464,14 @@ static void process_single_response(ocsp_location_t *location,
 
 	/* unlink cert from ocsp fetch request list */
 	*certinfop = certinfo->next;
-	
+
 	/* update certinfo using the single response information */
 	certinfo->thisUpdate = sres->thisUpdate;
 	certinfo->nextUpdate = sres->nextUpdate;
 	certinfo->status = sres->status;
 	certinfo->revocationTime = sres->revocationTime;
 	certinfo->revocationReason = sres->revocationReason;
-	
+
 	/* add or update certinfo in ocsp cache */
 	lock_ocsp_cache("process_single_response");
 	add_certinfo(location, certinfo, &ocsp_cache, FALSE);
@@ -1483,6 +1479,14 @@ static void process_single_response(ocsp_location_t *location,
 
 	/* free certinfo unlinked from ocsp fetch request list */
 	free_certinfo(certinfo);
+}
+
+/**
+ *  Destroy a response_t object
+ */
+static void free_response(response_t *res)
+{
+	DESTROY_IF(res->responder_id_name);
 }
 
 /**
@@ -1498,24 +1502,24 @@ void parse_ocsp(ocsp_location_t *location, chunk_t blob)
 	if (status != STATUS_SUCCESSFUL)
 	{
 		plog("error in ocsp response");
-		return;
+		goto free;
 	}
 	/* check if there was a nonce in the request */
-	if (location->nonce.ptr != NULL && res.nonce.ptr == NULL)
+	if (location->nonce.ptr && res.nonce.ptr == NULL)
 	{
 		plog("ocsp response contains no nonce, replay attack possible");
 	}
 	/* check if the nonce is identical */
-	if (res.nonce.ptr != NULL && !chunk_equals(res.nonce, location->nonce))
+	if (res.nonce.ptr && !chunk_equals(res.nonce, location->nonce))
 	{
 		plog("invalid nonce in ocsp response");
-		return;
+		goto free;
 	}
 	/* check if the response is signed by a trusted key */
 	if (!valid_ocsp_response(&res))
 	{
 		plog("invalid ocsp response");
-		return;
+		goto free;
 	}
 	DBG(DBG_CONTROL,
 		DBG_log("valid ocsp response")
@@ -1536,7 +1540,7 @@ void parse_ocsp(ocsp_location_t *location, chunk_t blob)
 				single_response_t sres = empty_single_response;
 
 				if (!parse_ocsp_single_response(object,
-						 				parser->get_level(parser)+1, &sres))
+										parser->get_level(parser)+1, &sres))
 				{
 					goto end;
 				}
@@ -1546,4 +1550,7 @@ void parse_ocsp(ocsp_location_t *location, chunk_t blob)
 end:
 		parser->destroy(parser);
 	}
+
+free:
+	free_response(&res);
 }
