@@ -1,6 +1,6 @@
 strongswan (4.3.6-1) unstable; urgency=low
 
-  * New upstream release.
+  * New upstream release, now build-depends on gperf.
   * Switch to dpkg-source 3.0 (quilt) format
 
  -- Rene Mayrhofer <rmayr@debian.org>  Tue, 23 Feb 2010 10:39:21 +0000
