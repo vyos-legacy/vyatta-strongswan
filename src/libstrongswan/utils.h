@@ -25,6 +25,9 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <sys/time.h>
+#include <arpa/inet.h>
+#include <string.h>
 
 #include <enum.h>
 
@@ -71,12 +74,19 @@
 /**
  * Macro gives back larger of two values.
  */
-#define max(x,y) ((x) > (y) ? (x):(y))
+#define max(x,y) ({ \
+	typeof(x) _x = (x); \
+	typeof(y) _y = (y); \
+	_x > _y ? _x : _y; })
+
 
 /**
  * Macro gives back smaller of two values.
  */
-#define min(x,y) ((x) < (y) ? (x):(y))
+#define min(x,y) ({ \
+	typeof(x) _x = (x); \
+	typeof(y) _y = (y); \
+	_x < _y ? _x : _y; })
 
 /**
  * Call destructor of an object, if object != NULL
@@ -97,6 +107,35 @@
  * Debug macro to follow control flow
  */
 #define POS printf("%s, line %d\n", __FILE__, __LINE__)
+
+/**
+ * Object allocation/initialization macro, using designated initializer.
+ */
+#define INIT(this, ...) { (this) = malloc(sizeof(*this)); \
+						  *(this) = (typeof(*this)){ __VA_ARGS__ }; }
+
+/**
+ * Method declaration/definition macro, providing private and public interface.
+ *
+ * Defines a method name with this as first parameter and a return value ret,
+ * and an alias for this method with a _ prefix, having the this argument
+ * safely casted to the public interface iface.
+ * _name is provided a function pointer, but will get optimized out by GCC.
+ */
+#define METHOD(iface, name, ret, this, ...) \
+	static ret name(union {iface *_public; this;} \
+	__attribute__((transparent_union)), ##__VA_ARGS__); \
+	const static typeof(name) *_##name = (const typeof(name)*)name; \
+	static ret name(this, ##__VA_ARGS__)
+
+/**
+ * Same as METHOD(), but is defined for two public interfaces.
+ */
+#define METHOD2(iface1, iface2, name, ret, this, ...) \
+	static ret name(union {iface1 *_public1; iface2 *_public2; this;} \
+	__attribute__((transparent_union)), ##__VA_ARGS__); \
+	const static typeof(name) *_##name = (const typeof(name)*)name; \
+	static ret name(this, ##__VA_ARGS__)
 
 /**
  * Macro to allocate a sized type.
@@ -122,6 +161,11 @@
  * time_t not defined
  */
 #define UNDEFINED_TIME 0
+
+/**
+ * Maximum time since epoch causing wrap-around on Jan 19 03:14:07 UTC 2038
+ */
+#define TIME_32_BIT_SIGNED_MAX	0x7fffffff
 
 /**
  * General purpose boolean type.
@@ -167,57 +211,57 @@ enum status_t {
 	 * Call succeeded.
 	 */
 	SUCCESS,
-	
+
 	/**
 	 * Call failed.
 	 */
 	FAILED,
-	
+
 	/**
 	 * Out of resources.
 	 */
 	OUT_OF_RES,
-	
+
 	/**
 	 * The suggested operation is already done
 	 */
 	ALREADY_DONE,
-	
+
 	/**
 	 * Not supported.
 	 */
 	NOT_SUPPORTED,
-	
+
 	/**
 	 * One of the arguments is invalid.
 	 */
 	INVALID_ARG,
-	
+
 	/**
 	 * Something could not be found.
 	 */
 	NOT_FOUND,
-	
+
 	/**
 	 * Error while parsing.
 	 */
 	PARSE_ERROR,
-	
+
 	/**
 	 * Error while verifying.
 	 */
 	VERIFY_ERROR,
-	
+
 	/**
 	 * Object in invalid state.
 	 */
 	INVALID_STATE,
-	
+
 	/**
 	 * Destroy object which called method belongs to.
 	 */
 	DESTROY_ME,
-	
+
 	/**
 	 * Another call to the method is required.
 	 */
@@ -267,13 +311,25 @@ void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 void *memstr(const void *haystack, const char *needle, size_t n);
 
 /**
- * Creates a directory and all required parent directories. 
+ * Creates a directory and all required parent directories.
  *
- * @param	path	path to the new directory
- * @param	mode	permissions of the new directory/directories 
+ * @param path		path to the new directory
+ * @param mode		permissions of the new directory/directories
  * @return			TRUE on success
  */
 bool mkdir_p(const char *path, mode_t mode);
+
+/**
+ * Get a timestamp from a monotonic time source.
+ *
+ * While the time()/gettimeofday() functions are affected by leap seconds
+ * and system time changes, this function returns ever increasing monotonic
+ * time stamps.
+ *
+ * @param tv		timeval struct receiving monotonic timestamps, or NULL
+ * @return			monotonic timestamp in seconds
+ */
+time_t time_monotonic(timeval_t *tv);
 
 /**
  * returns null
@@ -294,6 +350,64 @@ bool return_true();
  * returns FALSE
  */
 bool return_false();
+
+/**
+ * Write a 16-bit host order value in network order to an unaligned address.
+ *
+ * @param host		host order 16-bit value
+ * @param network	unaligned address to write network order value to
+ */
+static inline void htoun16(void *network, u_int16_t host)
+{
+	char *unaligned = (char*)network;
+
+	host = htons(host);
+	memcpy(unaligned, &host, sizeof(host));
+}
+
+/**
+ * Write a 32-bit host order value in network order to an unaligned address.
+ *
+ * @param host		host order 32-bit value
+ * @param network	unaligned address to write network order value to
+ */
+static inline void htoun32(void *network, u_int32_t host)
+{
+	char *unaligned = (char*)network;
+
+	host = htonl(host);
+	memcpy((char*)unaligned, &host, sizeof(host));
+}
+
+/**
+ * Read a 16-bit value in network order from an unaligned address to host order.
+ *
+ * @param network	unaligned address to read network order value from
+ * @return			host order value
+ */
+static inline u_int16_t untoh16(void *network)
+{
+	char *unaligned = (char*)network;
+	u_int16_t tmp;
+
+	memcpy(&tmp, unaligned, sizeof(tmp));
+	return ntohs(tmp);
+}
+
+/**
+ * Read a 32-bit value in network order from an unaligned address to host order.
+ *
+ * @param network	unaligned address to read network order value from
+ * @return			host order value
+ */
+static inline u_int32_t untoh32(void *network)
+{
+	char *unaligned = (char*)network;
+	u_int32_t tmp;
+
+	memcpy(&tmp, unaligned, sizeof(tmp));
+	return ntohl(tmp);
+}
 
 /**
  * Special type to count references
@@ -320,7 +434,7 @@ void ref_get(refcount_t *ref);
 /**
  * Put back a unused reference.
  *
- * Decrements the reference counter atomic and 
+ * Decrements the reference counter atomic and
  * says if more references available.
  *
  * @param ref	pointer to ref counter
@@ -333,8 +447,8 @@ bool ref_put(refcount_t *ref);
 /**
  * printf hook for time_t.
  *
- * Arguments are: 
- *    time_t* time, bool utc
+ * Arguments are:
+ *	time_t* time, bool utc
  */
 int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					 const void *const *args);
@@ -342,8 +456,8 @@ int time_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 /**
  * printf hook for time_t deltas.
  *
- * Arguments are: 
- *    time_t* begin, time_t* end
+ * Arguments are:
+ *	time_t* begin, time_t* end
  */
 int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 						   const void *const *args);
@@ -351,8 +465,8 @@ int time_delta_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 /**
  * printf hook for memory areas.
  *
- * Arguments are: 
- *    u_char *ptr, int len
+ * Arguments are:
+ *	u_char *ptr, int len
  */
 int mem_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					const void *const *args);

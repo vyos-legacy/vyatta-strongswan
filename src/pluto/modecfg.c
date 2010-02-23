@@ -26,6 +26,7 @@
 #include <freeswan.h>
 
 #include <library.h>
+#include <attributes/attributes.h>
 #include <crypto/prfs/prf.h>
 
 #include "constants.h"
@@ -81,11 +82,10 @@ struct internal_addr
 	bool       xauth_status;
 };
 
-/*
+/**
  * Initialize an internal_addr struct
  */
-static void
-init_internal_addr(internal_addr_t *ia)
+static void init_internal_addr(internal_addr_t *ia)
 {
 	int i;
 
@@ -106,46 +106,65 @@ init_internal_addr(internal_addr_t *ia)
 		anyaddr(AF_INET, &ia->dns[i]);
 	}
 
-	/* initialize WINS server information */
+	/* initialize NBNS server information */
 	for (i = 0; i < NBNS_SERVER_MAX; i++)
 	{
 		anyaddr(AF_INET, &ia->nbns[i]);
 	}
 }
 
-/*
- * get internal IP address for a connection
+/**
+ * Get internal IP address for a connection
  */
-static void
-get_internal_addr(struct connection *c, internal_addr_t *ia)
+static void get_internal_addr(connection_t *c, host_t *requested_vip,
+							  internal_addr_t *ia)
 {
 	int i, dns_idx = 0, nbns_idx = 0;
+	enumerator_t *enumerator;
+	configuration_attribute_type_t type;
+	chunk_t value;
+	host_t *vip = NULL;
 
 	if (isanyaddr(&c->spd.that.host_srcip))
 	{
-		/* not defined in connection - fetch it from LDAP */
+		if (c->spd.that.pool)
+		{
+			vip = lib->attributes->acquire_address(lib->attributes,
+										c->spd.that.pool, c->spd.that.id,
+										requested_vip);
+			if (vip)
+			{
+				chunk_t addr = vip->get_address(vip);
+		
+				plog("assigning virtual IP %H to peer", vip);
+				initaddr(addr.ptr, addr.len, vip->get_family(vip), &ia->ipaddr);
+
+			}
+		}
+		else
+		{
+			plog("no virtual IP found");
+		}
 	}
 	else
 	{
-		char srcip[ADDRTOT_BUF];
-
 		ia->ipaddr = c->spd.that.host_srcip;
-
-		addrtot(&ia->ipaddr, 0, srcip, sizeof(srcip));
-		plog("assigning virtual IP source address %s", srcip);
+		vip = host_create_from_sockaddr((sockaddr_t*)&ia->ipaddr);
+		plog("assigning virtual IP  %H to peer", vip);
 	}
 
 	if (!isanyaddr(&ia->ipaddr))        /* We got an IP address, send it */
 	{
+		c->spd.that.host_srcip      = ia->ipaddr;
 		c->spd.that.client.addr     = ia->ipaddr;
 		c->spd.that.client.maskbits = 32;
 		c->spd.that.has_client      = TRUE;
-		
+
 		ia->attr_set = LELEM(INTERNAL_IP4_ADDRESS)
 					 | LELEM(INTERNAL_IP4_NETMASK);
 	}
 
-	/* assign DNS servers */
+	/* assign DNS servers from strongswan.conf */
 	for (i = 1; i <= DNS_SERVER_MAX; i++)
 	{
 		char dns_key[16], *dns_str;
@@ -158,20 +177,20 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 			sa_family_t family = strchr(dns_str, ':') ? AF_INET6 : AF_INET;
 
 			ugh = ttoaddr(dns_str, 0, family, &ia->dns[dns_idx]);
-			if (ugh != NULL)
+			if (ugh)
 			{
 				plog("error in DNS server address: %s", ugh);
 				continue;
 			}
 			plog("assigning DNS server %s to peer", dns_str);
 
-			/* differentiate between IP4 and IP6 in modecfg_build_msg() */ 
+			/* differentiate between IP4 and IP6 in modecfg_build_msg() */
 			ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
 			dns_idx++;
 		}
 	}
 
-	/* assign WINS servers */
+	/* assign NBNS servers from strongswan.conf */
 	for (i = 1; i <= NBNS_SERVER_MAX; i++)
 	{
 		char nbns_key[16], *nbns_str;
@@ -184,26 +203,93 @@ get_internal_addr(struct connection *c, internal_addr_t *ia)
 			sa_family_t family = strchr(nbns_str, ':') ? AF_INET6 : AF_INET;
 
 			ugh = ttoaddr(nbns_str, 0, family, &ia->nbns[nbns_idx]);
-			if (ugh != NULL)
+			if (ugh)
 			{
-				plog("error in WINS server address: %s", ugh);
+				plog("error in NBNS server address: %s", ugh);
 				continue;
 			}
 			plog("assigning NBNS server %s to peer", nbns_str);
 
-			/* differentiate between IP4 and IP6 in modecfg_build_msg() */ 
+			/* differentiate between IP4 and IP6 in modecfg_build_msg() */
 			ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
 			nbns_idx++;
 		}
 	}
+
+	/* assign attributes from registered providers */
+	enumerator = lib->attributes->create_responder_enumerator(lib->attributes,
+											c->spd.that.id, vip);
+	while (enumerator->enumerate(enumerator, &type, &value))
+	{
+		err_t ugh;
+		host_t *server;
+		sa_family_t family = AF_INET;
+		
+		switch (type)
+		{
+			case INTERNAL_IP6_DNS:
+				family = AF_INET6;
+				/* fallthrough */
+			case INTERNAL_IP4_DNS:
+				if (dns_idx >= DNS_SERVER_MAX)
+				{
+					plog("exceeded the maximum number of %d DNS servers",
+						 DNS_SERVER_MAX);
+					break;
+				}
+				ugh = initaddr(value.ptr, value.len, family, &ia->dns[dns_idx]);
+				if (ugh)
+				{
+					plog("error in DNS server address: %s", ugh);
+					break;
+				}
+				server = host_create_from_chunk(family, value, 0);
+				plog("assigning DNS server %H to peer", server);
+				server->destroy(server);
+
+				/* differentiate between IP4 and IP6 in modecfg_build_msg() */
+				ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
+				dns_idx++;
+				break;
+
+			case INTERNAL_IP6_NBNS:
+				family = AF_INET6;
+				/* fallthrough */
+			case INTERNAL_IP4_NBNS:
+				if (nbns_idx >= NBNS_SERVER_MAX)
+ 				{
+					plog("exceeded the maximum number of %d NBNS servers",
+						 NBNS_SERVER_MAX);
+					break;
+				}
+				ugh = initaddr(value.ptr, value.len, family, &ia->nbns[nbns_idx]);
+				if (ugh)
+				{
+					plog("error in NBNS server address: %s", ugh);
+					break;
+				}
+				server = host_create_from_chunk(family, value, 0);
+				plog("assigning NBNS server %H to peer", server);
+				server->destroy(server);
+
+				/* differentiate between IP4 and IP6 in modecfg_build_msg() */
+				ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
+				nbns_idx++;
+				break;
+
+			default:
+				break;
+		}			
+	}
+	enumerator->destroy(enumerator);
+	DESTROY_IF(vip);
 }
 
 
-/*
+/**
  * Set srcip and client subnet to internal IP address
  */
-static bool
-set_internal_addr(struct connection *c, internal_addr_t *ia)
+static bool set_internal_addr(connection_t *c, internal_addr_t *ia)
 {
 	if (ia->attr_set & LELEM(INTERNAL_IP4_ADDRESS)
 	&& !isanyaddr(&ia->ipaddr))
@@ -227,7 +313,7 @@ set_internal_addr(struct connection *c, internal_addr_t *ia)
 			plog("replacing virtual IP source address %s by %s"
 				, old_srcip, new_srcip);
 		}
-		
+
 		/* setting srcip */
 		c->spd.this.host_srcip = ia->ipaddr;
 
@@ -240,7 +326,7 @@ set_internal_addr(struct connection *c, internal_addr_t *ia)
 	return FALSE;
 }
 
-/*
+/**
  * Compute HASH of Mode Config.
  */
 static size_t modecfg_hash(u_char *dest, u_char *start, u_char *roof,
@@ -263,19 +349,18 @@ static size_t modecfg_hash(u_char *dest, u_char *start, u_char *roof,
 	DBG(DBG_CRYPT,
 		DBG_log("ModeCfg HASH computed:");
 		DBG_dump("", dest, prf_block_size)
-	) 
+	)
 	return prf_block_size;
 }
 
 
-/* 
+/**
  * Generate an IKE message containing ModeCfg information (eg: IP, DNS, WINS)
  */
-static stf_status
-modecfg_build_msg(struct state *st, pb_stream *rbody
-								  , u_int16_t msg_type
-								  , internal_addr_t *ia
-								  , u_int16_t ap_id)
+static stf_status modecfg_build_msg(struct state *st, pb_stream *rbody,
+									u_int16_t msg_type,
+									internal_addr_t *ia,
+									u_int16_t ap_id)
 {
 	u_char *r_hash_start, *r_hashval;
 
@@ -322,7 +407,7 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 					is_unity_attr_set = FALSE;
 				}
 			}
-		
+
 			dont_advance = FALSE;
 
 			if (attr_set & 1)
@@ -384,7 +469,7 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 								mask[t] = 0xff;
 							m -= 8;
 						}
-#endif                              
+#endif
 						if (st->st_connection->spd.this.client.maskbits == 0)
 						{
 							mask = 0;
@@ -491,11 +576,11 @@ modecfg_build_msg(struct state *st, pb_stream *rbody
 	return STF_OK;
 }
 
-/*
+/**
  * Send ModeCfg message
  */
-static stf_status
-modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
+static stf_status modecfg_send_msg(struct state *st, int isama_type,
+								   internal_addr_t *ia)
 {
 	pb_stream msg;
 	pb_stream rbody;
@@ -549,11 +634,10 @@ modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
 	return STF_OK;
 }
 
-/*
+/**
  * Parse a ModeCfg attribute payload
  */
-static stf_status
-modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
+static stf_status modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 {
 	struct isakmp_attribute attr;
 	pb_stream strattr;
@@ -610,12 +694,12 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 				ugh = initaddr((char *)(strattr.cur), 4, AF_INET, &ia->nbns[nbns_idx]);
 				if (ugh != NULL)
 				{
-					plog("received invalid IPv4 WINS server address: %s", ugh);
+					plog("received invalid IPv4 NBNS server address: %s", ugh);
 				}
 				else
 				{
 					addrtot(&ia->nbns[nbns_idx], 0, buf, BUF_LEN);
-					plog("received IPv4 WINS server address %s", buf);
+					plog("received IPv4 NBNS server address %s", buf);
 					nbns_idx++;
 				}
 			}
@@ -644,12 +728,12 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 				ugh = initaddr((char *)(strattr.cur), 16, AF_INET6, &ia->nbns[nbns_idx]);
 				if (ugh != NULL)
 				{
-					plog("received invalid IPv6 WINS server address: %s", ugh);
+					plog("received invalid IPv6 NBNS server address: %s", ugh);
 				}
 				else
 				{
 					addrtot(&ia->nbns[nbns_idx], 0, buf, BUF_LEN);
-					plog("received IPv6 WINS server address %s", buf);
+					plog("received IPv6 NBNS server address %s", buf);
 					nbns_idx++;
 				}
 			}
@@ -735,12 +819,11 @@ modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 	return STF_OK;
 }
 
-/* 
+/**
  * Parse a ModeCfg message
  */
-static stf_status
-modecfg_parse_msg(struct msg_digest *md, int isama_type, u_int16_t *isama_id
-				, internal_addr_t *ia)
+static stf_status modecfg_parse_msg(struct msg_digest *md, int isama_type,
+									u_int16_t *isama_id, internal_addr_t *ia)
 {
 	struct state *const st = md->st;
 	struct payload_digest *p;
@@ -788,12 +871,12 @@ modecfg_parse_msg(struct msg_digest *md, int isama_type, u_int16_t *isama_id
 	return STF_IGNORE;
 }
 
-/*
+/**
  * Send ModeCfg request message from client to server in pull mode
  */
-stf_status
-modecfg_send_request(struct state *st)
+stf_status modecfg_send_request(struct state *st)
 {
+	connection_t *c = st->st_connection;
 	stf_status stat;
 	internal_addr_t ia;
 
@@ -801,6 +884,7 @@ modecfg_send_request(struct state *st)
 
 	ia.attr_set = LELEM(INTERNAL_IP4_ADDRESS)
 				| LELEM(INTERNAL_IP4_NETMASK);
+	ia.ipaddr = c->spd.this.host_srcip;
 
 	plog("sending ModeCfg request");
 	st->st_state = STATE_MODE_CFG_I1;
@@ -817,14 +901,14 @@ modecfg_send_request(struct state *st)
  *
  * used in ModeCfg pull mode, on the server (responder)
  */
-stf_status
-modecfg_inR0(struct msg_digest *md)
+stf_status modecfg_inR0(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
 	internal_addr_t ia;
 	bool want_unity_banner;
 	stf_status stat, stat_build;
+	host_t *requested_vip;
 
 	stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
 	if (stat != STF_OK)
@@ -832,9 +916,20 @@ modecfg_inR0(struct msg_digest *md)
 		return stat;
 	}
 
+	if (ia.attr_set & LELEM(INTERNAL_IP4_ADDRESS))
+	{
+		requested_vip = host_create_from_sockaddr((sockaddr_t*)&ia.ipaddr);
+	}
+	else
+	{
+		requested_vip = host_create_any(AF_INET);
+	}
+	plog("peer requested virtual IP %H", requested_vip);
+
 	want_unity_banner = (ia.unity_attr_set & LELEM(UNITY_BANNER - UNITY_BASE)) != LEMPTY;
 	init_internal_addr(&ia);
-	get_internal_addr(st->st_connection, &ia);
+	get_internal_addr(st->st_connection, requested_vip, &ia);
+	requested_vip->destroy(requested_vip);
 
 	if (want_unity_banner)
 	{
@@ -859,10 +954,9 @@ modecfg_inR0(struct msg_digest *md)
 /* STATE_MODE_CFG_I1:
  * HDR*, HASH, ATTR(REPLY=IP)
  *
- * used in ModeCfg pull mode, on the client (initiator) 
+ * used in ModeCfg pull mode, on the client (initiator)
  */
-stf_status
-modecfg_inI1(struct msg_digest *md)
+stf_status modecfg_inI1(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -882,17 +976,19 @@ modecfg_inI1(struct msg_digest *md)
 }
 
 
-/*
+/**
  * Send ModeCfg set message from server to client in push mode
  */
-stf_status
-modecfg_send_set(struct state *st)
+stf_status modecfg_send_set(struct state *st)
 {
 	stf_status stat;
 	internal_addr_t ia;
+	host_t *vip;
 
 	init_internal_addr(&ia);
-	get_internal_addr(st->st_connection, &ia);
+	vip = host_create_any(AF_INET);
+	get_internal_addr(st->st_connection, vip, &ia);
+	vip->destroy(vip);
 
 #ifdef CISCO_QUIRKS
 	ia.unity_banner = UNITY_BANNER_STR;
@@ -914,8 +1010,7 @@ modecfg_send_set(struct state *st)
  *
  * used in ModeCfg push mode, on the client (initiator).
  */
-stf_status
-modecfg_inI0(struct msg_digest *md)
+stf_status modecfg_inI0(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -958,8 +1053,7 @@ modecfg_inI0(struct msg_digest *md)
  *
  * used in ModeCfg push mode, on the server (responder)
  */
-stf_status
-modecfg_inR3(struct msg_digest *md)
+stf_status modecfg_inR3(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -977,11 +1071,10 @@ modecfg_inR3(struct msg_digest *md)
 	return STF_OK;
 }
 
-/*
+/**
  * Send XAUTH credentials request (username + password)
  */
-stf_status
-xauth_send_request(struct state *st)
+stf_status xauth_send_request(struct state *st)
 {
 	stf_status stat;
 	internal_addr_t ia;
@@ -1005,8 +1098,7 @@ xauth_send_request(struct state *st)
  *
  * used on the XAUTH client (initiator)
  */
-stf_status
-xauth_inI0(struct msg_digest *md)
+stf_status xauth_inI0(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -1111,8 +1203,7 @@ xauth_inI0(struct msg_digest *md)
  *
  *  used on the XAUTH server (responder)
  */
-stf_status
-xauth_inR1(struct msg_digest *md)
+stf_status xauth_inR1(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -1148,13 +1239,14 @@ xauth_inR1(struct msg_digest *md)
 		plog("user password attribute is missing in XAUTH reply");
 		st->st_xauth.status = FALSE;
 	}
-	else 
+	else
 	{
 		xauth_peer_t peer;
 
 		peer.conn_name = st->st_connection->name;
 		addrtot(&md->sender, 0, peer.ip_address, sizeof(peer.ip_address));
-		idtoa(&md->st->st_connection->spd.that.id, peer.id, sizeof(peer.id));
+		snprintf(peer.id, sizeof(peer.id), "%Y",
+				 md->st->st_connection->spd.that.id);
 
 		DBG(DBG_CONTROL,
 			DBG_log("peer xauth user name is '%.*s'"
@@ -1191,8 +1283,7 @@ xauth_inR1(struct msg_digest *md)
  *
  * used on the XAUTH client (initiator)
  */
-stf_status
-xauth_inI1(struct msg_digest *md)
+stf_status xauth_inI1(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;
@@ -1204,7 +1295,7 @@ xauth_inI1(struct msg_digest *md)
 	if (stat != STF_OK)
 	{
 		/* notification payload - not exactly the right choice, but okay */
-		md->note = ATTRIBUTES_NOT_SUPPORTED;
+		md->note = ISAKMP_ATTRIBUTES_NOT_SUPPORTED;
 		return stat;
 	}
 
@@ -1243,8 +1334,7 @@ xauth_inI1(struct msg_digest *md)
  *
  * used on the XAUTH server (responder)
  */
-stf_status
-xauth_inR2(struct msg_digest *md)
+stf_status xauth_inR2(struct msg_digest *md)
 {
 	struct state *const st = md->st;
 	u_int16_t isama_id;

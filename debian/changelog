@@ -1,9 +1,9 @@
-strongswan (4.3.4-1.1) unstable; urgency=low
+strongswan (4.3.6-1) unstable; urgency=low
 
-  * Non-maintainer upload.
+  * New upstream release.
   * Switch to dpkg-source 3.0 (quilt) format
 
- -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Tue, 23 Feb 2010 09:26:30 +0000
+ -- Rene Mayrhofer <rmayr@debian.org>  Tue, 23 Feb 2010 10:39:21 +0000
 
 strongswan (4.3.4-1) unstable; urgency=low
 

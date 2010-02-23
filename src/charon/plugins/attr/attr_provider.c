@@ -28,12 +28,12 @@ typedef struct attribute_entry_t attribute_entry_t;
  * private data of attr_provider
  */
 struct private_attr_provider_t {
-	
+
 	/**
 	 * public functions
 	 */
 	attr_provider_t public;
-	
+
 	/**
 	 * List of attributes, attribute_entry_t
 	 */
@@ -61,12 +61,16 @@ static bool attr_enum_filter(void *null, attribute_entry_t **in,
 /**
  * Implementation of attribute_provider_t.create_attribute_enumerator
  */
-static enumerator_t* create_attribute_enumerator(
-					private_attr_provider_t *this, identification_t *id)
+static enumerator_t* create_attribute_enumerator(private_attr_provider_t *this,
+											identification_t *id, host_t *vip)
 {
-	return enumerator_create_filter(
+	if (vip)
+	{
+		return enumerator_create_filter(
 						this->attributes->create_enumerator(this->attributes),
 						(void*)attr_enum_filter, NULL, NULL);
+	}
+	return enumerator_create_empty();
 }
 
 /**
@@ -75,7 +79,7 @@ static enumerator_t* create_attribute_enumerator(
 static void destroy(private_attr_provider_t *this)
 {
 	attribute_entry_t *entry;
-	
+
 	while (this->attributes->remove_last(this->attributes,
 										 (void**)&entry) == SUCCESS)
 	{
@@ -89,13 +93,13 @@ static void destroy(private_attr_provider_t *this)
 /**
  * Add an attribute entry to the list
  */
-static void add_entry(private_attr_provider_t *this, char *key, int nr,
-					  configuration_attribute_type_t type)
+static void add_legacy_entry(private_attr_provider_t *this, char *key, int nr,
+							 configuration_attribute_type_t type)
 {
 	attribute_entry_t *entry;
 	host_t *host;
 	char *str;
-	
+
 	str = lib->settings->get_str(lib->settings, "charon.%s%d", NULL, key, nr);
 	if (str)
 	{
@@ -103,7 +107,7 @@ static void add_entry(private_attr_provider_t *this, char *key, int nr,
 		if (host)
 		{
 			entry = malloc_thing(attribute_entry_t);
-			
+
 			if (host->get_family(host) == AF_INET6)
 			{
 				switch (type)
@@ -126,6 +130,82 @@ static void add_entry(private_attr_provider_t *this, char *key, int nr,
 	}
 }
 
+/**
+ * Key to attribute type mappings, for v4 and v6 attributes
+ */
+static struct {
+	char *name;
+	configuration_attribute_type_t v4;
+	configuration_attribute_type_t v6;
+} keys[] = {
+	{"address",		INTERNAL_IP4_ADDRESS,	INTERNAL_IP6_ADDRESS},
+	{"dns",			INTERNAL_IP4_DNS,		INTERNAL_IP6_DNS},
+	{"nbns",		INTERNAL_IP4_NBNS,		INTERNAL_IP6_NBNS},
+	{"dhcp",		INTERNAL_IP4_DHCP,		INTERNAL_IP6_DHCP},
+	{"netmask",		INTERNAL_IP4_NETMASK,	INTERNAL_IP6_NETMASK},
+	{"server",		INTERNAL_IP4_SERVER,	INTERNAL_IP6_SERVER},
+};
+
+/**
+ * Load (numerical) entries from the plugins.attr namespace
+ */
+static void load_entries(private_attr_provider_t *this)
+{
+	enumerator_t *enumerator, *tokens;
+	char *key, *value, *token;
+
+	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
+														"charon.plugins.attr");
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		configuration_attribute_type_t type;
+		attribute_entry_t *entry;
+		host_t *host;
+		int i;
+
+		type = atoi(key);
+		tokens = enumerator_create_token(value, ",", " ");
+		while (tokens->enumerate(tokens, &token))
+		{
+			host = host_create_from_string(token, 0);
+			if (!host)
+			{
+				DBG1(DBG_CFG, "invalid host in key %s: %s", key, token);
+				continue;
+			}
+			if (!type)
+			{
+				for (i = 0; i < countof(keys); i++)
+				{
+					if (streq(key, keys[i].name))
+					{
+						if (host->get_family(host) == AF_INET)
+						{
+							type = keys[i].v4;
+						}
+						else
+						{
+							type = keys[i].v6;
+						}
+					}
+				}
+				if (!type)
+				{
+					DBG1(DBG_CFG, "mapping attribute type %s failed", key);
+					break;
+				}
+			}
+			entry = malloc_thing(attribute_entry_t);
+			entry->type = type;
+			entry->value = chunk_clone(host->get_address(host));
+			host->destroy(host);
+			this->attributes->insert_last(this->attributes, entry);
+		}
+		tokens->destroy(tokens);
+	}
+	enumerator->destroy(enumerator);
+}
+
 /*
  * see header file
  */
@@ -133,22 +213,24 @@ attr_provider_t *attr_provider_create(database_t *db)
 {
 	private_attr_provider_t *this;
 	int i;
-	
+
 	this = malloc_thing(private_attr_provider_t);
-	
+
 	this->public.provider.acquire_address = (host_t*(*)(attribute_provider_t *this, char*, identification_t *, host_t *))return_null;
 	this->public.provider.release_address = (bool(*)(attribute_provider_t *this, char*,host_t *, identification_t*))return_false;
-	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id))create_attribute_enumerator;
+	this->public.provider.create_attribute_enumerator = (enumerator_t*(*)(attribute_provider_t*, identification_t *id, host_t *vip))create_attribute_enumerator;
 	this->public.destroy = (void(*)(attr_provider_t*))destroy;
-	
+
 	this->attributes = linked_list_create();
-	
+
 	for (i = 1; i <= SERVER_MAX; i++)
 	{
-		add_entry(this, "dns", i, INTERNAL_IP4_DNS);
-		add_entry(this, "nbns", i, INTERNAL_IP4_NBNS);
+		add_legacy_entry(this, "dns", i, INTERNAL_IP4_DNS);
+		add_legacy_entry(this, "nbns", i, INTERNAL_IP4_NBNS);
 	}
-	
+
+	load_entries(this);
+
 	return &this->public;
 }
 

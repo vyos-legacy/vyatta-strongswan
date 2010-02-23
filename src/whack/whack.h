@@ -17,6 +17,9 @@
 
 #include <freeswan.h>
 
+#include <defs.h>
+#include <constants.h>
+
 /* copy of smartcard operations, defined in smartcard.h */
 #ifndef SC_OP_T
 #define SC_OP_T
@@ -58,12 +61,12 @@ struct whack_end {
 	char *cert;         /* path string (if any) -- loaded by pluto  */
 	char *ca;           /* distinguished name string (if any) -- parsed by pluto */
 	char *groups;       /* access control groups (if any) -- parsed by pluto */
-	ip_address
-		host_addr,
-		host_nexthop,
-		host_srcip;
+	char *sourceip;		/* source IP address or pool identifier -- parsed by pluto */
+	int   sourceip_mask;
+	ip_address host_addr;
+	ip_address host_nexthop;
+	ip_address host_srcip;	
 	ip_subnet client;
-
 	bool key_from_DNS_on_demand;
 	bool has_client;
 	bool has_client_wildcard;
@@ -280,7 +283,7 @@ enum rc_type {
 
 	/* entry of secrets */
 	RC_ENTERSECRET = 40,
-	
+
 	/* progress: start of range for successful state transition.
 	 * Actual value is RC_NEW_STATE plus the new state code.
 	 */

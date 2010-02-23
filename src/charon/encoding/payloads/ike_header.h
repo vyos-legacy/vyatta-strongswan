@@ -60,7 +60,7 @@ enum exchange_type_t{
 	 * EXCHANGE_TYPE_UNDEFINED. In private space, since not a official message type.
 	 */
 	EXCHANGE_TYPE_UNDEFINED = 255,
-	
+
 	/**
 	 * IKE_SA_INIT.
 	 */
@@ -94,11 +94,11 @@ enum exchange_type_t{
 extern enum_name_t *exchange_type_names;
 
 /**
- * An object of this type represents an IKEv2 header and is used to 
+ * An object of this type represents an IKEv2 header and is used to
  * generate and parse IKEv2 headers.
- * 
- * The header format of an IKEv2-Message is compatible to the 
- * ISAKMP-Header format to allow implementations supporting 
+ *
+ * The header format of an IKEv2-Message is compatible to the
+ * ISAKMP-Header format to allow implementations supporting
  * both versions of the IKE-protocol.
  */
 struct ike_header_t {
@@ -106,61 +106,60 @@ struct ike_header_t {
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
-	
+
 	/**
 	 * Get the initiator spi.
 	 *
 	 * @return 				initiator_spi
 	 */
 	u_int64_t (*get_initiator_spi) (ike_header_t *this);
-	
+
 	/**
 	 * Set the initiator spi.
 	 *
 	 * @param initiator_spi	initiator_spi
 	 */
 	void (*set_initiator_spi) (ike_header_t *this, u_int64_t initiator_spi);
-	
+
 	/**
 	 * Get the responder spi.
 	 *
 	 * @return 				responder_spi
 	 */
 	u_int64_t (*get_responder_spi) (ike_header_t *this);
-	
+
 	/**
 	 * Set the responder spi.
 	 *
 	 * @param responder_spi	responder_spi
 	 */
 	void (*set_responder_spi) (ike_header_t *this, u_int64_t responder_spi);
-	
+
 	/**
 	 * Get the major version.
 	 *
 	 * @return 				major version
 	 */
 	u_int8_t (*get_maj_version) (ike_header_t *this);
-	
+
 	/**
 	 * Get the minor version.
 	 *
 	 * @return 				minor version
 	 */
 	u_int8_t (*get_min_version) (ike_header_t *this);
-	
+
 	/**
 	 * Get the response flag.
 	 *
 	 * @return 				response flag
 	 */
 	bool (*get_response_flag) (ike_header_t *this);
-	
+
 	/**
 	 * Set the response flag-
 	 *
 	 * @param response		response flag
-	 * 
 	 */
 	void (*set_response_flag) (ike_header_t *this, bool response);
 	/**
@@ -169,14 +168,14 @@ struct ike_header_t {
 	 * @return 				version flag
 	 */
 	bool (*get_version_flag) (ike_header_t *this);
-	
+
 	/**
 	 * Get the initiator flag.
 	 *
 	 * @return 				initiator flag
 	 */
 	bool (*get_initiator_flag) (ike_header_t *this);
-	
+
 	/**
 	 * Set the initiator flag.
 	 *
@@ -190,28 +189,28 @@ struct ike_header_t {
 	 * @return 				exchange type
 	 */
 	u_int8_t (*get_exchange_type) (ike_header_t *this);
-	
+
 	/**
 	 * Set the  exchange type.
 	 *
 	 * @param exchange_type	exchange type
 	 */
 	void (*set_exchange_type) (ike_header_t *this, u_int8_t exchange_type);
-	
+
 	/**
 	 * Get the message id.
 	 *
 	 * @return 				message id
 	 */
 	u_int32_t (*get_message_id) (ike_header_t *this);
-	
+
 	/**
 	 * Set the message id.
 	 *
 	 * @param initiator_spi	message id
 	 */
 	void (*set_message_id) (ike_header_t *this, u_int32_t message_id);
-	
+
 	/**
 	 * Destroys a ike_header_t object.
 	 */
@@ -220,7 +219,7 @@ struct ike_header_t {
 
 /**
  * Create an ike_header_t object
- * 
+ *
  * @return ike_header_t object
  */
 ike_header_t *ike_header_create(void);

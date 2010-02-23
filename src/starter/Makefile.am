@@ -6,7 +6,7 @@ keywords.c files.h keywords.h cmp.c starter.c cmp.h exec.c invokecharon.c \
 exec.h invokecharon.h lex.yy.c loglite.c klips.c klips.h
 
 INCLUDES = \
--I${linuxdir} \
+-I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
 -I$(top_srcdir)/src/pluto \
@@ -15,9 +15,11 @@ INCLUDES = \
 
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DIPSEC_EAPDIR=\"${eapdir}\" \
+-DDEV_RANDOM=\"${random_device}\" \
+-DDEV_URANDOM=\"${urandom_device}\" \
 -DDEBUG
 
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)
@@ -37,7 +39,7 @@ if USE_CHARON
 endif
 
 lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h
-		$(LEX) $(srcdir)/parser.l 
+		$(LEX) $(srcdir)/parser.l
 
 y.tab.c:	$(srcdir)/parser.y $(srcdir)/parser.l $(srcdir)/parser.h
 		$(YACC) -v -d $(srcdir)/parser.y
@@ -51,7 +53,7 @@ keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
 defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $(PLUTODIR)/defs.c
 
-install-exec-local :	
+install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts" || true

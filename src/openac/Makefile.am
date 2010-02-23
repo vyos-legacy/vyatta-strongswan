@@ -4,9 +4,7 @@ dist_man_MANS = openac.8
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
-  -DIPSEC_CONFDIR=\"${confdir}\" \
-  -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
-  -DIPSEC_PLUGINDIR=\"${plugindir}\" \
+  -DIPSEC_CONFDIR=\"${sysconfdir}\" \
   -DPLUGINS=\""${libstrongswan_plugins}\""
-openac_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp
+openac_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 

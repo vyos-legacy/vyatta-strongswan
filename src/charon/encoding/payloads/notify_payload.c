@@ -41,7 +41,7 @@ ENUM_NEXT(notify_type_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PROPOSAL
 	"INVALID_KE_PAYLOAD");
 ENUM_NEXT(notify_type_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
 	"AUTHENTICATION_FAILED");
-ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED, AUTHENTICATION_FAILED,
+ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, USE_ASSIGNED_HoA, AUTHENTICATION_FAILED,
 	"SINGLE_PAIR_REQUIRED",
 	"NO_ADDITIONAL_SAS",
 	"INTERNAL_ADDRESS_FAILURE",
@@ -49,10 +49,11 @@ ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED, AUTH
 	"TS_UNACCEPTABLE",
 	"INVALID_SELECTORS",
 	"UNACCEPTABLE_ADDRESSES",
-	"UNEXPECTED_NAT_DETECTED");
-ENUM_NEXT(notify_type_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, UNEXPECTED_NAT_DETECTED,
+	"UNEXPECTED_NAT_DETECTED",
+	"USE_ASSIGNED_HoA");
+ENUM_NEXT(notify_type_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, USE_ASSIGNED_HoA,
 	"ME_CONNECT_FAILED");
-ENUM_NEXT(notify_type_names, INITIAL_CONTACT, ANOTHER_AUTH_FOLLOWS, ME_CONNECT_FAILED,
+ENUM_NEXT(notify_type_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
 	"INITIAL_CONTACT",
 	"SET_WINDOW_SIZE",
 	"ADDITIONAL_TS_POSSIBLE",
@@ -74,8 +75,17 @@ ENUM_NEXT(notify_type_names, INITIAL_CONTACT, ANOTHER_AUTH_FOLLOWS, ME_CONNECT_F
 	"NO_NATS_ALLOWED",
 	"AUTH_LIFETIME",
 	"MULTIPLE_AUTH_SUPPORTED",
-	"ANOTHER_AUTH_FOLLOWS");
-ENUM_NEXT(notify_type_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, ANOTHER_AUTH_FOLLOWS,
+	"ANOTHER_AUTH_FOLLOWS",
+	"REDIRECT_SUPPORTED",
+	"REDIRECT",
+	"REDIRECTED_FROM",
+	"TICKET_LT_OPAQUE",
+	"TICKET_REQUEST",
+	"TICKET_ACK",
+	"TICKET_NACK",
+	"TICKET_OPAQUE",
+	"LINK_ID");
+ENUM_NEXT(notify_type_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, LINK_ID,
 	"EAP_ONLY_AUTHENTICATION");
 ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"USE_BEET_MODE");
@@ -107,7 +117,7 @@ ENUM_NEXT(notify_type_short_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PR
 	"INVAL_KE");
 ENUM_NEXT(notify_type_short_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
 	"AUTH_FAILED");
-ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED, AUTHENTICATION_FAILED,
+ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, USE_ASSIGNED_HoA, AUTHENTICATION_FAILED,
 	"SINGLE_PAIR",
 	"NO_ADD_SAS",
 	"INT_ADDR_FAIL",
@@ -115,10 +125,11 @@ ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, UNEXPECTED_NAT_DETECTED
 	"TS_UNACCEPT",
 	"INVAL_SEL",
 	"UNACCEPT_ADDR",
-	"UNEXPECT_NAT");
-ENUM_NEXT(notify_type_short_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, UNEXPECTED_NAT_DETECTED,
+	"UNEXPECT_NAT",
+	"ASSIGNED_HoA");
+ENUM_NEXT(notify_type_short_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, USE_ASSIGNED_HoA,
 	"ME_CONN_FAIL");
-ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, ANOTHER_AUTH_FOLLOWS, ME_CONNECT_FAILED,
+ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
 	"INIT_CONTACT",
 	"SET_WINSIZE",
 	"ADD_TS_POSS",
@@ -140,8 +151,17 @@ ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, ANOTHER_AUTH_FOLLOWS, ME_CON
 	"NO_NATS",
 	"AUTH_LFT",
 	"MULT_AUTH",
-	"AUTH_FOLLOWS");
-ENUM_NEXT(notify_type_short_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, ANOTHER_AUTH_FOLLOWS,
+	"AUTH_FOLLOWS",
+	"REDIR_SUP",
+	"REDIR",
+	"REDIR_FROM",
+	"TKT_LT_OPAK",
+	"TKT_REQ",
+	"TKT_ACK",
+	"TKT_NACK",
+	"TKT_OPAK",
+	"LINK_ID");
+ENUM_NEXT(notify_type_short_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, LINK_ID,
 	"EAP_ONLY");
 ENUM_NEXT(notify_type_short_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"BEET_MODE");
@@ -160,14 +180,14 @@ typedef struct private_notify_payload_t private_notify_payload_t;
 
 /**
  * Private data of an notify_payload_t object.
- * 
+ *
  */
 struct private_notify_payload_t {
 	/**
 	 * Public notify_payload_t interface.
 	 */
 	notify_payload_t public;
-	
+
 	/**
 	 * Next payload type.
 	 */
@@ -177,27 +197,27 @@ struct private_notify_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
-		
+
 	/**
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
-		
+
 	/**
 	 * Protocol id.
 	 */
 	u_int8_t protocol_id;
-	
+
 	/**
 	 * Spi size.
 	 */
 	u_int8_t spi_size;
-	
+
 	/**
 	 * Notify message type.
 	 */
 	u_int16_t notify_type;
-	
+
 	/**
 	 * Security parameter index (spi).
 	 */
@@ -211,26 +231,26 @@ struct private_notify_payload_t {
 
 /**
  * Encoding rules to parse or generate a IKEv2-Notify Payload.
- * 
- * The defined offsets are the positions in a object of type 
+ *
+ * The defined offsets are the positions in a object of type
  * private_notify_payload_t.
- * 
+ *
  */
 encoding_rule_t notify_payload_encodings[] = {
- 	/* 1 Byte next payload type, stored in the field next_payload */
+	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload) 		},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_notify_payload_t, critical) 			},	
- 	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
-	{ RESERVED_BIT,	0 														}, 
+	{ FLAG,				offsetof(private_notify_payload_t, critical) 			},
+	/* 7 Bit reserved bits, nowhere stored */
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,	0 														},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length) 		},	
+	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length) 		},
 	/* Protocol ID as 8 bit field*/
 	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id) 			},
 	/* SPI Size as 8 bit field*/
@@ -238,7 +258,7 @@ encoding_rule_t notify_payload_encodings[] = {
 	/* Notify message type as 16 bit field*/
 	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)	},
 	/* SPI as variable length field*/
-	{ SPI,				offsetof(private_notify_payload_t, spi)		 			},
+	{ SPI,				offsetof(private_notify_payload_t, spi)					},
 	/* Key Exchange Data is from variable size */
 	{ NOTIFICATION_DATA,	offsetof(private_notify_payload_t, notification_data) 	}
 };
@@ -279,7 +299,7 @@ static status_t verify(private_notify_payload_t *this)
 			DBG1(DBG_ENC, "Unknown protocol (%d)", this->protocol_id);
 			return FAILED;
 	}
-	
+
 	switch (this->notify_type)
 	{
 		case INVALID_KE_PAYLOAD:
@@ -567,7 +587,7 @@ notify_payload_t *notify_payload_create()
 	this->public.get_notification_data = (chunk_t (*) (notify_payload_t *)) get_notification_data;
 	this->public.set_notification_data = (void (*) (notify_payload_t *,chunk_t)) set_notification_data;
 	this->public.destroy = (void (*) (notify_payload_t *)) destroy;
-	
+
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
@@ -579,7 +599,7 @@ notify_payload_t *notify_payload_create()
 	this->spi_size = 0;
 	this->notification_data.ptr = NULL;
 	this->notification_data.len = 0;
-	
+
 	return &this->public;
 }
 
@@ -592,6 +612,6 @@ notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t pro
 
 	notify->set_notify_type(notify,notify_type);
 	notify->set_protocol_id(notify,protocol_id);
-	
+
 	return notify;
 }

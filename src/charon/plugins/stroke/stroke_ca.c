@@ -17,7 +17,7 @@
 #include "stroke_ca.h"
 #include "stroke_cred.h"
 
-#include <utils/mutex.h>
+#include <threading/rwlock.h>
 #include <utils/linked_list.h>
 #include <crypto/hashers/hasher.h>
 
@@ -34,17 +34,17 @@ struct private_stroke_ca_t {
 	 * public functions
 	 */
 	stroke_ca_t public;
-	
+
 	/**
 	 * read-write lock to lists
 	 */
 	rwlock_t *lock;
-	
+
 	/**
 	 * list of starters CA sections and its certificates (ca_section_t)
 	 */
 	linked_list_t *sections;
-	
+
 	/**
 	 * stroke credentials, stores our CA certificates
 	 */
@@ -62,27 +62,27 @@ struct ca_section_t {
 	 * name of the CA section
 	 */
 	char *name;
-	
+
 	/**
 	 * reference to cert in trusted_credential_t
 	 */
 	certificate_t *cert;
-	
+
 	/**
 	 * CRL URIs
 	 */
 	linked_list_t *crl;
-	
+
 	/**
 	 * OCSP URIs
 	 */
 	linked_list_t *ocsp;
-	
+
 	/**
 	 * Hashes of certificates issued by this CA
 	 */
 	linked_list_t *hashes;
-	
+
 	/**
 	 * Base URI used for certificates from this CA
 	 */
@@ -90,12 +90,12 @@ struct ca_section_t {
 };
 
 /**
- * create a new CA section 
+ * create a new CA section
  */
 static ca_section_t *ca_section_create(char *name, certificate_t *cert)
 {
 	ca_section_t *ca = malloc_thing(ca_section_t);
-	
+
 	ca->name = strdup(name);
 	ca->crl = linked_list_create();
 	ca->ocsp = linked_list_create();
@@ -142,10 +142,9 @@ static void cdp_data_destroy(cdp_data_t *data)
 static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 {
 	public_key_t *public;
-	identification_t *keyid;
 	enumerator_t *enumerator = NULL;
 	linked_list_t *list;
-	
+
 	if (data->type == CERT_X509_OCSP_RESPONSE)
 	{
 		list = section->ocsp;
@@ -164,10 +163,9 @@ static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
 		}
 		else
 		{
-			keyid = public->get_id(public, data->id->get_type(data->id));
-			if (keyid && keyid->matches(keyid, data->id))
+			if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
 			{
-				enumerator = list->create_enumerator(list);		
+				enumerator = list->create_enumerator(list);
 			}
 		}
 		public->destroy(public);
@@ -182,25 +180,25 @@ static enumerator_t *create_inner_cdp_hashandurl(ca_section_t *section, cdp_data
 {
 	enumerator_t *enumerator = NULL, *hash_enum;
 	identification_t *current;
-	
+
 	if (!data->id || !section->certuribase)
 	{
 		return NULL;
 	}
-	
+
 	hash_enum = section->hashes->create_enumerator(section->hashes);
 	while (hash_enum->enumerate(hash_enum, &current))
-	{	
+	{
 		if (current->matches(current, data->id))
 		{
 			char *url, *hash;
-			
+
 			url = malloc(strlen(section->certuribase) + 40 + 1);
 			strcpy(url, section->certuribase);
 			hash = chunk_to_hex(current->get_encoding(current), NULL, FALSE).ptr;
 			strncat(url, hash, 40);
 			free(hash);
-			
+
 			enumerator = enumerator_create_single(url, free);
 			break;
 		}
@@ -231,7 +229,7 @@ static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
 	data->this = this;
 	data->type = type;
 	data->id = id;
-	
+
 	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(this->sections->create_enumerator(this->sections),
 			(type == CERT_X509) ? (void*)create_inner_cdp_hashandurl : (void*)create_inner_cdp,
@@ -244,12 +242,12 @@ static void add(private_stroke_ca_t *this, stroke_msg_t *msg)
 {
 	certificate_t *cert;
 	ca_section_t *ca;
-	
+
 	if (msg->add_ca.cacert == NULL)
 	{
 		DBG1(DBG_CFG, "missing cacert parameter");
 		return;
-	}	
+	}
 	cert = this->cred->load_ca(this->cred, msg->add_ca.cacert);
 	if (cert)
 	{
@@ -288,7 +286,7 @@ static void del(private_stroke_ca_t *this, stroke_msg_t *msg)
 {
 	enumerator_t *enumerator;
 	ca_section_t *ca = NULL;
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->sections->create_enumerator(this->sections);
 	while (enumerator->enumerate(enumerator, &ca))
@@ -344,14 +342,14 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 {
 	ca_section_t *section;
 	enumerator_t *enumerator;
-	
+
 	hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (hasher == NULL)
 	{
 		DBG1(DBG_IKE, "unable to use hash-and-url: sha1 not supported");
 		return;
 	}
-	
+
 	this->lock->write_lock(this->lock);
 	enumerator = this->sections->create_enumerator(this->sections);
 	while (enumerator->enumerate(enumerator, (void**)&section))
@@ -361,7 +359,7 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 			chunk_t hash, encoded = cert->get_encoding(cert);
 			hasher->allocate_hash(hasher, encoded, &hash);
 			section->hashes->insert_last(section->hashes,
-					identification_create_from_encoding(ID_CERT_DER_SHA1, hash));
+					identification_create_from_encoding(ID_KEY_ID, hash));
 			chunk_free(&hash);
 			chunk_free(&encoded);
 			break;
@@ -369,7 +367,7 @@ static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cer
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	
+
 	hasher->destroy(hasher);
 }
 
@@ -381,13 +379,14 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 	bool first = TRUE;
 	ca_section_t *section;
 	enumerator_t *enumerator;
-	
+
 	this->lock->read_lock(this->lock);
 	enumerator = this->sections->create_enumerator(this->sections);
 	while (enumerator->enumerate(enumerator, (void**)&section))
 	{
 		certificate_t *cert = section->cert;
 		public_key_t *public = cert->get_public_key(cert);
+		chunk_t chunk;
 
 		if (first)
 		{
@@ -401,10 +400,14 @@ static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 		/* list authkey and keyid */
 		if (public)
 		{
-			fprintf(out, "  authkey:      %Y\n",
-					public->get_id(public, ID_PUBKEY_SHA1));
-			fprintf(out, "  keyid:        %Y\n",
-					public->get_id(public, ID_PUBKEY_INFO_SHA1));
+			if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &chunk))
+			{
+				fprintf(out, "  authkey:      %#B\n", &chunk);
+			}
+			if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &chunk))
+			{
+				fprintf(out, "  keyid:        %#B\n", &chunk);
+			}
 			public->destroy(public);
 		}
 		list_uris(section->crl, "  crluris:     ", out);
@@ -434,7 +437,7 @@ static void destroy(private_stroke_ca_t *this)
 stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 {
 	private_stroke_ca_t *this = malloc_thing(private_stroke_ca_t);
-	
+
 	this->public.set.create_private_enumerator = (void*)return_null;
 	this->public.set.create_cert_enumerator = (void*)return_null;
 	this->public.set.create_shared_enumerator = (void*)return_null;
@@ -445,11 +448,11 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 	this->public.list = (void(*)(stroke_ca_t*, stroke_msg_t *msg, FILE *out))list;
 	this->public.check_for_hash_and_url = (void(*)(stroke_ca_t*, certificate_t*))check_for_hash_and_url;
 	this->public.destroy = (void(*)(stroke_ca_t*))destroy;
-	
+
 	this->sections = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	this->cred = cred;
-	
+
 	return &this->public;
 }
 

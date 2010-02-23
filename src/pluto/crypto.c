@@ -21,12 +21,12 @@
 #include "log.h"
 
 static struct encrypt_desc encrypt_desc_3des =
-{       
+{
 	algo_type:       IKE_ALG_ENCRYPT,
-	algo_id:         OAKLEY_3DES_CBC, 
+	algo_id:         OAKLEY_3DES_CBC,
 	algo_next:       NULL,
 
-	enc_blocksize:	 DES_BLOCK_SIZE, 
+	enc_blocksize:	 DES_BLOCK_SIZE,
 	keydeflen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 	keyminlen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
 	keymaxlen:		 DES_BLOCK_SIZE * 3 * BITS_PER_BYTE,
@@ -40,12 +40,28 @@ static struct encrypt_desc encrypt_desc_aes =
 {
 	algo_type: 	     IKE_ALG_ENCRYPT,
 	algo_id:   	     OAKLEY_AES_CBC,
-	algo_next: 	     NULL, 
+	algo_next: 	     NULL,
 
 	enc_blocksize: 	 AES_BLOCK_SIZE,
 	keyminlen: 		 AES_KEY_MIN_LEN,
 	keydeflen: 		 AES_KEY_DEF_LEN,
 	keymaxlen: 		 AES_KEY_MAX_LEN,
+};
+
+#define  CAMELLIA_KEY_MIN_LEN	128
+#define  CAMELLIA_KEY_DEF_LEN	128
+#define  CAMELLIA_KEY_MAX_LEN	256
+
+static struct encrypt_desc encrypt_desc_camellia =
+{
+	algo_type: 	     IKE_ALG_ENCRYPT,
+	algo_id:   	     OAKLEY_CAMELLIA_CBC,
+	algo_next: 	     NULL,
+
+	enc_blocksize: 	 CAMELLIA_BLOCK_SIZE,
+	keyminlen: 		 CAMELLIA_KEY_MIN_LEN,
+	keydeflen: 		 CAMELLIA_KEY_DEF_LEN,
+	keymaxlen: 		 CAMELLIA_KEY_MAX_LEN,
 };
 
 #define  BLOWFISH_KEY_MIN_LEN	128
@@ -55,7 +71,7 @@ static struct encrypt_desc encrypt_desc_blowfish =
 {
 	algo_type:       IKE_ALG_ENCRYPT,
 	algo_id:         OAKLEY_BLOWFISH_CBC,
-	algo_next:       NULL, 
+	algo_next:       NULL,
 
 	enc_blocksize:	 BLOWFISH_BLOCK_SIZE,
 	keyminlen:		 BLOWFISH_KEY_MIN_LEN,
@@ -83,7 +99,7 @@ static struct encrypt_desc encrypt_desc_serpent =
 #define  TWOFISH_KEY_DEF_LEN	128
 #define  TWOFISH_KEY_MAX_LEN	256
 
-static struct encrypt_desc encrypt_desc_twofish = 
+static struct encrypt_desc encrypt_desc_twofish =
 {
 	algo_type: 	     IKE_ALG_ENCRYPT,
 	algo_id:   	     OAKLEY_TWOFISH_CBC,
@@ -108,18 +124,18 @@ static struct encrypt_desc encrypt_desc_twofish_ssh =
 };
 
 static struct hash_desc hash_desc_md5 =
-{       
+{
 	algo_type: IKE_ALG_HASH,
 	algo_id:   OAKLEY_MD5,
-	algo_next: NULL, 
+	algo_next: NULL,
 	hash_digest_size: HASH_SIZE_MD5,
 };
 
 static struct hash_desc hash_desc_sha1 =
-{       
+{
 	algo_type: IKE_ALG_HASH,
 	algo_id:   OAKLEY_SHA,
-	algo_next: NULL, 
+	algo_next: NULL,
 	hash_digest_size: HASH_SIZE_SHA1,
 };
 
@@ -146,91 +162,91 @@ static struct hash_desc hash_desc_sha2_512 = {
 
 const struct dh_desc unset_group = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    MODP_NONE, 
+	algo_id:    MODP_NONE,
 	algo_next:  NULL,
 	ke_size:    0
 };
 
-static struct dh_desc dh_desc_modp_1024 = {       
+static struct dh_desc dh_desc_modp_1024 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    MODP_1024_BIT, 
+	algo_id:    MODP_1024_BIT,
 	algo_next:  NULL,
 	ke_size:    1024 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_modp_1536 = {       
+static struct dh_desc dh_desc_modp_1536 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    MODP_1536_BIT, 
+	algo_id:    MODP_1536_BIT,
 	algo_next:  NULL,
 	ke_size:    1536 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_modp_2048 = {       
+static struct dh_desc dh_desc_modp_2048 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    MODP_2048_BIT, 
+	algo_id:    MODP_2048_BIT,
 	algo_next:  NULL,
 	ke_size:    2048 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_modp_3072 = {       
+static struct dh_desc dh_desc_modp_3072 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    MODP_3072_BIT, 
+	algo_id:    MODP_3072_BIT,
 	algo_next:  NULL,
 	ke_size:    3072 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_modp_4096 = {       
+static struct dh_desc dh_desc_modp_4096 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    MODP_4096_BIT, 
+	algo_id:    MODP_4096_BIT,
 	algo_next:  NULL,
 	ke_size:    4096 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_modp_6144 = {       
+static struct dh_desc dh_desc_modp_6144 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    MODP_6144_BIT, 
+	algo_id:    MODP_6144_BIT,
 	algo_next:  NULL,
 	ke_size:    6144 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_modp_8192 = {       
+static struct dh_desc dh_desc_modp_8192 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    MODP_8192_BIT, 
+	algo_id:    MODP_8192_BIT,
 	algo_next:  NULL,
 	ke_size:    8192 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_ecp_256 = {       
+static struct dh_desc dh_desc_ecp_256 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    ECP_256_BIT, 
+	algo_id:    ECP_256_BIT,
 	algo_next:  NULL,
 	ke_size:    2*256 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_ecp_384 = {       
+static struct dh_desc dh_desc_ecp_384 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    ECP_384_BIT, 
+	algo_id:    ECP_384_BIT,
 	algo_next:  NULL,
 	ke_size:    2*384 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_ecp_521 = {       
+static struct dh_desc dh_desc_ecp_521 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    ECP_521_BIT, 
+	algo_id:    ECP_521_BIT,
 	algo_next:  NULL,
 	ke_size:    2*528 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_ecp_192 = {       
+static struct dh_desc dh_desc_ecp_192 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    ECP_192_BIT, 
+	algo_id:    ECP_192_BIT,
 	algo_next:  NULL,
 	ke_size:    2*192 / BITS_PER_BYTE
 };
 
-static struct dh_desc dh_desc_ecp_224 = {       
+static struct dh_desc dh_desc_ecp_224 = {
 	algo_type:  IKE_ALG_DH_GROUP,
-	algo_id:    ECP_224_BIT, 
+	algo_id:    ECP_224_BIT,
 	algo_next:  NULL,
 	ke_size:    2*224 / BITS_PER_BYTE
 };
@@ -283,12 +299,12 @@ bool init_crypto(void)
 			 (no_md5) ? "MD5" : "");
 		return FALSE;
 	}
-		
+
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &encryption_alg))
 	{
 		const struct encrypt_desc *desc;
- 
+
 		switch (encryption_alg)
 		{
 			case ENCR_3DES:
@@ -300,6 +316,9 @@ bool init_crypto(void)
 			case ENCR_AES_CBC:
 				desc = &encrypt_desc_aes;
 				break;
+			case ENCR_CAMELLIA_CBC:
+				desc = &encrypt_desc_camellia;
+				break;
 			case ENCR_TWOFISH_CBC:
 				desc = &encrypt_desc_twofish;
 				ike_alg_add((struct ike_alg *)&encrypt_desc_twofish_ssh);
@@ -308,7 +327,7 @@ bool init_crypto(void)
 				desc = &encrypt_desc_serpent;
 				break;
 			default:
-				continue;			
+				continue;
 		}
 		ike_alg_add((struct ike_alg *)desc);
 	}
@@ -381,7 +400,7 @@ encryption_algorithm_t oakley_to_encryption_algorithm(int alg)
 		case OAKLEY_DES_CBC:
 			return ENCR_DES;
 		case OAKLEY_IDEA_CBC:
-			return ENCR_IDEA; 
+			return ENCR_IDEA;
 		case OAKLEY_BLOWFISH_CBC:
 			return ENCR_BLOWFISH;
 		case OAKLEY_RC5_R16_B64_CBC:
@@ -392,6 +411,8 @@ encryption_algorithm_t oakley_to_encryption_algorithm(int alg)
 			return ENCR_CAST;
 		case OAKLEY_AES_CBC:
 			return ENCR_AES_CBC;
+		case OAKLEY_CAMELLIA_CBC:
+			return ENCR_CAMELLIA_CBC;
 		case OAKLEY_SERPENT_CBC:
 			return ENCR_SERPENT_CBC;
 		case OAKLEY_TWOFISH_CBC:
@@ -491,7 +512,7 @@ int oakley_from_encryption_algorithm(encryption_algorithm_t alg)
 			return OAKLEY_CAMELLIA_CBC;
 		case ENCR_SERPENT_CBC:
 			return OAKLEY_SERPENT_CBC;
-    	case ENCR_TWOFISH_CBC:
+	case ENCR_TWOFISH_CBC:
 			return OAKLEY_TWOFISH_CBC;
 		default:
 			return 0;
@@ -561,7 +582,7 @@ int esp_from_encryption_algorithm(encryption_algorithm_t alg)
 			return ESP_CAMELLIA;
 		case ENCR_SERPENT_CBC:
 			return ESP_SERPENT;
-    	case ENCR_TWOFISH_CBC:
+	case ENCR_TWOFISH_CBC:
 			return ESP_TWOFISH;
 		default:
 			return 0;
@@ -581,12 +602,20 @@ int esp_from_integrity_algorithm(integrity_algorithm_t alg)
 			return AUTH_ALGORITHM_HMAC_SHA1;
 		case AUTH_AES_XCBC_96:
 			return AUTH_ALGORITHM_AES_XCBC_MAC;
+		case AUTH_HMAC_SHA2_256_96:
+			return AUTH_ALGORITHM_HMAC_SHA2_256_96;
 		case AUTH_HMAC_SHA2_256_128:
 			return AUTH_ALGORITHM_HMAC_SHA2_256;
 		case AUTH_HMAC_SHA2_384_192:
 			return AUTH_ALGORITHM_HMAC_SHA2_384;
 		case AUTH_HMAC_SHA2_512_256:
 			return AUTH_ALGORITHM_HMAC_SHA2_512;
+		case AUTH_AES_128_GMAC:
+			return AUTH_ALGORITHM_AES_128_GMAC;
+		case AUTH_AES_192_GMAC:
+			return AUTH_ALGORITHM_AES_192_GMAC;
+		case AUTH_AES_256_GMAC:
+			return AUTH_ALGORITHM_AES_256_GMAC;
 		default:
 			return 0;
 	}

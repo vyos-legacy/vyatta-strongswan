@@ -28,52 +28,52 @@ struct private_load_tester_config_t {
 	 * Public part
 	 */
 	load_tester_config_t public;
-	
+
 	/**
 	 * peer config
 	 */
 	peer_cfg_t *peer_cfg;
-	
+
 	/**
 	 * virtual IP, if any
 	 */
 	host_t *vip;
-	
+
 	/**
 	 * Remote address
 	 */
 	char *remote;
-	
+
 	/**
 	 * IP address pool
 	 */
 	char *pool;
-	
+
 	/**
- 	 * IKE proposal
- 	 */
+	 * IKE proposal
+	 */
 	proposal_t *proposal;
-	
+
 	/**
 	 * Authentication method(s) to use/expect from initiator
 	 */
 	char *initiator_auth;
-	
+
 	/**
 	 * Authentication method(s) use/expected from responder
 	 */
 	char *responder_auth;
-	
+
 	/**
 	 * IKE_SA rekeying delay
 	 */
 	u_int ike_rekey;
-	
+
 	/**
 	 * CHILD_SA rekeying delay
 	 */
 	u_int child_rekey;
-	
+
 	/**
 	 * incremental numbering of generated configs
 	 */
@@ -93,13 +93,13 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 	eap_type_t type;
 	char buf[128];
 	int rnd = 0;
-	
+
 	enumerator = enumerator_create_token(str, "|", " ");
 	while (enumerator->enumerate(enumerator, &str))
 	{
 		auth = auth_cfg_create();
 		rnd++;
-		
+
 		if (streq(str, "psk"))
 		{	/* PSK authentication, use FQDNs */
 			class = AUTH_CLASS_PSK;
@@ -181,7 +181,14 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	peer_cfg_t *peer_cfg;
 	traffic_selector_t *ts;
 	proposal_t *proposal;
-	
+	lifetime_cfg_t lifetime = {
+		.time = {
+			.life = this->child_rekey * 2,
+			.rekey = this->child_rekey,
+			.jitter = 0
+		}
+	};
+
 	ike_cfg = ike_cfg_create(FALSE, FALSE, "0.0.0.0", this->remote);
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
 	peer_cfg = peer_cfg_create("load-test", 2, ike_cfg,
@@ -201,9 +208,9 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		generate_auth_cfg(this, this->responder_auth, peer_cfg, TRUE, num);
 		generate_auth_cfg(this, this->initiator_auth, peer_cfg, FALSE, num);
 	}
-	child_cfg = child_cfg_create("load-test", this->child_rekey * 2,
-								 this->child_rekey, 0, NULL, TRUE,
-								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE);
+
+	child_cfg = child_cfg_create("load-test", &lifetime, NULL, TRUE,
+								 MODE_TUNNEL, ACTION_NONE, ACTION_NONE, FALSE, 0);
 	proposal = proposal_create_from_string(PROTO_ESP, "aes128-sha1");
 	child_cfg->add_proposal(child_cfg, proposal);
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
@@ -218,7 +225,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
  * Implementation of backend_t.create_peer_cfg_enumerator.
  */
 static enumerator_t* create_peer_cfg_enumerator(private_load_tester_config_t *this,
-												identification_t *me, 
+												identification_t *me,
 												identification_t *other)
 {
 	return enumerator_create_single(this->peer_cfg, NULL);
@@ -266,44 +273,44 @@ static void destroy(private_load_tester_config_t *this)
 load_tester_config_t *load_tester_config_create()
 {
 	private_load_tester_config_t *this = malloc_thing(private_load_tester_config_t);
-	
+
 	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
 	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
 	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
 	this->public.destroy = (void(*)(load_tester_config_t*))destroy;
-	
+
 	this->vip = NULL;
 	if (lib->settings->get_bool(lib->settings,
-				"charon.plugins.load_tester.request_virtual_ip", FALSE))
+				"charon.plugins.load-tester.request_virtual_ip", FALSE))
 	{
 		this->vip = host_create_from_string("0.0.0.0", 0);
 	}
 	this->pool = lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.pool", NULL);
-	this->remote = lib->settings->get_str(lib->settings, 
-				"charon.plugins.load_tester.remote", "127.0.0.1");
-				
+				"charon.plugins.load-tester.pool", NULL);
+	this->remote = lib->settings->get_str(lib->settings,
+				"charon.plugins.load-tester.remote", "127.0.0.1");
+
 	this->proposal = proposal_create_from_string(PROTO_IKE,
 			lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.proposal", "aes128-sha1-modp768"));
+				"charon.plugins.load-tester.proposal", "aes128-sha1-modp768"));
 	if (!this->proposal)
 	{	/* fallback */
 		this->proposal = proposal_create_from_string(PROTO_IKE,
 													 "aes128-sha1-modp768");
 	}
 	this->ike_rekey = lib->settings->get_int(lib->settings,
-				"charon.plugins.load_tester.ike_rekey", 0);
+				"charon.plugins.load-tester.ike_rekey", 0);
 	this->child_rekey = lib->settings->get_int(lib->settings,
-				"charon.plugins.load_tester.child_rekey", 600);
-	
+				"charon.plugins.load-tester.child_rekey", 600);
+
 	this->initiator_auth = lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.initiator_auth", "pubkey");
+				"charon.plugins.load-tester.initiator_auth", "pubkey");
 	this->responder_auth = lib->settings->get_str(lib->settings,
-				"charon.plugins.load_tester.responder_auth", "pubkey");
-	
+				"charon.plugins.load-tester.responder_auth", "pubkey");
+
 	this->num = 1;
 	this->peer_cfg = generate_config(this, 0);
-	
+
 	return &this->public;
 }
 

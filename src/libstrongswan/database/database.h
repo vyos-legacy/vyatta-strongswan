@@ -59,41 +59,41 @@ enum db_driver_t {
  * Interface for a database implementation.
  *
  * @code
-   int affected, rowid, aint;
-   char *atext;
-   database_t *db;
-   enumerator_t *enumerator;
-   
-   db = lib->database->create("mysql://user:pass@host/database");
-   affected = db->execute(db, &rowid, "INSERT INTO table VALUES (?, ?)",
-   						  DB_INT, 77, DB_TEXT, "a text");
-   printf("inserted %d row, new row ID: %d\n", affected, rowid);
-   
-   enumerator = db->query(db, "SELECT aint, atext FROM table WHERE aint > ?",
-   						  DB_INT, 10, 		// 1 argument to SQL string
-   						  DB_INT, DB_TEXT); // 2 enumerated types in query
-   if (enumerator)
-   {
-       while (enumerator->enumerate(enumerator, &aint, &atext))
-       {
-           printf("%d: %s\n", aint, atext);
-       }
-       enumerator->destroy(enumerator);
-   }
+	int affected, rowid, aint;
+	char *atext;
+	database_t *db;
+	enumerator_t *enumerator;
+
+	db = lib->database->create("mysql://user:pass@host/database");
+	affected = db->execute(db, &rowid, "INSERT INTO table VALUES (?, ?)",
+						   DB_INT, 77, DB_TEXT, "a text");
+	printf("inserted %d row, new row ID: %d\n", affected, rowid);
+
+	enumerator = db->query(db, "SELECT aint, atext FROM table WHERE aint > ?",
+						   DB_INT, 10, 		// 1 argument to SQL string
+						   DB_INT, DB_TEXT); // 2 enumerated types in query
+	if (enumerator)
+	{
+		while (enumerator->enumerate(enumerator, &aint, &atext))
+		{
+			printf("%d: %s\n", aint, atext);
+		}
+		enumerator->destroy(enumerator);
+	}
    @endcode
  */
 struct database_t {
-	
+
 	/**
 	 * Run a query which returns rows, such as a SELECT.
 	 *
 	 * @param sql		sql query string, containing '?' placeholders
 	 * @param ...		list of sql placeholder db_type_t followed by its value,
-	 *                  followed by enumerators arguments as db_type_t's
+	 *					followed by enumerators arguments as db_type_t's
 	 * @return			enumerator as defined with arguments, NULL on failure
 	 */
 	enumerator_t* (*query)(database_t *this, char *sql, ...);
-	
+
 	/**
 	 * Execute a query which dows not return rows, such as INSERT.
 	 *
@@ -103,7 +103,7 @@ struct database_t {
 	 * @return			number of affected rows, < 0 on failure
 	 */
 	int (*execute)(database_t *this, int *rowid, char *sql, ...);
-	
+
 	/**
 	 * Get the database implementation type.
 	 *
@@ -113,11 +113,11 @@ struct database_t {
 	 * @return			database implementation type
 	 */
 	db_driver_t (*get_driver)(database_t *this);
-	
+
 	/**
-     * Destroy a database connection.
-     */
-    void (*destroy)(database_t *this);
+	 * Destroy a database connection.
+	 */
+	void (*destroy)(database_t *this);
 };
 
 #endif /** DATABASE_H_ @}*/

@@ -11,10 +11,8 @@ medsrv_fcgi_LDADD = $(top_builddir)/src/libfast/libfast.la
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast
 AM_CFLAGS = -rdynamic \
-  -DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
   -DIPSECDIR=\"${ipsecdir}\" \
   -DIPSEC_PIDDIR=\"${piddir}\" \
-  -DIPSEC_PLUGINDIR=\"${plugindir}\"\
   -DPLUGINS=\""${libstrongswan_plugins}\""
 
 # Don't forget to add templates to EXTRA_DIST !!! How to automate?
@@ -24,10 +22,10 @@ medsrv_templates_DATA = templates/header.cs templates/footer.cs
 medsrv_templates_userdir = ${medsrv_templatesdir}/user
 medsrv_templates_user_DATA = templates/user/add.cs templates/user/edit.cs \
 templates/user/login.cs templates/user/help.cs
-  
+
 medsrv_templates_peerdir = ${medsrv_templatesdir}/peer
 medsrv_templates_peer_DATA = templates/peer/add.cs templates/peer/edit.cs \
-templates/peer/list.cs 
+templates/peer/list.cs
 
 medsrv_templates_staticdir = ${medsrv_templatesdir}/static
 medsrv_templates_static_DATA = templates/header.cs templates/footer.cs \

@@ -16,6 +16,8 @@
 #ifndef _CONSTANTS_H
 #define _CONSTANTS_H
 
+#include <freeswan.h>
+
 #include <utils.h>
 #include <utils/identification.h>
 #include <crypto/hashers/hasher.h>
@@ -135,19 +137,23 @@ extern const char sparse_end[];
  * and in http://www.iana.org/assignments/isakmp-registry
  */
 enum ipsec_authentication_algo {
-  AH_NONE         = 0,
-  AH_MD5          = 2,
-  AH_SHA          = 3,
-  AH_DES          = 4,
-  AH_SHA2_256     = 5,
-  AH_SHA2_384     = 6,
-  AH_SHA2_512     = 7,
-  AH_RIPEMD       = 8,
-  AH_AES_XCBC_MAC = 9,
-  AH_RSA          = 10
+	AH_NONE         = 0,
+	AH_MD5          = 2,
+	AH_SHA          = 3,
+	AH_DES          = 4,
+	AH_SHA2_256     = 5,
+	AH_SHA2_384     = 6,
+	AH_SHA2_512     = 7,
+	AH_RIPEMD       = 8,
+	AH_AES_XCBC_MAC = 9,
+	AH_RSA          = 10,
+	AH_AES_128_GMAC = 11,
+	AH_AES_192_GMAC = 12,
+	AH_AES_256_GMAC = 13,
+	AH_SHA2_256_96  = 252  
 };
 
-extern enum_names ah_transformid_names;
+extern enum_names ah_transform_names;
 
 /* IPsec ESP transform values
  * RFC2407 The Internet IP security Domain of Interpretation for ISAKMP 4.4.4
@@ -155,45 +161,45 @@ extern enum_names ah_transformid_names;
  */
 
 enum ipsec_cipher_algo {
-  ESP_NONE          = 0,
-  ESP_DES_IV64      = 1,
-  ESP_DES           = 2,
-  ESP_3DES          = 3,
-  ESP_RC5           = 4,
-  ESP_IDEA          = 5,
-  ESP_CAST          = 6,
-  ESP_BLOWFISH      = 7,
-  ESP_3IDEA         = 8,
-  ESP_DES_IV32      = 9,
-  ESP_RC4           = 10,
-  ESP_NULL          = 11,
-  ESP_AES           = 12,
-  ESP_AES_CTR       = 13,
-  ESP_AES_CCM_8     = 14,
-  ESP_AES_CCM_12    = 15,
-  ESP_AES_CCM_16    = 16,
-  ESP_UNASSIGNED_17 = 17,
-  ESP_AES_GCM_8     = 18,
-  ESP_AES_GCM_12    = 19,
-  ESP_AES_GCM_16    = 20,
-  ESP_SEED_CBC      = 21,
-  ESP_CAMELLIA      = 22,
-  ESP_SERPENT       = 252,
-  ESP_TWOFISH       = 253
+	ESP_NONE          = 0,
+	ESP_DES_IV64      = 1,
+	ESP_DES           = 2,
+	ESP_3DES          = 3,
+	ESP_RC5           = 4,
+	ESP_IDEA          = 5,
+	ESP_CAST          = 6,
+	ESP_BLOWFISH      = 7,
+	ESP_3IDEA         = 8,
+	ESP_DES_IV32      = 9,
+	ESP_RC4           = 10,
+	ESP_NULL          = 11,
+	ESP_AES           = 12,
+	ESP_AES_CTR       = 13,
+	ESP_AES_CCM_8     = 14,
+	ESP_AES_CCM_12    = 15,
+	ESP_AES_CCM_16    = 16,
+	ESP_UNASSIGNED_17 = 17,
+	ESP_AES_GCM_8     = 18,
+	ESP_AES_GCM_12    = 19,
+	ESP_AES_GCM_16    = 20,
+	ESP_SEED_CBC      = 21,
+	ESP_CAMELLIA      = 22,
+	ESP_SERPENT       = 252,
+	ESP_TWOFISH       = 253
 };
 
-extern enum_names esp_transformid_names;
+extern enum_names esp_transform_names;
 
 /* IPCOMP transform values
  * RFC2407 The Internet IP security Domain of Interpretation for ISAKMP 4.4.5
  */
 
 enum ipsec_comp_algo {
-  IPSCOMP_NONE   = 0,
-  IPCOMP_OUI     = 1,
-  IPCOMP_DEFLATE = 2,
-  IPCOMP_LZS     = 3,
-  IPCOMP_LZJH    = 4
+	IPSCOMP_NONE   = 0,
+	IPCOMP_OUI     = 1,
+	IPCOMP_DEFLATE = 2,
+	IPCOMP_LZS     = 3,
+	IPCOMP_LZJH    = 4
 };
 
 extern enum_names ipcomp_transformid_names;
@@ -202,18 +208,18 @@ extern enum_names ipcomp_transformid_names;
  * RFC 2408 ISAKMP, chapter 3.9
  */
 enum ipsec_cert_type {
-  CERT_NONE=                0,
-  CERT_PKCS7_WRAPPED_X509=  1,
-  CERT_PGP=                 2,
-  CERT_DNS_SIGNED_KEY=      3,
-  CERT_X509_SIGNATURE=      4,
-  CERT_X509_KEY_EXCHANGE=   5,
-  CERT_KERBEROS_TOKENS=     6,
-  CERT_CRL=                 7,
-  CERT_ARL=                 8,
-  CERT_SPKI=                9,
-  CERT_X509_ATTRIBUTE=      10,
-  CERT_RAW_RSA_KEY=         11
+	CERT_NONE=                0,
+	CERT_PKCS7_WRAPPED_X509=  1,
+	CERT_PGP=                 2,
+	CERT_DNS_SIGNED_KEY=      3,
+	CERT_X509_SIGNATURE=      4,
+	CERT_X509_KEY_EXCHANGE=   5,
+	CERT_KERBEROS_TOKENS=     6,
+	CERT_CRL=                 7,
+	CERT_ARL=                 8,
+	CERT_SPKI=                9,
+	CERT_X509_ATTRIBUTE=      10,
+	CERT_RAW_RSA_KEY=         11
 };
 
 /* RFC 2560 OCSP - certificate status */
@@ -224,21 +230,6 @@ typedef enum {
 	CERT_UNKNOWN =      2,
 	CERT_UNDEFINED =    3
 } cert_status_t;
-
-/* RFC 2459 CRL reason codes */
-
-extern enum_name_t *crl_reason_names;
-
-typedef enum {
-	REASON_UNSPECIFIED =                0,
-	REASON_KEY_COMPROMISE =             1,
-	REASON_CA_COMPROMISE =              2,
-	REASON_AFFILIATION_CHANGED =        3,
-	REASON_SUPERSEDED =                 4,
-	REASON_CESSATION_OF_OPERATON =      5,
-	REASON_CERTIFICATE_HOLD =           6,
-	REASON_REMOVE_FROM_CRL =            8
-} crl_reason_t;
 
 /* RFC 3706 Dead Peer Detection */
 
@@ -549,24 +540,6 @@ extern const char *const payload_name[];
 
 extern enum_names attr_msg_type_names;
 
-/* Mode Config attribute values */
-#define    INTERNAL_IP4_ADDRESS        1
-#define    INTERNAL_IP4_NETMASK        2
-#define    INTERNAL_IP4_DNS            3
-#define    INTERNAL_IP4_NBNS           4
-#define    INTERNAL_ADDRESS_EXPIRY     5
-#define    INTERNAL_IP4_DHCP           6
-#define    APPLICATION_VERSION         7
-#define    INTERNAL_IP6_ADDRESS        8
-#define    INTERNAL_IP6_NETMASK        9
-#define    INTERNAL_IP6_DNS           10
-#define    INTERNAL_IP6_NBNS          11
-#define    INTERNAL_IP6_DHCP          12
-#define    INTERNAL_IP4_SUBNET        13
-#define    SUPPORTED_ATTRIBUTES       14
-#define    INTERNAL_IP6_SUBNET        15
-
-
 extern enum_names modecfg_attr_names;
 
 /* XAUTH attribute values */
@@ -704,10 +677,10 @@ extern enum_name_t *cert_policy_names;
 
 typedef enum certpolicy {
 	CERT_ALWAYS_SEND   = 0,
-	CERT_SEND_IF_ASKED = 1, 
+	CERT_SEND_IF_ASKED = 1,
 	CERT_NEVER_SEND    = 2,
 
- 	CERT_YES_SEND      = 3,       /* synonym for CERT_ALWAYS_SEND */
+	CERT_YES_SEND      = 3,       /* synonym for CERT_ALWAYS_SEND */
 	CERT_NO_SEND       = 4        /* synonym for CERT_NEVER_SEND  */
 } certpolicy_t;
 
@@ -883,18 +856,22 @@ extern enum_names enc_mode_names;
 
 extern enum_names auth_alg_names, extended_auth_alg_names;
 
-#define AUTH_ALGORITHM_NONE             0  /* our private designation */
-#define AUTH_ALGORITHM_HMAC_MD5         1
-#define AUTH_ALGORITHM_HMAC_SHA1        2
-#define AUTH_ALGORITHM_DES_MAC          3
-#define AUTH_ALGORITHM_KPDK             4
-#define AUTH_ALGORITHM_HMAC_SHA2_256    5
-#define AUTH_ALGORITHM_HMAC_SHA2_384    6
-#define AUTH_ALGORITHM_HMAC_SHA2_512    7
-#define AUTH_ALGORITHM_HMAC_RIPEMD      8
-#define AUTH_ALGORITHM_AES_XCBC_MAC     9
-#define AUTH_ALGORITHM_SIG_RSA          10
-#define AUTH_ALGORITHM_NULL             251
+#define AUTH_ALGORITHM_NONE                0  /* our private designation */
+#define AUTH_ALGORITHM_HMAC_MD5            1
+#define AUTH_ALGORITHM_HMAC_SHA1           2
+#define AUTH_ALGORITHM_DES_MAC             3
+#define AUTH_ALGORITHM_KPDK                4
+#define AUTH_ALGORITHM_HMAC_SHA2_256       5
+#define AUTH_ALGORITHM_HMAC_SHA2_384       6
+#define AUTH_ALGORITHM_HMAC_SHA2_512       7
+#define AUTH_ALGORITHM_HMAC_RIPEMD         8
+#define AUTH_ALGORITHM_AES_XCBC_MAC        9
+#define AUTH_ALGORITHM_SIG_RSA            10
+#define AUTH_ALGORITHM_AES_128_GMAC       11
+#define AUTH_ALGORITHM_AES_192_GMAC       12
+#define AUTH_ALGORITHM_AES_256_GMAC       13
+#define AUTH_ALGORITHM_NULL              251
+#define AUTH_ALGORITHM_HMAC_SHA2_256_96  252
 
 /* Oakley Lifetime Type attribute
  * draft-ietf-ipsec-ike-01.txt appendix A
@@ -1026,52 +1003,55 @@ extern enum_names notification_names;
 extern enum_names ipsec_notification_names;
 
 typedef enum {
-	NOTHING_WRONG =             0,  /* unofficial! */
+	ISAKMP_NOTHING_WRONG =              0,  /* unofficial! */
 
-	INVALID_PAYLOAD_TYPE =       1,
-	DOI_NOT_SUPPORTED =          2,
-	SITUATION_NOT_SUPPORTED =    3,
-	INVALID_COOKIE =             4,
-	INVALID_MAJOR_VERSION =      5,
-	INVALID_MINOR_VERSION =      6,
-	INVALID_EXCHANGE_TYPE =      7,
-	INVALID_FLAGS =              8,
-	INVALID_MESSAGE_ID =         9,
-	INVALID_PROTOCOL_ID =       10,
-	INVALID_SPI =               11,
-	INVALID_TRANSFORM_ID =      12,
-	ATTRIBUTES_NOT_SUPPORTED =  13,
-	NO_PROPOSAL_CHOSEN =        14,
-	BAD_PROPOSAL_SYNTAX =       15,
-	PAYLOAD_MALFORMED =         16,
-	INVALID_KEY_INFORMATION =   17,
-	INVALID_ID_INFORMATION =    18,
-	INVALID_CERT_ENCODING =     19,
-	INVALID_CERTIFICATE =       20,
-	CERT_TYPE_UNSUPPORTED =     21,
-	INVALID_CERT_AUTHORITY =    22,
-	INVALID_HASH_INFORMATION =  23,
-	AUTHENTICATION_FAILED =     24,
-	INVALID_SIGNATURE =         25,
-	ADDRESS_NOTIFICATION =      26,
-	NOTIFY_SA_LIFETIME =        27,
-	CERTIFICATE_UNAVAILABLE =   28,
-	UNSUPPORTED_EXCHANGE_TYPE = 29,
-	UNEQUAL_PAYLOAD_LENGTHS =   30,
+	ISAKMP_INVALID_PAYLOAD_TYPE =       1,
+	ISAKMP_DOI_NOT_SUPPORTED =          2,
+	ISAKMP_SITUATION_NOT_SUPPORTED =    3,
+	ISAKMP_INVALID_COOKIE =             4,
+	ISAKMP_INVALID_MAJOR_VERSION =      5,
+	ISAKMP_INVALID_MINOR_VERSION =      6,
+	ISAKMP_INVALID_EXCHANGE_TYPE =      7,
+	ISAKMP_INVALID_FLAGS =              8,
+	ISAKMP_INVALID_MESSAGE_ID =         9,
+	ISAKMP_INVALID_PROTOCOL_ID =       10,
+	ISAKMP_INVALID_SPI =               11,
+	ISAKMP_INVALID_TRANSFORM_ID =      12,
+	ISAKMP_ATTRIBUTES_NOT_SUPPORTED =  13,
+	ISAKMP_NO_PROPOSAL_CHOSEN =        14,
+	ISAKMP_BAD_PROPOSAL_SYNTAX =       15,
+	ISAKMP_PAYLOAD_MALFORMED =         16,
+	ISAKMP_INVALID_KEY_INFORMATION =   17,
+	ISAKMP_INVALID_ID_INFORMATION =    18,
+	ISAKMP_INVALID_CERT_ENCODING =     19,
+	ISAKMP_INVALID_CERTIFICATE =       20,
+	ISAKMP_CERT_TYPE_UNSUPPORTED =     21,
+	ISAKMP_INVALID_CERT_AUTHORITY =    22,
+	ISAKMP_INVALID_HASH_INFORMATION =  23,
+	ISAKMP_AUTHENTICATION_FAILED =     24,
+	ISAKMP_INVALID_SIGNATURE =         25,
+	ISAKMP_ADDRESS_NOTIFICATION =      26,
+	ISAKMP_NOTIFY_SA_LIFETIME =        27,
+	ISAKMP_CERTIFICATE_UNAVAILABLE =   28,
+	ISAKMP_UNSUPPORTED_EXCHANGE_TYPE = 29,
+	ISAKMP_UNEQUAL_PAYLOAD_LENGTHS =   30,
 
 	/* ISAKMP status type */
-	CONNECTED =              16384,
+	ISAKMP_CONNECTED =              16384,
 
 	/* IPSEC DOI additions; status types (RFC2407 IPSEC DOI 4.6.3)
 	 * These must be sent under the protection of an ISAKMP SA.
 	 */
-	IPSEC_RESPONDER_LIFETIME = 24576,
-	IPSEC_REPLAY_STATUS =      24577,
-	IPSEC_INITIAL_CONTACT =    24578,
+	IPSEC_RESPONDER_LIFETIME =      24576,
+	IPSEC_REPLAY_STATUS =           24577,
+	IPSEC_INITIAL_CONTACT =         24578,
 
 	/* RFC 3706 DPD */
-	R_U_THERE =                36136,
-	R_U_THERE_ACK =            36137
+	R_U_THERE =                     36136,
+	R_U_THERE_ACK =                 36137,
+
+	/* Juniper SRX private use */
+	NS_NHTB_INFORM =                40001
 
 	} notification_t;
 

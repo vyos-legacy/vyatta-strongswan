@@ -19,9 +19,6 @@
  * @defgroup asn1 asn1
  * @ingroup libstrongswan
  *
- * @defgroup pgp pgp
- * @ingroup libstrongswan
- *
  * @defgroup credentials credentials
  * @ingroup libstrongswan
  *
@@ -41,6 +38,9 @@
  * @ingroup libstrongswan
  *
  * @defgroup plugins plugins
+ * @ingroup libstrongswan
+ *
+ * @defgroup threading threading
  * @ingroup libstrongswan
  *
  * @defgroup utils utils
@@ -63,8 +63,10 @@
 #include <plugins/plugin_loader.h>
 #include <crypto/crypto_factory.h>
 #include <fetcher/fetcher_manager.h>
+#include <attributes/attribute_manager.h>
 #include <database/database_factory.h>
 #include <credentials/credential_factory.h>
+#include <credentials/keys/key_encoding.h>
 
 typedef struct library_t library_t;
 
@@ -77,42 +79,52 @@ struct library_t {
 	 * Printf hook registering facility
 	 */
 	printf_hook_t *printf_hook;
-	
+
 	/**
 	 * crypto algorithm registry and factory
 	 */
 	crypto_factory_t *crypto;
-	
+
 	/**
 	 * credential constructor registry and factory
 	 */
 	credential_factory_t *creds;
-	
+
+	/**
+	 * key encoding registry and factory
+	 */
+	key_encoding_t *encoding;
+
 	/**
 	 * URL fetching facility
 	 */
 	fetcher_manager_t *fetcher;
-	
+
+	/**
+	 * manager for payload attributes
+	 */
+	attribute_manager_t *attributes;
+
 	/**
 	 * database construction factory
 	 */
 	database_factory_t *db;
-	
+
 	/**
 	 * plugin loading facility
 	 */
 	plugin_loader_t *plugins;
-	
+
 	/**
 	 * various settings loaded from settings file
 	 */
 	settings_t *settings;
-	
+
 	/**
 	 * integrity checker to verify code integrity
 	 */
 	integrity_checker_t *integrity;
-	
+
 	/**
 	 * is leak detective running?
 	 */

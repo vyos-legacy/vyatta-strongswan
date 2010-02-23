@@ -30,7 +30,7 @@ struct private_migrate_job_t {
 	 * Public migrate_job_t interface.
 	 */
 	migrate_job_t public;
-	
+
 	/**
 	 * reqid of the CHILD_SA if it already exists
 	 */
@@ -75,7 +75,7 @@ static void destroy(private_migrate_job_t *this)
 static void execute(private_migrate_job_t *this)
 {
 	ike_sa_t *ike_sa = NULL;
-	
+
 	if (this->reqid)
 	{
 		ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
@@ -110,7 +110,7 @@ static void execute(private_migrate_job_t *this)
 
 		if (child_sa->update(child_sa, this->local, this->remote,
 				ike_sa->get_virtual_ip(ike_sa, TRUE),
-			 	ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
+				ike_sa->has_condition(ike_sa, COND_NAT_ANY)) == NOT_SUPPORTED)
 		{
 			ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 								   child_sa->get_spi(child_sa, TRUE));
@@ -134,17 +134,17 @@ migrate_job_t *migrate_job_create(u_int32_t reqid,
 								  host_t *local, host_t *remote)
 {
 	private_migrate_job_t *this = malloc_thing(private_migrate_job_t);
-	
+
 	/* interface functions */
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-	
+
 	/* private variables */
 	this->reqid = reqid;
 	this->src_ts = (dir == POLICY_OUT) ? src_ts : dst_ts;
 	this->dst_ts = (dir == POLICY_OUT) ? dst_ts : src_ts;
 	this->local = local;
 	this->remote = remote;
-	
+
 	return &this->public;
 }

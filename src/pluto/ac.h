@@ -1,7 +1,7 @@
 /* Support of X.509 attribute certificates
  * Copyright (C) 2002 Ueli Galizzi, Ariane Seiler
  * Copyright (C) 2003 Martin Berner, Lukas Suter
-
+ * Copyright (C) 2009 Andreas Steffen
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,85 +17,23 @@
 #ifndef _AC_H
 #define _AC_H
 
-/* definition of ietfAttribute kinds */
-
-typedef enum {
-	IETF_ATTRIBUTE_OCTETS =     0,
-	IETF_ATTRIBUTE_OID =        1,
-	IETF_ATTRIBUTE_STRING =     2
-} ietfAttribute_t;
-
-/* access structure for an ietfAttribute */
-
-typedef struct ietfAttr ietfAttr_t;
-
-struct ietfAttr {
-  time_t           installed;
-  int              count;
-  ietfAttribute_t  kind;
-  chunk_t          value;
-};
-
-typedef struct ietfAttrList ietfAttrList_t;
-
-struct ietfAttrList {
-  ietfAttrList_t   *next;
-  ietfAttr_t       *attr;
-};
-
+#include <utils/identification.h>
+#include <credentials/certificates/certificate.h>
+#include <credentials/ietf_attributes/ietf_attributes.h>
 
 /* access structure for an X.509 attribute certificate */
 
-typedef struct x509acert x509acert_t;
+extern void ac_initialize(void);
+extern void ac_finalize(void);
+extern void ac_load_certs(void);
+extern void ac_list_certs(bool utc);
 
-struct x509acert {
-  x509acert_t    *next;
-  time_t         installed;
-  chunk_t        certificate;
-  chunk_t          certificateInfo;
-  u_int              version;
-				/*   holder */
-				/*     baseCertificateID */
-  chunk_t                holderIssuer;
-  chunk_t                holderSerial;
-  chunk_t                entityName;
-				/*   v2Form */
-  chunk_t              issuerName;
-				/*   signature */
-  int                  sigAlg;
-  chunk_t            serialNumber;
-				/*   attrCertValidityPeriod */
-  time_t               notBefore;
-  time_t               notAfter;
-				/*   attributes */
-  ietfAttrList_t       *charging;
-  ietfAttrList_t       *groups;
-				/*   extensions */
-  chunk_t              authKeyID;
-  chunk_t              authKeySerialNumber;
-  bool                 noRevAvail;
-				/* signatureAlgorithm */
-  int                algorithm;
-  chunk_t          signature;
-};
+extern certificate_t* ac_get_cert(identification_t *issuer, chunk_t serial);
 
-/* used for initialization */
-extern const x509acert_t empty_ac;
+extern bool ac_verify_cert(certificate_t *ac, bool strict);
 
-extern void unshare_ietfAttrList(ietfAttrList_t **listp);
-extern void free_ietfAttrList(ietfAttrList_t *list);
-extern void decode_groups(char *groups, ietfAttrList_t **listp);
-extern bool group_membership(const ietfAttrList_t *my_list
-	, const char *conn, const ietfAttrList_t *conn_list);
-extern bool parse_ac(chunk_t blob, x509acert_t *ac);
-extern bool verify_x509acert(x509acert_t *ac, bool strict);
-extern x509acert_t* get_x509acert(chunk_t issuer, chunk_t serial);
-extern void load_acerts(void);
-extern void free_acert(x509acert_t *ac);
-extern void free_acerts(void);
-extern void list_acerts(bool utc);
-extern void list_groups(bool utc);
-extern void format_groups(const ietfAttrList_t *list, char *buf, int len);
+extern bool match_group_membership(ietf_attributes_t *peer_attributes,
+								   char *conn,
+								   ietf_attributes_t *conn_attributes);
 
-
-#endif /* _AH_H */
+#endif /* _AC_H */

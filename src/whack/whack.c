@@ -393,7 +393,7 @@ enum {
 	END_SRCIP,
 	END_HOSTACCESS,
 	END_UPDOWN,
-		
+
 #define END_LAST  END_UPDOWN    /* last end description*/
 
 /* Connection Description options -- segregated */
@@ -431,7 +431,7 @@ enum {
 	CD_DPDTIMEOUT,
 	CD_IKE,
 	CD_PFSGROUP,
-	CD_ESP,     
+	CD_ESP,
 
 #   define CD_LAST CD_ESP       /* last connection description */
 
@@ -861,7 +861,7 @@ int main(int argc, char **argv)
 
 	msg.addr_family = AF_INET;
 	msg.tunnel_addr_family = AF_INET;
-	
+
 	msg.cacert = NULL;
 	msg.ldaphost = NULL;
 	msg.ldapbase = NULL;
@@ -1017,7 +1017,7 @@ int main(int argc, char **argv)
 			if (!options->from(options, optarg, &argc, &argv, optind))
 			{
 				fprintf(stderr, "optionsfrom failed");
-				whack_exit(RC_WHACK_PROBLEM);				
+				whack_exit(RC_WHACK_PROBLEM);
 			}
 			continue;
 
@@ -1134,7 +1134,7 @@ int main(int argc, char **argv)
 		case OPT_STATUS:        /* --status */
 			msg.whack_status = TRUE;
 			continue;
-		
+
 		case OPT_SHUTDOWN:      /* --shutdown */
 			msg.whack_shutdown = TRUE;
 			continue;
@@ -1180,7 +1180,7 @@ int main(int argc, char **argv)
 					base = 256;
 				else
 					diagq("not a valid base", optarg);
-				
+
 				if (c == SC_INBASE)
 					msg.inbase = base;
 				else
@@ -1472,7 +1472,7 @@ int main(int argc, char **argv)
 		case CD_IKE:    /* --ike <ike_alg1,ike_alg2,...> */
 			msg.ike = optarg;
 			continue;
-			
+
 		case CD_PFSGROUP:       /* --pfsgroup modpXXXX */
 			msg.pfsgroup = optarg;
 			continue;
@@ -1726,10 +1726,10 @@ int main(int argc, char **argv)
 	{
 		if (msg.dpd_delay <= 0)
 			diag("dpddelay must be larger than zero");
-		
+
 		if (msg.dpd_timeout <= 0)
 			diag("dpdtimeout must be larger than zero");
-		
+
 		if (msg.dpd_timeout <= msg.dpd_delay)
 			diag("dpdtimeout must be larger than dpddelay");
 	}
@@ -1740,36 +1740,38 @@ int main(int argc, char **argv)
 
 	/* build esp message as esp="<esp>;<pfsgroup>" */
 	if (msg.pfsgroup) {
-			snprintf(esp_buf, sizeof (esp_buf), "%s;%s", 
+			snprintf(esp_buf, sizeof (esp_buf), "%s;%s",
 					msg.esp ? msg.esp : "",
 					msg.pfsgroup ? msg.pfsgroup : "");
 			msg.esp=esp_buf;
 	}
-	if (!pack_str(&msg.name)            /* string  1 */
-	|| !pack_str(&msg.left.id)          /* string  2 */
-	|| !pack_str(&msg.left.cert)        /* string  3 */
-	|| !pack_str(&msg.left.ca)          /* string  4 */
-	|| !pack_str(&msg.left.groups)      /* string  5 */
-	|| !pack_str(&msg.left.updown)      /* string  6 */
-	|| !pack_str(&msg.left.virt)        /* string  7 */
-	|| !pack_str(&msg.right.id)         /* string  8 */
-	|| !pack_str(&msg.right.cert)       /* string  9 */
-	|| !pack_str(&msg.right.ca)         /* string 10 */
-	|| !pack_str(&msg.right.groups)     /* string 11 */
-	|| !pack_str(&msg.right.updown)     /* string 12 */
-	|| !pack_str(&msg.right.virt)       /* string 13 */
-	|| !pack_str(&msg.keyid)            /* string 14 */
-	|| !pack_str(&msg.myid)             /* string 15 */
-	|| !pack_str(&msg.cacert)           /* string 16 */
-	|| !pack_str(&msg.ldaphost)         /* string 17 */
-	|| !pack_str(&msg.ldapbase)         /* string 18 */
-	|| !pack_str(&msg.crluri)           /* string 19 */
-	|| !pack_str(&msg.crluri2)          /* string 20 */
-	|| !pack_str(&msg.ocspuri)          /* string 21 */
-	|| !pack_str(&msg.ike)              /* string 22 */
-	|| !pack_str(&msg.esp)              /* string 23 */
-	|| !pack_str(&msg.sc_data)          /* string 24 */
-	|| str_roof - next_str < (ptrdiff_t)msg.keyval.len)    /* chunk (sort of string 5) */
+	if (!pack_str(&msg.name)             /* string  1 */
+	||  !pack_str(&msg.left.id)          /* string  2 */
+	||  !pack_str(&msg.left.cert)        /* string  3 */
+	||  !pack_str(&msg.left.ca)          /* string  4 */
+	||  !pack_str(&msg.left.groups)      /* string  5 */
+	||  !pack_str(&msg.left.updown)      /* string  6 */
+	||  !pack_str(&msg.left.sourceip)    /* string  7 */
+	||  !pack_str(&msg.left.virt)        /* string  8 */
+	||  !pack_str(&msg.right.id)         /* string  9 */
+	||  !pack_str(&msg.right.cert)       /* string 10 */
+	||  !pack_str(&msg.right.ca)         /* string 11 */
+	||  !pack_str(&msg.right.groups)     /* string 12 */
+	||  !pack_str(&msg.right.updown)     /* string 13 */
+	||  !pack_str(&msg.right.sourceip)   /* string 14 */
+	||  !pack_str(&msg.right.virt)       /* string 15 */
+	||  !pack_str(&msg.keyid)            /* string 16 */
+	||  !pack_str(&msg.myid)             /* string 17 */
+	||  !pack_str(&msg.cacert)           /* string 18 */
+	||  !pack_str(&msg.ldaphost)         /* string 19 */
+	||  !pack_str(&msg.ldapbase)         /* string 20 */
+	||  !pack_str(&msg.crluri)           /* string 21 */
+	||  !pack_str(&msg.crluri2)          /* string 22 */
+	||  !pack_str(&msg.ocspuri)          /* string 23 */
+	||  !pack_str(&msg.ike)              /* string 24 */
+	||  !pack_str(&msg.esp)              /* string 25 */
+	||  !pack_str(&msg.sc_data)          /* string 26 */
+	||  str_roof - next_str < (ptrdiff_t)msg.keyval.len)
 		diag("too many bytes of strings to fit in message to pluto");
 
 	memcpy(next_str, msg.keyval.ptr, msg.keyval.len);

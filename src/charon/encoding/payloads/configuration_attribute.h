@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,12 +22,11 @@
 #ifndef CONFIGURATION_ATTRIBUTE_H_
 #define CONFIGURATION_ATTRIBUTE_H_
 
-typedef enum configuration_attribute_type_t configuration_attribute_type_t;
 typedef struct configuration_attribute_t configuration_attribute_t;
 
 #include <library.h>
+#include <attributes/attributes.h>
 #include <encoding/payloads/payload.h>
-
 
 /**
  * Configuration attribute header length in bytes.
@@ -35,83 +34,31 @@ typedef struct configuration_attribute_t configuration_attribute_t;
 #define CONFIGURATION_ATTRIBUTE_HEADER_LENGTH 4
 
 /**
- * Type of the attribute, as in IKEv2 RFC 3.15.1.
- */
-enum configuration_attribute_type_t {
-	INTERNAL_IP4_ADDRESS = 1,
-	INTERNAL_IP4_NETMASK = 2,
-	INTERNAL_IP4_DNS = 3,
-	INTERNAL_IP4_NBNS = 4,
-	INTERNAL_ADDRESS_EXPIRY = 5,
-	INTERNAL_IP4_DHCP = 6,
-	APPLICATION_VERSION = 7,
-	INTERNAL_IP6_ADDRESS = 8,
-	INTERNAL_IP6_DNS = 10,
-	INTERNAL_IP6_NBNS = 11,
-	INTERNAL_IP6_DHCP = 12,
-	INTERNAL_IP4_SUBNET = 13,
-	SUPPORTED_ATTRIBUTES = 14,
-	INTERNAL_IP6_SUBNET = 15,
-	/* proprietary Microsoft attributes */
-	INTERNAL_IP4_SERVER = 23456,
-	INTERNAL_IP6_SERVER = 23457
-};
-
-/** 
- * enum names for configuration_attribute_type_t.
- */
-extern enum_name_t *configuration_attribute_type_names;
-
-/**
  * Class representing an IKEv2-CONFIGURATION Attribute.
- * 
+ *
  * The CONFIGURATION ATTRIBUTE format is described in RFC section 3.15.1.
  */
 struct configuration_attribute_t {
+
 	/**
-	 * The payload_t interface.
+	 * Implements payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
-	 * Returns the currently set value of the attribute.
-	 * 	
-	 * @warning Returned data are not copied.
-	 * 
-	 * @return 		chunk_t pointing to the value
+	 * Get the type of the attribute.
+	 *
+	 * @return 		type of the configuration attribute
 	 */
-	chunk_t (*get_value) (configuration_attribute_t *this);
-	
-	/**
-	 * Sets the value of the attribute.
-	 * 	
-	 * Value is getting copied.
-	 * 
-	 * @param value chunk_t pointing to the value to set
-	 */
-	void (*set_value) (configuration_attribute_t *this, chunk_t value);
+	configuration_attribute_type_t (*get_type)(configuration_attribute_t *this);
 
 	/**
-	 * Sets the type of the attribute.
-	 * 	
-	 * @param type	type to set (most significant bit is set to zero)
+	 * Returns the value of the attribute.
+	 *
+	 * @return 		chunk_t pointing to the internal value
 	 */
-	void (*set_type) (configuration_attribute_t *this, u_int16_t type);
-	
-	/**
-	 * get the type of the attribute.
-	 * 	
-	 * @return 		type of the value
-	 */
-	u_int16_t (*get_type) (configuration_attribute_t *this);
-	
-	/**
-	 * get the length of an attribute.
-	 * 	
-	 * @return 		type of the value
-	 */
-	u_int16_t (*get_length) (configuration_attribute_t *this);
-	
+	chunk_t (*get_value) (configuration_attribute_t *this);
+
 	/**
 	 * Destroys an configuration_attribute_t object.
 	 */
@@ -119,10 +66,20 @@ struct configuration_attribute_t {
 };
 
 /**
- * Creates an empty configuration_attribute_t object.
- * 
- * @return			created configuration_attribute_t object
+ * Creates an empty configuration attribute.
+ *
+ * @return		created configuration attribute
  */
-configuration_attribute_t *configuration_attribute_create(void);
+configuration_attribute_t *configuration_attribute_create();
+
+/**
+ * Creates a configuration attribute with type and value.
+ *
+ * @param type	type of configuration attribute
+ * @param value	value, gets cloned
+ * @return		created configuration attribute
+ */
+configuration_attribute_t *configuration_attribute_create_value(
+							configuration_attribute_type_t type, chunk_t value);
 
 #endif /** CONFIGURATION_ATTRIBUTE_H_ @}*/

@@ -41,18 +41,22 @@
 #include <asn1/oid.h>
 #include <utils/optionsfrom.h>
 #include <utils/enumerator.h>
+#include <utils/linked_list.h>
+#include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/proposal/proposal_keywords.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/public_key.h>
+#include <credentials/certificates/certificate.h>
+#include <credentials/certificates/x509.h>
+#include <credentials/certificates/pkcs10.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
-#include "../pluto/pkcs7.h"
 #include "../pluto/certs.h"
+#include "../pluto/pkcs7.h"
 
-#include "pkcs10.h"
 #include "scep.h"
 
 /*
@@ -121,26 +125,27 @@ options_t *options;
  * Global variables
  */
 
-private_key_t *private_key = NULL;
-public_key_t *public_key = NULL;
-
 chunk_t pkcs1;
 chunk_t pkcs7;
-chunk_t subject;
 chunk_t challengePassword;
 chunk_t serialNumber;
 chunk_t transID;
 chunk_t fingerprint;
+chunk_t encoding;
+chunk_t pkcs10_encoding;
 chunk_t issuerAndSubject;
 chunk_t getCertInitial;
 chunk_t scep_response;
-cert_t cert;
 
-x509cert_t *x509_signer        = NULL;
-x509cert_t *x509_ca_enc        = NULL;
-x509cert_t *x509_ca_sig        = NULL;
-generalName_t *subjectAltNames = NULL;
-pkcs10_t *pkcs10               = NULL;
+linked_list_t *subjectAltNames;
+
+identification_t *subject      = NULL;
+private_key_t *private_key     = NULL;
+public_key_t *public_key       = NULL;
+certificate_t *x509_signer     = NULL;
+certificate_t *x509_ca_enc     = NULL;
+certificate_t *x509_ca_sig     = NULL;
+certificate_t *pkcs10_req      = NULL;
 
 /**
  * @brief exit scepclient
@@ -152,27 +157,25 @@ exit_scepclient(err_t message, ...)
 {
 	int status = 0;
 
+	DESTROY_IF(subject);
 	DESTROY_IF(private_key);
 	DESTROY_IF(public_key);
+	DESTROY_IF(x509_signer);
+	DESTROY_IF(x509_ca_enc);
+	DESTROY_IF(x509_ca_sig);
+	DESTROY_IF(pkcs10_req);
+	subjectAltNames->destroy_offset(subjectAltNames,
+								   offsetof(identification_t, destroy));
 	free(pkcs1.ptr);
 	free(pkcs7.ptr);
-	free(subject.ptr);
 	free(serialNumber.ptr);
 	free(transID.ptr);
 	free(fingerprint.ptr);
+	free(encoding.ptr);
+	free(pkcs10_encoding.ptr);
 	free(issuerAndSubject.ptr);
 	free(getCertInitial.ptr);
 	free(scep_response.ptr);
-
-	free_generalNames(subjectAltNames, TRUE);
-	if (x509_signer != NULL)
-	{
-		x509_signer->subjectAltName = NULL;
-	}
-	free_x509cert(x509_signer);
-	free_x509cert(x509_ca_enc);
-	free_x509cert(x509_ca_sig);
-	pkcs10_free(pkcs10);
 	options->destroy(options);
 
 	/* print any error message to stderr */
@@ -279,7 +282,7 @@ static void print_plugins()
 	char buf[BUF_LEN], *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
-	
+
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{
@@ -357,8 +360,8 @@ int main(int argc, char **argv)
 	/* digest algorithm used by pkcs7, default is SHA-1 */
 	int pkcs7_digest_alg = OID_SHA1;
 
-	/* signature algorithm used by pkcs10, default is SHA-1 with RSA encryption */
-	int pkcs10_signature_alg = OID_SHA1;
+	/* signature algorithm used by pkcs10, default is SHA-1 */
+	hash_algorithm_t pkcs10_signature_alg = HASH_SHA1;
 
 	/* URL of the SCEP-Server */
 	char *scep_url = NULL;
@@ -374,20 +377,8 @@ int main(int argc, char **argv)
 
 	err_t ugh = NULL;
 
-	/* initialize global variables */
-	pkcs1             = chunk_empty;
-	pkcs7             = chunk_empty;
-	serialNumber      = chunk_empty;
-	transID           = chunk_empty;
-	fingerprint       = chunk_empty;
-	issuerAndSubject  = chunk_empty;
-	challengePassword = chunk_empty;
-	getCertInitial    = chunk_empty;
-	scep_response     = chunk_empty;
-	log_to_stderr     = TRUE;
-
 	/* initialize library */
-	if (!library_init(STRONGSWAN_CONF))
+	if (!library_init(NULL))
 	{
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
@@ -400,8 +391,21 @@ int main(int argc, char **argv)
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 
-	/* initialize optionsfrom */
-	options = options_create();
+	/* initialize global variables */
+	pkcs1             = chunk_empty;
+	pkcs7             = chunk_empty;
+	serialNumber      = chunk_empty;
+	transID           = chunk_empty;
+	fingerprint       = chunk_empty;
+	encoding          = chunk_empty;
+	pkcs10_encoding   = chunk_empty; 
+	issuerAndSubject  = chunk_empty;
+	challengePassword = chunk_empty;
+	getCertInitial    = chunk_empty;
+	scep_response     = chunk_empty;
+	subjectAltNames   = linked_list_create();
+	options           = options_create();
+	log_to_stderr     = TRUE;
 
 	for (;;)
 	{
@@ -544,7 +548,7 @@ int main(int argc, char **argv)
 				}
 				continue;
 			}
-		
+
 		case 'f':       /* --force */
 			force = TRUE;
 			continue;
@@ -614,7 +618,6 @@ int main(int argc, char **argv)
 
 		case 's':       /* --subjectAltName */
 			{
-				generalNames_t kind;
 				char *value = strstr(optarg, "=");
 
 				if (value)
@@ -625,25 +628,19 @@ int main(int argc, char **argv)
 					value++;
 				}
 
-				if (strcaseeq("email", optarg))
-				{       
-					kind = GN_RFC822_NAME;
-				}
-				else if (strcaseeq("dns", optarg))
+				if (strcaseeq("email", optarg) ||
+					strcaseeq("dns", optarg)   ||
+					strcaseeq("ip", optarg))
 				{
-					kind = GN_DNS_NAME;
-				}
-				else if (strcaseeq("ip", optarg))
-				{
-					kind = GN_IP_ADDRESS;
+					subjectAltNames->insert_last(subjectAltNames,
+								 identification_create_from_string(value));
+					continue;
 				}
 				else
 				{
 					usage("invalid --subjectAltName type");
 					continue;
 				}
-				pkcs10_add_subjectAltName(&subjectAltNames, kind, value);
-				continue;
 			}
 
 		case 'p':       /* --password */
@@ -748,7 +745,7 @@ int main(int argc, char **argv)
 			base_debugging |= DBG_PRIVATE;
 			continue;
 #endif
-		default: 
+		default:
 			usage("unknown option");
 		}
 		/* break from loop */
@@ -759,8 +756,11 @@ int main(int argc, char **argv)
 	init_log("scepclient");
 
 	/* load plugins, further infrastructure may need it */
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "scepclient.load", PLUGINS));
+	if (!lib->plugins->load(lib->plugins, NULL,
+			lib->settings->get_str(lib->settings, "scepclient.load", PLUGINS)))
+	{
+		exit_scepclient("plugin loading failed");
+	}
 	print_plugins();
 
 	if ((filetype_out == 0) && (!request_ca_certificate))
@@ -787,18 +787,18 @@ int main(int argc, char **argv)
 	/*
 	 * input of PKCS#1 file
 	 */
-	if (filetype_in & PKCS1)    /* load an RSA key pair from file */ 
+	if (filetype_in & PKCS1)    /* load an RSA key pair from file */
 	{
-		prompt_pass_t pass = { "", FALSE, STDIN_FILENO };
 		char *path = concatenate_paths(PRIVATE_KEY_PATH, file_in_pkcs1);
 
-		private_key = load_private_key(path, &pass, KEY_RSA);
+		private_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+										 BUILD_FROM_FILE, path, BUILD_END);
 	}
 	else                                /* generate an RSA key pair */
 	{
 		private_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 										 BUILD_KEY_SIZE, rsa_keylength,
- 										 BUILD_END);
+										 BUILD_END);
 	}
 	if (private_key == NULL)
 	{
@@ -828,11 +828,6 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		char buf[IDTOA_BUF];
-		chunk_t dn = chunk_empty;
-
-		dn.ptr = buf;
-
 		if (distinguishedName == NULL)
 		{
 			char buf[BUF_LEN];
@@ -850,34 +845,43 @@ int main(int argc, char **argv)
 		DBG(DBG_CONTROL,
 			DBG_log("dn: '%s'", distinguishedName);
 		)
-		ugh = atodn(distinguishedName, &dn);
-		if (ugh != NULL)
+		subject = identification_create_from_string(distinguishedName);
+		if (subject->get_type(subject) != ID_DER_ASN1_DN)
 		{
-			exit_scepclient(ugh);
+			exit_scepclient("parsing of distinguished name failed");
 		}
-
-		subject = chunk_clone(dn);
 
 		DBG(DBG_CONTROL,
 			DBG_log("building pkcs10 object:")
 		)
-		pkcs10 = pkcs10_build(private_key, public_key, subject,
-							  challengePassword, subjectAltNames,
-							  pkcs10_signature_alg);
-		fingerprint = scep_generate_pkcs10_fingerprint(pkcs10->request);
+		pkcs10_req = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+						CERT_PKCS10_REQUEST,
+						BUILD_SIGNING_KEY, private_key,
+						BUILD_SUBJECT, subject,
+						BUILD_SUBJECT_ALTNAMES, subjectAltNames,
+						BUILD_PASSPHRASE, challengePassword,
+						BUILD_DIGEST_ALG, pkcs10_signature_alg,
+						BUILD_END);
+		if (!pkcs10_req)
+		{
+			exit_scepclient("generating pkcs10 request failed");
+		}
+		pkcs10_encoding = pkcs10_req->get_encoding(pkcs10_req);
+		fingerprint = scep_generate_pkcs10_fingerprint(pkcs10_encoding);
 		plog("  fingerprint:    %s", fingerprint.ptr);
 	}
 
-	/* 
+	/*
 	 * output of PKCS#10 file
 	 */
 	if (filetype_out & PKCS10)
 	{
 		char *path = concatenate_paths(REQ_PATH, file_out_pkcs10);
 
-		if (!chunk_write(pkcs10->request, path, "pkcs10",  0022, force))
+		if (!chunk_write(pkcs10_encoding, path, "pkcs10",  0022, force))
+		{
 			exit_scepclient("could not write pkcs10 file '%s'", path);
-
+		}
 		filetype_out &= ~PKCS10;   /* delete PKCS10 flag */
 	}
 
@@ -896,11 +900,11 @@ int main(int argc, char **argv)
 		DBG(DBG_CONTROL,
 			DBG_log("building pkcs1 object:")
 		)
-		pkcs1 = private_key->get_encoding(private_key);
-
-		if (!chunk_write(pkcs1, path, "pkcs1", 0066, force))
+		if (!private_key->get_encoding(private_key, KEY_PRIV_ASN1_DER, &pkcs1) ||
+			!chunk_write(pkcs1, path, "pkcs1", 0066, force))
+		{
 			exit_scepclient("could not write pkcs1 file '%s'", path);
-
+		}
 		filetype_out &= ~PKCS1;   /* delete PKCS1 flag */
 	}
 
@@ -912,19 +916,23 @@ int main(int argc, char **argv)
 	scep_generate_transaction_id(public_key, &transID, &serialNumber);
 	plog("  transaction ID: %.*s", (int)transID.len, transID.ptr);
 
+	notBefore = notBefore ? notBefore : time(NULL);
+	notAfter  = notAfter  ? notAfter  : (notBefore + validity);
+
 	/* generate a self-signed X.509 certificate */
-	x509_signer = malloc_thing(x509cert_t);
-	*x509_signer = empty_x509cert;
-	x509_signer->serialNumber = serialNumber;
-	x509_signer->sigAlg = OID_SHA1_WITH_RSA;
-	x509_signer->issuer = subject;
-	x509_signer->notBefore = (notBefore)? notBefore
-										: time(NULL);
-	x509_signer->notAfter = (notAfter)? notAfter
-									  : x509_signer->notBefore + validity;
-	x509_signer->subject = subject;
-	x509_signer->subjectAltName = subjectAltNames;
-	build_x509cert(x509_signer, public_key, private_key);
+	x509_signer = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+						BUILD_SIGNING_KEY, private_key,
+						BUILD_PUBLIC_KEY, public_key,
+						BUILD_SUBJECT, subject,
+						BUILD_NOT_BEFORE_TIME, notBefore,
+						BUILD_NOT_AFTER_TIME, notAfter,
+						BUILD_SERIAL, serialNumber,
+						BUILD_SUBJECT_ALTNAMES, subjectAltNames,
+						BUILD_END);
+	if (!x509_signer)
+	{
+		exit_scepclient("generating certificate failed");
+	}
 
 	/*
 	 * output of self-signed X.509 certificate file
@@ -933,9 +941,16 @@ int main(int argc, char **argv)
 	{
 		char *path = concatenate_paths(HOST_CERT_PATH, file_out_cert_self);
 
-		if (!chunk_write(x509_signer->certificate, path, "self-signed cert", 0022, force))
+		encoding = x509_signer->get_encoding(x509_signer);
+		if (!encoding.ptr)
+		{
+			exit_scepclient("encoding certificate failed");
+		}
+		if (!chunk_write(encoding, path, "self-signed cert", 0022, force))
+		{
 			exit_scepclient("could not write self-signed cert file '%s'", path);
-;
+		}
+		chunk_free(&encoding);
 		filetype_out &= ~CERT_SELF;   /* delete CERT_SELF flag */
 	}
 
@@ -949,16 +964,16 @@ int main(int argc, char **argv)
 	 */
 	{
 		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_enc);
-		cert_t cert;
-
-		if (!load_cert(path, "encryption cacert", &cert))
+	
+		x509_ca_enc = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+										 BUILD_FROM_FILE, path, BUILD_END);
+		if (!x509_ca_enc)
 		{
 			exit_scepclient("could not load encryption cacert file '%s'", path);
 		}
-		x509_ca_enc = cert.u.x509;
 	}
 
-	/* 
+	/*
 	 * input of PKCS#7 file
 	 */
 	if (filetype_in & PKCS7)
@@ -976,10 +991,10 @@ int main(int argc, char **argv)
 		DBG(DBG_CONTROL,
 			DBG_log("building pkcs7 request")
 		)
-		pkcs7 = scep_build_request(pkcs10->request
-					, transID, SCEP_PKCSReq_MSG
-					, x509_ca_enc, pkcs7_symmetric_cipher
-					, x509_signer, pkcs7_digest_alg, private_key);
+		pkcs7 = scep_build_request(pkcs10_encoding,
+						transID, SCEP_PKCSReq_MSG,
+						x509_ca_enc, pkcs7_symmetric_cipher,
+						x509_signer, pkcs7_digest_alg, private_key);
 	}
 
 	/*
@@ -1005,19 +1020,23 @@ int main(int argc, char **argv)
 	 */
 	if (filetype_out & CERT)
 	{
+		certificate_t *cert;
+		enumerator_t  *enumerator;
 		char *path = concatenate_paths(CA_CERT_PATH, file_in_cacert_sig);
-		cert_t cert;
-		time_t poll_start;
+		time_t poll_start = 0;
 
-		x509cert_t       *certs         = NULL;
+		linked_list_t    *certs         = linked_list_create();
 		chunk_t           envelopedData = chunk_empty;
 		chunk_t           certData      = chunk_empty;
 		contentInfo_t     data          = empty_contentInfo;
 		scep_attributes_t attrs         = empty_scep_attributes;
 
-		if (!load_cert(path, "signature cacert", &cert))
+		x509_ca_sig = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+										 BUILD_FROM_FILE, path, BUILD_END);
+		if (!x509_ca_sig)
+		{
 			exit_scepclient("could not load signature cacert file '%s'", path);
-		x509_ca_sig = cert.u.x509;
+		}
 
 		if (!scep_http_request(scep_url, pkcs7, SCEP_PKI_OPERATION,
 			http_get_request, &scep_response))
@@ -1034,17 +1053,19 @@ int main(int argc, char **argv)
 		/* in case of manual mode, we are going into a polling loop */
 		if (attrs.pkiStatus == SCEP_PENDING)
 		{
+			identification_t *issuer = x509_ca_sig->get_subject(x509_ca_sig);
+
 			plog("  scep request pending, polling every %d seconds"
 				, poll_interval);
-			time(&poll_start);
-			issuerAndSubject = asn1_wrap(ASN1_SEQUENCE, "cc"
-								   , x509_ca_sig->subject
-								   , subject);
+			poll_start = time_monotonic(NULL);
+			issuerAndSubject = asn1_wrap(ASN1_SEQUENCE, "cc",
+									issuer->get_encoding(issuer),
+									subject);
 		}
 		while (attrs.pkiStatus == SCEP_PENDING)
 		{
 			if (max_poll_time > 0
-			&& (time(NULL) - poll_start >= max_poll_time))
+			&& (time_monotonic(NULL) - poll_start >= max_poll_time))
 			{
 				exit_scepclient("maximum poll time reached: %d seconds"
 							   , max_poll_time);
@@ -1096,7 +1117,7 @@ int main(int argc, char **argv)
 		{
 			exit_scepclient("could not decrypt envelopedData");
 		}
-		if (!pkcs7_parse_signedData(certData, NULL, &certs, NULL, NULL))
+		if (!pkcs7_parse_signedData(certData, NULL, certs, NULL, NULL))
 		{
 			exit_scepclient("error parsing the scep response");
 		}
@@ -1104,22 +1125,29 @@ int main(int argc, char **argv)
 
 		/* store the end entity certificate */
 		path = concatenate_paths(HOST_CERT_PATH, file_out_cert);
-		while (certs != NULL)
+
+		enumerator = certs->create_enumerator(certs);
+		while (enumerator->enumerate(enumerator, &cert))
 		{
 			bool stored = FALSE;
-			x509cert_t *cert = certs;
+			x509_t *x509 = (x509_t*)cert;
 
-			if (!cert->isCA)
+			if (!(x509->get_flags(x509) & X509_CA))
 			{
 				if (stored)
+				{
 					exit_scepclient("multiple certs received, only first stored");
-				if (!chunk_write(cert->certificate, path, "requested cert", 0022, force))
+				}
+				encoding = cert->get_encoding(cert);
+				if (!chunk_write(encoding, path, "requested cert", 0022, force))
+				{
 					exit_scepclient("could not write cert file '%s'", path);
+				}
+				chunk_free(&encoding);
 				stored = TRUE;
 			}
-			certs = certs->next;
-			free_x509cert(cert);
 		}
+		certs->destroy_offset(certs, offsetof(certificate_t, destroy));
 		filetype_out &= ~CERT;   /* delete CERT flag */
 	}
 

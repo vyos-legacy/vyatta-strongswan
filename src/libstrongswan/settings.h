@@ -37,17 +37,17 @@ typedef struct settings_t settings_t;
  *
  * E.g.:
  * @code
-  	a = b
-  	section-one {
-  		somevalue = asdf
-  		subsection {
-  			othervalue = xxx
-  		}
-  		yetanother = zz
-  	}
-  	section-two {
-  	}
-  	@endcode
+	a = b
+	section-one {
+		somevalue = asdf
+		subsection {
+			othervalue = xxx
+		}
+		yetanother = zz
+	}
+	section-two {
+	}
+	@endcode
  *
  * The values are accesses using the get() functions using dotted keys, e.g.
  *   section-one.subsection.othervalue
@@ -63,7 +63,7 @@ struct settings_t {
 	 * @return			value pointing to internal string
 	 */
 	char* (*get_str)(settings_t *this, char *key, char *def, ...);
-	
+
 	/**
 	 * Get a boolean yes|no, true|false value.
 	 *
@@ -73,7 +73,7 @@ struct settings_t {
 	 * @return			value of the key
 	 */
 	bool (*get_bool)(settings_t *this, char *key, bool def, ...);
-	
+
 	/**
 	 * Get an integer value.
 	 *
@@ -83,7 +83,17 @@ struct settings_t {
 	 * @return			value of the key
 	 */
 	int (*get_int)(settings_t *this, char *key, int def, ...);
-	
+
+	/**
+	 * Get an double value.
+	 *
+	 * @param key		key including sections, printf style format
+	 * @param def		value returned if key not found
+	 * @param ...		argument list for key
+	 * @return			value of the key
+	 */
+	double (*get_double)(settings_t *this, char *key, double def, ...);
+
 	/**
 	 * Get a time value.
 	 *
@@ -93,7 +103,7 @@ struct settings_t {
 	 * @return			value of the key
 	 */
 	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def, ...);
-	
+
 	/**
 	 * Create an enumerator over subsection names of a section.
 	 *
@@ -103,6 +113,17 @@ struct settings_t {
 	 */
 	enumerator_t* (*create_section_enumerator)(settings_t *this,
 											   char *section, ...);
+
+	/**
+	 * Create an enumerator over key/value pairs in a section.
+	 *
+	 * @param section	section name to list key/value pairs of, printf style
+	 * @param ...		argmuent list for section
+	 * @return			enumerator over (char *key, char *value)
+	 */
+	enumerator_t* (*create_key_value_enumerator)(settings_t *this,
+												 char *section, ...);
+
 	/**
 	 * Destroy a settings instance.
 	 */
@@ -110,7 +131,10 @@ struct settings_t {
 };
 
 /**
- * Load setings from a file.
+ * Load settings from a file.
+ *
+ * @param file			file to read settings from, NULL for default
+ * @return				settings object
  */
 settings_t *settings_create(char *file);
 

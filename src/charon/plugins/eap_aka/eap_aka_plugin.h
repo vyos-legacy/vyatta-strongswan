@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -29,7 +29,10 @@
 typedef struct eap_aka_plugin_t eap_aka_plugin_t;
 
 /**
- * EAP-AKA plugin
+ * EAP-AKA plugin.
+ *
+ * EAP-AKA uses 3rd generation mobile phone standard authentication
+ * mechanism for authentication, as defined RFC4187.
  */
 struct eap_aka_plugin_t {
 

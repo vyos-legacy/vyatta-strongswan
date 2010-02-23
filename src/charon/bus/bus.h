@@ -133,6 +133,8 @@ enum level_t {
 enum alert_t {
 	/* a RADIUS server did not respond, no additional arguments */
 	ALERT_RADIUS_NOT_RESPONDING,
+	/* a shutdown signal has been received, argument is a int with the signal */
+	ALERT_SHUTDOWN_SIGNAL,
 };
 
 /**
@@ -142,7 +144,7 @@ enum alert_t {
  * may wait actively to events using the blocking listen() call.
  */
 struct bus_t {
-	
+
 	/**
 	 * Register a listener to the bus.
 	 *
@@ -153,14 +155,14 @@ struct bus_t {
 	 * @param listener	listener to register.
 	 */
 	void (*add_listener) (bus_t *this, listener_t *listener);
-	
+
 	/**
 	 * Unregister a listener from the bus.
 	 *
 	 * @param listener	listener to unregister.
 	 */
 	void (*remove_listener) (bus_t *this, listener_t *listener);
-	
+
 	/**
 	 * Register a listener and block the calling thread.
 	 *
@@ -174,20 +176,30 @@ struct bus_t {
 	 * @param job		job to execute asynchronously when registered, or NULL
 	 */
 	void (*listen)(bus_t *this, listener_t *listener, job_t *job);
-	
+
 	/**
 	 * Set the IKE_SA the calling thread is using.
 	 *
 	 * To associate an received log message to an IKE_SA without passing it as
 	 * parameter each time, the thread registers the currenlty used IKE_SA
-	 * during check-out. Before check-in, the thread unregisters the IKE_SA. 
+	 * during check-out. Before check-in, the thread unregisters the IKE_SA.
 	 * This IKE_SA is stored per-thread, so each thread has its own IKE_SA
 	 * registered.
-	 * 
+	 *
 	 * @param ike_sa	ike_sa to register, or NULL to unregister
 	 */
 	void (*set_sa) (bus_t *this, ike_sa_t *ike_sa);
-	
+
+	/**
+	 * Get the IKE_SA the calling thread is currently using.
+	 *
+	 * If a thread currently does not know what IKE_SA it is processing,
+	 * it can call get_sa() to look up the SA set during checkout via set_sa().
+	 *
+	 * @return			registered ike_sa, NULL if none registered
+	 */
+	ike_sa_t* (*get_sa)(bus_t *this);
+
 	/**
 	 * Send a log message to the bus.
 	 *
@@ -202,7 +214,7 @@ struct bus_t {
 	 * @param ...		printf() style argument list
 	 */
 	void (*log)(bus_t *this, debug_t group, level_t level, char* format, ...);
-	
+
 	/**
 	 * Send a log message to the bus using va_list arguments.
 	 *
@@ -215,7 +227,7 @@ struct bus_t {
 	 */
 	void (*vlog)(bus_t *this, debug_t group, level_t level,
 				 char* format, va_list args);
-	
+
 	/**
 	 * Raise an alert over the bus.
 	 *
@@ -223,7 +235,7 @@ struct bus_t {
 	 * @param ...		alert specific attributes
 	 */
 	void (*alert)(bus_t *this, alert_t alert, ...);
-	
+
 	/**
 	 * Send a IKE_SA state change event to the bus.
 	 *
@@ -247,16 +259,15 @@ struct bus_t {
 	 * @param incoming	TRUE for incoming messages, FALSE for outgoing
 	 */
 	void (*message)(bus_t *this, message_t *message, bool incoming);
-	
+
 	/**
 	 * IKE_SA authorization hook.
 	 *
-	 * @param auth		list of auth_cfg_t, containing peers authentication info
 	 * @param final		TRUE if this is the final invocation
 	 * @return			TRUE to establish IKE_SA, FALSE to send AUTH_FAILED
 	 */
-	bool (*authorize)(bus_t *this, linked_list_t *auth, bool final);
-	
+	bool (*authorize)(bus_t *this, bool final);
+
 	/**
 	 * IKE_SA keymat hook.
 	 *
@@ -278,7 +289,7 @@ struct bus_t {
 	 */
 	void (*child_keys)(bus_t *this, child_sa_t *child_sa, diffie_hellman_t *dh,
 					   chunk_t nonce_i, chunk_t nonce_r);
-	
+
 	/**
 	 * IKE_SA up/down hook.
 	 *
@@ -286,7 +297,7 @@ struct bus_t {
 	 * @param up		TRUE for an up event, FALSE for a down event
 	 */
 	void (*ike_updown)(bus_t *this, ike_sa_t *ike_sa, bool up);
-	
+
 	/**
 	 * IKE_SA rekeying hook.
 	 *
@@ -294,7 +305,7 @@ struct bus_t {
 	 * @param new		new IKE_SA replacing old
 	 */
 	void (*ike_rekey)(bus_t *this, ike_sa_t *old, ike_sa_t *new);
-	
+
 	/**
 	 * CHILD_SA up/down hook.
 	 *
@@ -302,7 +313,7 @@ struct bus_t {
 	 * @param up		TRUE for an up event, FALSE for a down event
 	 */
 	void (*child_updown)(bus_t *this, child_sa_t *child_sa, bool up);
-	
+
 	/**
 	 * CHILD_SA rekeying hook.
 	 *
@@ -310,7 +321,7 @@ struct bus_t {
 	 * @param new		new CHILD_SA replacing old
 	 */
 	void (*child_rekey)(bus_t *this, child_sa_t *old, child_sa_t *new);
-	
+
 	/**
 	 * Destroy the event bus.
 	 */

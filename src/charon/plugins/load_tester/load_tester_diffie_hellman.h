@@ -29,7 +29,7 @@ typedef struct load_tester_diffie_hellman_t load_tester_diffie_hellman_t;
  * A NULL Diffie Hellman implementation to avoid calculation overhead in tests.
  */
 struct load_tester_diffie_hellman_t {
-	
+
 	/**
 	 * Implements diffie_hellman_t interface.
 	 */
@@ -38,11 +38,11 @@ struct load_tester_diffie_hellman_t {
 
 /**
  * Creates a new gmp_diffie_hellman_t object.
- * 
+ *
  * @param group			Diffie Hellman group, supports MODP_NULL only
  * @return				gmp_diffie_hellman_t object
  */
 load_tester_diffie_hellman_t *load_tester_diffie_hellman_create(
 												diffie_hellman_group_t group);
 
-#endif /** LOAD_TESTER_DIFFIE_HELLMAN_ @}*/
+#endif /** LOAD_TESTER_DIFFIE_HELLMAN_H_ @}*/

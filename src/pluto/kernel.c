@@ -45,7 +45,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
 #include "connections.h"
 #include "state.h"
 #include "timer.h"
@@ -151,7 +150,7 @@ static void DBG_bare_shunt(const char *op, const struct bare_shunt *bs)
 struct eroute_info *orphaned_holds = NULL;
 
 /* forward declaration */
-static bool shunt_eroute(struct connection *c, struct spd_route *sr,
+static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 						 enum routing_t rt_kind, unsigned int op,
 						 const char *opname);
 
@@ -347,12 +346,41 @@ ipsec_spi_t get_my_cpi(struct spd_route *sr, bool tunnel)
 	latest_cpi++;
 
 	if (latest_cpi == first_busy_cpi)
+	{
 		find_my_cpi_gap(&latest_cpi, &first_busy_cpi);
-
+	}
 	if (latest_cpi > IPCOMP_LAST_NEGOTIATED)
+	{
 		latest_cpi = IPCOMP_FIRST_NEGOTIATED;
-
+	}
 	return htonl((ipsec_spi_t)latest_cpi);
+}
+
+/* Replace the shell metacharacters ', \, ", `, and $ in a character string
+ * by escape sequences consisting of their octal values
+ */
+static void escape_metachar(const char *src, char *dst, size_t dstlen)
+{
+	while (*src != '\0' && dstlen > 4)
+	{
+		switch (*src)
+		{
+		case '\'':
+		case '\\':
+		case '"':
+		case '`':
+		case '$':
+			sprintf(dst,"\\%s%o", (*src < 64)?"0":"", *src);
+			dst += 4;
+			dstlen -= 4;
+			break;
+		default:
+			*dst++ = *src;
+			dstlen--;
+		}
+		src++;
+	}
+	*dst = '\0';
 }
 
 /* invoke the updown script to do the routing and firewall commands required
@@ -392,7 +420,7 @@ ipsec_spi_t get_my_cpi(struct spd_route *sr, bool tunnel)
 # define DEFAULT_UPDOWN "ipsec _updown"
 #endif
 
-static bool do_command(struct connection *c, struct spd_route *sr,
+static bool do_command(connection_t *c, struct spd_route *sr,
 					   const char *verb)
 {
 	char cmd[1536];     /* arbitrary limit on shell command length */
@@ -469,7 +497,7 @@ static bool do_command(struct connection *c, struct spd_route *sr,
 		}
 
 		addrtot(&sr->this.host_addr, 0, me_str, sizeof(me_str));
-		idtoa(&sr->this.id, myid_str, sizeof(myid_str));
+		snprintf(myid_str, sizeof(myid_str), "%Y", sr->this.id);
 		escape_metachar(myid_str, secure_myid_str, sizeof(secure_myid_str));
 		subnettot(&sr->this.client, 0, myclient_str, sizeof(myclientnet_str));
 		networkof(&sr->this.client, &ta);
@@ -478,7 +506,7 @@ static bool do_command(struct connection *c, struct spd_route *sr,
 		addrtot(&ta, 0, myclientmask_str, sizeof(myclientmask_str));
 
 		addrtot(&sr->that.host_addr, 0, peer_str, sizeof(peer_str));
-		idtoa(&sr->that.id, peerid_str, sizeof(peerid_str));
+		snprintf(peerid_str, sizeof(peerid_str), "%Y", sr->that.id);
 		escape_metachar(peerid_str, secure_peerid_str, sizeof(secure_peerid_str));
 		subnettot(&sr->that.client, 0, peerclient_str, sizeof(peerclientnet_str));
 		networkof(&sr->that.client, &ta);
@@ -492,11 +520,19 @@ static bool do_command(struct connection *c, struct spd_route *sr,
 			key_type_t type = key->public_key->get_type(key->public_key);
 			int pathlen;
 
-			if (type == KEY_RSA && same_id(&sr->that.id, &key->id) &&
+			if (type == KEY_RSA &&
+				sr->that.id->equals(sr->that.id, key->id) &&
 				trusted_ca(key->issuer, sr->that.ca, &pathlen))
 			{
-				dntoa_or_null(peerca_str, BUF_LEN, key->issuer, "");
-				escape_metachar(peerca_str, secure_peerca_str, sizeof(secure_peerca_str));
+				if (key->issuer)
+				{
+					snprintf(peerca_str, BUF_LEN, "%Y", key->issuer);	
+					escape_metachar(peerca_str, secure_peerca_str, BUF_LEN);
+				}
+				else
+				{
+					secure_peerca_str[0] = '\0';
+				}
 				break;
 			}
 		}
@@ -653,10 +689,10 @@ enum routability {
 	route_farconflict = 3
 };
 
-static enum routability could_route(struct connection *c)
+static enum routability could_route(connection_t *c)
 {
 	struct spd_route *esr, *rosr;
-	struct connection *ero      /* who, if anyone, owns our eroute? */
+	connection_t *ero      /* who, if anyone, owns our eroute? */
 		, *ro = route_owner(c, &rosr, &ero, &esr); /* who owns our route? */
 
 	/* it makes no sense to route a connection that is ISAKMP-only */
@@ -710,8 +746,8 @@ static enum routability could_route(struct connection *c)
 	/* if there is an eroute for another connection, there is a problem */
 	if (ero != NULL && ero != c)
 	{
-		struct connection *ero2, *ero_top;
-		struct connection *inside, *outside;
+		connection_t *ero2, *ero_top;
+		connection_t *inside, *outside;
 
 		/*
 		 * note, wavesec (PERMANENT) goes *outside* and
@@ -797,7 +833,7 @@ static enum routability could_route(struct connection *c)
 	return route_easy;
 }
 
-bool trap_connection(struct connection *c)
+bool trap_connection(connection_t *c)
 {
 	switch (could_route(c))
 	{
@@ -825,7 +861,7 @@ bool trap_connection(struct connection *c)
 /**
  * Delete any eroute for a connection and unroute it if route isn't shared
  */
-void unroute_connection(struct connection *c)
+void unroute_connection(connection_t *c)
 {
 	struct spd_route *sr;
 	enum routing_t cr;
@@ -847,7 +883,9 @@ void unroute_connection(struct connection *c)
 
 		/* only unroute if no other connection shares it */
 		if (routed(cr) && route_owner(c, NULL, NULL, NULL) == NULL)
+		{
 			(void) do_command(c, sr, "unroute");
+		}
 	}
 }
 
@@ -868,7 +906,7 @@ static void set_text_said(char *text_said, const ip_address *dst,
  * this allows the entry to be deleted.
  */
 static struct bare_shunt** bare_shunt_ptr(const ip_subnet *ours,
-										  const ip_subnet *his, 
+										  const ip_subnet *his,
 										  int transport_proto)
 {
 	struct bare_shunt *p, **pp;
@@ -942,8 +980,8 @@ static bool raw_eroute(const ip_address *this_host,
 					   const ip_subnet *this_client,
 					   const ip_address *that_host,
 					   const ip_subnet *that_client,
-		   			   ipsec_spi_t spi,
-		   			   unsigned int proto,
+					   ipsec_spi_t spi,
+					   unsigned int proto,
 					   unsigned int satype,
 					   unsigned int transport_proto,
 					   const struct pfkey_proto_info *proto_info,
@@ -1072,8 +1110,9 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 			 , "eroute_connection %s", opname);
 
 	if (proto == SA_INT)
+	{
 		peer = aftoinfo(addrtypeof(peer))->any;
-
+	}
 	return raw_eroute(&sr->this.host_addr, &sr->this.client
 					  , peer
 					  , &sr->that.client
@@ -1083,7 +1122,7 @@ static bool eroute_connection(struct spd_route *sr, ipsec_spi_t spi,
 
 /* assign a bare hold to a connection */
 
-bool assign_hold(struct connection *c USED_BY_DEBUG, struct spd_route *sr,
+bool assign_hold(connection_t *c USED_BY_DEBUG, struct spd_route *sr,
 				 int transport_proto,
 				 const ip_address *src,
 				 const ip_address *dst)
@@ -1225,7 +1264,7 @@ static bool sag_eroute(struct state *st, struct spd_route *sr,
 
 /* compute a (host-order!) SPI to implement the policy in connection c */
 ipsec_spi_t
-shunt_policy_spi(struct connection *c, bool prospective)
+shunt_policy_spi(connection_t *c, bool prospective)
 {
 	/* note: these are in host order :-( */
 	static const ipsec_spi_t shunt_spi[] =
@@ -1256,7 +1295,7 @@ shunt_policy_spi(struct connection *c, bool prospective)
  * If negotiation has failed, the choice between %trap/%pass/%drop/%reject
  * is specified in the policy of connection c.
  */
-static bool shunt_eroute(struct connection *c, struct spd_route *sr,
+static bool shunt_eroute(connection_t *c, struct spd_route *sr,
 						 enum routing_t rt_kind,
 						 unsigned int op, const char *opname)
 {
@@ -1316,7 +1355,7 @@ static bool shunt_eroute(struct connection *c, struct spd_route *sr,
 	{
 		/* maybe we are uneclipsing something */
 		struct spd_route *esr;
-		struct connection *ue = eclipsed(c, &esr);
+		connection_t *ue = eclipsed(c, &esr);
 
 		if (ue != NULL)
 		{
@@ -1359,15 +1398,20 @@ static const char *read_proto(const char * s, size_t * len, int * transport_prot
 
 	l = *len;
 	p = memchr(s, ':', l);
-	if (p == 0) {
+	if (p == 0)
+	{
 		*transport_proto = 0;
 		return 0;
 	}
 	ugh = ttoul(p+1, l-((p-s)+1), 10, &proto);
 	if (ugh != 0)
+	{
 		return ugh;
+	}
 	if (proto > 65535)
+	{
 		return "protocol number is too large, legal range is 0-65535";
+	}
 	*len = p-s;
 	*transport_proto = proto;
 	return 0;
@@ -1429,7 +1473,9 @@ void scan_proc_shunts(void)
 
 	f = fopen(procname, "r");
 	if (f == NULL)
+	{
 		return;
+	}
 
 	/* for each line... */
 	for (lino = 1; ; lino++)
@@ -1445,7 +1491,9 @@ void scan_proc_shunts(void)
 
 		cp = fgets(buf, sizeof(buf), f);
 		if (cp == NULL)
+		{
 			break;
+		}
 
 		/* break out each field
 		 * Note: if there are too many fields, just stop;
@@ -1461,7 +1509,9 @@ void scan_proc_shunts(void)
 			field[fi] = chunk_create(cp, w);
 			cp += w;
 			if (w == 0)
+			{
 				break;
+			}
 		}
 
 		/* This odd do-hickey is to share error reporting code.
@@ -1473,9 +1523,13 @@ void scan_proc_shunts(void)
 			 * check if things are as they should be.
 			 */
 			if (fi == 5)
+			{
 				ff = &field[0]; /* old form, with no count */
+			}
 			else if (fi == 6)
+			{
 				ff = &field[1]; /* new form, with count */
+			}
 			else
 			{
 				ugh = "has wrong number of fields";
@@ -1501,7 +1555,9 @@ void scan_proc_shunts(void)
 				context = "count field is malformed: ";
 				ugh = ttoul(field[0].ptr, field[0].len, 10, &eri.count);
 				if (ugh != NULL)
+				{
 					break;
+				}
 			}
 
 			/* our client */
@@ -1509,21 +1565,27 @@ void scan_proc_shunts(void)
 			context = "source subnet field malformed: ";
 			ugh = ttosubnet(ff[0].ptr, ff[0].len, AF_INET, &eri.ours);
 			if (ugh != NULL)
+			{
 				break;
+			}
 
 			/* his client */
 
 			context = "destination subnet field malformed: ";
 			ugh = ttosubnet(ff[2].ptr, ff[2].len, AF_INET, &eri.his);
 			if (ugh != NULL)
+			{
 				break;
+			}
 
 			/* SAID */
 
 			context = "SA ID field malformed: ";
 			ugh = read_proto(ff[4].ptr, &ff[4].len, &eri.transport_proto);
 			if (ugh != NULL)
+			{
 				break;
+			}
 			ugh = ttosa(ff[4].ptr, ff[4].len, &eri.said);
 		} while (FALSE);
 
@@ -1666,7 +1728,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 {
 	/* Build an inbound or outbound SA */
 
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	ip_subnet src, dst;
 	ip_subnet src_client, dst_client;
 	ipsec_spi_t inner_spi = 0;
@@ -1738,9 +1800,13 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 
 			ipip_spi = htonl(++last_tunnel_spi);
 			if (inbound)
+			{
 				st->st_tunnel_in_spi = ipip_spi;
+			}
 			else
+			{
 				st->st_tunnel_out_spi = ipip_spi;
+			}
 		}
 
 		set_text_said(text_said
@@ -1797,10 +1863,10 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		said_next->text_said = text_said;
 
 		if (!kernel_ops->add_sa(said_next, replace))
+		{
 			goto fail;
-
+		}
 		said_next++;
-
 		encapsulation = ENCAPSULATION_MODE_TRANSPORT;
 	}
 
@@ -1861,7 +1927,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			if (ei == &esp_info[countof(esp_info)])
 			{
 				/* Check for additional kernel alg */
-				if ((ei=kernel_alg_esp_info(st->st_esp.attrs.transid, 
+				if ((ei=kernel_alg_esp_info(st->st_esp.attrs.transid,
 										st->st_esp.attrs.auth))!=NULL)
 				{
 					break;
@@ -1873,7 +1939,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				 * assuming the name will be found.
 				 */
 				loglog(RC_LOG_SERIOUS, "ESP transform %s / auth %s not implemented yet"
-					, enum_name(&esp_transformid_names, st->st_esp.attrs.transid)
+					, enum_name(&esp_transform_names, st->st_esp.attrs.transid)
 					, enum_name(&auth_alg_names, st->st_esp.attrs.auth));
 				goto fail;
 			}
@@ -1892,7 +1958,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			if (key_len > ei->enckeylen)
 			{
 				loglog(RC_LOG_SERIOUS, "ESP transform %s passed key_len=%d > %d",
-					enum_name(&esp_transformid_names, st->st_esp.attrs.transid),
+					enum_name(&esp_transform_names, st->st_esp.attrs.transid),
 					(int)key_len, (int)ei->enckeylen);
 				goto fail;
 			}
@@ -1906,7 +1972,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		{
 			case ESP_3DES:
 				/* 168 bits in kernel, need 192 bits for keymat_len */
-				if (key_len == 21) 
+				if (key_len == 21)
 				{
 					key_len = 24;
 				}
@@ -1914,7 +1980,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 			case ESP_DES:
 				/* 56 bits in kernel, need 64 bits for keymat_len */
 				if (key_len == 7)
-				{ 
+				{
 					key_len = 8;
 				}
 				break;
@@ -1930,7 +1996,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				key_len += 4;
 				break;
 			default:
-				break;			
+				break;
 		}
 
 		/* divide up keying material */
@@ -2032,7 +2098,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 		{
 			struct pfkey_proto_info proto_info[4];
 			int i = 0;
-			
+
 			if (st->st_ipcomp.present)
 			{
 				proto_info[i].proto = IPPROTO_COMP;
@@ -2040,7 +2106,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				proto_info[i].reqid = c->spd.reqid + 2;
 				i++;
 			}
-			
+
 			if (st->st_esp.present)
 			{
 				proto_info[i].proto = IPPROTO_ESP;
@@ -2048,7 +2114,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				proto_info[i].reqid = c->spd.reqid + 1;
 				i++;
 			}
-			
+
 			if (st->st_ah.present)
 			{
 				proto_info[i].proto = IPPROTO_AH;
@@ -2056,9 +2122,9 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				proto_info[i].reqid = c->spd.reqid;
 				i++;
 			}
-			
+
 			proto_info[i].proto = 0;
-			
+
 			if (kernel_ops->inbound_eroute
 				&& encapsulation == ENCAPSULATION_MODE_TUNNEL)
 			{
@@ -2068,7 +2134,7 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 					proto_info[i].encapsulation = ENCAPSULATION_MODE_TRANSPORT;
 				}
 			}
-			
+
 			/* MCR - should be passed a spd_eroute structure here */
 			(void) raw_eroute(&c->spd.that.host_addr, &c->spd.that.client
 							  , &c->spd.this.host_addr, &c->spd.this.client
@@ -2079,11 +2145,11 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 	}
 
 	/* If there are multiple SPIs, group them. */
-	
+
 	if (kernel_ops->grp_sa && said_next > &said[1])
 	{
 		struct kernel_sa *s;
-		
+
 		/* group SAs, two at a time, inner to outer (backwards in said[])
 		 * The grouping is by pairs.  So if said[] contains ah esp ipip,
 		 * the grouping would be ipip:esp, esp:ah.
@@ -2095,15 +2161,15 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 				text_said1[SATOT_BUF];
 
 			/* group s[1] and s[0], in that order */
-			
+
 			set_text_said(text_said0, s[0].dst, s[0].spi, s[0].proto);
 			set_text_said(text_said1, s[1].dst, s[1].spi, s[1].proto);
-			
+
 			DBG(DBG_KLIPS, DBG_log("grouping %s and %s", text_said1, text_said0));
-			
+
 			s[0].text_said = text_said0;
 			s[1].text_said = text_said1;
-			
+
 			if (!kernel_ops->grp_sa(s + 1, s))
 			{
 				goto fail;
@@ -2135,7 +2201,7 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 	 * so deleting any one will do.  So we just delete the
 	 * first one found.  It may or may not be the only one.
 	 */
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	struct {
 		unsigned proto;
 		struct ipsec_proto_info *info;
@@ -2227,7 +2293,7 @@ bool get_sa_info(struct state *st, bool inbound, u_int *bytes, time_t *use_time)
 {
 	char text_said[SATOT_BUF];
 	struct kernel_sa sa;
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 
 	*use_time = UNDEFINED_TIME;
 
@@ -2353,7 +2419,7 @@ void init_kernel(void)
  */
 bool install_inbound_ipsec_sa(struct state *st)
 {
-	struct connection *const c = st->st_connection;
+	connection_t *const c = st->st_connection;
 
 	/* If our peer has a fixed-address client, check if we already
 	 * have a route for that client that conflicts.  We will take this
@@ -2367,7 +2433,7 @@ bool install_inbound_ipsec_sa(struct state *st)
 		for (;;)
 		{
 			struct spd_route *esr;
-			struct connection *o = route_owner(c, &esr, NULL, NULL);
+			connection_t *o = route_owner(c, &esr, NULL, NULL);
 
 			if (o == NULL)
 			{
@@ -2417,20 +2483,20 @@ bool install_inbound_ipsec_sa(struct state *st)
  * Any SA Group must have already been created.
  * On failure, steps will be unwound.
  */
-bool route_and_eroute(struct connection *c USED_BY_KLIPS,
+bool route_and_eroute(connection_t *c USED_BY_KLIPS,
 					  struct spd_route *sr USED_BY_KLIPS,
 					  struct state *st USED_BY_KLIPS)
 {
 #ifdef KLIPS
 	struct spd_route *esr;
 	struct spd_route *rosr;
-	struct connection *ero      /* who, if anyone, owns our eroute? */
+	connection_t *ero      /* who, if anyone, owns our eroute? */
 		, *ro = route_owner(c, &rosr, &ero, &esr);
 	bool eroute_installed = FALSE
 		, firewall_notified = FALSE
 		, route_installed = FALSE;
 
-	struct connection *ero_top;
+	connection_t *ero_top;
 	struct bare_shunt **bspp;
 
 	DBG(DBG_CONTROLMORE,
@@ -2438,7 +2504,7 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 				, c->name
 				, (c->policy_next ? c->policy_next->name : "none")
 				, ero ? ero->name : "null"
-				, esr 
+				, esr
 				, ro ? ro->name : "null"
 				, rosr
 				, st ? st->st_serialno : 0));
@@ -2472,11 +2538,14 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 
 		/* if no state provided, then install a shunt for later */
 		if (st == NULL)
+		{
 			eroute_installed = shunt_eroute(c, sr, RT_ROUTED_PROSPECTIVE
 											, ERO_REPLACE, "replace");
+		}
 		else
+		{
 			eroute_installed = sag_eroute(st, sr, ERO_REPLACE, "replace");
-
+		}
 #if 0
 		/* XXX - MCR. I previously felt that this was a bogus check */
 		if (ero != NULL && ero != c && esr != sr)
@@ -2588,7 +2657,7 @@ bool route_and_eroute(struct connection *c USED_BY_KLIPS,
 		else if (ero != NULL && ero != c)
 		{
 			/* check if ero is an ancestor of c. */
-			struct connection *ero2;
+			connection_t *ero2;
 
 			for (ero2 = c; ero2 != NULL && ero2 != c; ero2 = ero2->policy_next)
 				;
@@ -2788,7 +2857,7 @@ void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
 		/* If the state is the eroute owner, we must adjust
 		 * the routing for the connection.
 		 */
-		struct connection *c = st->st_connection;
+		connection_t *c = st->st_connection;
 		struct spd_route *sr;
 
 		passert(st->st_connection);
@@ -2837,9 +2906,9 @@ void delete_ipsec_sa(struct state *st USED_BY_KLIPS,
 #ifdef KLIPS
 static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 {
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	char text_said[SATOT_BUF];
-	struct kernel_sa sa;        
+	struct kernel_sa sa;
 	ip_address
 		src = inbound? c->spd.that.host_addr : c->spd.this.host_addr,
 		dst = inbound? c->spd.this.host_addr : c->spd.that.host_addr;
@@ -2924,7 +2993,7 @@ bool was_eroute_idle(struct state *st, time_t idle_max, time_t *idle_time)
 			ret = *idle_time >= idle_max;
 		}
 	}
-	else 
+	else
 	{
 		while (f != NULL)
 		{

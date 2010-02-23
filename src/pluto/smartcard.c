@@ -31,6 +31,7 @@
 
 #include <asn1/asn1.h>
 #include <credentials/keys/public_key.h>
+#include <credentials/certificates/x509.h>
 
 #include "constants.h"
 
@@ -58,21 +59,21 @@ static smartcard_t *smartcards   = NULL;
 static int sc_number = 0;
 
 const smartcard_t empty_sc = {
-	  NULL               , /* next */
-			0            , /* last_load */
-	{ CERT_NONE, {NULL} }, /* last_cert */
-			0            , /* count */
-			0            , /* number */
-	   999999            , /* slot */
-	  NULL               , /* id */
-	  NULL               , /* label */
-	{ NULL, 0 }          , /* pin */
-	  FALSE              , /* pinpad */
-	  FALSE              , /* valid */
-	  FALSE              , /* session_opened */
-	  FALSE              , /* logged_in */
-	  TRUE               , /* any_slot */
-			0L           , /* session */
+	  NULL         , /* next */
+			0      , /* last_load */
+	  NULL         , /* last_cert */
+			0      , /* count */
+			0      , /* number */
+	  999999       , /* slot */
+	  NULL         , /* id */
+	  NULL         , /* label */
+	{ NULL, 0 }    , /* pin */
+	  FALSE        , /* pinpad */
+	  FALSE        , /* valid */
+	  FALSE        , /* session_opened */
+	  FALSE        , /* logged_in */
+	  TRUE         , /* any_slot */
+			0L     , /* session */
 };
 
 #ifdef SMARTCARD        /* compile with smartcard support */
@@ -115,7 +116,7 @@ static const char *const pkcs11_return_name_10[] = {
 	};
 
 static const char *const pkcs11_return_name_20[] = {
-		"CKR_DATA_INVALID", 
+		"CKR_DATA_INVALID",
 		"CKR_DATA_LEN_RANGE"
 	};
 
@@ -386,8 +387,7 @@ static enum_names pkcs11_return_names =
  * The calling application is responsible for cleaning up
  * and calling C_Finalize()
  */
-static CK_RV
-scx_unload_pkcs11_module(scx_pkcs11_module_t *mod)
+static CK_RV scx_unload_pkcs11_module(scx_pkcs11_module_t *mod)
 {
 	if (!mod || mod->_magic != SCX_MAGIC)
 		return CKR_ARGUMENTS_BAD;
@@ -400,8 +400,8 @@ scx_unload_pkcs11_module(scx_pkcs11_module_t *mod)
 	return CKR_OK;
 }
 
-static scx_pkcs11_module_t*
-scx_load_pkcs11_module(const char *name, CK_FUNCTION_LIST_PTR_PTR funcs)
+static scx_pkcs11_module_t* scx_load_pkcs11_module(const char *name,
+								 CK_FUNCTION_LIST_PTR_PTR funcs)
 {
 	CK_RV (*c_get_function_list)(CK_FUNCTION_LIST_PTR_PTR);
 	scx_pkcs11_module_t *mod;
@@ -437,14 +437,13 @@ failed: scx_unload_pkcs11_module(mod);
 /*
  * retrieve a certificate object
  */
-static bool
-scx_find_cert_object(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object
-, smartcard_t *sc, cert_t *cert)
+static cert_t* scx_find_cert_object(CK_SESSION_HANDLE session,
+									CK_OBJECT_HANDLE object, smartcard_t *sc)
 {
 	size_t hex_len, label_len;
 	u_char *hex_id = NULL;
+	cert_t *cert;
 	chunk_t blob;
-	x509cert_t *x509cert;
 
 	CK_ATTRIBUTE attr[] = {
 		{ CKA_ID,    NULL_PTR, 0L },
@@ -452,16 +451,13 @@ scx_find_cert_object(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object
 		{ CKA_VALUE, NULL_PTR, 0L }
 	};
 
-	/* initialize the return argument */
-	*cert = cert_empty;
-
 	/* get the length of the attributes first */
 	CK_RV rv = pkcs11_functions->C_GetAttributeValue(session, object, attr, 3);
 	if (rv != CKR_OK)
 	{
 		plog("couldn't read the attribute sizes: %s"
 			, enum_show(&pkcs11_return_names, rv));
-		return FALSE;
+		return NULL;
 	}
 
 	free(sc->label);
@@ -486,7 +482,7 @@ scx_find_cert_object(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object
 		free(hex_id);
 		free(sc->label);
 		free(blob.ptr);
-		return FALSE;
+		return NULL;
 	}
 
 	free(sc->id);
@@ -500,26 +496,30 @@ scx_find_cert_object(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE object
 	sc->label[label_len] = '\0';
 
 	/* parse the retrieved cert */
-	x509cert = malloc_thing(x509cert_t);
-	*x509cert = empty_x509cert;
-	x509cert->smartcard = TRUE;
 
-	if (!parse_x509cert(blob, 0, x509cert))
+	/* initialize the return argument */
+	cert = malloc_thing(cert_t);
+	*cert = cert_empty;
+	cert->smartcard = TRUE;
+	cert->cert = lib->creds->create(lib->creds,
+							  		CRED_CERTIFICATE, CERT_X509,
+							  		BUILD_BLOB_ASN1_DER, blob,
+							  		BUILD_END);
+	if (cert->cert)
 	{
-		plog("failed to load cert from smartcard, error in X.509 certificate");
-		free_x509cert(x509cert);
-		return FALSE;
+		return cert;
 	}
-	cert->type = CERT_X509_SIGNATURE;
-	cert->u.x509 = x509cert;
-	return TRUE;
+
+	plog("failed to load cert from smartcard, error in X.509 certificate");
+	cert_free(cert);
+	return NULL;
 }
+
 
 /*
  * search a given slot for PKCS#11 certificate objects
  */
-static void
-scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
+static void scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 {
 	CK_RV rv;
 	CK_OBJECT_CLASS class = CKO_CERTIFICATE;
@@ -537,10 +537,10 @@ scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 	{
 		CK_OBJECT_HANDLE object;
 		CK_ULONG obj_count = 0;
-		err_t ugh;
 		time_t valid_until;
 		smartcard_t *sc;
-		x509cert_t *cert;
+		certificate_t *certificate;
+		x509_t *x509;
 
 		rv = pkcs11_functions->C_FindObjects(session, &object, 1, &obj_count);
 		if (rv != CKR_OK)
@@ -559,8 +559,8 @@ scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		*sc = empty_sc;
 		sc->any_slot = FALSE;
 		sc->slot  = slot;
-
-		if (!scx_find_cert_object(session, object, sc, &sc->last_cert))
+		sc->last_cert = scx_find_cert_object(session, object, sc);
+		if (sc->last_cert == NULL)
 		{
 			scx_free(sc);
 			continue;
@@ -571,37 +571,31 @@ scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 		)
 
 		/* check validity of certificate */
-		cert = sc->last_cert.u.x509;
-		valid_until = cert->notAfter;
-		ugh = check_validity(cert, &valid_until);
-		if (ugh != NULL)
+		certificate = sc->last_cert->cert;
+		if (!certificate->get_validity(certificate, NULL, NULL, &valid_until))
 		{
-			plog("  %s", ugh);
-			free_x509cert(cert);
 			scx_free(sc);
 			continue;
 		}
-		else
-		{
-			DBG(DBG_CONTROL,
-				DBG_log("  certificate is valid")
-			)
-		}
+		DBG(DBG_CONTROL,
+			DBG_log("  certificate is valid")
+		)
 
 		sc = scx_add(sc);
+		x509 = (x509_t*)certificate;
 
 		/* put end entity and ca certificates into different chains */
-		if (cert->isCA)
+		if (x509->get_flags(x509) & X509_CA)
 		{
-			sc->last_cert.u.x509 = add_authcert(cert, AUTH_CA);
+			sc->last_cert = add_authcert(sc->last_cert, X509_CA);
 		}
 		else
 		{
-			add_x509_public_key(cert, valid_until, DAL_LOCAL);
-			sc->last_cert.u.x509 = add_x509cert(cert);
+			add_public_key_from_cert(sc->last_cert, valid_until, DAL_LOCAL);
+			sc->last_cert = cert_add(sc->last_cert);
 		}
 
-		share_cert(sc->last_cert);
+		cert_share(sc->last_cert);
 		time(&sc->last_load);
 	}
 
@@ -616,8 +610,7 @@ scx_find_cert_objects(CK_SLOT_ID slot, CK_SESSION_HANDLE session)
 /*
  * search all slots for PKCS#11 certificate objects
  */
-static void
-scx_find_all_cert_objects(void)
+static void scx_find_all_cert_objects(void)
 {
 	CK_RV rv;
 	CK_SLOT_ID_PTR slots = NULL_PTR;
@@ -659,7 +652,7 @@ scx_find_all_cert_objects(void)
 				, enum_show(&pkcs11_return_names, rv));
 			continue;
 		}
-		
+
 		if (!(info.flags & CKF_TOKEN_PRESENT))
 		{
 			plog("no token present in slot %lu", slot);
@@ -696,8 +689,7 @@ scx_find_all_cert_objects(void)
  * init_args should be unused when we have a PKCS#11 compliant module,
  * but NSS softoken breaks that API.
  */
-void
-scx_init(const char* module, const char *init_args)
+void scx_init(const char* module, const char *init_args)
 {
 #ifdef SMARTCARD
 	CK_C_INITIALIZE_ARGS args = { .pReserved = (char *)init_args, };
@@ -750,10 +742,9 @@ scx_init(const char* module, const char *init_args)
 }
 
 /*
- * finalize and unload PKCS#11 cryptoki module 
+ * finalize and unload PKCS#11 cryptoki module
  */
-void
-scx_finalize(void)
+void scx_finalize(void)
 {
 #ifdef SMARTCARD
 	while (smartcards != NULL)
@@ -783,21 +774,18 @@ scx_finalize(void)
 /*
  * does a filename contain the token %smartcard?
  */
-bool
-scx_on_smartcard(const char *filename)
+bool scx_on_smartcard(const char *filename)
 {
 	return strneq(filename, SCX_TOKEN, strlen(SCX_TOKEN));
 }
 
 #ifdef SMARTCARD
 /*
- * find a specific object on the smartcard 
+ * find a specific object on the smartcard
  */
-static bool
-scx_pkcs11_find_object( CK_SESSION_HANDLE session, 
-						CK_OBJECT_HANDLE_PTR object, 
-						CK_OBJECT_CLASS class, 
-						const char* id)
+static bool scx_pkcs11_find_object(CK_SESSION_HANDLE session,
+								   CK_OBJECT_HANDLE_PTR object,
+								   CK_OBJECT_CLASS class, const char* id)
 {
 	size_t len;
 	char buf[BUF_LEN];
@@ -848,8 +836,7 @@ scx_pkcs11_find_object( CK_SESSION_HANDLE session,
 /*
  * check if a given certificate object id is found in a slot
  */
-static bool
-scx_find_cert_id_in_slot(smartcard_t *sc, CK_SLOT_ID slot)
+static bool scx_find_cert_id_in_slot(smartcard_t *sc, CK_SLOT_ID slot)
 {
 	CK_SESSION_HANDLE session;
 	CK_OBJECT_HANDLE object;
@@ -863,7 +850,7 @@ scx_find_cert_id_in_slot(smartcard_t *sc, CK_SLOT_ID slot)
 			, enum_show(&pkcs11_return_names, rv));
 		 return FALSE;
 	}
-		
+
 	if (!(info.flags & CKF_TOKEN_PRESENT))
 	{
 		plog("no token present in slot %lu", slot);
@@ -891,7 +878,7 @@ scx_find_cert_id_in_slot(smartcard_t *sc, CK_SLOT_ID slot)
 		sc->session_opened = TRUE;
 		return TRUE;
 	}
-		
+
 	rv = pkcs11_functions->C_CloseSession(session);
 	if (rv != CKR_OK)
 	{
@@ -905,8 +892,7 @@ scx_find_cert_id_in_slot(smartcard_t *sc, CK_SLOT_ID slot)
 /*
  * Connect to the smart card in the reader and select the correct slot
  */
-bool
-scx_establish_context(smartcard_t *sc)
+bool scx_establish_context(smartcard_t *sc)
 {
 #ifdef SMARTCARD
 	bool id_found = FALSE;
@@ -983,8 +969,7 @@ scx_establish_context(smartcard_t *sc)
 /*
  * log in to a session
  */
-bool
-scx_login(smartcard_t *sc)
+bool scx_login(smartcard_t *sc)
 {
 #ifdef SMARTCARD
 	CK_RV rv;
@@ -996,7 +981,7 @@ scx_login(smartcard_t *sc)
 		)
 		return TRUE;
 	}
-		
+
 	if (sc->pin.ptr == NULL)
 	{
 		plog("unable to log in without PIN!");
@@ -1009,7 +994,7 @@ scx_login(smartcard_t *sc)
 		return FALSE;
 	}
 
-	rv = pkcs11_functions->C_Login(sc->session, CKU_USER 
+	rv = pkcs11_functions->C_Login(sc->session, CKU_USER
 								, (CK_UTF8CHAR *) sc->pin.ptr, sc->pin.len);
 	if (rv != CKR_OK && rv != CKR_USER_ALREADY_LOGGED_IN)
 	{
@@ -1031,11 +1016,10 @@ scx_login(smartcard_t *sc)
 /*
  * logout from a session
  */
-static void
-scx_logout(smartcard_t *sc)
+static void scx_logout(smartcard_t *sc)
 {
 	CK_RV rv;
-	
+
 	rv = pkcs11_functions->C_Logout(sc->session);
 	if (rv != CKR_OK)
 		plog("error in C_Logout: %s"
@@ -1052,8 +1036,7 @@ scx_logout(smartcard_t *sc)
 /*
  * Release context and disconnect from card
  */
-void
-scx_release_context(smartcard_t *sc)
+void scx_release_context(smartcard_t *sc)
 {
 #ifdef SMARTCARD
 	CK_RV rv;
@@ -1067,7 +1050,7 @@ scx_release_context(smartcard_t *sc)
 			scx_logout(sc);
 
 		sc->session_opened = FALSE;
-		
+
 		rv = pkcs11_functions->C_CloseSession(sc->session);
 		if (rv != CKR_OK)
 			plog("error in C_CloseSession: %s"
@@ -1083,68 +1066,66 @@ scx_release_context(smartcard_t *sc)
 /*
  * Load host certificate from smartcard
  */
-bool
-scx_load_cert(const char *filename, smartcard_t **scp, cert_t *cert
-, bool *cached)
+cert_t* scx_load_cert(const char *filename, smartcard_t **scp, bool *cached)
 {
 #ifdef SMARTCARD        /* compile with smartcard support */
-	CK_OBJECT_HANDLE object;
-
 	const char *number_slot_id = filename + strlen(SCX_TOKEN);
-
-	smartcard_t *sc = scx_add(scx_parse_number_slot_id(number_slot_id));
+	CK_OBJECT_HANDLE object;
+	smartcard_t *sc;
+	cert_t *cert = NULL;
 
 	/* return the smartcard object */
-	*scp = sc;
+	*scp = sc = scx_add(scx_parse_number_slot_id(number_slot_id));
 
 	/* is there a cached smartcard certificate? */
-	*cached = sc->last_cert.type != CERT_NONE
-			  && (time(NULL) - sc->last_load) < SCX_CERT_CACHE_INTERVAL;
+	*cached = sc->last_cert && 
+			  (time(NULL) - sc->last_load) < SCX_CERT_CACHE_INTERVAL;
 
 	if (*cached)
 	{
-		*cert = sc->last_cert;
 		plog("  using cached cert from smartcard #%d (%s, id: %s, label: '%s')"
 				, sc->number
 				, scx_print_slot(sc, "")
 				, sc->id
 				, sc->label);
-		return TRUE;
+		return sc->last_cert;
 	}
 
 	if (!scx_establish_context(sc))
 	{
 		scx_release_context(sc);
-		return FALSE;
+		return NULL;
 	}
 
 	/* find the certificate object */
 	if (!scx_pkcs11_find_object(sc->session, &object, CKO_CERTIFICATE, sc->id))
 	{
 		scx_release_context(sc);
-		return FALSE;
+		return NULL;
 	}
 
 	/* retrieve the certificate object */
-	if (!scx_find_cert_object(sc->session, object, sc, cert))
+	cert = scx_find_cert_object(sc->session, object, sc);
+	if (cert == NULL)
 	{
 		scx_release_context(sc);
-		return FALSE;
+		return NULL;
 	}
 
 	if (!pkcs11_keep_state)
+	{
 		scx_release_context(sc);
-
+	}
 	plog("  loaded cert from smartcard #%d (%s, id: %s, label: '%s')"
 		, sc->number
 		, scx_print_slot(sc, "")
 		, sc->id
 		, sc->label);
 
-	return TRUE;
+	return cert;
 #else
 	plog("  warning: SMARTCARD support is deactivated in pluto/Makefile!");
-	return FALSE;
+	return NULL;
 #endif
 }
 
@@ -1158,8 +1139,7 @@ scx_load_cert(const char *filename, smartcard_t **scp, cert_t *cert
  * %smartcard:45   -       -     45
  * %smartcard0:45  -       0     45
  */
-smartcard_t*
-scx_parse_number_slot_id(const char *number_slot_id)
+smartcard_t* scx_parse_number_slot_id(const char *number_slot_id)
 {
 	int len = strlen(number_slot_id);
 	smartcard_t *sc = malloc_thing(smartcard_t);
@@ -1169,7 +1149,7 @@ scx_parse_number_slot_id(const char *number_slot_id)
 
 	if (len == 0)                       /* default: use certificate #1 */
 	{
-		sc->number = 1; 
+		sc->number = 1;
 	}
 	else if (*number_slot_id == '#')    /* #number scheme */
 	{
@@ -1218,12 +1198,11 @@ scx_parse_number_slot_id(const char *number_slot_id)
 /*
  * Verify pin on card
  */
-bool
-scx_verify_pin(smartcard_t *sc)
+bool scx_verify_pin(smartcard_t *sc)
 {
 #ifdef SMARTCARD
 	CK_RV rv;
-	
+
 	if (!sc->pinpad)
 		sc->valid = FALSE;
 
@@ -1270,9 +1249,8 @@ scx_verify_pin(smartcard_t *sc)
 /*
  * Sign hash on smartcard
  */
-bool
-scx_sign_hash(smartcard_t *sc, const u_char *in, size_t inlen
-, u_char *out, size_t outlen)
+bool scx_sign_hash(smartcard_t *sc, const u_char *in, size_t inlen, u_char *out,
+				   size_t outlen)
 {
 #ifdef SMARTCARD
 	CK_RV rv;
@@ -1377,12 +1355,11 @@ scx_sign_hash(smartcard_t *sc, const u_char *in, size_t inlen
 #endif
 }
 
-/* 
+/*
  * encrypt data block with an RSA public key
  */
-bool
-scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
-, u_char *out, size_t *outlen)
+bool scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen, u_char *out,
+				 size_t *outlen)
 {
 #ifdef SMARTCARD
 	CK_RV rv;
@@ -1423,7 +1400,7 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 		scx_release_context(sc);
 		return FALSE;
 	}
-		
+
 	/* there must be enough space left for the PKCS#1 v1.5 padding */
 	if (inlen > attr[0].ulValueLen - 11)
 	{
@@ -1467,7 +1444,7 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 			rsa_key = asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_integer("m", rsa_modulus),
 								asn1_integer("m", rsa_exponent));
-			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,	
+			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 								BUILD_BLOB_ASN1_DER, rsa_key, BUILD_END);
 			free(rsa_key.ptr);
 			if (key == NULL)
@@ -1527,12 +1504,11 @@ scx_encrypt(smartcard_t *sc, const u_char *in, size_t inlen
 	return FALSE;
 #endif
 }
-/* 
+/*
  * decrypt a data block with an RSA private key
  */
-bool
-scx_decrypt(smartcard_t *sc, const u_char *in, size_t inlen
-, u_char *out, size_t *outlen)
+bool scx_decrypt(smartcard_t *sc, const u_char *in, size_t inlen, u_char *out,
+				 size_t *outlen)
 {
 #ifdef SMARTCARD
 	CK_RV rv;
@@ -1570,7 +1546,7 @@ scx_decrypt(smartcard_t *sc, const u_char *in, size_t inlen
 		scx_release_context(sc);
 		return FALSE;
 	}
-		
+
 	DBG(DBG_CONTROL,
 		DBG_log("doing RSA decryption on smartcard")
 	)
@@ -1606,9 +1582,8 @@ scx_decrypt(smartcard_t *sc, const u_char *in, size_t inlen
  * decrypt it using a private RSA key and
  * return the decrypted data block via whack
  */
-bool
-scx_op_via_whack(const char* msg, int inbase, int outbase, sc_op_t op
-, const char* keyid, int whackfd)
+bool scx_op_via_whack(const char* msg, int inbase, int outbase, sc_op_t op,
+					  const char* keyid, int whackfd)
 {
 	char inbuf[RSA_MAX_OCTETS];
 	char outbuf[2*RSA_MAX_OCTETS + 1];
@@ -1680,7 +1655,7 @@ scx_op_via_whack(const char* msg, int inbase, int outbase, sc_op_t op
 		DBG_dump("smartcard output data:\n", inbuf, outlen)
 	)
 
-	if (outbase == 0)  /* use default base */ 
+	if (outbase == 0)  /* use default base */
 		outbase = DEFAULT_BASE;
 
 	if (outbase == 256) /* ascii plain text */
@@ -1701,8 +1676,7 @@ scx_op_via_whack(const char* msg, int inbase, int outbase, sc_op_t op
  /*
  * get length of RSA key in bytes
  */
-size_t
-scx_get_keylength(smartcard_t *sc)
+size_t scx_get_keylength(smartcard_t *sc)
 {
 #ifdef SMARTCARD
 	CK_RV rv;
@@ -1737,8 +1711,7 @@ scx_get_keylength(smartcard_t *sc)
 /*
  * prompt for pin and verify it
  */
-bool
-scx_get_pin(smartcard_t *sc, int whackfd)
+bool scx_get_pin(smartcard_t *sc, int whackfd)
 {
 #ifdef SMARTCARD
 	char pin[BUF_LEN];
@@ -1796,8 +1769,7 @@ scx_get_pin(smartcard_t *sc, int whackfd)
 /*
  * free the pin code
  */
-void
-scx_free_pin(chunk_t *pin)
+void scx_free_pin(chunk_t *pin)
 {
 	if (pin->ptr != NULL)
 	{
@@ -1811,12 +1783,12 @@ scx_free_pin(chunk_t *pin)
 /*
  * frees a smartcard record
  */
-void
-scx_free(smartcard_t *sc)
+void scx_free(smartcard_t *sc)
 {
 	if (sc != NULL)
 	{
 		scx_release_context(sc);
+		cert_release(sc->last_cert);
 		free(sc->id);
 		free(sc->label);
 		scx_free_pin(&sc->pin);
@@ -1827,8 +1799,7 @@ scx_free(smartcard_t *sc)
 /*  release of a smartcard record decreases the count by one
  "  the record is freed when the counter reaches zero
  */
-void
-scx_release(smartcard_t *sc)
+void scx_release(smartcard_t *sc)
 {
 	if (sc != NULL && --sc->count == 0)
 	{
@@ -1836,7 +1807,6 @@ scx_release(smartcard_t *sc)
 		while (*pp != sc)
 			pp = &(*pp)->next;
 		*pp = sc->next;
-		release_cert(sc->last_cert);
 		scx_free(sc);
 	}
 }
@@ -1844,8 +1814,7 @@ scx_release(smartcard_t *sc)
 /*
  *  compare two smartcard records by comparing their slots and ids
  */
-static bool
-scx_same(smartcard_t *a, smartcard_t *b)
+static bool scx_same(smartcard_t *a, smartcard_t *b)
 {
 	if  (a->number && b->number)
 	{
@@ -1863,8 +1832,7 @@ scx_same(smartcard_t *a, smartcard_t *b)
 /*  for each link pointing to the smartcard record
  "  increase the count by one
  */
-void
-scx_share(smartcard_t *sc)
+void scx_share(smartcard_t *sc)
 {
 	if (sc != NULL)
 		sc->count++;
@@ -1873,8 +1841,7 @@ scx_share(smartcard_t *sc)
 /*
  *  adds a smartcard record to the chained list
  */
-smartcard_t*
-scx_add(smartcard_t *smartcard)
+smartcard_t* scx_add(smartcard_t *smartcard)
 {
 	smartcard_t *sc = smartcards;
 	smartcard_t **psc = &smartcards;
@@ -1903,15 +1870,16 @@ scx_add(smartcard_t *smartcard)
 /*
  * get the smartcard that belongs to an X.509 certificate
  */
-smartcard_t*
-scx_get(x509cert_t *cert)
+smartcard_t* scx_get(cert_t *cert)
 {
 	smartcard_t *sc = smartcards;
 
 	while (sc != NULL)
 	{
-		if (sc->last_cert.u.x509 == cert)
+		if (sc->last_cert == cert)
+		{
 			return sc;
+		}
 		sc = sc->next;
 	}
 	return NULL;
@@ -1920,8 +1888,7 @@ scx_get(x509cert_t *cert)
 /*
  * prints either the slot number or 'any slot'
  */
-char *
-scx_print_slot(smartcard_t *sc, const char *whitespace)
+char *scx_print_slot(smartcard_t *sc, const char *whitespace)
 {
 	char *buf = temporary_cyclic_buffer();
 
@@ -1935,8 +1902,7 @@ scx_print_slot(smartcard_t *sc, const char *whitespace)
 /*
  *  list all smartcard info records in a chained list
  */
-void
-scx_list(bool utc)
+void scx_list(bool utc)
 {
 	smartcard_t *sc = smartcards;
 
@@ -1944,32 +1910,28 @@ scx_list(bool utc)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of Smartcard Objects:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (sc != NULL)
 	{
-		whack_log(RC_COMMENT, "%T, #%d, count: %d"
-			, &sc->last_load, utc
-			, sc->number
-			, sc->count);
-		whack_log(RC_COMMENT, "       %s, session %s, logged %s, has %s"
+		whack_log(RC_COMMENT, " ");
+		whack_log(RC_COMMENT, "  %s, session %s, logged %s, has %s"
 			, scx_print_slot(sc, "    ")
 			, sc->session_opened? "opened" : "closed"
 			, sc->logged_in? "in" : "out"
-			, sc->pinpad? "pin pad" 
+			, sc->pinpad? "pin pad"
 				: ((sc->pin.ptr == NULL)? "no pin"
 					: sc->valid? "valid pin" : "invalid pin"));
 		if (sc->id != NULL)
-			whack_log(RC_COMMENT, "       id:       %s", sc->id);
+			whack_log(RC_COMMENT, "  id:       %s", sc->id);
 		if (sc->label != NULL)
-			whack_log(RC_COMMENT, "       label:   '%s'", sc->label);
-		if (sc->last_cert.type == CERT_X509_SIGNATURE)
+			whack_log(RC_COMMENT, "  label:   '%s'", sc->label);
+		if (sc->last_cert)
 		{
-			char buf[BUF_LEN];
+			certificate_t *certificate = sc->last_cert->cert;
 
-			dntoa(buf, BUF_LEN, sc->last_cert.u.x509->subject);
-			whack_log(RC_COMMENT, "       subject: '%s'", buf);
+			whack_log(RC_COMMENT, "  subject: '%Y'",
+					  certificate->get_subject(certificate));
 		}
 		sc = sc->next;
 	}

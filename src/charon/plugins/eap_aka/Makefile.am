@@ -1,11 +1,14 @@
 
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon \
+  -I$(top_srcdir)/src/libsimaka
 
 AM_CFLAGS = -rdynamic
 
-plugin_LTLIBRARIES = libstrongswan-eapaka.la
+plugin_LTLIBRARIES = libstrongswan-eap-aka.la
 
-libstrongswan_eapaka_la_SOURCES = eap_aka_plugin.h eap_aka_plugin.c eap_aka.h eap_aka.c
-libstrongswan_eapaka_la_LDFLAGS = -module -avoid-version
-libstrongswan_eapaka_la_LIBADD = -lgmp
+libstrongswan_eap_aka_la_SOURCES = eap_aka_plugin.h eap_aka_plugin.c \
+  eap_aka_peer.h eap_aka_peer.c \
+  eap_aka_server.h eap_aka_server.c
+libstrongswan_eap_aka_la_LIBADD = $(top_builddir)/src/libsimaka/libsimaka.la
+libstrongswan_eap_aka_la_LDFLAGS = -module -avoid-version
 

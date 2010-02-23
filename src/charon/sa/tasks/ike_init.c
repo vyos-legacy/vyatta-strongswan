@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -24,7 +24,6 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
-#include <encoding/payloads/vendor_id_payload.h>
 
 /** maximum retries to do with cookies/other dh groups */
 #define MAX_RETRIES 5
@@ -35,67 +34,67 @@ typedef struct private_ike_init_t private_ike_init_t;
  * Private members of a ike_init_t task.
  */
 struct private_ike_init_t {
-	
+
 	/**
 	 * Public methods and task_t interface.
 	 */
 	ike_init_t public;
-	
+
 	/**
 	 * Assigned IKE_SA.
 	 */
 	ike_sa_t *ike_sa;
-	
+
 	/**
 	 * Are we the initiator?
 	 */
 	bool initiator;
-	
+
 	/**
 	 * IKE config to establish
 	 */
 	ike_cfg_t *config;
-	
+
 	/**
 	 * diffie hellman group to use
 	 */
 	diffie_hellman_group_t dh_group;
-	
+
 	/**
 	 * diffie hellman key exchange
 	 */
 	diffie_hellman_t *dh;
-	
+
 	/**
 	 * Keymat derivation (from IKE_SA)
 	 */
 	keymat_t *keymat;
-	
+
 	/**
 	 * nonce chosen by us
 	 */
 	chunk_t my_nonce;
-	
+
 	/**
 	 * nonce chosen by peer
 	 */
 	chunk_t other_nonce;
-	
+
 	/**
 	 * Negotiated proposal used for IKE_SA
 	 */
 	proposal_t *proposal;
-	
+
 	/**
 	 * Old IKE_SA which gets rekeyed
 	 */
 	ike_sa_t *old_sa;
-	
+
 	/**
 	 * cookie received from responder
 	 */
 	chunk_t cookie;
-	
+
 	/**
 	 * retries done so far after failure (cookie or bad dh group)
 	 */
@@ -114,16 +113,16 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 	ike_sa_id_t *id;
 	proposal_t *proposal;
 	iterator_t *iterator;
-	
+
 	id = this->ike_sa->get_id(this->ike_sa);
-	
+
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 
 	if (this->initiator)
 	{
 		proposal_list = this->config->get_proposals(this->config);
 		if (this->old_sa)
-		{	
+		{
 			/* include SPI of new IKE_SA when we are rekeying */
 			iterator = proposal_list->create_iterator(proposal_list, TRUE);
 			while (iterator->iterate(iterator, (void**)&proposal))
@@ -132,7 +131,7 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 			}
 			iterator->destroy(iterator);
 		}
-		
+
 		sa_payload = sa_payload_create_from_proposal_list(proposal_list);
 		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 	}
@@ -146,11 +145,11 @@ static void build_payloads(private_ike_init_t *this, message_t *message)
 		sa_payload = sa_payload_create_from_proposal(this->proposal);
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
-	
+
 	nonce_payload = nonce_payload_create();
 	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 	ke_payload = ke_payload_create_from_diffie_hellman(this->dh);
-	
+
 	if (this->old_sa)
 	{	/* payload order differs if we are rekeying */
 		message->add_payload(message, (payload_t*)nonce_payload);
@@ -170,7 +169,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
-	
+
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -180,18 +179,21 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				linked_list_t *proposal_list;
-				
+				bool private;
+
 				proposal_list = sa_payload->get_proposals(sa_payload);
+				private = this->ike_sa->supports_extension(this->ike_sa,
+														   EXT_STRONGSWAN);
 				this->proposal = this->config->select_proposal(this->config,
-															   proposal_list);
-				proposal_list->destroy_offset(proposal_list, 
+														proposal_list, private);
+				proposal_list->destroy_offset(proposal_list,
 											  offsetof(proposal_t, destroy));
 				break;
 			}
 			case KEY_EXCHANGE:
 			{
 				ke_payload_t *ke_payload = (ke_payload_t*)payload;
-				
+
 				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
 				if (!this->initiator)
 				{
@@ -212,13 +214,6 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 				this->other_nonce = nonce_payload->get_nonce(nonce_payload);
 				break;
 			}
-			case VENDOR_ID:
-			{
-				vendor_id_payload_t *vendor_id = (vendor_id_payload_t*)payload;
-				chunk_t vid = vendor_id->get_data(vendor_id);
-
-				DBG1(DBG_ENC, "received vendor id: %#B", &vid);					
-			}
 			default:
 				break;
 		}
@@ -232,20 +227,20 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 static status_t build_i(private_ike_init_t *this, message_t *message)
 {
 	rng_t *rng;
-	
+
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	DBG0(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_other_host(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
-	
-	if (this->retry++ >= MAX_RETRIES)
+
+	if (this->retry >= MAX_RETRIES)
 	{
 		DBG1(DBG_IKE, "giving up after %d retries", MAX_RETRIES);
 		return FAILED;
 	}
-	
+
 	/* if the DH group is set via use_dh_group(), we already have a DH object */
 	if (!this->dh)
 	{
@@ -258,7 +253,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 			return FAILED;
 		}
 	}
-	
+
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
 	{
@@ -271,12 +266,12 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 		rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
 		rng->destroy(rng);
 	}
-	
+
 	if (this->cookie.ptr)
 	{
 		message->add_notify(message, FALSE, COOKIE, this->cookie);
 	}
-	
+
 	build_payloads(this, message);
 
 #ifdef ME
@@ -288,7 +283,7 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
 		}
 	}
 #endif /* ME */
-	
+
 	return NEED_MORE;
 }
 
@@ -296,9 +291,9 @@ static status_t build_i(private_ike_init_t *this, message_t *message)
  * Implementation of task_t.process for responder
  */
 static status_t process_r(private_ike_init_t *this, message_t *message)
-{	
+{
 	rng_t *rng;
-	
+
 	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
@@ -311,59 +306,22 @@ static status_t process_r(private_ike_init_t *this, message_t *message)
 	}
 	rng->allocate_bytes(rng, NONCE_SIZE, &this->my_nonce);
 	rng->destroy(rng);
-	
+
 #ifdef ME
 	{
-		chunk_t connect_id = chunk_empty;
-		enumerator_t *enumerator;
-		payload_t *payload;
-		
-		/* check for a ME_CONNECTID notify */
-		enumerator = message->create_payload_enumerator(message);
-		while (enumerator->enumerate(enumerator, &payload))
+		notify_payload_t *notify = message->get_notify(message, ME_CONNECTID);
+		if (notify)
 		{
-			if (payload->get_type(payload) == NOTIFY)
-			{
-				notify_payload_t *notify = (notify_payload_t*)payload;
-				notify_type_t type = notify->get_notify_type(notify);
-			
-				switch (type)
-				{
-					case ME_CONNECTID:
-					{
-						chunk_free(&connect_id);
-						connect_id = chunk_clone(notify->get_notification_data(notify));
-						DBG2(DBG_IKE, "received ME_CONNECTID %#B", &connect_id);
-						break;
-					}
-					default:
-					{
-						if (type < 16383)
-						{
-							DBG1(DBG_IKE, "received %N notify error",
-								notify_type_names, type);
-							break;	
-						}
-						DBG2(DBG_IKE, "received %N notify",
-							notify_type_names, type);
-						break;
-					}
-				}
-			}
-		}
-		enumerator->destroy(enumerator);
-		
-		if (connect_id.ptr)
-		{
+			chunk_t connect_id = notify->get_notification_data(notify);
+			DBG2(DBG_IKE, "received ME_CONNECTID %#B", &connect_id);
 			charon->connect_manager->stop_checks(charon->connect_manager,
-				connect_id);
-			chunk_free(&connect_id);
+												 connect_id);
 		}
 	}
 #endif /* ME */
-	
+
 	process_payloads(this, message);
-	
+
 	return NEED_MORE;
 }
 
@@ -377,7 +335,7 @@ static bool derive_keys(private_ike_init_t *this,
 	pseudo_random_function_t prf_alg = PRF_UNDEFINED;
 	chunk_t skd = chunk_empty;
 	ike_sa_id_t *id;
-	
+
 	id = this->ike_sa->get_id(this->ike_sa);
 	if (this->old_sa)
 	{
@@ -417,12 +375,12 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		return FAILED;
 	}
 	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
-	
+
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
 		u_int16_t group;
-		
+
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
 		{
@@ -440,7 +398,7 @@ static status_t build_r(private_ike_init_t *this, message_t *message)
 		}
 		return FAILED;
 	}
-	
+
 	if (!derive_keys(this, this->other_nonce, this->my_nonce))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
@@ -458,7 +416,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
-	
+
 	/* check for erronous notifies */
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -467,27 +425,28 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		{
 			notify_payload_t *notify = (notify_payload_t*)payload;
 			notify_type_t type = notify->get_notify_type(notify);
-			
+
 			switch (type)
 			{
 				case INVALID_KE_PAYLOAD:
 				{
 					chunk_t data;
 					diffie_hellman_group_t bad_group;
-					
+
 					bad_group = this->dh_group;
 					data = notify->get_notification_data(notify);
 					this->dh_group = ntohs(*((u_int16_t*)data.ptr));
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
 						 "it requested %N", diffie_hellman_group_names,
 						 bad_group, diffie_hellman_group_names, this->dh_group);
-						 
+
 					if (this->old_sa == NULL)
 					{	/* reset the IKE_SA if we are not rekeying */
 						this->ike_sa->reset(this->ike_sa);
 					}
-					
+
 					enumerator->destroy(enumerator);
+					this->retry++;
 					return NEED_MORE;
 				}
 				case NAT_DETECTION_SOURCE_IP:
@@ -504,6 +463,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 					this->ike_sa->reset(this->ike_sa);
 					enumerator->destroy(enumerator);
 					DBG2(DBG_IKE, "received %N notify", notify_type_names, type);
+					this->retry++;
 					return NEED_MORE;
 				}
 				default:
@@ -513,7 +473,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
 						enumerator->destroy(enumerator);
-						return FAILED;	
+						return FAILED;
 					}
 					DBG2(DBG_IKE, "received %N notify",
 						notify_type_names, type);
@@ -523,7 +483,7 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		}
 	}
 	enumerator->destroy(enumerator);
-	
+
 	process_payloads(this, message);
 
 	/* check if we have everything */
@@ -534,14 +494,14 @@ static status_t process_i(private_ike_init_t *this, message_t *message)
 		return FAILED;
 	}
 	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
-	
+
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))
 	{
 		DBG1(DBG_IKE, "peer DH group selection invalid");
 		return FAILED;
 	}
-	
+
 	if (!derive_keys(this, this->my_nonce, this->other_nonce))
 	{
 		DBG1(DBG_IKE, "key derivation failed");
@@ -581,7 +541,7 @@ static void migrate(private_ike_init_t *this, ike_sa_t *ike_sa)
 {
 	DESTROY_IF(this->proposal);
 	chunk_free(&this->other_nonce);
-	
+
 	this->ike_sa = ike_sa;
 	this->proposal = NULL;
 	DESTROY_IF(this->dh);
@@ -622,7 +582,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
 		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
 	}
-	
+
 	this->ike_sa = ike_sa;
 	this->initiator = initiator;
 	this->dh_group = MODP_NONE;
@@ -635,6 +595,6 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 	this->config = NULL;
 	this->old_sa = old_sa;
 	this->retry = 0;
-	
+
 	return &this->public;
 }

@@ -15,14 +15,15 @@
  */
 
 #include <stdlib.h>
-#include <pthread.h>
 
 #include "sender.h"
 
 #include <daemon.h>
 #include <network/socket.h>
 #include <processing/jobs/callback_job.h>
-#include <utils/mutex.h>
+#include <threading/thread.h>
+#include <threading/condvar.h>
+#include <threading/mutex.h>
 
 
 typedef struct private_sender_t private_sender_t;
@@ -40,7 +41,7 @@ struct private_sender_t {
 	 * Sender threads job.
 	 */
 	callback_job_t *job;
-	 
+
 	/**
 	 * The packets are stored in a linked list
 	 */
@@ -55,7 +56,7 @@ struct private_sender_t {
 	 * condvar to signal for packets added to list
 	 */
 	condvar_t *got;
-	
+
 	/**
 	 * condvar to signal for packets sent
 	 */
@@ -68,11 +69,11 @@ struct private_sender_t {
 static void send_(private_sender_t *this, packet_t *packet)
 {
 	host_t *src, *dst;
-	
+
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
 	DBG1(DBG_NET, "sending packet: from %#H to %#H", src, dst);
-	
+
 	this->mutex->lock(this->mutex);
 	this->list->insert_last(this->list, packet);
 	this->got->signal(this->got);
@@ -85,24 +86,24 @@ static void send_(private_sender_t *this, packet_t *packet)
 static job_requeue_t send_packets(private_sender_t * this)
 {
 	packet_t *packet;
-	int oldstate;
-	
+	bool oldstate;
+
 	this->mutex->lock(this->mutex);
 	while (this->list->get_count(this->list) == 0)
 	{
 		/* add cleanup handler, wait for packet, remove cleanup handler */
-		pthread_cleanup_push((void(*)(void*))this->mutex->unlock, this->mutex);
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		
+		thread_cleanup_push((thread_cleanup_t)this->mutex->unlock, this->mutex);
+		oldstate = thread_cancelability(TRUE);
+
 		this->got->wait(this->got, this->mutex);
-		
-		pthread_setcancelstate(oldstate, NULL);
-		pthread_cleanup_pop(0);
+
+		thread_cancelability(oldstate);
+		thread_cleanup_pop(FALSE);
 	}
 	this->list->remove_first(this->list, (void**)&packet);
 	this->sent->signal(this->sent);
 	this->mutex->unlock(this->mutex);
-	
+
 	charon->socket->send(charon->socket, packet);
 	packet->destroy(packet);
 	return JOB_REQUEUE_DIRECT;
@@ -134,19 +135,19 @@ static void destroy(private_sender_t *this)
 sender_t * sender_create()
 {
 	private_sender_t *this = malloc_thing(private_sender_t);
-	
+
 	this->public.send = (void(*)(sender_t*,packet_t*))send_;
 	this->public.destroy = (void(*)(sender_t*)) destroy;
-	
+
 	this->list = linked_list_create();
 	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->got = condvar_create(CONDVAR_TYPE_DEFAULT);
 	this->sent = condvar_create(CONDVAR_TYPE_DEFAULT);
-	
+
 	this->job = callback_job_create((callback_job_cb_t)send_packets,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
-	
+
 	return &this->public;
 }
 

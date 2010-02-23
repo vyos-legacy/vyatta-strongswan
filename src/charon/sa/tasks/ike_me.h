@@ -34,18 +34,17 @@ typedef struct ike_me_t ike_me_t;
  * connection, allows to initiate mediated connections using ME_CONNECT
  * exchanges and to request reflexive addresses from the mediation server using
  * ME_ENDPOINT notifies.
- * 
+ *
  * @note This task has to be activated before the IKE_AUTH task, because that
  * task generates the IKE_SA_INIT message so that no more payloads can be added
  * to it afterwards.
  */
 struct ike_me_t {
-
 	/**
 	 * Implements the task_t interface
 	 */
 	task_t task;
-	
+
 	/**
 	 * Initiates a connection with another peer (i.e. sends a ME_CONNECT
 	 * to the mediation server)
@@ -53,45 +52,48 @@ struct ike_me_t {
 	 * @param peer_id			ID of the other peer (gets cloned)
 	 */
 	void (*connect)(ike_me_t *this, identification_t *peer_id);
-	
+
 	/**
 	 * Responds to a ME_CONNECT from another peer (i.e. sends a ME_CONNECT
 	 * to the mediation server)
-	 * 
-	 * @param peer_id			ID of the other peer (gets cloned)
-	 * @param connect_id		the connect ID as provided by the initiator (gets cloned)
+	 *
+	 * Data gets cloned.
+	 *
+	 * @param peer_id			ID of the other peer
+	 * @param connect_id		the connect ID as provided by the initiator
 	 */
-	void (*respond)(ike_me_t *this, identification_t *peer_id, chunk_t connect_id);
-	
+	void (*respond)(ike_me_t *this, identification_t *peer_id,
+					chunk_t connect_id);
+
 	/**
-	 * Sends a ME_CALLBACK to a peer that previously requested another peer.
-	 * 
+	 * Sends a ME_CALLBACK to a peer that previously requested some other peer.
+	 *
 	 * @param peer_id			ID of the other peer (gets cloned)
 	 */
 	void (*callback)(ike_me_t *this, identification_t *peer_id);
-	
+
 	/**
 	 * Relays data to another peer (i.e. sends a ME_CONNECT to the peer)
-	 * 
+	 *
 	 * Data gets cloned.
-	 * 
+	 *
 	 * @param requester			ID of the requesting peer
 	 * @param connect_id		content of the ME_CONNECTID notify
 	 * @param connect_key		content of the ME_CONNECTKEY notify
 	 * @param endpoints			endpoints
 	 * @param response			TRUE if this is a response
 	 */
-	void (*relay)(ike_me_t *this, identification_t *requester, chunk_t connect_id,
-			chunk_t connect_key, linked_list_t *endpoints, bool response);
-
+	void (*relay)(ike_me_t *this, identification_t *requester,
+				  chunk_t connect_id, chunk_t connect_key,
+				  linked_list_t *endpoints, bool response);
 };
 
 /**
  * Create a new ike_me task.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param initiator		TRUE if taks is initiated by us
- * @return			  	ike_me task to handle by the task_manager
+ * @param initiator		TRUE if task is initiated by us
+ * @return				ike_me task to be handled by the task_manager
  */
 ike_me_t *ike_me_create(ike_sa_t *ike_sa, bool initiator);
 

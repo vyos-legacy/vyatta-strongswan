@@ -13,12 +13,10 @@
  * for more details.
  */
 
-#include <sys/time.h>
 #include <time.h>
 #include <pthread.h>
 
 #include <library.h>
-#include <daemon.h>
 
 #define ALLOCS 1000
 #define THREADS 20
@@ -28,33 +26,34 @@ static void* testing(void *thread)
 	int i;
 	host_t *addr[ALLOCS];
 	identification_t *id[ALLOCS];
-	
+
 	/* prepare identities */
 	for (i = 0; i < ALLOCS; i++)
 	{
 		char buf[256];
-		
+
 		snprintf(buf, sizeof(buf), "%d-%d@strongswan.org", (uintptr_t)thread, i);
 		id[i] = identification_create_from_string(buf);
 	}
-	
+
 	/* allocate addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		addr[i] = charon->attributes->acquire_address(charon->attributes, 
-													  "test", id[i], NULL);
+		addr[i] = lib->attributes->acquire_address(lib->attributes,
+												   "test", id[i], NULL);
 		if (!addr[i])
 		{
 			return (void*)FALSE;
 		}
 	}
-	
+
 	/* release addresses */
 	for (i = 0; i < ALLOCS; i++)
 	{
-		charon->attributes->release_address(charon->attributes, "test", addr[i], id[i]);
+		lib->attributes->release_address(lib->attributes,
+										 "test", addr[i], id[i]);
 	}
-	
+
 	/* cleanup */
 	for (i = 0; i < ALLOCS; i++)
 	{
@@ -73,7 +72,7 @@ bool test_pool()
 	uintptr_t i;
 	void *res;
 	pthread_t thread[THREADS];
-	
+
 	for (i = 0; i < THREADS; i++)
 	{
 		if (pthread_create(&thread[i], NULL, (void*)testing, (void*)i) < 0)

@@ -46,14 +46,14 @@ chunk_t chunk_empty = { NULL, 0 };
 chunk_t chunk_create_clone(u_char *ptr, chunk_t chunk)
 {
 	chunk_t clone = chunk_empty;
-	
+
 	if (chunk.ptr && chunk.len > 0)
 	{
 		clone.ptr = ptr;
 		clone.len = chunk.len;
 		memcpy(clone.ptr, chunk.ptr, chunk.len);
 	}
-	
+
 	return clone;
 }
 
@@ -64,7 +64,7 @@ size_t chunk_length(const char* mode, ...)
 {
 	va_list chunks;
 	size_t length = 0;
-	
+
 	va_start(chunks, mode);
 	while (TRUE)
 	{
@@ -72,6 +72,7 @@ size_t chunk_length(const char* mode, ...)
 		{
 			case 'm':
 			case 'c':
+			case 's':
 			{
 				chunk_t ch = va_arg(chunks, chunk_t);
 				length += ch.len;
@@ -93,36 +94,42 @@ chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...)
 {
 	va_list chunks;
 	chunk_t construct = chunk_create(ptr, 0);
-	
+
 	va_start(chunks, mode);
 	while (TRUE)
 	{
-		bool free_chunk = FALSE;
+		bool free_chunk = FALSE, clear_chunk = FALSE;
+		chunk_t ch;
+
 		switch (*mode++)
 		{
+			case 's':
+				clear_chunk = TRUE;
+				/* FALL */
 			case 'm':
-			{
 				free_chunk = TRUE;
-			}
+				/* FALL */
 			case 'c':
-			{
-				chunk_t ch = va_arg(chunks, chunk_t);
-				memcpy(ptr, ch.ptr, ch.len); 
+				ch = va_arg(chunks, chunk_t);
+				memcpy(ptr, ch.ptr, ch.len);
 				ptr += ch.len;
 				construct.len += ch.len;
-				if (free_chunk)
+				if (clear_chunk)
+				{
+					chunk_clear(&ch);
+				}
+				else if (free_chunk)
 				{
 					free(ch.ptr);
 				}
 				continue;
-			}
 			default:
 				break;
 		}
 		break;
 	}
 	va_end(chunks);
-	
+
 	return construct;
 }
 
@@ -134,7 +141,7 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 	va_list chunks;
 	u_int len;
 	chunk_t *ch;
-	
+
 	va_start(chunks, mode);
 	while (TRUE)
 	{
@@ -255,19 +262,19 @@ chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase)
 {
 	int i, len;
 	char *hexdig = hexdig_lower;
-	
+
 	if (uppercase)
 	{
 		hexdig = hexdig_upper;
 	}
-	
+
 	len = chunk.len * 2;
 	if (!buf)
 	{
 		buf = malloc(len + 1);
 	}
 	buf[len] = '\0';
-	
+
 	for (i = 0; i < chunk.len; i++)
 	{
 		buf[i*2]   = hexdig[(chunk.ptr[i] >> 4) & 0xF];
@@ -301,7 +308,7 @@ chunk_t chunk_from_hex(chunk_t hex, char *buf)
 {
 	int i, len;
 	bool odd = FALSE;
-	
+
 	len = (hex.len / 2);
 	if (hex.len % 2)
 	{
@@ -327,7 +334,7 @@ chunk_t chunk_from_hex(chunk_t hex, char *buf)
 }
 
 /** base 64 conversion digits */
-static char b64digits[] = 
+static char b64digits[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /**
@@ -337,7 +344,7 @@ chunk_t chunk_to_base64(chunk_t chunk, char *buf)
 {
 	int i, len;
 	char *pos;
-	
+
 	len = chunk.len + ((3 - chunk.len % 3) % 3);
 	if (!buf)
 	{
@@ -401,7 +408,7 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf)
 {
 	u_char *pos, byte[4];
 	int i, j, len, outlen;
-	
+
 	len = base64.len / 4 * 3;
 	if (!buf)
 	{
@@ -442,6 +449,24 @@ int chunk_compare(chunk_t a, chunk_t b)
 	return memcmp(a.ptr, b.ptr, len);
 };
 
+
+/**
+ * Described in header.
+ */
+bool chunk_increment(chunk_t chunk)
+{
+	int i;
+
+	for (i = chunk.len - 1; i >= 0; i--)
+	{
+		if (++chunk.ptr[i] != 0)
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /**
  * Remove non-printable characters from a chunk.
  */
@@ -449,7 +474,7 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace)
 {
 	bool printable = TRUE;
 	int i;
-	
+
 	if (sane)
 	{
 		*sane = chunk_clone(chunk);
@@ -470,7 +495,7 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace)
 
 /**
  * Described in header.
- * 
+ *
  * The implementation is based on Paul Hsieh's SuperFastHash:
  * 	 http://www.azillionmonkeys.com/qed/hash.html
  */
@@ -480,15 +505,15 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 	size_t len = chunk.len;
 	u_int32_t tmp;
 	int rem;
-	
+
 	if (!len || data == NULL)
 	{
 		return 0;
 	}
-	
+
 	rem = len & 3;
 	len >>= 2;
-	
+
 	/* Main loop */
 	for (; len > 0; --len)
 	{
@@ -498,7 +523,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 		data += 2 * sizeof(u_int16_t);
 		hash += hash >> 11;
 	}
-	
+
 	/* Handle end cases */
 	switch (rem)
 	{
@@ -525,7 +550,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 			break;
 		}
 	}
-	
+
 	/* Force "avalanching" of final 127 bits */
 	hash ^= hash << 3;
 	hash += hash >> 5;
@@ -533,7 +558,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 	hash += hash >> 17;
 	hash ^= hash << 25;
 	hash += hash >> 6;
-	
+
 	return hash;
 }
 
@@ -555,13 +580,13 @@ int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	bool first = TRUE;
 	chunk_t copy = *chunk;
 	int written = 0;
-	
+
 	if (!spec->hash)
 	{
 		const void *new_args[] = {&chunk->ptr, &chunk->len};
 		return mem_printf_hook(dst, len, spec, new_args);
 	}
-	
+
 	while (copy.len > 0)
 	{
 		if (first)

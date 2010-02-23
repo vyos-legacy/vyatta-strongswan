@@ -38,12 +38,13 @@
 #include "server.h"
 #include "state.h"
 #include "connections.h"
+#include "myid.h"
 #include "kernel.h"
 #include "whack.h"      /* needs connections.h */
 #include "timer.h"
 
 /* close one per-peer log */
-static void perpeer_logclose(struct connection *c);     /* forward */
+static void perpeer_logclose(connection_t *c);     /* forward */
 
 
 bool
@@ -77,7 +78,7 @@ static TAILQ_HEAD(perpeer, connection) perpeer_list;
  */
 int whack_log_fd = NULL_FD;     /* only set during whack_handle() */
 struct state *cur_state = NULL; /* current state, for diagnostics */
-struct connection *cur_connection = NULL;       /* current connection, for diagnostics */
+connection_t *cur_connection = NULL;       /* current connection, for diagnostics */
 const ip_address *cur_from = NULL;      /* source of current current message */
 u_int16_t cur_from_port;        /* host order */
 
@@ -99,12 +100,12 @@ static void pluto_dbg(int level, char *fmt, ...)
 	else if (cur_debugging & DBG_RAW)
 	{
 		debug_level = 3;
-	}	
+	}
 	else if (cur_debugging & DBG_PARSING)
 	{
 		debug_level = 2;
 	}
-	else 
+	else
 	{
 		debug_level = 1;
 	}
@@ -245,7 +246,7 @@ fmt_log(char *buf, size_t buf_len, const char *fmt, va_list ap)
 {
 	bool reproc = *fmt == '~';
 	size_t ps;
-	struct connection *c = cur_state != NULL ? cur_state->st_connection
+	connection_t *c = cur_state != NULL ? cur_state->st_connection
 		: cur_connection;
 
 	buf[0] = '\0';
@@ -293,7 +294,7 @@ fmt_log(char *buf, size_t buf_len, const char *fmt, va_list ap)
 }
 
 static void
-perpeer_logclose(struct connection *c)
+perpeer_logclose(connection_t *c)
 {
 	/* only free/close things if we had used them! */
 	if (c->log_file != NULL)
@@ -308,7 +309,7 @@ perpeer_logclose(struct connection *c)
 }
 
 void
-perpeer_logfree(struct connection *c)
+perpeer_logfree(connection_t *c)
 {
 	perpeer_logclose(c);
 	if (c->log_file_name != NULL)
@@ -321,7 +322,7 @@ perpeer_logfree(struct connection *c)
 
 /* open the per-peer log */
 static void
-open_peerlog(struct connection *c)
+open_peerlog(connection_t *c)
 {
 	syslog(LOG_INFO, "opening log file for conn %s", c->name);
 
@@ -725,7 +726,7 @@ lset_t
 	cur_debugging =  DBG_NONE;
 
 void
-extra_debugging(const struct connection *c)
+extra_debugging(const connection_t *c)
 {
 	if(c == NULL)
 	{
@@ -835,8 +836,8 @@ static void show_loaded_plugins()
 	char buf[BUF_LEN], *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
-	
-	buf[0] = '\0';	
+
+	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{

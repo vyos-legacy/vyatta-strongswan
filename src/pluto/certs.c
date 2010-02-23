@@ -17,153 +17,166 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <time.h>
 
 #include <freeswan.h>
 
-#include "library.h"
-#include "asn1/asn1.h"
+#include <library.h>
+#include <asn1/asn1.h>
+#include <credentials/certificates/certificate.h>
+#include <credentials/certificates/pgp_certificate.h>
 
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
-#include "id.h"
-#include "pem.h"
 #include "certs.h"
+#include "whack.h"
+#include "fetch.h"
+#include "keys.h"
+#include "builder.h"
 
 /**
- * used for initializatin of certs
+ * Initialization
  */
-const cert_t cert_empty = {CERT_NONE, {NULL}};
+const cert_t cert_empty = {
+	NULL   , /* cert */
+	NULL   , /* *next */
+	  0    , /* count */
+	FALSE    /* smartcard */
+};
 
 /**
- * extracts the certificate to be sent to the peer
+ * Chained lists of X.509 and PGP end entity certificates
  */
-chunk_t cert_get_encoding(cert_t cert)
+static cert_t *certs = NULL;
+
+/**
+ *  Free a pluto certificate
+ */
+void cert_free(cert_t *cert)
 {
-	switch (cert.type)
+	if (cert)
 	{
-	case CERT_PGP:
-		return cert.u.pgp->certificate;
-	case CERT_X509_SIGNATURE:
-		return cert.u.x509->certificate;
-	default:
+		certificate_t *certificate = cert->cert;
+
+		if (certificate)
+		{
+			certificate->destroy(certificate);
+		}
+		free(cert);
+	}
+}
+
+/**
+ *  Add a pluto end entity certificate to the chained list
+ */
+cert_t* cert_add(cert_t *cert)
+{
+	certificate_t *certificate = cert->cert;
+	cert_t *c = certs;
+
+	while (c != NULL)
+	{
+		if (certificate->equals(certificate, c->cert)) /* already in chain, free cert */
+		{
+			cert_free(cert);
+			return c;
+		}
+		c = c->next;
+	}
+
+	/* insert new cert at the root of the chain */
+	lock_certs_and_keys("cert_add");
+	cert->next = certs;
+	certs = cert;
+	DBG(DBG_CONTROL | DBG_PARSING,
+		DBG_log("  cert inserted")
+	)
+	unlock_certs_and_keys("cert_add");
+	return cert;
+}
+
+/**
+ * Passphrase callback to read from whack fd
+ */
+chunk_t whack_pass_cb(prompt_pass_t *pass, int try)
+{
+	int n;
+
+	if (try > MAX_PROMPT_PASS_TRIALS)
+	{
+		whack_log(RC_LOG_SERIOUS, "invalid passphrase, too many trials");
 		return chunk_empty;
 	}
-}
-
-public_key_t* cert_get_public_key(const cert_t cert)
-{
-	switch (cert.type)
+	if (try == 1)
 	{
-		case CERT_PGP:
-			return cert.u.pgp->public_key;
-			break;
-		case CERT_X509_SIGNATURE:
-			return cert.u.x509->public_key;
-			break;
-		default:
-			return NULL;
-	}
-}
-
-/* load a coded key or certificate file with autodetection
- * of binary DER or base64 PEM ASN.1 formats and armored PGP format
- */
-bool load_coded_file(char *filename, prompt_pass_t *pass, const char *type,
-					 chunk_t *blob, bool *pgp)
-{
-	err_t ugh = NULL;
-
-	FILE *fd = fopen(filename, "r");
-
-	if (fd)
-	{
-		int bytes;
-		fseek(fd, 0, SEEK_END );
-		blob->len = ftell(fd);
-		rewind(fd);
-		blob->ptr = malloc(blob->len);
-		bytes = fread(blob->ptr, 1, blob->len, fd);
-		fclose(fd);
-		plog("  loaded %s file '%s' (%d bytes)", type, filename, bytes);
-
-		*pgp = FALSE;
-
-		/* try DER format */
-		if (is_asn1(*blob))
-		{
-			DBG(DBG_PARSING,
-				DBG_log("  file coded in DER format");
-			)
-			return TRUE;
-		}
-
-		/* try PEM format */
-		ugh = pemtobin(blob, pass, filename, pgp);
-
-		if (ugh == NULL)
-		{
-			if (*pgp)
-			{
-				DBG(DBG_PARSING,
-					DBG_log("  file coded in armored PGP format");
-				)
-				return TRUE;
-			}
-			if (is_asn1(*blob))
-			{
-				DBG(DBG_PARSING,
-					DBG_log("  file coded in PEM format");
-				)
-				return TRUE;
-			}
-			ugh = "file coded in unknown format, discarded";
-		}
-
-		/* a conversion error has occured */
-		plog("  %s", ugh);
-		free(blob->ptr);
-		*blob = chunk_empty;
+		whack_log(RC_ENTERSECRET, "need passphrase for 'private key'");
 	}
 	else
 	{
-		plog("  could not open %s file '%s'", type, filename);
+		whack_log(RC_ENTERSECRET, "invalid passphrase, please try again");
 	}
-	return FALSE;
+
+	n = read(pass->fd, pass->secret, PROMPT_PASS_LEN);
+
+	if (n == -1)
+	{
+		whack_log(RC_LOG_SERIOUS, "read(whackfd) failed");
+		return chunk_empty;
+	}
+
+	pass->secret[n-1] = '\0';
+
+	if (strlen(pass->secret) == 0)
+	{
+		whack_log(RC_LOG_SERIOUS, "no passphrase entered, aborted");
+		return chunk_empty;
+	}
+	return chunk_create(pass->secret, strlen(pass->secret));
 }
 
 /**
- *  Loads a PKCS#1 or PGP privatekey file
+ *  Loads a PKCS#1 or PGP private key file
  */
 private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 								key_type_t type)
 {
 	private_key_t *key = NULL;
-	chunk_t blob = chunk_empty;
-	bool pgp = FALSE;
+	char *path;
 
-	char *path = concatenate_paths(PRIVATE_KEY_PATH, filename);
+	path = concatenate_paths(PRIVATE_KEY_PATH, filename);
+	if (pass && pass->prompt && pass->fd != NULL_FD)
+	{	/* use passphrase callback */
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path,
+								 BUILD_PASSPHRASE_CALLBACK, whack_pass_cb, pass,
+								 BUILD_END);
+		if (key)
+		{
+			whack_log(RC_SUCCESS, "valid passphrase");
+		}
+	}
+	else if (pass)
+	{	/* use a given passphrase */
+		chunk_t password = chunk_create(pass->secret, strlen(pass->secret));
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path,
+								 BUILD_PASSPHRASE, password, BUILD_END);
+	}
+	else
+	{	/* no passphrase */
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, path, BUILD_END);
 
-	if (load_coded_file(path, pass, "private key", &blob, &pgp))
+	}
+	if (key)
 	{
-		if (pgp)
-		{
- 			parse_pgp(blob, NULL, &key);
-		}
-		else
-		{
-			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-								 	 BUILD_BLOB_ASN1_DER, blob, BUILD_END);
-		}
-		if (key == NULL)
-		{
-			plog("  syntax error in %s private key file", pgp ? "PGP":"PKCS#");
-		}			
-		free(blob.ptr);
+		plog("  loaded private key from '%s'", filename);
 	}
 	else
 	{
-		plog("  error loading private key file");
+		plog("  syntax error in private key file");
 	}
 	return key;
 }
@@ -171,125 +184,166 @@ private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
 /**
  *  Loads a X.509 or OpenPGP certificate
  */
-bool load_cert(char *filename, const char *label, cert_t *cert)
+cert_t* load_cert(char *filename, const char *label, x509_flag_t flags)
 {
-	bool pgp = FALSE;
-	chunk_t blob = chunk_empty;
+	cert_t *cert;
 
-	/* initialize cert struct */
-	cert->type = CERT_NONE;
-	cert->u.x509 = NULL;
-
-	if (load_coded_file(filename, NULL, label, &blob, &pgp))
+	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_PLUTO_CERT,
+							  BUILD_FROM_FILE, filename,
+							  BUILD_X509_FLAG, flags,
+							  BUILD_END);
+	if (cert)
 	{
-		if (pgp)
-		{
-			pgpcert_t *pgpcert = malloc_thing(pgpcert_t);
-			*pgpcert = pgpcert_empty;
-			if (parse_pgp(blob, pgpcert, NULL))
-			{
-				cert->type = CERT_PGP;
-				cert->u.pgp = pgpcert;
-				return TRUE;
-			}
-			else
-			{
-				plog("  error in OpenPGP certificate");
-				free_pgpcert(pgpcert);
-				return FALSE;
-			}
-		}
-		else
-		{
-			x509cert_t *x509cert = malloc_thing(x509cert_t);
-			*x509cert = empty_x509cert;
-			if (parse_x509cert(blob, 0, x509cert))
-			{
-				cert->type = CERT_X509_SIGNATURE;
-				cert->u.x509 = x509cert;
-				return TRUE;
-			}
-			else
-			{
-				plog("  error in X.509 certificate");
-				free_x509cert(x509cert);
-				return FALSE;
-			}
-		}
+		plog("  loaded %s certificate from '%s'", label, filename);
 	}
-	return FALSE;
+	return cert;
 }
 
 /**
  *  Loads a host certificate
  */
-bool load_host_cert(char *filename, cert_t *cert)
+cert_t* load_host_cert(char *filename)
 {
 	char *path = concatenate_paths(HOST_CERT_PATH, filename);
 
-	return load_cert(path, "host cert", cert);
+	return load_cert(path, "host", X509_NONE);
 }
 
 /**
  *  Loads a CA certificate
  */
-bool load_ca_cert(char *filename, cert_t *cert)
+cert_t* load_ca_cert(char *filename)
 {
 	char *path = concatenate_paths(CA_CERT_PATH, filename);
 
-	return load_cert(path, "CA cert", cert);
-}
-
-/**
- * establish equality of two certificates
- */
-bool same_cert(const cert_t *a, const cert_t *b)
-{
-	return a->type == b->type && a->u.x509 == b->u.x509;
+	return load_cert(path, "CA", X509_NONE);
 }
 
 /**
  * for each link pointing to the certificate increase the count by one
  */
-void share_cert(cert_t cert)
+void cert_share(cert_t *cert)
 {
-	switch (cert.type)
+	if (cert != NULL)
 	{
-	case CERT_PGP:
-		share_pgpcert(cert.u.pgp);
-		break;
-	case CERT_X509_SIGNATURE:
-		share_x509cert(cert.u.x509);
-		break;
-	default:
-		break;
+		cert->count++;
 	}
 }
 
 /*  release of a certificate decreases the count by one
- "  the certificate is freed when the counter reaches zero
+ *  the certificate is freed when the counter reaches zero
  */
-void
-release_cert(cert_t cert)
+void cert_release(cert_t *cert)
 {
-   switch (cert.type)
+	if (cert && --cert->count == 0)
 	{
-	case CERT_PGP:
-		release_pgpcert(cert.u.pgp);
-		break;
-	case CERT_X509_SIGNATURE:
-		release_x509cert(cert.u.x509);
-		break;
-	default:
-		break;
+		cert_t **pp = &certs;
+		while (*pp != cert)
+		{
+			pp = &(*pp)->next;
+		}
+		*pp = cert->next;
+		cert_free(cert);
 	}
 }
 
-/*
+/**
+ * Get a X.509 certificate with a given issuer found at a certain position
+ */
+cert_t* get_x509cert(identification_t *issuer, chunk_t keyid, cert_t *chain)
+{
+	cert_t *cert = chain ? chain->next : certs;
+
+	while (cert)
+	{
+		certificate_t *certificate = cert->cert;
+		x509_t *x509 = (x509_t*)certificate;
+		chunk_t authKeyID = x509->get_authKeyIdentifier(x509);
+
+		if (keyid.ptr ? same_keyid(keyid, authKeyID) :
+			certificate->has_issuer(certificate, issuer))
+		{
+			return cert;
+		}
+		cert = cert->next;
+	}
+	return NULL;
+}
+
+/**
+ *  List all PGP end certificates in a chained list
+ */
+void list_pgp_end_certs(bool utc)
+{
+	cert_t *cert = certs;
+	time_t now = time(NULL);
+	bool first = TRUE;
+
+
+	while (cert != NULL)
+	{
+		certificate_t *certificate = cert->cert;
+
+		if (certificate->get_type(certificate) == CERT_GPG)
+		{
+			time_t created, until;
+			public_key_t *key;
+			identification_t *userid = certificate->get_subject(certificate);
+			pgp_certificate_t *pgp_cert = (pgp_certificate_t*)certificate;
+			chunk_t fingerprint = pgp_cert->get_fingerprint(pgp_cert);
+
+			if (first)
+			{
+				whack_log(RC_COMMENT, " ");
+				whack_log(RC_COMMENT, "List of PGP End Entity Certificates:");
+				first = false;
+			}
+			whack_log(RC_COMMENT, " ");
+			whack_log(RC_COMMENT, "  userid:   '%Y'", userid);
+			whack_log(RC_COMMENT, "  digest:    %#B", &fingerprint);
+
+			/* list validity */
+			certificate->get_validity(certificate, &now, &created, &until);
+			whack_log(RC_COMMENT, "  created:   %T", &created, utc);
+			whack_log(RC_COMMENT, "  until:     %T %s%s", &until, utc,
+					check_expiry(until, CA_CERT_WARNING_INTERVAL, TRUE),
+					(until == TIME_32_BIT_SIGNED_MAX) ? " (expires never)":"");
+
+			key = certificate->get_public_key(certificate);
+			if (key)
+			{
+				chunk_t keyid;
+
+				whack_log(RC_COMMENT, "  pubkey:    %N %4d bits%s",
+						key_type_names, key->get_type(key),
+						key->get_keysize(key) * BITS_PER_BYTE,
+						has_private_key(cert)? ", has private key" : "");
+				if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+				{
+					whack_log(RC_COMMENT, "  keyid:     %#B", &keyid);
+				}
+				if (key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &keyid))
+				{
+					whack_log(RC_COMMENT, "  subjkey:   %#B", &keyid);
+				}
+			}
+		}
+		cert = cert->next;
+	}
+}
+
+/**
+ * List all X.509 end certificates in a chained list
+ */
+void list_x509_end_certs(bool utc)
+{
+	list_x509cert_chain("End Entity", certs, X509_NONE, utc);
+}
+
+/**
  *  list all X.509 and OpenPGP end certificates
  */
-void
-list_certs(bool utc)
+void cert_list(bool utc)
 {
 	list_x509_end_certs(utc);
 	list_pgp_end_certs(utc);

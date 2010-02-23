@@ -24,12 +24,12 @@ typedef struct private_attr_plugin_t private_attr_plugin_t;
  * private data of attr plugin
  */
 struct private_attr_plugin_t {
-	
+
 	/**
 	 * implements plugin interface
 	 */
 	attr_plugin_t public;
-	
+
 	/**
 	 * CFG attributes provider
 	 */
@@ -41,7 +41,7 @@ struct private_attr_plugin_t {
  */
 static void destroy(private_attr_plugin_t *this)
 {
-	charon->attributes->remove_provider(charon->attributes, &this->provider->provider);
+	lib->attributes->remove_provider(lib->attributes, &this->provider->provider);
 	this->provider->destroy(this->provider);
 	free(this);
 }
@@ -52,12 +52,12 @@ static void destroy(private_attr_plugin_t *this)
 plugin_t *plugin_create()
 {
 	private_attr_plugin_t *this = malloc_thing(private_attr_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	this->provider = attr_provider_create();
-	charon->attributes->add_provider(charon->attributes, &this->provider->provider);
-	
+	lib->attributes->add_provider(lib->attributes, &this->provider->provider);
+
 	return &this->public.plugin;
 }
 

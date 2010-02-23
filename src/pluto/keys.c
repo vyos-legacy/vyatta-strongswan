@@ -36,12 +36,11 @@
 
 #include <library.h>
 #include <asn1/asn1.h>
+#include <credentials/certificates/pgp_certificate.h>
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
 #include "x509.h"
-#include "pgpcert.h"
 #include "certs.h"
 #include "smartcard.h"
 #include "connections.h"
@@ -61,7 +60,7 @@ const char *shared_secrets_file = SHARED_SECRETS_FILE;
 typedef struct id_list id_list_t;
 
 struct id_list {
-	struct id id;
+	identification_t *id;
 	id_list_t *next;
 };
 
@@ -84,9 +83,9 @@ struct secret {
  */
 static void free_public_key(pubkey_t *pk)
 {
+	DESTROY_IF(pk->id);
 	DESTROY_IF(pk->public_key);
-	free_id_content(&pk->id);
-	free(pk->issuer.ptr);
+	DESTROY_IF(pk->issuer);
 	free(pk->serial.ptr);
 	free(pk);
 }
@@ -97,7 +96,7 @@ secret_t *secrets = NULL;
  * me and the peer.  We match the Id (if none, the IP address).
  * Failure is indicated by a NULL.
  */
-static const secret_t* get_secret(const struct connection *c,
+static const secret_t* get_secret(const connection_t *c,
 								  enum PrivateKeyKind kind, bool asym)
 {
 	enum {      /* bits */
@@ -109,14 +108,14 @@ static const secret_t* get_secret(const struct connection *c,
 	unsigned int best_match = 0;
 	secret_t *best = NULL;
 	secret_t *s;
-	const struct id *my_id  = &c->spd.this.id
-				  , *his_id = &c->spd.that.id;
-	struct id rw_id;
+	identification_t *my_id, *his_id;
 
 	/* is there a certificate assigned to this connection? */
-	if (kind == PPK_PUBKEY && c->spd.this.cert.type != CERT_NONE)
+	if (kind == PPK_PUBKEY && c->spd.this.cert)
 	{
-		public_key_t *pub_key = cert_get_public_key(c->spd.this.cert);
+		certificate_t *certificate = c->spd.this.cert->cert;
+
+		public_key_t *pub_key = certificate->get_public_key(certificate);
 
 		for (s = secrets; s != NULL; s = s->next)
 		{
@@ -127,26 +126,28 @@ static const secret_t* get_secret(const struct connection *c,
 				break; /* we have found the private key - no sense in searching further */
 			}
 		}
+		pub_key->destroy(pub_key);
 		return best;
 	}
+
+	my_id  = c->spd.this.id;
 
 	if (his_id_was_instantiated(c))
 	{
 		/* roadwarrior: replace him with 0.0.0.0 */
-		rw_id.kind = c->spd.that.id.kind;
-		rw_id.name = chunk_empty;
-		happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
-		his_id = &rw_id;
+		his_id = identification_create_from_string("%any");
 	}
-	else if (kind == PPK_PSK
-	&& (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK))
-	&& ((c->kind == CK_TEMPLATE && c->spd.that.id.kind == ID_ANY) ||
-		(c->kind == CK_INSTANCE && id_is_ipaddr(&c->spd.that.id))))
+	else if (kind == PPK_PSK && (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK)) &&
+		((c->kind == CK_TEMPLATE &&
+		 c->spd.that.id->get_type(c->spd.that.id) == ID_ANY) ||
+		(c->kind == CK_INSTANCE && id_is_ipaddr(c->spd.that.id))))
 	{
 		/* roadwarrior: replace him with 0.0.0.0 */
-		rw_id.kind = ID_IPV4_ADDR;
-		happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
-		his_id = &rw_id;
+		his_id = identification_create_from_string("%any");
+	}
+	else
+	{
+		his_id = c->spd.that.id->clone(c->spd.that.id);
 	}
 
 	for (s = secrets; s != NULL; s = s->next)
@@ -169,11 +170,11 @@ static const secret_t* get_secret(const struct connection *c,
 
 				for (i = s->ids; i != NULL; i = i->next)
 				{
-					if (same_id(my_id, &i->id))
+					if (my_id->equals(my_id, i->id))
 					{
 						match |= match_me;
 					}
-					if (same_id(his_id, &i->id))
+					if (his_id->equals(his_id, i->id))
 					{
 						match |= match_him;
 					}
@@ -239,6 +240,7 @@ static const secret_t* get_secret(const struct connection *c,
 			}
 		}
 	}
+	his_id->destroy(his_id);
 	return best;
 }
 
@@ -246,7 +248,7 @@ static const secret_t* get_secret(const struct connection *c,
  * Failure is indicated by a NULL pointer.
  * Note: the result is not to be freed by the caller.
  */
-const chunk_t* get_preshared_secret(const struct connection *c)
+const chunk_t* get_preshared_secret(const connection_t *c)
 {
 	const secret_t *s = get_secret(c, PPK_PSK, FALSE);
 
@@ -262,11 +264,11 @@ const chunk_t* get_preshared_secret(const struct connection *c)
 /* check the existence of a private key matching a public key contained
  * in an X.509 or OpenPGP certificate
  */
-bool has_private_key(cert_t cert)
+bool has_private_key(cert_t *cert)
 {
 	secret_t *s;
 	bool has_key = FALSE;
-	public_key_t *pub_key = cert_get_public_key(cert);
+	public_key_t *pub_key = cert->cert->get_public_key(cert->cert);
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
@@ -277,31 +279,37 @@ bool has_private_key(cert_t cert)
 			break;
 		}
 	}
+	pub_key->destroy(pub_key);
 	return has_key;
 }
 
 /*
  * get the matching private key belonging to a given X.509 certificate
  */
-private_key_t* get_x509_private_key(const x509cert_t *cert)
+private_key_t* get_x509_private_key(const cert_t *cert)
 {
+	public_key_t *public_key = cert->cert->get_public_key(cert->cert);
+	private_key_t *private_key = NULL;
 	secret_t *s;
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
+
 		if (s->kind == PPK_PUBKEY &&
-			s->u.private_key->belongs_to(s->u.private_key, cert->public_key))
+			s->u.private_key->belongs_to(s->u.private_key, public_key))
 		{
-			return s->u.private_key;
+			private_key = s->u.private_key;
+			break;
 		}
 	}
-	return NULL;
+	public_key->destroy(public_key);
+	return private_key;
 }
 
 /* find the appropriate private key (see get_secret).
  * Failure is indicated by a NULL pointer.
  */
-private_key_t* get_private_key(const struct connection *c)
+private_key_t* get_private_key(const connection_t *c)
 {
 	const secret_t *s = get_secret(c, PPK_PUBKEY, TRUE);
 
@@ -392,7 +400,7 @@ enum rsa_private_key_part_t {
 	RSA_PART_EXPONENT1        = 5,
 	RSA_PART_EXPONENT2        = 6,
 	RSA_PART_COEFFICIENT      = 7
-}; 
+};
 
 const char *rsa_private_key_part_names[] = {
 	"Modulus",
@@ -408,20 +416,17 @@ const char *rsa_private_key_part_names[] = {
 /**
  * Parse fields of an RSA private key in BIND 8.2's representation
  * consistiong of a braced list of keyword and value pairs in required order.
- * Conversion into ASN.1 DER encoded PKCS#1 representation.
  */
 static err_t process_rsa_secret(private_key_t **key)
 {
-	chunk_t asn1_chunk[countof(rsa_private_key_part_names)];
-	chunk_t pkcs1_chunk;
+	chunk_t rsa_chunk[countof(rsa_private_key_part_names)];
 	u_char buf[RSA_MAX_ENCODING_BYTES];   /* limit on size of binary representation of key */
 	rsa_private_key_part_t part, p;
-	size_t sz, len = 0;
+	size_t sz;
 	err_t ugh;
 
 	for (part = RSA_PART_MODULUS; part <= RSA_PART_COEFFICIENT; part++)
 	{
-		chunk_t rsa_private_key_part;
 		const char *keyword = rsa_private_key_part_names[part];
 
 		if (!shift())
@@ -448,9 +453,8 @@ static err_t process_rsa_secret(private_key_t **key)
 			part++;
 			goto end;
 		}
-		rsa_private_key_part = chunk_create(buf, sz);
-		asn1_chunk[part] = asn1_integer("c", rsa_private_key_part);
-		len += asn1_chunk[part].len;
+		rsa_chunk[part] = chunk_create(buf, sz);
+		rsa_chunk[part] = chunk_clone(rsa_chunk[part]);
 	}
 
 	/* We require an (indented) '}' and the end of the record.
@@ -468,21 +472,17 @@ static err_t process_rsa_secret(private_key_t **key)
 		goto end;
 	}
 
-	pkcs1_chunk = asn1_wrap(ASN1_SEQUENCE, "ccccccccc",
-					 		ASN1_INTEGER_0,
-							asn1_chunk[RSA_PART_MODULUS],
-							asn1_chunk[RSA_PART_PUBLIC_EXPONENT],
-							asn1_chunk[RSA_PART_PRIVATE_EXPONENT],
-							asn1_chunk[RSA_PART_PRIME1],
-							asn1_chunk[RSA_PART_PRIME2],
-							asn1_chunk[RSA_PART_EXPONENT1],
-							asn1_chunk[RSA_PART_EXPONENT2],
-							asn1_chunk[RSA_PART_COEFFICIENT]);
-
 	*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-										  BUILD_BLOB_ASN1_DER, pkcs1_chunk,
-										  BUILD_END);
-	free(pkcs1_chunk.ptr);
+					BUILD_RSA_MODULUS,  rsa_chunk[RSA_PART_MODULUS],
+					BUILD_RSA_PUB_EXP,  rsa_chunk[RSA_PART_PUBLIC_EXPONENT],
+					BUILD_RSA_PRIV_EXP, rsa_chunk[RSA_PART_PRIVATE_EXPONENT],
+					BUILD_RSA_PRIME1,   rsa_chunk[RSA_PART_PRIME1],
+					BUILD_RSA_PRIME2,   rsa_chunk[RSA_PART_PRIME2],
+					BUILD_RSA_EXP1,     rsa_chunk[RSA_PART_EXPONENT1],
+					BUILD_RSA_EXP2,     rsa_chunk[RSA_PART_EXPONENT2],
+					BUILD_RSA_COEFF,    rsa_chunk[RSA_PART_COEFFICIENT],
+					BUILD_END);
+
 	if (*key == NULL)
 	{
 		ugh = "parsing of RSA private key failed";
@@ -492,9 +492,9 @@ end:
 	/* clean up and return */
 	for (p = RSA_PART_MODULUS ; p < part; p++)
 	{
-		free(asn1_chunk[p].ptr);
+		chunk_clear(&rsa_chunk[p]);
 	}
-	return ugh;	
+	return ugh;
 }
 
 /**
@@ -722,7 +722,7 @@ static err_t process_pin(secret_t *s, int whackfd)
 		}
 	}
 	else
-	{   
+	{
 		/* we read the pin directly from ipsec.secrets */
 		err_t ugh = process_psk_secret(&sc->pin);
 		if (ugh != NULL)
@@ -762,15 +762,11 @@ static void log_psk(secret_t *s)
 	{
 		do
 		{
-			n += idtoa(&id_list->id, buf + n, BUF_LEN - n);
+			n += snprintf(buf + n, BUF_LEN - n, "%Y ", id_list->id);
 			if (n >= BUF_LEN)
 			{
 				n = BUF_LEN - 1;
 				break;
-			}
-			else if (n < BUF_LEN - 1)
-			{
-				n += snprintf(buf + n, BUF_LEN - n, " ");
 			}
 			id_list = id_list->next;
 		}
@@ -948,42 +944,12 @@ static void process_secret_records(int whackfd)
 					/* an id
 					 * See RFC2407 IPsec Domain of Interpretation 4.6.2
 					 */
-					struct id id;
-					err_t ugh;
+					id_list_t *i = malloc_thing(id_list_t);
 
-					if (tokeq("%any"))
-					{
-						id = empty_id;
-						id.kind = ID_IPV4_ADDR;
-						ugh = anyaddr(AF_INET, &id.ip_addr);
-					}
-					else if (tokeq("%any6"))
-					{
-						id = empty_id;
-						id.kind = ID_IPV6_ADDR;
-						ugh = anyaddr(AF_INET6, &id.ip_addr);
-					}
-					else
-					{
-						ugh = atoid(tok, &id, FALSE);
-					}
+					i->id = identification_create_from_string(tok);
+					i->next = s->ids;
+					s->ids = i;
 
-					if (ugh != NULL)
-					{
-						loglog(RC_LOG_SERIOUS
-							, "ERROR \"%s\" line %d: index \"%s\" %s"
-							, flp->filename, flp->lino, tok, ugh);
-					}
-					else
-					{
-						id_list_t *i = malloc_thing(id_list_t);
-
-						i->id = id;
-						unshare_id_content(&i->id);
-						i->next = s->ids;
-						s->ids = i;
-						/* DBG_log("id type %d: %s %.*s", i->kind, ip_str(&i->ip_addr), (int)i->name.len, i->name.ptr); */
-					}
 					if (!shift())
 					{
 						/* unexpected Record Boundary or EOF */
@@ -1071,11 +1037,11 @@ void free_preshared_secrets(void)
 		{
 			id_list_t *i, *ni;
 
-			ns = s->next;       /* grab before freeing s */
+			ns = s->next;
 			for (i = s->ids; i != NULL; i = ni)
 			{
-				ni = i->next;   /* grab before freeing i */
-				free_id_content(&i->id);
+				ni = i->next; 
+				i->id->destroy(i->id);
 				free(i);
 			}
 			switch (s->kind)
@@ -1119,8 +1085,8 @@ pubkey_t* public_key_from_rsa(public_key_t *key)
 	pubkey_t *p = malloc_thing(pubkey_t);
 
 	zero(p);
-	p->id = empty_id;   /* don't know, doesn't matter */
-	p->issuer = chunk_empty;
+	p->id = identification_create_from_string("%any");  /* don't know, doesn't matter */
+	p->issuer = NULL;
 	p->serial = chunk_empty;
 	p->public_key = key;
 
@@ -1128,7 +1094,6 @@ pubkey_t* public_key_from_rsa(public_key_t *key)
 	 * invariant: recount > 0.
 	 */
 	p->refcnt = 1;
-	time(&p->installed_time);
 	return p;
 }
 
@@ -1207,25 +1172,14 @@ static void install_public_key(pubkey_t *pk, pubkey_list_t **head)
 {
 	pubkey_list_t *p = malloc_thing(pubkey_list_t);
 
-	unshare_id_content(&pk->id);
-
-	/* copy issuer dn */
-	pk->issuer = chunk_clone(pk->issuer);
-
-	/* copy serial number */
-	pk->serial = chunk_clone(pk->serial);
-
-	/* store the time the public key was installed */
-	time(&pk->installed_time);
-
 	/* install new key at front */
 	p->key = reference_key(pk);
 	p->next = *head;
 	*head = p;
 }
 
-void delete_public_keys(const struct id *id, key_type_t type,
-						chunk_t issuer, chunk_t serial)
+void delete_public_keys(identification_t *id, key_type_t type,
+						identification_t *issuer, chunk_t serial)
 {
 	pubkey_list_t **pp, *p;
 	pubkey_t *pk;
@@ -1236,10 +1190,10 @@ void delete_public_keys(const struct id *id, key_type_t type,
 		pk = p->key;
 		pk_type = pk->public_key->get_type(pk->public_key);
 
-		if (same_id(id, &pk->id) && pk_type == type
-		&& (issuer.ptr == NULL || pk->issuer.ptr == NULL
-			|| same_dn(issuer, pk->issuer))
-		&& same_serial(serial, pk->serial))
+		if (id->equals(id, pk->id) && pk_type == type
+		&& (issuer == NULL || pk->issuer == NULL
+			|| issuer->equals(issuer, pk->issuer))
+		&& (serial.ptr == NULL || chunk_equals(serial, pk->serial)))
 		{
 			*pp = free_public_keyentry(p);
 		}
@@ -1252,25 +1206,26 @@ void delete_public_keys(const struct id *id, key_type_t type,
 
 pubkey_t* reference_key(pubkey_t *pk)
 {
+	DBG(DBG_CONTROLMORE,
+		DBG_log("  ref key: %p %p cnt %d '%Y'",
+				 pk, pk->public_key, pk->refcnt, pk->id)
+	)
 	pk->refcnt++;
 	return pk;
 }
 
-void
-unreference_key(pubkey_t **pkp)
+void unreference_key(pubkey_t **pkp)
 {
 	pubkey_t *pk = *pkp;
-	char b[BUF_LEN];
 
 	if (pk == NULL)
 	{
 		return;
 	}
 
-	/* print stuff */
 	DBG(DBG_CONTROLMORE,
-		idtoa(&pk->id, b, sizeof(b));
-		DBG_log("unreference key: %p %s cnt %d--", pk, b, pk->refcnt)
+		DBG_log("unref key: %p %p cnt %d '%Y'",
+				 pk, pk->public_key, pk->refcnt, pk->id)
 	)
 
 	/* cancel out the pointer */
@@ -1284,7 +1239,7 @@ unreference_key(pubkey_t **pkp)
 	}
 }
 
-bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
+bool add_public_key(identification_t *id, enum dns_auth_level dns_auth_level,
 					enum pubkey_alg alg, chunk_t rfc3110_key,
 					pubkey_list_t **head)
 {
@@ -1296,7 +1251,7 @@ bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
 	{
 		case PUBKEY_ALG_RSA:
 			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-										BUILD_BLOB_RFC_3110, rfc3110_key,
+										BUILD_BLOB_DNSKEY, rfc3110_key,
 										BUILD_END);
 			if (key == NULL)
 			{
@@ -1310,90 +1265,97 @@ bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
 	pk->public_key = key;
-	pk->id = *id;
+	pk->id = id->clone(id);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = UNDEFINED_TIME;
-	pk->issuer = chunk_empty;
+	pk->issuer = NULL;
 	pk->serial = chunk_empty;
 	install_public_key(pk, head);
 	return TRUE;
 }
 
-/* extract id and public key from x.509 certificate and
- * insert it into a pubkeyrec
+/**
+ * Extract id and public key a certificate and insert it into a pubkeyrec
  */
-void add_x509_public_key(x509cert_t *cert , time_t until,
-						 enum dns_auth_level dns_auth_level)
+void add_public_key_from_cert(cert_t *cert , time_t until,
+							  enum dns_auth_level dns_auth_level)
 {
-	generalName_t *gn;
+	certificate_t *certificate = cert->cert;
+	identification_t *subject = certificate->get_subject(certificate);
+	identification_t *issuer = NULL;
+	identification_t *id;
+	chunk_t serialNumber = chunk_empty;
 	pubkey_t *pk;
 	key_type_t pk_type;
 
 	/* ID type: ID_DER_ASN1_DN  (X.509 subject field) */
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
-	pk->public_key = cert->public_key->get_ref(cert->public_key);
-	pk->id.kind = ID_DER_ASN1_DN;
-	pk->id.name = cert->subject;
+	pk->public_key = certificate->get_public_key(certificate);
+	pk_type = pk->public_key->get_type(pk->public_key);
+	pk->id = subject->clone(subject);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = until;
-	pk->issuer = cert->issuer;
-	pk->serial = cert->serialNumber;
-	pk_type = pk->public_key->get_type(pk->public_key);
-	delete_public_keys(&pk->id, pk_type, pk->issuer, pk->serial);
-	install_public_key(pk, &pubkeys);
-
-	gn = cert->subjectAltName;
-
-	while (gn != NULL) /* insert all subjectAltNames */
+	if (certificate->get_type(certificate) == CERT_X509)
 	{
-		struct id id = empty_id;
+		x509_t *x509 = (x509_t*)certificate;
 
-		gntoid(&id, gn);
-		if (id.kind != ID_ANY)
-		{
-			pk = malloc_thing(pubkey_t);
-			zero(pk);
-			pk->public_key = cert->public_key->get_ref(cert->public_key);
-			pk->id = id;
-			pk->dns_auth_level = dns_auth_level;
-			pk->until_time = until;
-			pk->issuer = cert->issuer;
-			pk->serial = cert->serialNumber;
-			delete_public_keys(&pk->id, pk_type, pk->issuer, pk->serial);
-			install_public_key(pk, &pubkeys);
-		}
-		gn = gn->next;
+		issuer = certificate->get_issuer(certificate);
+		serialNumber = x509->get_serial(x509);
+		pk->issuer = issuer->clone(issuer);
+		pk->serial = chunk_clone(serialNumber);
 	}
-}
-
-/* extract id and public key from OpenPGP certificate and
- * insert it into a pubkeyrec
- */
-void add_pgp_public_key(pgpcert_t *cert , time_t until,
-						enum dns_auth_level dns_auth_level)
-{
-	pubkey_t *pk;
-	key_type_t pk_type;
-
-	pk = malloc_thing(pubkey_t);
-	zero(pk);
-	pk->public_key = cert->public_key->get_ref(cert->public_key);
-	pk->id.kind = ID_KEY_ID;
-	pk->id.name = cert->fingerprint->get_encoding(cert->fingerprint);
-	pk->dns_auth_level = dns_auth_level;
-	pk->until_time = until;
-	pk_type = pk->public_key->get_type(pk->public_key);
-	delete_public_keys(&pk->id, pk_type, chunk_empty, chunk_empty);
+	delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
 	install_public_key(pk, &pubkeys);
+
+	if (certificate->get_type(certificate) == CERT_X509)
+	{
+		x509_t *x509 = (x509_t*)certificate;
+		enumerator_t *enumerator;
+
+		/* insert all subjectAltNames from X.509 certificates */
+		enumerator = x509->create_subjectAltName_enumerator(x509);
+		while (enumerator->enumerate(enumerator, &id)) 
+		{
+			if (id->get_type(id) != ID_ANY)
+			{
+				pk = malloc_thing(pubkey_t);
+				zero(pk);
+				pk->id = id->clone(id);
+				pk->public_key = certificate->get_public_key(certificate);
+				pk->dns_auth_level = dns_auth_level;
+				pk->until_time = until;
+				pk->issuer = issuer->clone(issuer);
+				pk->serial = chunk_clone(serialNumber);
+				delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
+				install_public_key(pk, &pubkeys);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		pgp_certificate_t *pgp_cert = (pgp_certificate_t*)certificate;
+		chunk_t fingerprint = pgp_cert->get_fingerprint(pgp_cert);
+
+		/* add v3 or v4 PGP fingerprint */
+		pk = malloc_thing(pubkey_t);
+		zero(pk);
+		pk->id = identification_create_from_encoding(ID_KEY_ID, fingerprint);
+		pk->public_key = certificate->get_public_key(certificate);
+		pk->dns_auth_level = dns_auth_level;
+		pk->until_time = until;
+		delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
+		install_public_key(pk, &pubkeys);
+	}
 }
 
 /*  when a X.509 certificate gets revoked, all instances of
  *  the corresponding public key must be removed
  */
-void remove_x509_public_key(const x509cert_t *cert)
+void remove_x509_public_key(const cert_t *cert)
 {
-	public_key_t *revoked_key = cert->public_key;
+	public_key_t *revoked_key = cert->cert->get_public_key(cert->cert);
 	pubkey_list_t *p, **pp;
 
 	p  = pubkeys;
@@ -1413,6 +1375,7 @@ void remove_x509_public_key(const x509cert_t *cert)
 		}
 		p =*pp;
 	}
+	revoked_key->destroy(revoked_key);
 }
 
 /*
@@ -1426,34 +1389,32 @@ void list_public_keys(bool utc)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of Public Keys:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (p != NULL)
 	{
 		pubkey_t *key = p->key;
 		public_key_t *public = key->public_key;
-		identification_t *keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-		char buf[BUF_LEN];
+		chunk_t keyid;
 
-		idtoa(&key->id, buf, BUF_LEN);
-		whack_log(RC_COMMENT,"%T, '%s'", &key->installed_time, utc, buf);
-		whack_log(RC_COMMENT, "       pubkey:  %N %4d bits, until %T %s",
+		whack_log(RC_COMMENT, " ");
+		whack_log(RC_COMMENT, "  identity: '%Y'", key->id);
+		whack_log(RC_COMMENT, "  pubkey:    %N %4d bits, until %T %s",
 			key_type_names, public->get_type(public),
 			public->get_keysize(public) * BITS_PER_BYTE,
 			&key->until_time, utc,
 			check_expiry(key->until_time, PUBKEY_WARNING_INTERVAL, TRUE));
-		whack_log(RC_COMMENT,"       keyid:   %Y", keyid);
-		if (key->issuer.len > 0)
+		if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
 		{
-			dntoa(buf, BUF_LEN, key->issuer);
-			whack_log(RC_COMMENT,"       issuer: '%s'", buf);
+			whack_log(RC_COMMENT,"  keyid:     %#B", &keyid);
 		}
-		if (key->serial.len > 0)
+		if (key->issuer)
 		{
-			datatot(key->serial.ptr, key->serial.len, ':'
-					, buf, BUF_LEN);
-			whack_log(RC_COMMENT,"       serial:  %s", buf);
+			whack_log(RC_COMMENT,"  issuer:   \"%Y\"", key->issuer);
+		}
+		if (key->serial.len)
+		{
+			whack_log(RC_COMMENT,"  serial:    %#B", &key->serial);
 		}
 		p = p->next;
 	}

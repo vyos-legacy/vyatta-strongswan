@@ -56,15 +56,15 @@ struct proposal_token {
     char             *name;
     transform_type_t  type;
 	u_int16_t         algorithm;
-    u_int16_t         keysize;  
+    u_int16_t         keysize;
 };
 
-#define TOTAL_KEYWORDS 87
+#define TOTAL_KEYWORDS 89
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 12
 #define MIN_HASH_VALUE 4
-#define MAX_HASH_VALUE 129
-/* maximum key range = 126, duplicates = 0 */
+#define MAX_HASH_VALUE 123
+/* maximum key range = 120, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -80,32 +80,32 @@ hash (str, len)
 {
   static const unsigned char asso_values[] =
     {
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130,  11,
-        2,  15,   5,  27,  21,   8,   5,   0, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130,  39, 130,  24,   0,   1,
-        8,   2,  50,   0,   9,  53, 130, 130,   0, 130,
-       42,   0, 130, 130,   5,   9,  34,   4, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
-      130, 130, 130, 130, 130, 130, 130
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124,  11,
+        2,  23,   5,  27,  21,   8,   5,   0, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124,  22, 124,  24,   0,   1,
+        8,   2,  50,   0,  11,  54, 124, 124,   0, 124,
+       42,   0, 124, 124,   5,   9,  34,   6, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124, 124, 124, 124,
+      124, 124, 124, 124, 124, 124, 124
     };
   register int hval = len;
 
@@ -197,31 +197,33 @@ static const struct proposal_token wordlist[] =
     {"aes256ccm16",      ENCRYPTION_ALGORITHM, ENCR_AES_CCM_ICV16,     256},
     {"md5",              INTEGRITY_ALGORITHM,  AUTH_HMAC_MD5_96,         0},
     {"blowfish192",      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          192},
-    {"camellia192",      ENCRYPTION_ALGORITHM, ENCR_CAMELLIA_CBC,      192},
-    {"modp3072",         DIFFIE_HELLMAN_GROUP, MODP_3072_BIT,            0},
-    {"modp4096",         DIFFIE_HELLMAN_GROUP, MODP_4096_BIT,            0},
-    {"blowfish",         ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          128},
-    {"blowfish128",      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          128},
-    {"camellia128",      ENCRYPTION_ALGORITHM, ENCR_CAMELLIA_CBC,      128},
-    {"twofish192",       ENCRYPTION_ALGORITHM, ENCR_TWOFISH_CBC,       192},
-    {"modp6144",         DIFFIE_HELLMAN_GROUP, MODP_6144_BIT,            0},
-    {"twofish",          ENCRYPTION_ALGORITHM, ENCR_TWOFISH_CBC,       128},
-    {"serpent192",       ENCRYPTION_ALGORITHM, ENCR_SERPENT_CBC,       192},
-    {"twofish128",       ENCRYPTION_ALGORITHM, ENCR_TWOFISH_CBC,       128},
-    {"sha256",           INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,   0},
-    {"serpent128",       ENCRYPTION_ALGORITHM, ENCR_SERPENT_CBC,       128},
     {"sha2_384",         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_384_192,   0},
+    {"camellia192",      ENCRYPTION_ALGORITHM, ENCR_CAMELLIA_CBC,      192},
+    {"modp4096",         DIFFIE_HELLMAN_GROUP, MODP_4096_BIT,            0},
+    {"sha2_512",         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_512_256,   0},
+    {"blowfish128",      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          128},
+    {"blowfish",         ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          128},
+    {"camellia128",      ENCRYPTION_ALGORITHM, ENCR_CAMELLIA_CBC,      128},
+    {"modp6144",         DIFFIE_HELLMAN_GROUP, MODP_6144_BIT,            0},
+    {"modp3072",         DIFFIE_HELLMAN_GROUP, MODP_3072_BIT,            0},
+    {"serpent192",       ENCRYPTION_ALGORITHM, ENCR_SERPENT_CBC,       192},
+    {"twofish192",       ENCRYPTION_ALGORITHM, ENCR_TWOFISH_CBC,       192},
+    {"sha256",           INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,   0},
+    {"twofish",          ENCRYPTION_ALGORITHM, ENCR_TWOFISH_CBC,       128},
+    {"serpent128",       ENCRYPTION_ALGORITHM, ENCR_SERPENT_CBC,       128},
+    {"twofish128",       ENCRYPTION_ALGORITHM, ENCR_TWOFISH_CBC,       128},
     {"modpnull",         DIFFIE_HELLMAN_GROUP, MODP_NULL,                0},
     {"camellia",         ENCRYPTION_ALGORITHM, ENCR_CAMELLIA_CBC,      128},
-    {"sha2_512",         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_512_256,   0},
-    {"modp1536",         DIFFIE_HELLMAN_GROUP, MODP_1536_BIT,            0},
     {"ecp256",           DIFFIE_HELLMAN_GROUP, ECP_256_BIT,              0},
+    {"modp1536",         DIFFIE_HELLMAN_GROUP, MODP_1536_BIT,            0},
     {"serpent",          ENCRYPTION_ALGORITHM, ENCR_SERPENT_CBC,       128},
-    {"twofish256",       ENCRYPTION_ALGORITHM, ENCR_TWOFISH_CBC,       256},
+    {"sha2_256",         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,   0},
+    {"sha256_96",        INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_96,    0},
+    {"sha2_256_96",      INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_96,    0},
     {"blowfish256",      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,          256},
     {"camellia256",      ENCRYPTION_ALGORITHM, ENCR_CAMELLIA_CBC,      256},
     {"serpent256",       ENCRYPTION_ALGORITHM, ENCR_SERPENT_CBC,       256},
-    {"sha2_256",         INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,   0}
+    {"twofish256",       ENCRYPTION_ALGORITHM, ENCR_TWOFISH_CBC,       256}
   };
 
 static const short lookup[] =
@@ -231,11 +233,10 @@ static const short lookup[] =
     17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, -1,
     30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
     44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
-    58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, -1,
-    71, -1, 72, -1, 73, -1, 74, 75, 76, 77, 78, -1, -1, 79,
-    -1, -1, -1, -1, -1, -1, 80, -1, -1, -1, -1, -1, -1, 81,
-    -1, -1, -1, -1, -1, -1, 82, 83, 84, -1, 85, -1, -1, -1,
-    -1, -1, -1, 86
+    58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, -1, 70,
+    71, 72, -1, -1, 73, 74, 75, 76, 77, -1, 78, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, 79, 80, -1, -1, -1, -1, -1, 81,
+    82, 83, -1, 84, -1, -1, -1, 85, -1, 86, 87, 88
   };
 
 #ifdef __GNUC__

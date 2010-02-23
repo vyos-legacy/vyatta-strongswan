@@ -57,6 +57,8 @@ enum task_type_t {
 	IKE_DELETE,
 	/** liveness check */
 	IKE_DPD,
+	/** Vendor ID processing */
+	IKE_VENDOR,
 #ifdef ME
 	/** handle ME stuff */
 	IKE_ME,
@@ -79,7 +81,7 @@ extern enum_name_t *task_type_names;
  *
  * A task is an elemantary operation. It may be handled by a single or by
  * multiple exchanges. An exchange may even complete multiple tasks.
- * A task has a build() and an process() operation. The build() operation 
+ * A task has a build() and an process() operation. The build() operation
  * creates payloads and adds it to the message. The process() operation
  * inspects a message and handles its payloads. An initiator of an exchange
  * first calls build() to build the request, and processes the response message
@@ -97,7 +99,7 @@ struct task_t {
 
 	/**
 	 * Build a request or response message for this task.
-	 * 
+	 *
 	 * @param message		message to add payloads to
 	 * @return
 	 *						- FAILED if a critical error occured
@@ -109,7 +111,7 @@ struct task_t {
 
 	/**
 	 * Process a request or response message for this task.
-	 * 
+	 *
 	 * @param message		message to read payloads from
 	 * @return
 	 * 						- FAILED if a critical error occured
@@ -123,7 +125,7 @@ struct task_t {
 	 * Get the type of the task implementation.
 	 */
 	task_type_t (*get_type) (task_t *this);
-	
+
 	/**
 	 * Migrate a task to a new IKE_SA.
 	 *
@@ -138,7 +140,7 @@ struct task_t {
 	 * @param ike_sa		new IKE_SA this task works for
 	 */
 	void (*migrate) (task_t *this, ike_sa_t *ike_sa);
-	
+
 	/**
 	 * Destroys a task_t object.
 	 */
