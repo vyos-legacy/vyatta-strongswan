@@ -6,6 +6,7 @@ strongswan (4.3.6-1) unstable; urgency=low
     X509 certificate handling etc. similar. Thanks to Harald Jenny for 
     implementing these changes in openswan, which I just converted to 
     strongswan.
+  * Now also build a strongswan-dbg package to ship debugging symbols.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Tue, 23 Feb 2010 10:39:21 +0000
 
