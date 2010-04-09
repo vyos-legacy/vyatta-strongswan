@@ -142,7 +142,7 @@ binary-common:
 	dh_installchangelogs NEWS
 	dh_installdocs README
 	dh_link
-	dh_strip
+	dh_strip --dbg-package=strongswan-dbg
 	dh_compress
 	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
 	dh_makeshlibs

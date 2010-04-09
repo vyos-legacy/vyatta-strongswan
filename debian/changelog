@@ -2,6 +2,10 @@ strongswan (4.3.6-1) unstable; urgency=low
 
   * New upstream release, now build-depends on gperf.
   * Switch to dpkg-source 3.0 (quilt) format
+  * Synchronize debconf handling with current openswan 2.6.25 package to keep
+    X509 certificate handling etc. similar. Thanks to Harald Jenny for 
+    implementing these changes in openswan, which I just converted to 
+    strongswan.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Tue, 23 Feb 2010 10:39:21 +0000
 
