@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: strongswan\n"
 "Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
-"POT-Creation-Date: 2009-05-25 14:44+0100\n"
+"POT-Creation-Date: 2010-04-09 11:25+0200\n"
 "PO-Revision-Date: 2009-05-25 14:49+0100\n"
 "Last-Translator: Esko Arajärvi <edu@iki.fi>\n"
 "Language-Team: Finnish <debian-l10n-finnish@lists.debian.org>\n"
@@ -16,92 +16,45 @@ msgstr ""
 "X-Generator: Lokalize 0.3\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#. Type: select
-#. Choices
-#: ../strongswan-starter.templates:2001
-msgid "earliest"
-msgstr "mahdollisimman aikaisin"
-
-#. Type: select
-#. Choices
-#: ../strongswan-starter.templates:2001
-msgid "after NFS"
-msgstr "NFS:n jälkeen"
-
-#. Type: select
-#. Choices
-#: ../strongswan-starter.templates:2001
-msgid "after PCMCIA"
-msgstr "PCMCIA:n jälkeen"
-
-#. Type: select
+#. Type: note
 #. Description
-#: ../strongswan-starter.templates:2002
-msgid "When to start strongSwan:"
+#: ../strongswan-starter.templates:2001
+msgid "Old runlevel management superseded"
+msgstr ""
+
+#. Type: note
+#. Description
+#: ../strongswan-starter.templates:2001
+msgid ""
+"Previous versions of the strongSwan package allowed the user to choose "
+"between three different Start/Stop-Levels. Due to changes in the standard "
+"system  startup procedure, this is no longer necessary and useful. For all "
+"new installations as well as old ones running in any of the predefined "
+"modes, sane default levels set will now be set. If you are upgrading from a "
+"previous version and changed your strongSwan startup parameters, then please "
+"take a look at NEWS.Debian for instructions on how to modify your setup "
+"accordingly."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+#, fuzzy
+#| msgid "When to start strongSwan:"
+msgid "Do you wish to restart strongSwan?"
 msgstr "Koska strongSwan käynnistetään:"
 
-#. Type: select
-#. Description
-#: ../strongswan-starter.templates:2002
-msgid ""
-"StrongSwan starts during system startup so that it can protect filesystems "
-"that are automatically mounted."
-msgstr ""
-"StrongSwan käynnistetään järjestelmän käynnistyessä, jotta se voi suojella "
-"automaattisesti liitettäviä levyjärjestelmiä."
-
-#. Type: select
-#. Description
-#: ../strongswan-starter.templates:2002
-msgid ""
-" * earliest: if /usr is not mounted through NFS and you don't use a\n"
-"   PCMCIA network card, it is best to start strongSwan as soon as\n"
-"   possible, so that NFS mounts can be secured by IPSec;\n"
-" * after NFS: recommended when /usr is mounted through NFS and no\n"
-"   PCMCIA network card is used;\n"
-" * after PCMCIA: recommended if the IPSec connection uses a PCMCIA\n"
-"   network card or if it needs keys to be fetched from a locally running "
-"DNS\n"
-"   server with DNSSec support."
-msgstr ""
-"* mahdollisimman aikaisin: Jos hakemistoa /usr ei liitetä NFS:n avulla,\n"
-"  eikä käytössä ole PCMCIA-verkkokortteja, strongSwan kannattaa\n"
-"  käynnistää mahdollisimman aikaisin, jotta liitettävät NFS-järjestelmät\n"
-"  voidaan suojata IPSecillä.\n"
-"* NFS:n jälkeen: suositeltava, kun käytössä ei ole PCMCIA-verkkokortteja\n"
-"  ja /usr liitetään NFS:n avulla.\n"
-"* PCMCIA:n jälkeen: suositeltava, jos IPSec-yhteys käyttää\n"
-"  PCMCIA-verkkokorttia tai hakee avaimia paikalliselta DNS-palvelimelta\n"
-"  DNSSec-tuen avulla."
-
-#. Type: boolean
-#. Description
-#: ../strongswan-starter.templates:3001
-msgid "Restart strongSwan now?"
-msgstr "Käynnistetäänkö strongSwan uudelleen nyt?"
-
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
 msgid ""
-"Restarting strongSwan is recommended, because if there is a security fix, it "
-"will not be applied until the daemon restarts. However, this might close "
-"existing connections and then bring them back up."
+"Restarting strongSwan is a good idea, since if there is a security fix, it "
+"will not be fixed until the daemon restarts. Most people expect the daemon "
+"to restart, so this is generally a good idea. However, this might take down "
+"existing connections and then bring them back up (including the connection "
+"currently used for this update, so it is recommended not to restart if you "
+"are using any of the tunnel for administration)."
 msgstr ""
-"On suositeltavaa käynnistää strongSwan-taustaohjelma uudelleen, koska "
-"mahdolliset tietoturvapäivitykset eivät tule käyttöön ennen tätä. Tämä "
-"saattaa kuitenkin katkaista olemassa olevat yhteydet ja avata ne sitten "
-"uudelleen."
-
-#. Type: boolean
-#. Description
-#: ../strongswan-starter.templates:3001
-msgid ""
-"If you don't restart strongSwan now, you should do so manually at the first "
-"opportunity."
-msgstr ""
-"Jos et käynnistä strongSwania nyt uudelleen, tee se käsin mahdollisimman "
-"pian."
 
 #. Type: boolean
 #. Description
@@ -138,69 +91,104 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:6001
-msgid "Create an RSA public/private keypair for this host?"
+msgid "Do you want to use a X509 certificate for this host?"
 msgstr ""
-"Luodaanko tälle koneelle julkisesta ja salaisesta avaimesta koostuva RSA-"
-"avainpari?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:6001
 msgid ""
-"StrongSwan can use a Pre-Shared Key (PSK) or an RSA keypair to authenticate "
-"IPSec connections to other hosts. RSA authentication is generally considered "
-"more secure and is easier to administer. You can use PSK and RSA "
-"authentication simultaneously."
+"This installer can automatically create or import a X509 certificate for "
+"this host. It can be used to authenticate IPsec connections to other hosts "
+"and is the preferred way for building up secure IPsec connections. The other "
+"possibility would be to use shared secrets (passwords that are the same on "
+"both sides of the tunnel) for authenticating an connection, but for a larger "
+"number of connections, key based authentication is easier to administer and "
+"more secure."
 msgstr ""
-"StrongSwan voi käyttää ennalta vaihdettua avainta (Pre-Shared Key, PSK) tai "
-"RSA-avainparia varmentaessaan IPSec-yhteyksiä toisiin koneisiin. RSA-"
-"varmennusta pidetään yleisesti turvallisempana ja helpommin ylläpidettävänä. "
-"PSK- ja RSA-varmennuksia voidaan käyttää yhtä aikaa."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:6001
 msgid ""
-"If you do not want to create a new public/private keypair, you can choose to "
-"use an existing one in the next step."
+"If you do not want to this now you can answer \"No\" and later use the "
+"command \"dpkg-reconfigure openswan\" to come back."
 msgstr ""
-"Jos et halua luoda uutta avainparia, voi valita olemassa olevan parin "
-"seuraavassa vaiheessa."
 
-#. Type: boolean
-#. Description
+#. Type: select
+#. Choices
 #: ../strongswan-starter.templates:7001
-msgid "Use an existing X.509 certificate for strongSwan?"
-msgstr "Tulisiko strongSwanin käyttää olemassa olevaa X.509-varmennetiedostoa?"
+msgid "create"
+msgstr ""
 
-#. Type: boolean
-#. Description
+#. Type: select
+#. Choices
 #: ../strongswan-starter.templates:7001
+msgid "import"
+msgstr ""
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:7002
+msgid "Methods for using a X509 certificate to authenticate this host:"
+msgstr ""
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:7002
 msgid ""
-"The required information can automatically be extracted from an existing "
-"X.509 certificate with a matching RSA private key. Both parts can be in one "
-"file, if it is in PEM format. You should choose this option if you have such "
-"an existing certificate and key file and want to use it for authenticating "
-"IPSec connections."
+"It is possible to create a new X509 certificate with user-defined settings "
+"or to import an existing public and private key stored in PEM file(s) for "
+"authenticating IPsec connections."
 msgstr ""
-"Vaadittavat tiedot voidaan automaattisesti erottaa olemassa olevasta X.509-"
-"varmennetiedostosta täsmäävällä salaisella RSA-avaimella. Avaimen molemmat "
-"osat voivat olla samassa tiedostossa, jos se on PEM-muodossa. Valitse tämä "
-"vaihtoehto, jos tällaiset varmenne- ja avaintiedostot ovat olemassa ja "
-"haluat käyttää niitä IPSec-yhteyksien varmentamiseen."
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:7002
+msgid ""
+"If you choose to create a new X509 certificate you will first be presented a "
+"number of questions which must be answered before the creation can start. "
+"Please keep in mind that if you want the public key to get signed by an "
+"existing certification authority you should not select to create a self-"
+"signed certificate and all the answers given must match exactly the "
+"requirements of the CA, otherwise the certificate request may be rejected."
+msgstr ""
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:7002
+msgid ""
+"In case you want to import an existing public and private key you will be "
+"prompted for their filenames (may be identical if both parts are stored  "
+"together in one file). Optionally you may also specify a filename where the "
+"public key(s) of the certification authority are kept, but this file cannot  "
+"be the same as the former ones. Please be also aware that the format for the "
+"X509 certificates has to be PEM and that the private key must not be "
+"encrypted  or the import procedure will fail."
+msgstr ""
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:8001
-msgid "File name of your X.509 certificate in PEM format:"
-msgstr "PEM-muodossa olevan X.509-varmennetiedoston nimi:"
+#, fuzzy
+#| msgid ""
+#| "Please enter the full location of the file containing your X.509 "
+#| "certificate in PEM format."
+msgid "Please enter the location of your X509 certificate in PEM format:"
+msgstr ""
+"Anna PEM-muodossa olevan, X.509-varmenteen sisältävän tiedoston täydellinen "
+"polku."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:8001
+#, fuzzy
+#| msgid ""
+#| "Please enter the full location of the file containing your X.509 "
+#| "certificate in PEM format."
 msgid ""
-"Please enter the full location of the file containing your X.509 certificate "
-"in PEM format."
+"Please enter the location of the file containing your X509 certificate in "
+"PEM format."
 msgstr ""
 "Anna PEM-muodossa olevan, X.509-varmenteen sisältävän tiedoston täydellinen "
 "polku."
@@ -208,16 +196,27 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:9001
-msgid "File name of your existing X.509 private key in PEM format:"
-msgstr "PEM-muotoisen, olemassa olevan, salaisen X.509-avaimen tiedostonimi:"
+#, fuzzy
+#| msgid ""
+#| "Please enter the full location of the file containing your X.509 "
+#| "certificate in PEM format."
+msgid "Please enter the location of your X509 private key in PEM format:"
+msgstr ""
+"Anna PEM-muodossa olevan, X.509-varmenteen sisältävän tiedoston täydellinen "
+"polku."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:9001
+#, fuzzy
+#| msgid ""
+#| "Please enter the full location of the file containing the private RSA key "
+#| "matching your X.509 certificate in PEM format. This can be the same file "
+#| "as the X.509 certificate."
 msgid ""
-"Please enter the full location of the file containing the private RSA key "
-"matching your X.509 certificate in PEM format. This can be the same file as "
-"the X.509 certificate."
+"Please enter the location of the file containing the private RSA key "
+"matching your X509 certificate in PEM format. This can be the same file that "
+"contains the X509 certificate."
 msgstr ""
 "Anna PEM-muodossa olevaan X.509-varmenteeseen täsmäävän salaisen RSA-avaimen "
 "täydellinen polku. Tämä voi olla sama tiedosto kuin X.509-varmenteen "
@@ -226,60 +225,75 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:10001
-msgid "RSA key length:"
-msgstr "RSA-avaimen pituus:"
+#, fuzzy
+#| msgid ""
+#| "Please enter the full location of the file containing your X.509 "
+#| "certificate in PEM format."
+msgid "You may now enter the location of your X509 RootCA in PEM format:"
+msgstr ""
+"Anna PEM-muodossa olevan, X.509-varmenteen sisältävän tiedoston täydellinen "
+"polku."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:10001
 msgid ""
-"Please enter the length of RSA key you wish to generate. A value of less "
-"than 1024 bits is not considered secure. A value of more than 2048 bits will "
-"probably affect performance."
+"Optionally you can now enter the location of the file containing the X509 "
+"certificate authority root used to sign your certificate in PEM format. If "
+"you do not have one or do not want to use it please leave the field empty. "
+"Please note that it's not possible to store the RootCA in the same file as "
+"your X509 certificate or private key."
 msgstr ""
-"Anna luotavan RSA-avaimen pituus. 1024 bittiä lyhyempiä avaimia ei pidetä "
-"turvallisina. 2048 bittiä pidemmät avaimet luultavasti heikentävät "
-"suorituskykyä."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid "Please enter which length the created RSA key should have:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"Please enter the length of the created RSA key. it should not be less than "
+"1024 bits because this should be considered unsecure and you will probably "
+"not need anything more than 4096 bits because it only slows the "
+"authentication process down and is not needed at the moment."
+msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:11001
-msgid "Create a self-signed X.509 certificate?"
+#: ../strongswan-starter.templates:12001
+#, fuzzy
+#| msgid "Create a self-signed X.509 certificate?"
+msgid "Do you want to create a self-signed X509 certificate?"
 msgstr "Luodaanko itseallekirjoitettu X.509-varmenne?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:11001
+#: ../strongswan-starter.templates:12001
 msgid ""
-"Only self-signed X.509 certificates can be created automatically, because "
-"otherwise a certificate authority is needed to sign the certificate request."
+"This installer can only create self-signed X509 certificates automatically, "
+"because otherwise a certificate authority is needed to sign the certificate "
+"request. If you want to create a self-signed certificate, you can use it "
+"immediately to connect to other IPsec hosts that support X509 certificate "
+"for authentication of IPsec connections. However, if you want to use the new "
+"PKI features of strongSwan >= 1.91, you will need to have all X509 "
+"certificates signed by a single certificate authority to create a trust path."
 msgstr ""
-"Vain itseallekirjoitettu X.509-varmenne voidaan luoda automaattisesti, koska "
-"muussa tapauksessa tarvitaan ulkoinen varmentaja allekirjoittamaan "
-"varmennepyyntö."
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:11001
+#: ../strongswan-starter.templates:12001
+#, fuzzy
+#| msgid ""
+#| "If you do not accept this option, only the RSA private key will be "
+#| "created, along with a certificate request which you will need to have "
+#| "signed by a certificate authority."
 msgid ""
-"If you accept this option, the certificate created can be used immediately "
-"to connect to other IPSec hosts that support authentication via an X.509 "
-"certificate. However, using strongSwan's PKI features requires a trust path "
-"to be created by having all X.509 certificates signed by a single authority."
-msgstr ""
-"Jos valitset tämän vaihtoehdon, luotua varmennetta voidaan heti käyttää "
-"yhteyksien ottamiseen toisiin IPSEc-koneisiin, jotka tukevat varmentamista "
-"X.509-varmenteilla. StrongSwanin PKI-ominaisuuksien käyttö kuitenkin vaatii "
-"varmennuspolun, jossa sama varmentaja on allekirjoittanut kaikki X.509-"
-"varmenteet."
-
-#. Type: boolean
-#. Description
-#: ../strongswan-starter.templates:11001
-msgid ""
-"If you do not accept this option, only the RSA private key will be created, "
-"along with a certificate request which you will need to have signed by a "
-"certificate authority."
+"If you do not want to create a self-signed certificate, then this installer "
+"will only create the RSA private key and the certificate request and you "
+"will have to sign the certificate request with your certificate authority."
 msgstr ""
 "Jos et valitse tätä vaihtoehtoa, luodaan vain salainen RSA-avain ja "
 "varmennepyyntö, joka pitää lähettää ulkoisen varmentajan "
@@ -287,36 +301,58 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:12001
-msgid "Country code for the X.509 certificate request:"
+#: ../strongswan-starter.templates:13001
+#, fuzzy
+#| msgid "Country code for the X.509 certificate request:"
+msgid "Please enter the country code for the X509 certificate request:"
 msgstr "X.509-varmennepyynnön maakoodi:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:12001
+#: ../strongswan-starter.templates:13001
+#, fuzzy
+#| msgid ""
+#| "Please enter the two-letter ISO3166 country code that should be used in "
+#| "the certificate request."
 msgid ""
-"Please enter the two-letter ISO3166 country code that should be used in the "
-"certificate request."
+"Please enter the 2 letter country code for your country. This code will be "
+"placed in the certificate request."
 msgstr "Anna varmennepyynnössä käytettävä kaksikirjaiminen ISO-3166-maakoodi."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:12001
-msgid "This field is mandatory; otherwise a certificate cannot be generated."
-msgstr "Tämä kenttä on pakollinen. Ilman sitä varmennetta ei voida luoda."
+#: ../strongswan-starter.templates:13001
+msgid ""
+"You really need to enter a valid country code here, because openssl will "
+"refuse to generate certificates without one. An empty field is allowed for "
+"any other field of the X.509 certificate, but not for this one."
+msgstr ""
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:13001
-msgid "State or province name for the X.509 certificate request:"
+msgid "Example: AT"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+#, fuzzy
+#| msgid "State or province name for the X.509 certificate request:"
+msgid ""
+"Please enter the state or province name for the X509 certificate request:"
 msgstr "X.509-varmennepyynnön osavaltio, lääni tai maakunta:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:13001
+#: ../strongswan-starter.templates:14001
+#, fuzzy
+#| msgid ""
+#| "Please enter the full name of the state or province to include in the "
+#| "certificate request."
 msgid ""
-"Please enter the full name of the state or province to include in the "
-"certificate request."
+"Please enter the full name of the state or province you live in. This name "
+"will be placed in the certificate request."
 msgstr ""
 "Anna varmennepyyntöön sisällytettävä osavaltion, läänin tai maakunnan koko "
 "nimi."
@@ -324,57 +360,107 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
-msgid "Locality name for the X.509 certificate request:"
+msgid "Example: Upper Austria"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+#, fuzzy
+#| msgid "Locality name for the X.509 certificate request:"
+msgid "Please enter the locality name for the X509 certificate request:"
 msgstr "X.509-varmennepyynnön paikkakunta:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:14001
+#: ../strongswan-starter.templates:15001
+#, fuzzy
+#| msgid ""
+#| "Please enter the locality name (often a city) that should be used in the "
+#| "certificate request."
 msgid ""
-"Please enter the locality name (often a city) that should be used in the "
-"certificate request."
+"Please enter the locality (e.g. city) where you live. This name will be "
+"placed in the certificate request."
 msgstr "Anna varmennepyynnössä käytettävä paikkakunnan nimi (usein kaupunki)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:15001
-msgid "Organization name for the X.509 certificate request:"
+msgid "Example: Vienna"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+#, fuzzy
+#| msgid "Organization name for the X.509 certificate request:"
+msgid "Please enter the organization name for the X509 certificate request:"
 msgstr "X.509-varmennepyynnön järjestön nimi:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:15001
+#: ../strongswan-starter.templates:16001
+#, fuzzy
+#| msgid ""
+#| "Please enter the organization name (often a company) that should be used "
+#| "in the certificate request."
 msgid ""
-"Please enter the organization name (often a company) that should be used in "
-"the certificate request."
+"Please enter the organization (e.g. company) that the X509 certificate "
+"should be created for. This name will be placed in the certificate request."
 msgstr "Anna varmennepyynnössä käytettävä järjestön nimi (usein yritys)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:16001
-msgid "Organizational unit for the X.509 certificate request:"
+msgid "Example: Debian"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+#, fuzzy
+#| msgid "Organizational unit for the X.509 certificate request:"
+msgid "Please enter the organizational unit for the X509 certificate request:"
 msgstr "X.509-varmennepyynnön järjestön yksikkö:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:16001
+#: ../strongswan-starter.templates:17001
+#, fuzzy
+#| msgid ""
+#| "Please enter the organizational unit name (often a department) that "
+#| "should be used in the certificate request."
 msgid ""
-"Please enter the organizational unit name (often a department) that should "
-"be used in the certificate request."
+"Please enter the organizational unit (e.g. section) that the X509 "
+"certificate should be created for. This name will be placed in the "
+"certificate request."
 msgstr "Valitse varmennepyynnössä käytettävä järjestön yksikkö (usein osasto)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:17001
-msgid "Common name for the X.509 certificate request:"
+msgid "Example: security group"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+#, fuzzy
+#| msgid "Common name for the X.509 certificate request:"
+msgid "Please enter the common name for the X509 certificate request:"
 msgstr "X.509-varmennepyynnön yleinen nimi:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:17001
+#: ../strongswan-starter.templates:18001
+#, fuzzy
+#| msgid ""
+#| "Please enter the common name (such as the host name of this machine) that "
+#| "should be used in the certificate request."
 msgid ""
-"Please enter the common name (such as the host name of this machine) that "
-"should be used in the certificate request."
+"Please enter the common name (e.g. the host name of this machine) for which "
+"the X509 certificate should be created for. This name will be placed in the "
+"certificate request."
 msgstr ""
 "Anna varmennepyynnössä käytettävä yleinen nimi (kuten tämän koneen "
 "verkkonimi)."
@@ -382,27 +468,40 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:18001
-msgid "Email address for the X.509 certificate request:"
+msgid "Example: gateway.debian.org"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:19001
+#, fuzzy
+#| msgid "Email address for the X.509 certificate request:"
+msgid "Please enter the email address for the X509 certificate request:"
 msgstr "X.509-varmennepyynnön sähköpostiosoite:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:18001
+#: ../strongswan-starter.templates:19001
+#, fuzzy
+#| msgid ""
+#| "Please enter the email address (for the individual or organization "
+#| "responsible) that should be used in the certificate request."
 msgid ""
-"Please enter the email address (for the individual or organization "
-"responsible) that should be used in the certificate request."
+"Please enter the email address of the person or organization who is "
+"responsible for the X509 certificate, This address will be placed in the "
+"certificate request."
 msgstr ""
 "Anna varmennepyynnössä käytettävä sähköpostiosoite (yksityinen ja järjestön)."
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:19001
+#: ../strongswan-starter.templates:20001
 msgid "Enable opportunistic encryption?"
 msgstr "Käytetäänkö opportunistista salausta?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:19001
+#: ../strongswan-starter.templates:20001
 msgid ""
 "This version of strongSwan supports opportunistic encryption (OE), which "
 "stores IPSec authentication information in DNS records. Until this is widely "
@@ -416,7 +515,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:19001
+#: ../strongswan-starter.templates:20001
 msgid ""
 "You should only enable opportunistic encryption if you are sure you want it. "
 "It may break the Internet connection (default route) as the pluto daemon "
@@ -425,3 +524,145 @@ msgstr ""
 "Valitse opportunistinen salaus vain, jos olet varma, että haluat sen "
 "käyttöön. Se saattaa rikkoa Internet-yhteyden (oletusreitityksen), kun pluto-"
 "taustaohjelma käynnistyy."
+
+#~ msgid "earliest"
+#~ msgstr "mahdollisimman aikaisin"
+
+#~ msgid "after NFS"
+#~ msgstr "NFS:n jälkeen"
+
+#~ msgid "after PCMCIA"
+#~ msgstr "PCMCIA:n jälkeen"
+
+#~ msgid ""
+#~ "StrongSwan starts during system startup so that it can protect "
+#~ "filesystems that are automatically mounted."
+#~ msgstr ""
+#~ "StrongSwan käynnistetään järjestelmän käynnistyessä, jotta se voi "
+#~ "suojella automaattisesti liitettäviä levyjärjestelmiä."
+
+#~ msgid ""
+#~ " * earliest: if /usr is not mounted through NFS and you don't use a\n"
+#~ "   PCMCIA network card, it is best to start strongSwan as soon as\n"
+#~ "   possible, so that NFS mounts can be secured by IPSec;\n"
+#~ " * after NFS: recommended when /usr is mounted through NFS and no\n"
+#~ "   PCMCIA network card is used;\n"
+#~ " * after PCMCIA: recommended if the IPSec connection uses a PCMCIA\n"
+#~ "   network card or if it needs keys to be fetched from a locally running "
+#~ "DNS\n"
+#~ "   server with DNSSec support."
+#~ msgstr ""
+#~ "* mahdollisimman aikaisin: Jos hakemistoa /usr ei liitetä NFS:n avulla,\n"
+#~ "  eikä käytössä ole PCMCIA-verkkokortteja, strongSwan kannattaa\n"
+#~ "  käynnistää mahdollisimman aikaisin, jotta liitettävät NFS-järjestelmät\n"
+#~ "  voidaan suojata IPSecillä.\n"
+#~ "* NFS:n jälkeen: suositeltava, kun käytössä ei ole PCMCIA-verkkokortteja\n"
+#~ "  ja /usr liitetään NFS:n avulla.\n"
+#~ "* PCMCIA:n jälkeen: suositeltava, jos IPSec-yhteys käyttää\n"
+#~ "  PCMCIA-verkkokorttia tai hakee avaimia paikalliselta DNS-palvelimelta\n"
+#~ "  DNSSec-tuen avulla."
+
+#~ msgid "Restart strongSwan now?"
+#~ msgstr "Käynnistetäänkö strongSwan uudelleen nyt?"
+
+#~ msgid ""
+#~ "Restarting strongSwan is recommended, because if there is a security fix, "
+#~ "it will not be applied until the daemon restarts. However, this might "
+#~ "close existing connections and then bring them back up."
+#~ msgstr ""
+#~ "On suositeltavaa käynnistää strongSwan-taustaohjelma uudelleen, koska "
+#~ "mahdolliset tietoturvapäivitykset eivät tule käyttöön ennen tätä. Tämä "
+#~ "saattaa kuitenkin katkaista olemassa olevat yhteydet ja avata ne sitten "
+#~ "uudelleen."
+
+#~ msgid ""
+#~ "If you don't restart strongSwan now, you should do so manually at the "
+#~ "first opportunity."
+#~ msgstr ""
+#~ "Jos et käynnistä strongSwania nyt uudelleen, tee se käsin mahdollisimman "
+#~ "pian."
+
+#~ msgid "Create an RSA public/private keypair for this host?"
+#~ msgstr ""
+#~ "Luodaanko tälle koneelle julkisesta ja salaisesta avaimesta koostuva RSA-"
+#~ "avainpari?"
+
+#~ msgid ""
+#~ "StrongSwan can use a Pre-Shared Key (PSK) or an RSA keypair to "
+#~ "authenticate IPSec connections to other hosts. RSA authentication is "
+#~ "generally considered more secure and is easier to administer. You can use "
+#~ "PSK and RSA authentication simultaneously."
+#~ msgstr ""
+#~ "StrongSwan voi käyttää ennalta vaihdettua avainta (Pre-Shared Key, PSK) "
+#~ "tai RSA-avainparia varmentaessaan IPSec-yhteyksiä toisiin koneisiin. RSA-"
+#~ "varmennusta pidetään yleisesti turvallisempana ja helpommin "
+#~ "ylläpidettävänä. PSK- ja RSA-varmennuksia voidaan käyttää yhtä aikaa."
+
+#~ msgid ""
+#~ "If you do not want to create a new public/private keypair, you can choose "
+#~ "to use an existing one in the next step."
+#~ msgstr ""
+#~ "Jos et halua luoda uutta avainparia, voi valita olemassa olevan parin "
+#~ "seuraavassa vaiheessa."
+
+#~ msgid "Use an existing X.509 certificate for strongSwan?"
+#~ msgstr ""
+#~ "Tulisiko strongSwanin käyttää olemassa olevaa X.509-varmennetiedostoa?"
+
+#~ msgid ""
+#~ "The required information can automatically be extracted from an existing "
+#~ "X.509 certificate with a matching RSA private key. Both parts can be in "
+#~ "one file, if it is in PEM format. You should choose this option if you "
+#~ "have such an existing certificate and key file and want to use it for "
+#~ "authenticating IPSec connections."
+#~ msgstr ""
+#~ "Vaadittavat tiedot voidaan automaattisesti erottaa olemassa olevasta "
+#~ "X.509-varmennetiedostosta täsmäävällä salaisella RSA-avaimella. Avaimen "
+#~ "molemmat osat voivat olla samassa tiedostossa, jos se on PEM-muodossa. "
+#~ "Valitse tämä vaihtoehto, jos tällaiset varmenne- ja avaintiedostot ovat "
+#~ "olemassa ja haluat käyttää niitä IPSec-yhteyksien varmentamiseen."
+
+#~ msgid "File name of your X.509 certificate in PEM format:"
+#~ msgstr "PEM-muodossa olevan X.509-varmennetiedoston nimi:"
+
+#~ msgid "File name of your existing X.509 private key in PEM format:"
+#~ msgstr ""
+#~ "PEM-muotoisen, olemassa olevan, salaisen X.509-avaimen tiedostonimi:"
+
+#~ msgid "RSA key length:"
+#~ msgstr "RSA-avaimen pituus:"
+
+#~ msgid ""
+#~ "Please enter the length of RSA key you wish to generate. A value of less "
+#~ "than 1024 bits is not considered secure. A value of more than 2048 bits "
+#~ "will probably affect performance."
+#~ msgstr ""
+#~ "Anna luotavan RSA-avaimen pituus. 1024 bittiä lyhyempiä avaimia ei pidetä "
+#~ "turvallisina. 2048 bittiä pidemmät avaimet luultavasti heikentävät "
+#~ "suorituskykyä."
+
+#~ msgid ""
+#~ "Only self-signed X.509 certificates can be created automatically, because "
+#~ "otherwise a certificate authority is needed to sign the certificate "
+#~ "request."
+#~ msgstr ""
+#~ "Vain itseallekirjoitettu X.509-varmenne voidaan luoda automaattisesti, "
+#~ "koska muussa tapauksessa tarvitaan ulkoinen varmentaja allekirjoittamaan "
+#~ "varmennepyyntö."
+
+#~ msgid ""
+#~ "If you accept this option, the certificate created can be used "
+#~ "immediately to connect to other IPSec hosts that support authentication "
+#~ "via an X.509 certificate. However, using strongSwan's PKI features "
+#~ "requires a trust path to be created by having all X.509 certificates "
+#~ "signed by a single authority."
+#~ msgstr ""
+#~ "Jos valitset tämän vaihtoehdon, luotua varmennetta voidaan heti käyttää "
+#~ "yhteyksien ottamiseen toisiin IPSEc-koneisiin, jotka tukevat "
+#~ "varmentamista X.509-varmenteilla. StrongSwanin PKI-ominaisuuksien käyttö "
+#~ "kuitenkin vaatii varmennuspolun, jossa sama varmentaja on "
+#~ "allekirjoittanut kaikki X.509-varmenteet."
+
+#~ msgid ""
+#~ "This field is mandatory; otherwise a certificate cannot be generated."
+#~ msgstr "Tämä kenttä on pakollinen. Ilman sitä varmennetta ei voida luoda."
