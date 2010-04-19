@@ -1,6 +1,10 @@
 strongswan (4.3.6-1) unstable; urgency=low
 
   * New upstream release, now build-depends on gperf.
+    Closes: #577855: New upstream release 4.3.6
+    Closes: #569553: strongswan: Certificates CNs containing email address 
+                     OIDs are not correctly parsed
+    Closes: #557635: strongswan charon does not rekey forever
   * Switch to dpkg-source 3.0 (quilt) format
   * Synchronize debconf handling with current openswan 2.6.25 package to keep
     X509 certificate handling etc. similar. Thanks to Harald Jenny for 
