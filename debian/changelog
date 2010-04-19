@@ -7,6 +7,9 @@ strongswan (4.3.6-1) unstable; urgency=low
     implementing these changes in openswan, which I just converted to 
     strongswan.
   * Now also build a strongswan-dbg package to ship debugging symbols.
+  * Include attr plugin in strongswan-ikev2 package. Thanks to Christoph Lukas
+    for pointing out that this was missing.
+    Closes: #569550: strongswan: Please include attr plugin
 
  -- Rene Mayrhofer <rmayr@debian.org>  Tue, 23 Feb 2010 10:39:21 +0000
 
