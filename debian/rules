@@ -12,7 +12,6 @@ export DEB_BUILD_HARDENING=1
 
 CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
-		--with-user=strongswan --with-group=nogroup \
 		--with-capabilities=libcap \
 		--enable-kernel-pfkey --enable-kernel-klips \
 		--enable-ldap --enable-curl \
@@ -24,8 +23,8 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-eap-radius --enable-eap-identity --enable-eap-md5 \
 		--enable-eap-gtc --enable-eap-aka --enable-eap-mschapv2 \
 		--enable-sql --enable-integrity-test \
-		--enable-nm --enable-android \
-		--enable-ha --enable-dhcp --enable-farp
+		--enable-nm --enable-ha --enable-dhcp --enable-farp
+	#	--with-user=strongswan --with-group=nogroup \
 	# Could enable --enable-nat-transport, but this is actually insecure,
 	# so don't!
 	# And for --enable-eap-sim we would need the library, which we don't

@@ -32,9 +32,9 @@ esac
 
 if [ "$1" = "purge" ] ; then
         update-rc.d ipsec remove >/dev/null
-        if which deluser >/dev/null 2>&1; then
-        	deluser --quiet strongswan > /dev/null || true
-        fi
+        #if which deluser >/dev/null 2>&1; then
+        #	deluser --quiet strongswan > /dev/null || true
+        #fi
 
         rm -rf /etc/ipsec.d/
         rm -rf /var/run/pluto/
