@@ -6,10 +6,6 @@ strongswan (4.4.0-1) unstable; urgency=low
     user to new system user strongswan (with nogroup) after startup
     is still disabled until this can be integrated with build-time
     determination of uid.
-  * Enable PF_KEY and KLIPS kernel interfaces as an alternative to
-    the standard NETKEY interface. This should allow interoperability
-    with the KLIPS kernel module built by openswan modules source
-    packages.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Tue, 25 May 2010 21:03:52 +0200
 
