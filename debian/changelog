@@ -1,6 +1,13 @@
 strongswan (4.4.0-1) unstable; urgency=low
 
-  * New upstream release
+  * New upstream release, now with a high-availability plugin.
+  * Enable building of android, ha, dhcp, and farp plugins.
+  * Enable capability dropping (now depends on libcap) and switching
+    user to new system user strongswan (with nogroup) after startup.
+  * Enable PF_KEY and KLIPS kernel interfaces as an alternative to
+    the standard NETKEY interface. This should allow interoperability
+    with the KLIPS kernel module built by openswan modules source
+    packages.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Tue, 25 May 2010 21:03:52 +0200
 

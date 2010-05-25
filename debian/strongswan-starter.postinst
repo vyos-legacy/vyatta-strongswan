@@ -119,6 +119,12 @@ disable_daemon_start() {
     fi
 }
 
+setup_strongswan_user() {
+        if ! getent passwd strongswan >/dev/null; then
+                adduser --quiet --system --no-create-home --home /var/lib/strongswan --shell /usr/sbin/nologin strongswan
+        fi
+}
+
 . /usr/share/debconf/confmodule
 
 case "$1" in
@@ -284,6 +290,9 @@ EOF
 	#else
         #    disable_daemon_start "charon" "IKEv2"
         #fi
+
+	# create user for strongswan to change its uid into
+	setup_strongswan_user
 
 	if [ -z "$2" ]; then
 	    # no old configured version - start strongswan now
