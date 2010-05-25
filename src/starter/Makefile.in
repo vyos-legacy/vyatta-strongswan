@@ -232,6 +232,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -718,7 +719,7 @@ uninstall-man: uninstall-man5 uninstall-man8
 	uninstall-man8
 
 
-lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h
+lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h y.tab.h
 		$(LEX) $(srcdir)/parser.l
 
 y.tab.c:	$(srcdir)/parser.y $(srcdir)/parser.l $(srcdir)/parser.h

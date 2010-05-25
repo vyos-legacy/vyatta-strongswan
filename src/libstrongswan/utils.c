@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -25,8 +25,8 @@
 #include <dirent.h>
 #include <time.h>
 
-#include <enum.h>
-#include <debug.h>
+#include "enum.h"
+#include "debug.h"
 
 ENUM(status_names, SUCCESS, DESTROY_ME,
 	"SUCCESS",
@@ -119,9 +119,31 @@ void *memstr(const void *haystack, const char *needle, size_t n)
 /**
  * Described in header.
  */
+char* translate(char *str, const char *from, const char *to)
+{
+	char *pos = str;
+	if (strlen(from) != strlen(to))
+	{
+		return str;
+	}
+	while (pos && *pos)
+	{
+		char *match;
+		if ((match = strchr(from, *pos)) != NULL)
+		{
+			*pos = to[match - from];
+		}
+		pos++;
+	}
+	return str;
+}
+
+/**
+ * Described in header.
+ */
 bool mkdir_p(const char *path, mode_t mode)
 {
-	size_t len;
+	int len;
 	char *pos, full[PATH_MAX];
 	pos = full;
 	if (!path || *path == '\0')
@@ -131,7 +153,7 @@ bool mkdir_p(const char *path, mode_t mode)
 	len = snprintf(full, sizeof(full)-1, "%s", path);
 	if (len < 0 || len >= sizeof(full)-1)
 	{
-		DBG1("path string %s too long", path);
+		DBG1(DBG_LIB, "path string %s too long", path);
 		return FALSE;
 	}
 	/* ensure that the path ends with a '/' */
@@ -152,7 +174,7 @@ bool mkdir_p(const char *path, mode_t mode)
 		{
 			if (mkdir(full, mode) < 0)
 			{
-				DBG1("failed to create directory %s", full);
+				DBG1(DBG_LIB, "failed to create directory %s", full);
 				return FALSE;
 			}
 		}

@@ -204,14 +204,20 @@ static char* get_query_data(private_request_t *this, char *name)
 }
 
 /**
+ * Implementation of request_t.get_base.
+ */
+static char* get_base(private_request_t *this)
+{
+	return FCGX_GetParam("SCRIPT_NAME", this->req.envp);
+}
+
+/**
  * Implementation of request_t.add_cookie.
  */
 static void add_cookie(private_request_t *this, char *name, char *value)
 {
 	thread_this->set(thread_this, this);
-	cgi_cookie_set (this->cgi, name, value,
-					FCGX_GetParam("SCRIPT_NAME", this->req.envp),
-					NULL, NULL, 0, 0);
+	cgi_cookie_set (this->cgi, name, value, get_base(this), NULL, NULL, 0, 0);
 }
 
 /**
@@ -222,8 +228,7 @@ static void redirect(private_request_t *this, char *fmt, ...)
 	va_list args;
 
 	FCGX_FPrintF(this->req.out, "Status: 303 See Other\n");
-	FCGX_FPrintF(this->req.out, "Location: %s%s",
-				 FCGX_GetParam("SCRIPT_NAME", this->req.envp),
+	FCGX_FPrintF(this->req.out, "Location: %s%s", get_base(this),
 				 *fmt == '/' ? "" : "/");
 	va_start(args, fmt);
 	FCGX_VFPrintF(this->req.out, fmt, args);
@@ -232,21 +237,30 @@ static void redirect(private_request_t *this, char *fmt, ...)
 }
 
 /**
+ * Implementation of request_t.get_referer.
+ */
+static char* get_referer(private_request_t *this)
+{
+	return FCGX_GetParam("HTTP_REFERER", this->req.envp);
+}
+
+/**
  * Implementation of request_t.to_referer.
  */
 static void to_referer(private_request_t *this)
 {
-	FCGX_FPrintF(this->req.out, "Status: 303 See Other\n");
-	FCGX_FPrintF(this->req.out, "Location: %s\n\n",
-				 FCGX_GetParam("HTTP_REFERER", this->req.envp));
-}
+	char *referer;
 
-/**
- * Implementation of request_t.get_base.
- */
-static char* get_base(private_request_t *this)
-{
-	return FCGX_GetParam("SCRIPT_NAME", this->req.envp);
+	referer = get_referer(this);
+	if (referer)
+	{
+		FCGX_FPrintF(this->req.out, "Status: 303 See Other\n");
+		FCGX_FPrintF(this->req.out, "Location: %s\n\n", referer);
+	}
+	else
+	{
+		redirect(this, "/");
+	}
 }
 
 /**
@@ -396,6 +410,7 @@ request_t *request_create(int fd, bool debug)
 	this->public.session_closed = (bool(*)(request_t*))session_closed;
 	this->public.close_session = (void(*)(request_t*))close_session;
 	this->public.redirect = (void(*)(request_t*, char *fmt,...))redirect;
+	this->public.get_referer = (char*(*)(request_t*))get_referer;
 	this->public.to_referer = (void(*)(request_t*))to_referer;
 	this->public.render = (void(*)(request_t*,char*))render;
 	this->public.streamf = (int(*)(request_t*, char *format, ...))streamf;

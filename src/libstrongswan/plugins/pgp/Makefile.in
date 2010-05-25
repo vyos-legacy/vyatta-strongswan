@@ -72,7 +72,7 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 am__installdirs = "$(DESTDIR)$(plugindir)"
-LTLIBRARIES = $(plugin_LTLIBRARIES)
+LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
 libstrongswan_pgp_la_LIBADD =
 am_libstrongswan_pgp_la_OBJECTS = pgp_plugin.lo pgp_utils.lo \
 	pgp_cert.lo pgp_encoder.lo pgp_builder.lo
@@ -80,6 +80,8 @@ libstrongswan_pgp_la_OBJECTS = $(am_libstrongswan_pgp_la_OBJECTS)
 libstrongswan_pgp_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libstrongswan_pgp_la_LDFLAGS) $(LDFLAGS) -o $@
+@MONOLITHIC_FALSE@am_libstrongswan_pgp_la_rpath = -rpath $(plugindir)
+@MONOLITHIC_TRUE@am_libstrongswan_pgp_la_rpath =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -218,6 +220,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -254,12 +257,14 @@ xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -rdynamic
-plugin_LTLIBRARIES = libstrongswan-pgp.la
-libstrongswan_pgp_la_SOURCES = pgp_plugin.h pgp_plugin.c \
-  pgp_utils.h pgp_utils.c \
-  pgp_cert.h pgp_cert.c \
-  pgp_encoder.h pgp_encoder.c \
-  pgp_builder.h pgp_builder.c
+@MONOLITHIC_TRUE@noinst_LTLIBRARIES = libstrongswan-pgp.la
+@MONOLITHIC_FALSE@plugin_LTLIBRARIES = libstrongswan-pgp.la
+libstrongswan_pgp_la_SOURCES = \
+	pgp_plugin.h pgp_plugin.c \
+	pgp_utils.h pgp_utils.c \
+	pgp_cert.h pgp_cert.c \
+	pgp_encoder.h pgp_encoder.c \
+	pgp_builder.h pgp_builder.c
 
 libstrongswan_pgp_la_LDFLAGS = -module -avoid-version
 all: all-am
@@ -296,6 +301,15 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+
+clean-noinstLTLIBRARIES:
+	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
+	@list='$(noinst_LTLIBRARIES)'; for p in $$list; do \
+	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
+	  test "$$dir" != "$$p" || dir=.; \
+	  echo "rm -f \"$${dir}/so_locations\""; \
+	  rm -f "$${dir}/so_locations"; \
+	done
 install-pluginLTLIBRARIES: $(plugin_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
 	test -z "$(plugindir)" || $(MKDIR_P) "$(DESTDIR)$(plugindir)"
@@ -328,7 +342,7 @@ clean-pluginLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libstrongswan-pgp.la: $(libstrongswan_pgp_la_OBJECTS) $(libstrongswan_pgp_la_DEPENDENCIES) 
-	$(libstrongswan_pgp_la_LINK) -rpath $(plugindir) $(libstrongswan_pgp_la_OBJECTS) $(libstrongswan_pgp_la_LIBADD) $(LIBS)
+	$(libstrongswan_pgp_la_LINK) $(am_libstrongswan_pgp_la_rpath) $(libstrongswan_pgp_la_OBJECTS) $(libstrongswan_pgp_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -485,8 +499,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-pluginLTLIBRARIES \
-	mostlyclean-am
+clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
+	clean-pluginLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -557,18 +571,19 @@ uninstall-am: uninstall-pluginLTLIBRARIES
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-libtool clean-pluginLTLIBRARIES ctags distclean \
-	distclean-compile distclean-generic distclean-libtool \
-	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-pluginLTLIBRARIES \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am uninstall-pluginLTLIBRARIES
+	clean-libtool clean-noinstLTLIBRARIES clean-pluginLTLIBRARIES \
+	ctags distclean distclean-compile distclean-generic \
+	distclean-libtool distclean-tags distdir dvi dvi-am html \
+	html-am info info-am install install-am install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-pdf install-pdf-am \
+	install-pluginLTLIBRARIES install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags uninstall uninstall-am \
+	uninstall-pluginLTLIBRARIES
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

@@ -226,6 +226,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -584,6 +585,10 @@ uninstall-am:
 	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
 	pdf pdf-am ps ps-am tags uninstall uninstall-am
 
+
+key2keyid.o :	$(top_builddir)/config.status
+
+keyid2sql.o :	$(top_builddir)/config.status
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

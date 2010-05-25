@@ -30,6 +30,7 @@
 #include <freeswan.h>
 #include "kameipsec.h"
 
+#include <hydra.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/keys/private_key.h>
 
@@ -61,6 +62,7 @@
 #include "kernel_alg.h"
 #include "nat_traversal.h"
 #include "virtual.h"
+#include "whack_attribute.h"
 
 static void flush_pending_by_connection(connection_t *c);  /* forward */
 
@@ -104,7 +106,7 @@ bool his_id_was_instantiated(const connection_t *c)
 	{
 		identification_t *host;
 		bool equal;
-	
+
 		host = identification_create_from_sockaddr((sockaddr_t*)&c->spd.that.host_addr);
 		equal = host->equals(host, c->spd.that.id);
 		host->destroy(host);
@@ -113,7 +115,7 @@ bool his_id_was_instantiated(const connection_t *c)
 	else
 	{
 		return TRUE;
-	} 
+	}
 }
 
 /**
@@ -369,9 +371,14 @@ void delete_connection(connection_t *c, bool relations)
 		host_t *vip;
 
 		vip = host_create_from_sockaddr((sockaddr_t*)&c->spd.that.host_srcip);
-		lib->attributes->release_address(lib->attributes, c->spd.that.pool,
-										 vip, c->spd.that.id);
+		hydra->attributes->release_address(hydra->attributes, c->spd.that.pool,
+										   vip, c->spd.that.id);
 		vip->destroy(vip);
+	}
+
+	if (c->kind != CK_GOING_AWAY)
+	{
+		whack_attr->del_pool(whack_attr, c->name);
 	}
 
 	/* free internal data */
@@ -683,7 +690,7 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 	}
 
 	/* id */
-	snprintf(host_id, sizeof(host_id), "[%Y]", this->id); 
+	snprintf(host_id, sizeof(host_id), "[%Y]", this->id);
 
 	/* [---hop] */
 	hop[0] = '\0';
@@ -769,7 +776,7 @@ static void load_end_certificate(char *filename, struct end *dst)
 	cert_t *cert = NULL;
 	certificate_t *certificate;
 	bool cached_cert = FALSE;
-	
+
 	/* initialize end certificate */
 	dst->cert = NULL;
 
@@ -853,10 +860,11 @@ static void load_end_certificate(char *filename, struct end *dst)
 }
 
 static bool extract_end(struct end *dst, const whack_end_t *src,
-						const char *which)
+						const char *name, bool is_left)
 {
 	bool same_ca = FALSE;
 
+	dst->is_left = is_left;
 	dst->id = identification_create_from_string(src->id);
 	dst->ca = NULL;
 
@@ -1117,15 +1125,14 @@ void add_connection(const whack_message_t *wm)
 		c->tunnel_addr_family = wm->tunnel_addr_family;
 
 		c->requested_ca = NULL;
+		same_leftca  = extract_end(&c->spd.this, &wm->left, wm->name, TRUE);
+		same_rightca = extract_end(&c->spd.that, &wm->right, wm->name, FALSE);
 
-		same_leftca  = extract_end(&c->spd.this, &wm->left, "left");
-		same_rightca = extract_end(&c->spd.that, &wm->right, "right");
-
-		if (same_rightca)
+		if (same_rightca && c->spd.this.ca)
 		{
 			c->spd.that.ca = c->spd.this.ca->clone(c->spd.this.ca);
 		}
-		else if (same_leftca)
+		else if (same_leftca && c->spd.that.ca)
 		{
 			c->spd.this.ca = c->spd.that.ca->clone(c->spd.that.ca);
 		}
@@ -1195,6 +1202,17 @@ void add_connection(const whack_message_t *wm)
 		}
 
 		(void)orient(c);
+
+		/* if rightsourceip defines a subnet then create an in-memory pool */
+		if (whack_attr->add_pool(whack_attr, c->name,
+							c->spd.this.is_left ? &wm->right : &wm->left))
+		{
+			c->spd.that.pool = clone_str(c->name);
+			c->spd.that.modecfg = TRUE;
+			c->spd.that.has_client = FALSE;
+			/* reset the host_srcip so that it gets assigned in modecfg */
+			anyaddr(AF_INET, &c->spd.that.host_srcip);
+		}
 
 		if (c->ikev1)
 		{
@@ -1794,7 +1812,7 @@ connection_t *build_outgoing_opportunistic_connection(struct gw_info *gw,
 	else
 	{
 		chunk_t encoding = gw->gw_id->get_encoding(gw->gw_id);
-		id_type_t type   = gw->gw_id->get_type(gw->gw_id); 
+		id_type_t type   = gw->gw_id->get_type(gw->gw_id);
 		ip_address ip_addr;
 
 		initaddr(encoding.ptr, encoding.len,
@@ -2758,7 +2776,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					addrtot(&b->peer_client, 0, pcb, sizeof(pcb));
 					loglog(RC_OPPOFAILURE,
 							"no suitable connection for opportunism "
-						  	"between %s and %s with %Y as peer",
+							"between %s and %s with %Y as peer",
 							 ocb, pcb, ac->gateways_from_dns->gw_id);
 
 #ifdef KLIPS
@@ -3379,7 +3397,7 @@ connection_t *refine_host_connection(const struct state *st,
 			id_match_t match_level = peer_id->matches(peer_id, d->spd.that.id);
 
 			bool matching_id = match_level > ID_MATCH_NONE;
-				
+
 			bool matching_auth = (d->policy & auth_policy) != LEMPTY;
 
 			bool matching_trust = trusted_ca(peer_ca
@@ -3580,7 +3598,7 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 	policy_prio_t best_prio = BOTTOM_PRIO;
 	id_match_t match_level;
 	int pathlen;
-	
+
 
 	const bool peer_net_is_host = subnetisaddr(peer_net, &c->spd.that.host_addr);
 
@@ -3675,7 +3693,8 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 			}
 			else
 			{
-				if (!peer_net_is_host)
+				if (!peer_net_is_host && !(sr->that.modecfg && c->spd.that.modecfg &&
+						subnetisaddr(peer_net, &c->spd.that.host_srcip)))
 				{
 					continue;
 				}
@@ -3843,7 +3862,7 @@ void get_peer_ca_and_groups(connection_t *c,
 		if (cert && ac_verify_cert(cert, strict_crl_policy))
 		{
 			ac_t *ac = (ac_t*)cert;
-		
+
 			*peer_attributes = ac->get_groups(ac);
 		}
 		else

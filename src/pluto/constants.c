@@ -392,7 +392,8 @@ static const char *const esp_transform_name[] = {
 	"AES_GCM_12",
 	"AES_GCM_16",
 	"SEED_CBC",
-	"CAMELLIA_CBC"
+	"CAMELLIA_CBC",
+	"AES_GMAC"
 };
 
 static const char *const esp_transform_name_high[] = {
@@ -404,7 +405,7 @@ enum_names esp_transform_names_high =
 	{ ESP_SERPENT, ESP_TWOFISH, esp_transform_name_high, NULL };
 
 enum_names esp_transform_names =
-	{ ESP_DES_IV64, ESP_CAMELLIA, esp_transform_name, &esp_transform_names_high };
+	{ ESP_DES_IV64, ESP_AES_GMAC, esp_transform_name, &esp_transform_names_high };
 
 /* IPCOMP transform values */
 
@@ -919,12 +920,15 @@ static const char *const oakley_group_name_rfc4753[] = {
 };
 
 static const char *const oakley_group_name_rfc5114[] = {
+	"MODP_1024_160",
+	"MODP_2048_224",
+	"MODP_2048_256",
 	"ECP_192",
 	"ECP_224"
 };
 
 enum_names oakley_group_names_rfc5114 =
-	{ ECP_192_BIT, ECP_224_BIT,
+	{ MODP_1024_160, ECP_224_BIT,
 			oakley_group_name_rfc5114, NULL };
 
 enum_names oakley_group_names_rfc4753 =

@@ -96,6 +96,8 @@ static void default_values(starter_config_t *cfg)
 	anyaddr(AF_INET, &cfg->conn_default.left.nexthop);
 	anyaddr(AF_INET, &cfg->conn_default.right.addr);
 	anyaddr(AF_INET, &cfg->conn_default.right.nexthop);
+	cfg->conn_default.left.ikeport = 500;
+	cfg->conn_default.right.ikeport = 500;
 
 	cfg->ca_default.seen = LEMPTY;
 }
@@ -105,8 +107,7 @@ static void default_values(starter_config_t *cfg)
 		else if (streq(kw->value, sn)) { conn->policy &= ~fl; } \
 		else { plog("# bad policy value: %s=%s", kw->entry->name, kw->value); cfg->err++; }
 
-static void
-load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
+static void load_setup(starter_config_t *cfg, config_parsed_t *cfgp)
 {
 	kw_list_t *kw;
 
@@ -193,11 +194,13 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 				streq(value, "%config") || streq(value, "%cfg"))
 			{
 				/* request ip via config payload */
+				free(end->sourceip);
 				end->sourceip = NULL;
 				end->sourceip_mask = 1;
 			}
 			else
 			{	/* %poolname, strip %, serve ip requests */
+				free(end->sourceip);
 				end->sourceip = clone_str(value+1);
 				end->sourceip_mask = 0;
 			}
@@ -221,6 +224,7 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 					goto err;
 				 }
 				*pos = '\0';
+				free(end->sourceip);
 				end->sourceip = clone_str(value);
 				end->sourceip_mask = atoi(pos + 1);
 			}
@@ -232,7 +236,6 @@ static void kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token,
 					plog("# bad addr: %s=%s [%s]", name, value, ugh);
 					goto err;
 				}
-				end->sourceip = clone_str(value);
 				end->sourceip_mask = (conn->tunnel_addr_family == AF_INET) ?
 									  32 : 128;
 			}
@@ -419,8 +422,8 @@ err:
 /*
  * handles left|right=<FQDN> DNS resolution failure
  */
-static void
-handle_dns_failure( const char *label, starter_end_t *end, starter_config_t *cfg)
+static void handle_dns_failure(const char *label, starter_end_t *end,
+							   starter_config_t *cfg)
 {
 	if (end->dns_failed)
 	{
@@ -440,8 +443,8 @@ handle_dns_failure( const char *label, starter_end_t *end, starter_config_t *cfg
 /*
  * handles left|rightfirewall and left|rightupdown parameters
  */
-static void
-handle_firewall( const char *label, starter_end_t *end, starter_config_t *cfg)
+static void handle_firewall(const char *label, starter_end_t *end,
+							starter_config_t *cfg)
 {
 	if (end->firewall && (end->seen & LELEM(KW_FIREWALL - KW_END_FIRST)))
 	{
@@ -461,8 +464,7 @@ handle_firewall( const char *label, starter_end_t *end, starter_config_t *cfg)
 /*
  * parse a conn section
  */
-static void
-load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
+static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 {
 	char *conn_name = (conn->name == NULL)? "%default":conn->name;
 
@@ -718,8 +720,7 @@ load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg)
 /*
  * initialize a conn object with the default conn
  */
-static void
-conn_default(char *name, starter_conn_t *conn, starter_conn_t *def)
+static void conn_default(char *name, starter_conn_t *conn, starter_conn_t *def)
 {
 	memcpy(conn, def, sizeof(starter_conn_t));
 	conn->name = clone_str(name);
@@ -732,8 +733,7 @@ conn_default(char *name, starter_conn_t *conn, starter_conn_t *def)
 /*
  * parse a ca section
  */
-static void
-load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
+static void load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 {
 	char *ca_name = (ca->name == NULL)? "%default":ca->name;
 
@@ -786,8 +786,7 @@ load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 /*
  * initialize a ca object with the default ca
  */
-static void
-ca_default(char *name, starter_ca_t *ca, starter_ca_t *def)
+static void ca_default(char *name, starter_ca_t *ca, starter_ca_t *def)
 {
 	memcpy(ca, def, sizeof(starter_ca_t));
 	ca->name = clone_str(name);
@@ -795,11 +794,11 @@ ca_default(char *name, starter_ca_t *ca, starter_ca_t *def)
 	clone_args(KW_CA_FIRST, KW_CA_LAST, (char *)ca, (char *)def);
 }
 
-static kw_list_t*
-find_also_conn(const char* name, starter_conn_t *conn, starter_config_t *cfg);
+static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn,
+								 starter_config_t *cfg);
 
-static void
-load_also_conns(starter_conn_t *conn, also_t *also, starter_config_t *cfg)
+static void load_also_conns(starter_conn_t *conn, also_t *also,
+							starter_config_t *cfg)
 {
 	while (also != NULL)
 	{
@@ -825,8 +824,8 @@ load_also_conns(starter_conn_t *conn, also_t *also, starter_config_t *cfg)
 /*
  * find a conn included by also
  */
-static kw_list_t*
-find_also_conn(const char* name, starter_conn_t *conn, starter_config_t *cfg)
+static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn, 
+								 starter_config_t *cfg)
 {
 	starter_conn_t *c = cfg->conn_first;
 
@@ -852,11 +851,10 @@ find_also_conn(const char* name, starter_conn_t *conn, starter_config_t *cfg)
 	return NULL;
 }
 
-static kw_list_t*
-find_also_ca(const char* name, starter_ca_t *ca, starter_config_t *cfg);
+static kw_list_t* find_also_ca(const char* name, starter_ca_t *ca,
+							   starter_config_t *cfg);
 
-static void
-load_also_cas(starter_ca_t *ca, also_t *also, starter_config_t *cfg)
+static void load_also_cas(starter_ca_t *ca, also_t *also, starter_config_t *cfg)
 {
 	while (also != NULL)
 	{
@@ -882,8 +880,8 @@ load_also_cas(starter_ca_t *ca, also_t *also, starter_config_t *cfg)
 /*
  * find a ca included by also
  */
-static kw_list_t*
-find_also_ca(const char* name, starter_ca_t *ca, starter_config_t *cfg)
+static kw_list_t* find_also_ca(const char* name, starter_ca_t *ca,
+							   starter_config_t *cfg)
 {
 	starter_ca_t *c = cfg->ca_first;
 
@@ -912,8 +910,7 @@ find_also_ca(const char* name, starter_ca_t *ca, starter_config_t *cfg)
 /*
  * free the memory used by also_t objects
  */
-static void
-free_also(also_t *head)
+static void free_also(also_t *head)
 {
 	while (head != NULL)
 	{
@@ -928,8 +925,7 @@ free_also(also_t *head)
 /*
  * free the memory used by a starter_conn_t object
  */
-static void
-confread_free_conn(starter_conn_t *conn)
+static void confread_free_conn(starter_conn_t *conn)
 {
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->left);
 	free_args(KW_END_FIRST, KW_END_LAST,  (char *)&conn->right);
@@ -950,8 +946,7 @@ confread_free_ca(starter_ca_t *ca)
 /*
  * free the memory used by a starter_config_t object
  */
-void
-confread_free(starter_config_t *cfg)
+void confread_free(starter_config_t *cfg)
 {
 	starter_conn_t *conn = cfg->conn_first;
 	starter_ca_t   *ca   = cfg->ca_first;
@@ -986,8 +981,7 @@ confread_free(starter_config_t *cfg)
 /*
  * load and parse an IPsec configuration file
  */
-starter_config_t *
-confread_load(const char *file)
+starter_config_t* confread_load(const char *file)
 {
 	starter_config_t *cfg = NULL;
 	config_parsed_t  *cfgp;

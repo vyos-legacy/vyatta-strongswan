@@ -192,6 +192,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -226,7 +227,7 @@ top_srcdir = @top_srcdir@
 urandom_device = @urandom_device@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
-INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra -I$(top_srcdir)/src/libcharon
 noinst_LTLIBRARIES = libsimaka.la
 libsimaka_la_SOURCES = simaka_message.h simaka_message.c \
   simaka_crypto.h simaka_crypto.c

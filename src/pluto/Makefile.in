@@ -94,12 +94,13 @@ am_pluto_OBJECTS = ac.$(OBJEXT) alg_info.$(OBJEXT) ca.$(OBJEXT) \
 	pkcs7.$(OBJEXT) plutomain.$(OBJEXT) rcv_whack.$(OBJEXT) \
 	server.$(OBJEXT) smartcard.$(OBJEXT) spdb.$(OBJEXT) \
 	state.$(OBJEXT) timer.$(OBJEXT) vendor.$(OBJEXT) \
-	virtual.$(OBJEXT) xauth.$(OBJEXT) x509.$(OBJEXT) \
-	builder.$(OBJEXT)
+	virtual.$(OBJEXT) whack_attribute.$(OBJEXT) xauth.$(OBJEXT) \
+	x509.$(OBJEXT) builder.$(OBJEXT)
 pluto_OBJECTS = $(am_pluto_OBJECTS)
 pluto_DEPENDENCIES = $(LIBSTRONGSWANDIR)/libstrongswan.la \
-	$(LIBFREESWANDIR)/libfreeswan.a $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(LIBFREESWANDIR)/libfreeswan.a $(LIBHYDRADIR)/libhydra.la \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -263,6 +264,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -339,6 +341,7 @@ state.c state.h \
 timer.c timer.h \
 vendor.c vendor.h \
 virtual.c virtual.h \
+whack_attribute.c whack_attribute.h \
 xauth.c xauth.h \
 x509.c x509.h \
 builder.c builder.h \
@@ -347,10 +350,12 @@ rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 _pluto_adns_SOURCES = adns.c adns.h
 LIBSTRONGSWANDIR = $(top_builddir)/src/libstrongswan
 LIBFREESWANDIR = $(top_builddir)/src/libfreeswan
+LIBHYDRADIR = $(top_builddir)/src/libhydra
 INCLUDES = \
 -I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
+-I$(top_srcdir)/src/libhydra \
 -I$(top_srcdir)/src/whack
 
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
@@ -362,8 +367,8 @@ AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
 	$(am__append_1) $(am__append_2) $(am__append_3) \
 	$(am__append_4) $(am__append_5) $(am__append_7)
 pluto_LDADD = $(LIBSTRONGSWANDIR)/libstrongswan.la \
-	$(LIBFREESWANDIR)/libfreeswan.a -lresolv $(PTHREADLIB) \
-	$(DLLIB) $(am__append_6)
+	$(LIBFREESWANDIR)/libfreeswan.a $(LIBHYDRADIR)/libhydra.la \
+	-lresolv $(PTHREADLIB) $(DLLIB) $(am__append_6)
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)
@@ -501,6 +506,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/timer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vendor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/virtual.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/whack_attribute.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/x509.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xauth.Po@am__quote@
 
@@ -825,6 +831,8 @@ uninstall-man: uninstall-man5 uninstall-man8
 	uninstall-ipsecPROGRAMS uninstall-man uninstall-man5 \
 	uninstall-man8
 
+
+plutomain.o :	$(top_builddir)/config.status
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

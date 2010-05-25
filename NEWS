@@ -1,3 +1,52 @@
+strongswan-4.4.0
+----------------
+
+- The IKEv2 High Availability plugin has been integrated. It provides
+  load sharing and failover capabilities in a cluster of currently two nodes,
+  based on an extend ClusterIP kernel module. More information is available at
+  http://wiki.strongswan.org/projects/strongswan/wiki/HighAvailability.
+  The development of the High Availability functionality was sponsored by
+  secunet Security Networks AG.
+
+- Added IKEv1 and IKEv2 configuration support for the AES-GMAC
+  authentication-only ESP cipher. Our aes_gmac kernel patch or a Linux
+  2.6.34 kernel is required to make AES-GMAC available via the XFRM
+  kernel interface.
+
+- Added support for Diffie-Hellman groups 22, 23 and 24 to the gmp, gcrypt
+  and openssl plugins, usable by both pluto and charon. The new proposal
+  keywords are modp1024s160, modp2048s224 and modp2048s256. Thanks to Joy Latten
+  from IBM for his contribution.
+
+- The IKEv1 pluto daemon supports RAM-based virtual IP pools using
+  the rightsourceip directive with a subnet from which addresses
+  are allocated.
+
+- The ipsec pki --gen and --pub commands now allow the output of
+  private and public keys in PEM format using the --outform pem
+  command line option.
+
+- The new DHCP plugin queries virtual IP addresses for clients from a DHCP
+  server using broadcasts, or a defined server using the
+  charon.plugins.dhcp.server strongswan.conf option. DNS/WINS server information
+  is additionally served to clients if the DHCP server provides such
+  information. The plugin is used in ipsec.conf configurations having
+  rightsourceip set to %dhcp.
+
+- A new plugin called farp fakes ARP responses for virtual IP addresses
+  handed out to clients from the IKEv2 daemon charon. The plugin lets a
+  road-warrior act as a client on the local LAN if it uses a virtual IP
+  from the responders subnet, e.g. acquired using the DHCP plugin.
+
+- The existing IKEv2 socket implementations have been migrated to the
+  socket-default and the socket-raw plugins. The new socket-dynamic plugin
+  binds sockets dynamically to ports configured via the left-/rightikeport
+  ipsec.conf connection parameters.
+
+- The android charon plugin stores received DNS server information as "net.dns"
+  system properties, as used by the Android platform.
+
+
 strongswan-4.3.6
 ----------------
 

@@ -48,7 +48,7 @@ static void destroy(private_curl_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *curl_plugin_create()
 {
 	CURLcode res;
 	private_curl_plugin_t *this = malloc_thing(private_curl_plugin_t);
@@ -69,7 +69,7 @@ plugin_t *plugin_create()
 	}
 	else
 	{
-		DBG1("global libcurl initializing failed: %s, curl disabled",
+		DBG1(DBG_LIB, "global libcurl initializing failed: %s, curl disabled",
 			 curl_easy_strerror(res));
 	}
 	return &this->public.plugin;

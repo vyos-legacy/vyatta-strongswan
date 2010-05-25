@@ -84,14 +84,14 @@ static bool build_curve_signature(private_openssl_ec_private_key_t *this,
 	req_group = EC_GROUP_new_by_curve_name(nid_curve);
 	if (!req_group)
 	{
-		DBG1("signature scheme %N not supported in EC (required curve "
+		DBG1(DBG_LIB, "signature scheme %N not supported in EC (required curve "
 			 "not supported)", signature_scheme_names, scheme);
 		return FALSE;
 	}
 	my_group = EC_KEY_get0_group(this->ec);
 	if (EC_GROUP_cmp(my_group, req_group, NULL) != 0)
 	{
-		DBG1("signature scheme %N not supported by private key",
+		DBG1(DBG_LIB, "signature scheme %N not supported by private key",
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
@@ -162,7 +162,7 @@ static bool sign(private_openssl_ec_private_key_t *this,
 			return build_curve_signature(this, scheme, NID_sha512,
 										 NID_secp521r1, data, signature);
 		default:
-			DBG1("signature scheme %N not supported",
+			DBG1(DBG_LIB, "signature scheme %N not supported",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -174,7 +174,7 @@ static bool sign(private_openssl_ec_private_key_t *this,
 static bool decrypt(private_openssl_ec_private_key_t *this,
 					chunk_t crypto, chunk_t *plain)
 {
-	DBG1("EC private key decryption not implemented");
+	DBG1(DBG_LIB, "EC private key decryption not implemented");
 	return FALSE;
 }
 
@@ -233,11 +233,24 @@ static bool get_encoding(private_openssl_ec_private_key_t *this,
 	switch (type)
 	{
 		case KEY_PRIV_ASN1_DER:
+		case KEY_PRIV_PEM:
 		{
+			bool success = TRUE;
+
 			*encoding = chunk_alloc(i2d_ECPrivateKey(this->ec, NULL));
 			p = encoding->ptr;
 			i2d_ECPrivateKey(this->ec, &p);
-			return TRUE;
+
+			if (type == KEY_PRIV_PEM)
+			{
+				chunk_t asn1_encoding = *encoding;
+
+				success = lib->encoding->encode(lib->encoding, KEY_PRIV_PEM,
+								NULL, encoding, KEY_PART_ECDSA_PRIV_ASN1_DER,
+								asn1_encoding, KEY_PART_END);
+				chunk_clear(&asn1_encoding);
+			}
+			return success;
 		}
 		default:
 			return FALSE;
@@ -335,13 +348,13 @@ openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
 			this->ec = EC_KEY_new_by_curve_name(NID_secp521r1);
 			break;
 		default:
-			DBG1("EC private key size %d not supported", key_size);
+			DBG1(DBG_LIB, "EC private key size %d not supported", key_size);
 			destroy(this);
 			return NULL;
 	}
 	if (EC_KEY_generate_key(this->ec) != 1)
 	{
-		DBG1("EC private key generation failed", key_size);
+		DBG1(DBG_LIB, "EC private key generation failed", key_size);
 		destroy(this);
 		return NULL;
 	}

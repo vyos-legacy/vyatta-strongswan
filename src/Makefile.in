@@ -34,18 +34,19 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @USE_LIBSTRONGSWAN_TRUE@am__append_1 = libstrongswan
-@USE_SIMAKA_TRUE@am__append_2 = libsimaka
-@USE_FILE_CONFIG_TRUE@am__append_3 = libfreeswan starter ipsec _copyright
-@USE_PLUTO_TRUE@am__append_4 = pluto whack
-@USE_CHARON_TRUE@am__append_5 = charon
-@USE_STROKE_TRUE@am__append_6 = stroke
-@USE_UPDOWN_TRUE@am__append_7 = _updown _updown_espmark
-@USE_TOOLS_TRUE@am__append_8 = openac scepclient pki
-@USE_DUMM_TRUE@am__append_9 = dumm
-@USE_FAST_TRUE@am__append_10 = libfast
-@USE_MANAGER_TRUE@am__append_11 = manager
-@USE_MEDSRV_TRUE@am__append_12 = medsrv
-@USE_INTEGRITY_TEST_TRUE@am__append_13 = checksum
+@USE_LIBHYDRA_TRUE@am__append_2 = libhydra
+@USE_SIMAKA_TRUE@am__append_3 = libsimaka
+@USE_FILE_CONFIG_TRUE@am__append_4 = libfreeswan starter ipsec _copyright
+@USE_PLUTO_TRUE@am__append_5 = pluto whack
+@USE_CHARON_TRUE@am__append_6 = libcharon charon
+@USE_STROKE_TRUE@am__append_7 = stroke
+@USE_UPDOWN_TRUE@am__append_8 = _updown _updown_espmark
+@USE_TOOLS_TRUE@am__append_9 = libfreeswan openac scepclient pki
+@USE_DUMM_TRUE@am__append_10 = dumm
+@USE_FAST_TRUE@am__append_11 = libfast
+@USE_MANAGER_TRUE@am__append_12 = manager
+@USE_MEDSRV_TRUE@am__append_13 = medsrv
+@USE_INTEGRITY_TEST_TRUE@am__append_14 = checksum
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -78,10 +79,10 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = . include libstrongswan libsimaka libfreeswan starter \
-	ipsec _copyright pluto whack charon stroke _updown \
-	_updown_espmark openac scepclient pki dumm libfast manager \
-	medsrv checksum
+DIST_SUBDIRS = . include libstrongswan libhydra libsimaka libfreeswan \
+	starter ipsec _copyright pluto whack libcharon charon stroke \
+	_updown _updown_espmark openac scepclient pki dumm libfast \
+	manager medsrv checksum
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -228,6 +229,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -266,7 +268,7 @@ SUBDIRS = . include $(am__append_1) $(am__append_2) $(am__append_3) \
 	$(am__append_4) $(am__append_5) $(am__append_6) \
 	$(am__append_7) $(am__append_8) $(am__append_9) \
 	$(am__append_10) $(am__append_11) $(am__append_12) \
-	$(am__append_13)
+	$(am__append_13) $(am__append_14)
 EXTRA_DIST = strongswan.conf
 all: all-recursive
 

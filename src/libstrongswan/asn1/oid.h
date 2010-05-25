@@ -41,6 +41,7 @@ extern const oid_t oid_names[];
 #define OID_UNIQUE_IDENTIFIER				34
 #define OID_ROLE							35
 #define OID_SUBJECT_KEY_ID					38
+#define OID_KEY_USAGE						39
 #define OID_SUBJECT_ALT_NAME				41
 #define OID_BASIC_CONSTRAINTS				43
 #define OID_CRL_NUMBER						44

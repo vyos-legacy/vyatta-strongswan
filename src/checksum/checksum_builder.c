@@ -13,16 +13,12 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
 
 #include <library.h>
-
-/* we need to fake some charon symbols to dlopen() its plugins */
-void *charon, *eap_type_names, *auth_class_names, *protocol_id_names,
-*action_names, *ipsec_mode_names, *ike_sa_state_names, *child_sa_state_names,
-*policy_dir_names, *ipcomp_transform_names, *debug_names, *controller_cb_empty;
 
 int main(int argc, char* argv[])
 {
@@ -62,12 +58,30 @@ int main(int argc, char* argv[])
 			name[strlen(name) - 3] = '"';
 			name[strlen(name) - 2] = ',';
 			name[strlen(name) - 1] = '\0';
-			sname = "plugin_create";
+			if (asprintf(&sname, "%.*s_plugin_create", strlen(name) - 2,
+						 name) < 0)
+			{
+				fprintf(stderr, "failed to format plugin constructor "
+						"for '%s', ignored", path);
+				free(name);
+				continue;
+			}
+			translate(sname, "-", "_");
 		}
 		else if (strstr(path, "libstrongswan.so"))
 		{
 			name = strdup("libstrongswan\",");
-			sname = "library_init";
+			sname = strdup("library_init");
+		}
+		else if (strstr(path, "libhydra.so"))
+		{
+			name = strdup("libhydra\",");
+			sname = strdup("libhydra_init");
+		}
+		else if (strstr(path, "libcharon.so"))
+		{
+			name = strdup("libcharon\",");
+			sname = strdup("libcharon_init");
 		}
 		else if (strstr(path, "pool"))
 		{
@@ -126,6 +140,7 @@ int main(int argc, char* argv[])
 			   name, fsize, fsum, ssize, ssum);
 		fprintf(stderr, "\"%-20s%7u / 0x%08x       %6u / 0x%08x\n",
 				name, fsize, fsum, ssize, ssum);
+		free(sname);
 		free(name);
 	}
 	printf("};\n");

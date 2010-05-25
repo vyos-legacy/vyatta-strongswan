@@ -196,6 +196,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -237,7 +238,7 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 	commands/pub.c \
 	commands/req.c \
 	commands/self.c \
-	commands/verify.c 
+	commands/verify.c
 
 pki_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
@@ -667,6 +668,7 @@ uninstall-am: uninstall-ipsecPROGRAMS
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-ipsecPROGRAMS
 
+pki.o :	$(top_builddir)/config.status
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

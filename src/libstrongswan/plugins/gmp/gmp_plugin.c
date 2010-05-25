@@ -52,13 +52,17 @@ static void destroy(private_gmp_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *gmp_plugin_create()
 {
 	private_gmp_plugin_t *this = malloc_thing(private_gmp_plugin_t);
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT,
+						(dh_constructor_t)gmp_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_2048_224,
+						(dh_constructor_t)gmp_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_2048_256,
 						(dh_constructor_t)gmp_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT,
 						(dh_constructor_t)gmp_diffie_hellman_create);
@@ -71,6 +75,8 @@ plugin_t *plugin_create()
 	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT,
 						(dh_constructor_t)gmp_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
+						(dh_constructor_t)gmp_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_1024_160,
 						(dh_constructor_t)gmp_diffie_hellman_create);
 	lib->crypto->add_dh(lib->crypto, MODP_768_BIT,
 						(dh_constructor_t)gmp_diffie_hellman_create);

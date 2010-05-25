@@ -160,7 +160,7 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, NID_md5, data, signature);
 		default:
-			DBG1("signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -172,7 +172,7 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 static bool decrypt(private_openssl_rsa_private_key_t *this,
 					chunk_t crypto, chunk_t *plain)
 {
-	DBG1("RSA private key decryption not implemented");
+	DBG1(DBG_LIB, "RSA private key decryption not implemented");
 	return FALSE;
 }
 
@@ -226,11 +226,24 @@ static bool get_encoding(private_openssl_rsa_private_key_t *this,
 	switch (type)
 	{
 		case KEY_PRIV_ASN1_DER:
+		case KEY_PRIV_PEM:
 		{
+			bool success = TRUE;
+
 			*encoding = chunk_alloc(i2d_RSAPrivateKey(this->rsa, NULL));
 			p = encoding->ptr;
 			i2d_RSAPrivateKey(this->rsa, &p);
-			return TRUE;
+
+			if (type == KEY_PRIV_PEM)
+			{
+				chunk_t asn1_encoding = *encoding;
+
+				success = lib->encoding->encode(lib->encoding, KEY_PRIV_PEM,
+								NULL, encoding, KEY_PART_RSA_PRIV_ASN1_DER,
+								asn1_encoding, KEY_PART_END);
+				chunk_clear(&asn1_encoding);
+			}
+			return success;
 		}
 		default:
 			return FALSE;
@@ -296,6 +309,8 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_gen(key_type_t type,
 {
 	private_openssl_rsa_private_key_t *this;
 	u_int key_size = 0;
+	RSA *rsa = NULL;
+	BIGNUM *e = NULL;
 
 	while (TRUE)
 	{
@@ -315,10 +330,31 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_gen(key_type_t type,
 	{
 		return NULL;
 	}
+	e = BN_new();
+	if (!e || !BN_set_word(e, PUBLIC_EXPONENT))
+	{
+		goto error;
+	}
+	rsa = RSA_new();
+	if (!rsa || !RSA_generate_key_ex(rsa, key_size, e, NULL))
+	{
+		goto error;
+	}
 	this = create_empty();
-	this->rsa = RSA_generate_key(key_size, PUBLIC_EXPONENT, NULL, NULL);
-
+	this->rsa = rsa;
+	BN_free(e);
 	return &this->public;
+
+error:
+	if (e)
+	{
+		BN_free(e);
+	}
+	if (rsa)
+	{
+		RSA_free(rsa);
+	}
+	return NULL;
 }
 
 /**
@@ -440,22 +476,22 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	}
 
 	engine_id = lib->settings->get_str(lib->settings,
-								"library.plugins.openssl.engine_id", "pkcs11");
+						"libstrongswan.plugins.openssl.engine_id", "pkcs11");
 	engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
-		DBG1("engine '%s' is not available", engine_id);
+		DBG1(DBG_LIB, "engine '%s' is not available", engine_id);
 		return NULL;
 	}
 	if (!ENGINE_init(engine))
 	{
-		DBG1("failed to initialize engine '%s'", engine_id);
+		DBG1(DBG_LIB, "failed to initialize engine '%s'", engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}
 	if (!ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
 	{
-		DBG1("failed to set PIN on engine '%s'", engine_id);
+		DBG1(DBG_LIB, "failed to set PIN on engine '%s'", engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}
@@ -463,8 +499,8 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	key = ENGINE_load_private_key(engine, keyid, NULL, NULL);
 	if (!key)
 	{
-		DBG1("failed to load private key with ID '%s' from engine '%s'",
-			 keyid, engine_id);
+		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
+			 "engine '%s'", keyid, engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}

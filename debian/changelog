@@ -1,4 +1,12 @@
+strongswan (4.4.0-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Tue, 25 May 2010 21:03:52 +0200
+
 strongswan (4.3.6-1) unstable; urgency=low
+
+  * UNRELEASED
 
   * New upstream release, now build-depends on gperf.
     Closes: #577855: New upstream release 4.3.6

@@ -18,14 +18,12 @@
 
 #include <stdlib.h>
 
-#include <utils.h>
-#include <chunk.h>
-#include <debug.h>
-#include <threading/thread.h>
-#include <utils/identification.h>
-#include <utils/host.h>
+#include "debug.h"
+#include "threading/thread.h"
+#include "utils/identification.h"
+#include "utils/host.h"
 #ifdef LEAK_DETECTIVE
-#include <utils/leak_detective.h>
+#include "utils/leak_detective.h"
 #endif
 
 #define CHECKSUM_LIBRARY IPSEC_DIR"/libchecksum.so"
@@ -68,7 +66,6 @@ void library_deinit()
 	this->public.encoding->destroy(this->public.encoding);
 	this->public.crypto->destroy(this->public.crypto);
 	this->public.fetcher->destroy(this->public.fetcher);
-	this->public.attributes->destroy(this->public.attributes);
 	this->public.db->destroy(this->public.db);
 	this->public.printf_hook->destroy(this->public.printf_hook);
 	if (this->public.integrity)
@@ -133,7 +130,6 @@ bool library_init(char *settings)
 	this->public.creds = credential_factory_create();
 	this->public.encoding = key_encoding_create();
 	this->public.fetcher = fetcher_manager_create();
-	this->public.attributes = attribute_manager_create();
 	this->public.db = database_factory_create();
 	this->public.plugins = plugin_loader_create();
 	this->public.integrity = NULL;
@@ -145,11 +141,11 @@ bool library_init(char *settings)
 		this->public.integrity = integrity_checker_create(CHECKSUM_LIBRARY);
 		if (!lib->integrity->check(lib->integrity, "libstrongswan", library_init))
 		{
-			DBG1("integrity check of libstrongswan failed");
+			DBG1(DBG_LIB, "integrity check of libstrongswan failed");
 			return FALSE;
 		}
 #else /* !INTEGRITY_TEST */
-		DBG1("integrity test enabled, but not supported");
+		DBG1(DBG_LIB, "integrity test enabled, but not supported");
 		return FALSE;
 #endif /* INTEGRITY_TEST */
 	}

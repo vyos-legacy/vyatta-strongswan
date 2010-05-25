@@ -702,6 +702,8 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				   struct payload_digest *p)
 {
 	struct isakmp_delete *d = &(p->payload.delete);
+	identification_t *this_id, *that_id;
+	ip_address peer_addr;
 	size_t sizespi;
 	int i;
 
@@ -759,6 +761,15 @@ void accept_delete(struct state *st, struct msg_digest *md,
 		return;
 	}
 
+	if (d->isad_protoid == PROTO_ISAKMP)
+	{
+		struct end *this = &st->st_connection->spd.this;
+		struct end *that = &st->st_connection->spd.that;
+		this_id = this->id->clone(this->id);
+		that_id = that->id->clone(that->id);
+		peer_addr = st->st_connection->spd.that.host_addr;
+	}
+
 	for (i = 0; i < d->isad_nospi; i++)
 	{
 		u_char *spi = p->pbs.cur + (i * sizespi);
@@ -770,7 +781,7 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			 */
 			struct state *dst = find_state(spi /*iCookie*/
 				, spi+COOKIE_SIZE /*rCookie*/
-				, &st->st_connection->spd.that.host_addr
+				, &peer_addr
 				, MAINMODE_MSGID);
 
 			if (dst == NULL)
@@ -778,7 +789,8 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				loglog(RC_LOG_SERIOUS, "ignoring Delete SA payload: "
 					"ISAKMP SA not found (maybe expired)");
 			}
-			else if (!same_peer_ids(st->st_connection, dst->st_connection, NULL))
+			else if (! this_id->equals(this_id, dst->st_connection->spd.this.id) ||
+					 ! that_id->equals(that_id, dst->st_connection->spd.that.id))
 			{
 				/* we've not authenticated the relevant identities */
 				loglog(RC_LOG_SERIOUS, "ignoring Delete SA payload: "
@@ -875,6 +887,12 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				set_cur_connection(oldc);
 			}
 		}
+	}
+
+	if (d->isad_protoid == PROTO_ISAKMP)
+	{
+		this_id->destroy(this_id);
+		that_id->destroy(that_id);
 	}
 }
 
@@ -2753,6 +2771,7 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 				case ESP_AES_GCM_12:
 				case ESP_AES_GCM_16:
 				case ESP_AES_CTR:
+				case ESP_AES_GMAC:
 					needed_len += 4;
 					break;
 				default:
@@ -3620,7 +3639,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	if (send_cert)
 	{
 		bool success;
-		chunk_t cert_encoding;	
+		chunk_t cert_encoding;
 		pb_stream cert_pbs;
 
 		struct isakmp_cert cert_hd;
@@ -3634,7 +3653,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		cert_encoding = mycert->cert->get_encoding(mycert->cert);
 		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
 		free(cert_encoding.ptr);
-		if (!success)	
+		if (!success)
 		{
 			return STF_INTERNAL_ERROR;
 		}
@@ -4076,7 +4095,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
 		free(cert_encoding.ptr);
 		if (!success)
-		{	
+		{
 			return STF_INTERNAL_ERROR;
 		}
 		close_output_pbs(&cert_pbs);
@@ -4871,6 +4890,21 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					 */
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
 								, his_net, c->spd.that.id);
+
+					/* inherit any virtual IP assigned by a Mode Config exchange */ 
+					if (p->spd.that.modecfg && c->spd.that.modecfg &&
+						subnetisaddr(his_net, &c->spd.that.host_srcip))
+					{
+						char srcip[ADDRTOT_BUF];
+
+						DBG(DBG_CONTROL,
+							addrtot(&c->spd.that.host_srcip, 0, srcip, sizeof(srcip));
+							DBG_log("inheriting virtual IP source address %s from ModeCfg", srcip)
+						)
+						p->spd.that.host_srcip = c->spd.that.host_srcip;
+						p->spd.that.client = c->spd.that.client;
+						p->spd.that.has_client = TRUE;
+					}
 				}
 			}
 #ifdef DEBUG

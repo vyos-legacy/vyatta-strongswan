@@ -17,10 +17,36 @@
 
 #include "debug.h"
 
+ENUM(debug_names, DBG_DMN, DBG_LIB,
+	"DMN",
+	"MGR",
+	"IKE",
+	"CHD",
+	"JOB",
+	"CFG",
+	"KNL",
+	"NET",
+	"ENC",
+	"LIB",
+);
+
+ENUM(debug_lower_names, DBG_DMN, DBG_LIB,
+	"dmn",
+	"mgr",
+	"ike",
+	"chd",
+	"job",
+	"cfg",
+	"knl",
+	"net",
+	"enc",
+	"lib",
+);
+
 /**
  * level logged by the default logger
  */
-static int default_level = 1;
+static level_t default_level = 1;
 
 /**
  * stream logged to by the default logger
@@ -30,7 +56,7 @@ static FILE *default_stream = NULL;
 /**
  * default dbg function which printf all to stderr
  */
-void dbg_default(int level, char *fmt, ...)
+void dbg_default(debug_t group, level_t level, char *fmt, ...)
 {
 	if (!default_stream)
 	{
@@ -50,7 +76,7 @@ void dbg_default(int level, char *fmt, ...)
 /**
  * set the level logged by the default stderr logger
  */
-void dbg_default_set_level(int level)
+void dbg_default_set_level(level_t level)
 {
 	default_level = level;
 }
@@ -66,5 +92,5 @@ void dbg_default_set_stream(FILE *stream)
 /**
  * The registered debug hook.
  */
-void (*dbg) (int level, char *fmt, ...) = dbg_default;
+void (*dbg) (debug_t group, level_t level, char *fmt, ...) = dbg_default;
 

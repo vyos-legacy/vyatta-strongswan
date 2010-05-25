@@ -62,7 +62,9 @@ am_medsrv_fcgi_OBJECTS = user.$(OBJEXT) main.$(OBJEXT) \
 	auth_filter.$(OBJEXT) user_controller.$(OBJEXT) \
 	peer_controller.$(OBJEXT)
 medsrv_fcgi_OBJECTS = $(am_medsrv_fcgi_OBJECTS)
-medsrv_fcgi_DEPENDENCIES = $(top_builddir)/src/libfast/libfast.la
+medsrv_fcgi_DEPENDENCIES =  \
+	$(top_srcdir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libfast/libfast.la
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -224,6 +226,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -264,7 +267,7 @@ main.c filter/auth_filter.c filter/auth_filter.h \
 controller/user_controller.c controller/user_controller.h \
 controller/peer_controller.c controller/peer_controller.h
 
-medsrv_fcgi_LDADD = $(top_builddir)/src/libfast/libfast.la
+medsrv_fcgi_LDADD = $(top_srcdir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libfast/libfast.la
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast
 AM_CFLAGS = -rdynamic \
   -DIPSECDIR=\"${ipsecdir}\" \
@@ -751,6 +754,7 @@ uninstall-am: uninstall-medsrvPROGRAMS uninstall-medsrv_templatesDATA \
 	uninstall-medsrv_templates_staticDATA \
 	uninstall-medsrv_templates_userDATA
 
+main.o :	$(top_builddir)/config.status
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

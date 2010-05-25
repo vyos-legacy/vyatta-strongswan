@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -29,7 +29,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#include <enum.h>
+#include "enum.h"
 
 /**
  * strongSwan program return codes
@@ -125,7 +125,7 @@
 #define METHOD(iface, name, ret, this, ...) \
 	static ret name(union {iface *_public; this;} \
 	__attribute__((transparent_union)), ##__VA_ARGS__); \
-	const static typeof(name) *_##name = (const typeof(name)*)name; \
+	static const typeof(name) *_##name = (const typeof(name)*)name; \
 	static ret name(this, ##__VA_ARGS__)
 
 /**
@@ -134,7 +134,7 @@
 #define METHOD2(iface1, iface2, name, ret, this, ...) \
 	static ret name(union {iface1 *_public1; iface2 *_public2; this;} \
 	__attribute__((transparent_union)), ##__VA_ARGS__); \
-	const static typeof(name) *_##name = (const typeof(name)*)name; \
+	static const typeof(name) *_##name = (const typeof(name)*)name; \
 	static ret name(this, ##__VA_ARGS__)
 
 /**
@@ -150,7 +150,7 @@
 /**
  * Ignore result of functions tagged with warn_unused_result attributes
  */
-#define ignore_result(call) { if(call); }
+#define ignore_result(call) { if(call){}; }
 
 /**
  * Assign a function as a class method
@@ -309,6 +309,14 @@ void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
  * a null-terminated string but simply a memory area of length n.
  */
 void *memstr(const void *haystack, const char *needle, size_t n);
+
+/**
+ * Translates the characters in the given string, searching for characters
+ * in 'from' and mapping them to characters in 'to'.
+ * The two characters sets 'from' and 'to' must contain the same number of
+ * characters.
+ */
+char *translate(char *str, const char *from, const char *to);
 
 /**
  * Creates a directory and all required parent directories.
