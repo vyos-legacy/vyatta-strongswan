@@ -106,7 +106,14 @@ struct request_t {
 	void (*redirect)(request_t *this, char *fmt, ...);
 
 	/**
-	 * Redirect the client to the referer.
+	 * Get the HTTP referer.
+	 *
+	 * @return			HTTP referer
+	 */
+	char* (*get_referer)(request_t *this);
+
+	/**
+	 * Redirect back to the referer.
 	 */
 	void (*to_referer)(request_t *this);
 

@@ -38,6 +38,7 @@
 
 #include <freeswan.h>
 
+#include <hydra.h>
 #include <library.h>
 #include <debug.h>
 #include <utils/enumerator.h>
@@ -74,6 +75,7 @@
 #include "timer.h"
 #include "vendor.h"
 #include "builder.h"
+#include "whack_attribute.h"
 
 static void usage(const char *mess)
 {
@@ -242,7 +244,7 @@ static void print_plugins()
 		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin);
 	}
 	enumerator->destroy(enumerator);
-	DBG1("loaded plugins: %s", buf);
+	DBG1(DBG_DMN, "loaded plugins: %s", buf);
 }
 
 int main(int argc, char **argv)
@@ -272,6 +274,12 @@ int main(int argc, char **argv)
 		fprintf(stderr, "integrity check of pluto failed\n");
 		library_deinit();
 		exit(SS_RC_DAEMON_INTEGRITY);
+	}
+	if (!libhydra_init("pluto"))
+	{
+		libhydra_deinit();
+		library_deinit();
+		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 	options = options_create();
 
@@ -648,6 +656,7 @@ int main(int argc, char **argv)
 	{
 		plog("integrity tests enabled:");
 		plog("lib    'libstrongswan': passed file and segment integrity tests");
+		plog("lib    'libhydra': passed file and segment integrity tests");
 		plog("daemon 'pluto': passed file integrity test");
 	}
 
@@ -676,6 +685,7 @@ int main(int argc, char **argv)
 	init_myid();
 	fetch_initialize();
 	ac_initialize();
+	whack_attribute_initialize();
 
 	/* drop unneeded capabilities and change UID/GID */
 	prctl(PR_SET_KEEPCAPS, 1);
@@ -750,6 +760,7 @@ void exit_pluto(int status)
 	free_preshared_secrets();
 	free_remembered_public_keys();
 	delete_every_connection();
+	whack_attribute_finalize(); /* free in-memory pools */
 	fetch_finalize();           /* stop fetching thread */
 	free_crl_fetch();           /* free chain of crl fetch requests */
 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */
@@ -770,6 +781,8 @@ void exit_pluto(int status)
 	free_builder();
 	delete_lock();
 	options->destroy(options);
+	lib->plugins->unload(lib->plugins);
+	libhydra_deinit();
 	library_deinit();
 	close_log();
 	exit(status);

@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.3.6)
+AC_INIT(strongSwan,4.4.0)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
 PKG_PROG_PKG_CONFIG
@@ -41,6 +41,7 @@ ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec 
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
 
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently only the value "libcap" is supported])
+ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 
 AC_ARG_WITH(
 	[xauth-module],
@@ -113,6 +114,10 @@ ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
+ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
+ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon, enforced if pluto is enabled])
+ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
+ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
 ARG_ENABL_SET([nat-transport],  [enable NAT traversal with IPsec transport mode in pluto.])
 ARG_DISBL_SET([vendor-id],      [disable the sending of the strongSwan vendor ID in pluto.])
 ARG_DISBL_SET([xauth-vid],      [disable the sending of the XAUTH vendor ID.])
@@ -129,14 +134,18 @@ ARG_DISBL_SET([scripts],        [disable additional utilities (found in director
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
 ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
 ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
+ARG_ENABL_SET([dhcp],           [enable DHCP based attribute provider plugin.])
 ARG_DISBL_SET([resolve],        [disable resolve DNS handler plugin.])
 ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
 ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
 ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
+ARG_ENABL_SET([android],        [enable Android specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
+ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
+ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 
 dnl =========================
 dnl  set up compiler and flags
@@ -202,7 +211,6 @@ fi
 
 if test x$eap_aka = xtrue; then
 	fips_prf=true;
-	sha1=true;
 	simaka=true;
 fi
 
@@ -212,7 +220,9 @@ if test x$eap_sim = xtrue; then
 fi
 
 if test x$fips_prf = xtrue; then
-	sha1=true;
+	if test x$openssl = xfalse; then
+		sha1=true;
+	fi
 fi
 
 if test x$smp = xtrue; then
@@ -230,6 +240,16 @@ fi
 
 if test x$medcli = xtrue; then
 	mediation=true
+fi
+
+if test x$pluto = xtrue; then
+	if test x$socket_raw = xfalse; then
+		AC_MSG_NOTICE([Enforcing --enable-socket-raw, as pluto is enabled])
+		socket_raw=true
+		if test x$socket_default_given = xfalse; then
+			socket_default=false
+		fi
+	fi
 fi
 
 dnl ===========================================
@@ -431,7 +451,21 @@ if test x$vstr = xtrue; then
 fi
 
 if test x$gmp = xtrue; then
-	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
+	saved_LIBS=$LIBS
+	AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
+	AC_MSG_CHECKING([mpz_powm_sec])
+	if test x$mpz_powm_sec = xyes; then
+		AC_TRY_COMPILE(
+			[#include "gmp.h"],
+			[
+				void *x = mpz_powm_sec;
+			],
+			[AC_MSG_RESULT([yes]); AC_DEFINE(HAVE_MPZ_POWM_SEC)], [AC_MSG_RESULT([no])]
+		)
+	else
+		AC_MSG_RESULT([disabled])
+	fi
+	LIBS=$saved_LIBS
 	AC_MSG_CHECKING([gmp.h version >= 4.1.4])
 	AC_TRY_COMPILE(
 		[#include "gmp.h"],
@@ -554,6 +588,15 @@ if test x$uci = xtrue; then
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
 fi
 
+if test x$android = xtrue; then
+	AC_HAVE_LIBRARY([cutils],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])])
+	AC_CHECK_HEADER([cutils/properties.h],,[AC_MSG_ERROR([Android header cutils/properties.h not found!])])
+	dnl we have to force the use of libdl here because the autodetection
+	dnl above does not work correctly when cross-compiling for android.
+	DLLIB="-ldl"
+	AC_SUBST(DLLIB)
+fi
+
 if test x$nm = xtrue; then
 	PKG_CHECK_EXISTS([libnm-glib],
 		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm-glib libnm-glib-vpn])],
@@ -592,11 +635,12 @@ if test x$integrity_test = xtrue; then
 	)
 fi
 
-dnl ======================================
-dnl  collect all plugins for libstrongswan
-dnl ======================================
+dnl ==========================================================
+dnl  collect all plugins for libstrongswan, libhydra and pluto
+dnl ==========================================================
 
 libstrongswan_plugins=
+libhydra_plugins=
 pluto_plugins=
 
 if test x$test_vectors = xtrue; then
@@ -638,9 +682,6 @@ if test x$md5 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md5"
 	pluto_plugins=${pluto_plugins}" md5"
 fi
-if test x$fips_prf = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
-fi
 if test x$random = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" random"
 	pluto_plugins=${pluto_plugins}" random"
@@ -677,10 +718,6 @@ if test x$sqlite = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sqlite"
 	pluto_plugins=${pluto_plugins}" sqlite"
 fi
-if test x$attr_sql = xtrue -o x$sql = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" attr-sql"
-	pluto_plugins=${pluto_plugins}" attr-sql"
-fi
 if test x$padlock = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" padlock"
 fi
@@ -691,6 +728,9 @@ fi
 if test x$gcrypt = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gcrypt"
 	pluto_plugins=${pluto_plugins}" gcrypt"
+fi
+if test x$fips_prf = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
 fi
 if test x$xcbc = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
@@ -706,8 +746,17 @@ if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 	pluto_plugins=${pluto_plugins}" gmp"
 fi
+if test x$attr = xtrue; then
+	libhydra_plugins=${libhydra_plugins}" attr"
+	pluto_plugins=${pluto_plugins}" attr"
+fi
+if test x$attr_sql = xtrue -o x$sql = xtrue; then
+	libhydra_plugins=${libhydra_plugins}" attr-sql"
+	pluto_plugins=${pluto_plugins}" attr-sql"
+fi
 
 AC_SUBST(libstrongswan_plugins)
+AC_SUBST(libhydra_plugins)
 AC_SUBST(pluto_plugins)
 
 dnl =========================
@@ -752,13 +801,16 @@ AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
+AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
+AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tests = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
+AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_PSEUDONYM, test x$eap_simaka_pseudonym = xtrue)
@@ -774,6 +826,10 @@ AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
+AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
+AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
+AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
+AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
 
 dnl other options
 dnl =============
@@ -796,9 +852,11 @@ AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
+AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
 dnl ==============================
 dnl  set global definitions
@@ -810,6 +868,10 @@ fi
 if test x$capabilities = xlibcap; then
 	AC_DEFINE(CAPABILITIES)
 fi
+if test x$monolithic = xtrue; then
+	AC_DEFINE(MONOLITHIC)
+fi
+
 
 dnl ==============================
 dnl  build Makefiles
@@ -842,44 +904,53 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
 	src/libstrongswan/plugins/sqlite/Makefile
-	src/libstrongswan/plugins/attr_sql/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
+	src/libhydra/Makefile
+	src/libhydra/plugins/attr/Makefile
+	src/libhydra/plugins/attr_sql/Makefile
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
 	src/pluto/Makefile
 	src/whack/Makefile
 	src/charon/Makefile
-	src/charon/plugins/eap_aka/Makefile
-	src/charon/plugins/eap_aka_3gpp2/Makefile
-	src/charon/plugins/eap_identity/Makefile
-	src/charon/plugins/eap_md5/Makefile
-	src/charon/plugins/eap_gtc/Makefile
-	src/charon/plugins/eap_sim/Makefile
-	src/charon/plugins/eap_sim_file/Makefile
-	src/charon/plugins/eap_simaka_pseudonym/Makefile
-	src/charon/plugins/eap_simaka_reauth/Makefile
-	src/charon/plugins/eap_mschapv2/Makefile
-	src/charon/plugins/eap_radius/Makefile
-	src/charon/plugins/kernel_netlink/Makefile
-	src/charon/plugins/kernel_pfkey/Makefile
-	src/charon/plugins/kernel_pfroute/Makefile
-	src/charon/plugins/kernel_klips/Makefile
-	src/charon/plugins/smp/Makefile
-	src/charon/plugins/sql/Makefile
-	src/charon/plugins/medsrv/Makefile
-	src/charon/plugins/medcli/Makefile
-	src/charon/plugins/nm/Makefile
-	src/charon/plugins/uci/Makefile
-	src/charon/plugins/stroke/Makefile
-	src/charon/plugins/updown/Makefile
-	src/charon/plugins/attr/Makefile
-	src/charon/plugins/resolve/Makefile
-	src/charon/plugins/unit_tester/Makefile
-	src/charon/plugins/load_tester/Makefile
+	src/libcharon/Makefile
+	src/libcharon/plugins/eap_aka/Makefile
+	src/libcharon/plugins/eap_aka_3gpp2/Makefile
+	src/libcharon/plugins/eap_identity/Makefile
+	src/libcharon/plugins/eap_md5/Makefile
+	src/libcharon/plugins/eap_gtc/Makefile
+	src/libcharon/plugins/eap_sim/Makefile
+	src/libcharon/plugins/eap_sim_file/Makefile
+	src/libcharon/plugins/eap_simaka_pseudonym/Makefile
+	src/libcharon/plugins/eap_simaka_reauth/Makefile
+	src/libcharon/plugins/eap_mschapv2/Makefile
+	src/libcharon/plugins/eap_radius/Makefile
+	src/libcharon/plugins/kernel_netlink/Makefile
+	src/libcharon/plugins/kernel_pfkey/Makefile
+	src/libcharon/plugins/kernel_pfroute/Makefile
+	src/libcharon/plugins/kernel_klips/Makefile
+	src/libcharon/plugins/socket_default/Makefile
+	src/libcharon/plugins/socket_raw/Makefile
+	src/libcharon/plugins/socket_dynamic/Makefile
+	src/libcharon/plugins/farp/Makefile
+	src/libcharon/plugins/smp/Makefile
+	src/libcharon/plugins/sql/Makefile
+	src/libcharon/plugins/medsrv/Makefile
+	src/libcharon/plugins/medcli/Makefile
+	src/libcharon/plugins/nm/Makefile
+	src/libcharon/plugins/uci/Makefile
+	src/libcharon/plugins/ha/Makefile
+	src/libcharon/plugins/android/Makefile
+	src/libcharon/plugins/stroke/Makefile
+	src/libcharon/plugins/updown/Makefile
+	src/libcharon/plugins/dhcp/Makefile
+	src/libcharon/plugins/resolve/Makefile
+	src/libcharon/plugins/unit_tester/Makefile
+	src/libcharon/plugins/load_tester/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile

@@ -21,26 +21,95 @@
 #ifndef DEBUG_H_
 #define DEBUG_H_
 
+typedef enum debug_t debug_t;
+typedef enum level_t level_t;
+
 #include <stdio.h>
+
+#include "enum.h"
+
+/**
+ * Debug message group.
+ */
+enum debug_t {
+	/** daemon specific */
+	DBG_DMN,
+	/** IKE_SA_MANAGER */
+	DBG_MGR,
+	/** IKE_SA */
+	DBG_IKE,
+	/** CHILD_SA */
+	DBG_CHD,
+	/** job processing */
+	DBG_JOB,
+	/** configuration backends */
+	DBG_CFG,
+	/** kernel interface */
+	DBG_KNL,
+	/** networking/sockets */
+	DBG_NET,
+	/** message encoding/decoding */
+	DBG_ENC,
+	/** libstrongswan */
+	DBG_LIB,
+	/** number of groups */
+	DBG_MAX,
+	/** pseudo group with all groups */
+	DBG_ANY = DBG_MAX,
+};
+
+/**
+ * short names of debug message group.
+ */
+extern enum_name_t *debug_names;
+
+/**
+ * short names of debug message group, lower case.
+ */
+extern enum_name_t *debug_lower_names;
+
+/**
+ * Debug levels used to control output verbosity.
+ */
+enum level_t {
+	/** absolutely silent */
+	LEVEL_SILENT = -1,
+	/** most important auditing logs */
+	LEVEL_AUDIT =   0,
+	/** control flow */
+	LEVEL_CTRL =    1,
+	/** diagnose problems */
+	LEVEL_DIAG =    2,
+	/** raw binary blobs */
+	LEVEL_RAW =     3,
+	/** including sensitive data (private keys) */
+	LEVEL_PRIVATE = 4,
+};
 
 #ifndef DEBUG_LEVEL
 # define DEBUG_LEVEL 4
 #endif /* DEBUG_LEVEL */
 
 /** debug macros, they call the dbg function hook */
+#if DEBUG_LEVEL >= 0
+# define DBG0(group, fmt, ...) dbg(group, 0, fmt, ##__VA_ARGS__)
+#endif /* DEBUG_LEVEL */
 #if DEBUG_LEVEL >= 1
-# define DBG1(fmt, ...) dbg(1, fmt, ##__VA_ARGS__)
+# define DBG1(group, fmt, ...) dbg(group, 1, fmt, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 #if DEBUG_LEVEL >= 2
-# define DBG2(fmt, ...) dbg(2, fmt, ##__VA_ARGS__)
+# define DBG2(group, fmt, ...) dbg(group, 2, fmt, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 #if DEBUG_LEVEL >= 3
-# define DBG3(fmt, ...) dbg(3, fmt, ##__VA_ARGS__)
+# define DBG3(group, fmt, ...) dbg(group, 3, fmt, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 #if DEBUG_LEVEL >= 4
-# define DBG4(fmt, ...) dbg(4, fmt, ##__VA_ARGS__)
+# define DBG4(group, fmt, ...) dbg(group, 4, fmt, ##__VA_ARGS__)
 #endif /* DEBUG_LEVEL */
 
+#ifndef DBG0
+# define DBG0(...) {}
+#endif
 #ifndef DBG1
 # define DBG1(...) {}
 #endif
@@ -55,13 +124,13 @@
 #endif
 
 /** dbg function hook, uses dbg_default() by default */
-extern void (*dbg) (int level, char *fmt, ...);
+extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
 
 /** default logging function */
-void dbg_default(int level, char *fmt, ...);
+void dbg_default(debug_t group, level_t level, char *fmt, ...);
 
 /** set the level logged by dbg_default() */
-void dbg_default_set_level(int level);
+void dbg_default_set_level(level_t level);
 
 /** set the stream logged by dbg_default() to */
 void dbg_default_set_stream(FILE *stream);

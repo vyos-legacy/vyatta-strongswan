@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -24,6 +25,7 @@
 
 typedef enum diffie_hellman_group_t diffie_hellman_group_t;
 typedef struct diffie_hellman_t diffie_hellman_t;
+typedef struct diffie_hellman_params_t diffie_hellman_params_t;
 
 #include <library.h>
 
@@ -48,6 +50,9 @@ enum diffie_hellman_group_t {
 	ECP_256_BIT   = 19,
 	ECP_384_BIT   = 20,
 	ECP_521_BIT   = 21,
+	MODP_1024_160 = 22,
+	MODP_2048_224 = 23,
+	MODP_2048_256 = 24,
 	ECP_192_BIT   = 25,
 	ECP_224_BIT   = 26,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
@@ -70,8 +75,8 @@ struct diffie_hellman_t {
 	 * Space for returned secret is allocated and must be
 	 * freed by the caller.
 	 *
-	 * @param secret 	shared secret will be written into this chunk
-	 * @return 			SUCCESS, FAILED if not both DH values are set
+	 * @param secret	shared secret will be written into this chunk
+	 * @return			SUCCESS, FAILED if not both DH values are set
 	 */
 	status_t (*get_shared_secret) (diffie_hellman_t *this, chunk_t *secret);
 
@@ -80,7 +85,7 @@ struct diffie_hellman_t {
 	 *
 	 * Chunk gets cloned and can be destroyed afterwards.
 	 *
-	 * @param value 	public value of partner
+	 * @param value		public value of partner
 	 */
 	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t value);
 
@@ -105,5 +110,39 @@ struct diffie_hellman_t {
 	 */
 	void (*destroy) (diffie_hellman_t *this);
 };
+
+/**
+ * Parameters for a specific diffie hellman group.
+ */
+struct diffie_hellman_params_t {
+
+	/**
+	 * The prime of the group
+	 */
+	const chunk_t prime;
+
+	/**
+	 * Generator of the group
+	 */
+	const chunk_t generator;
+
+	/**
+	 * Exponent length to use
+	 */
+	size_t exp_len;
+
+	/**
+	 * Prime order subgroup; for MODP Groups 22-24
+	 */
+	const chunk_t subgroup;
+};
+
+/**
+ * Get the parameters associated with the specified diffie hellman group.
+ *
+ * @param group			DH group
+ * @return				The parameters or NULL, if the group is not supported
+ */
+diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group);
 
 #endif /** DIFFIE_HELLMAN_H_ @}*/

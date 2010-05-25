@@ -45,33 +45,59 @@ host_triplet = @host@
 
 @USE_VSTR_TRUE@am__append_6 = -lvstr
 @USE_AES_TRUE@am__append_7 = plugins/aes
-@USE_DES_TRUE@am__append_8 = plugins/des
-@USE_BLOWFISH_TRUE@am__append_9 = plugins/blowfish
-@USE_MD4_TRUE@am__append_10 = plugins/md4
-@USE_MD5_TRUE@am__append_11 = plugins/md5
-@USE_SHA1_TRUE@am__append_12 = plugins/sha1
-@USE_SHA2_TRUE@am__append_13 = plugins/sha2
-@USE_FIPS_PRF_TRUE@am__append_14 = plugins/fips_prf
-@USE_GMP_TRUE@am__append_15 = plugins/gmp
-@USE_RANDOM_TRUE@am__append_16 = plugins/random
-@USE_HMAC_TRUE@am__append_17 = plugins/hmac
-@USE_XCBC_TRUE@am__append_18 = plugins/xcbc
-@USE_X509_TRUE@am__append_19 = plugins/x509
-@USE_PUBKEY_TRUE@am__append_20 = plugins/pubkey
-@USE_PKCS1_TRUE@am__append_21 = plugins/pkcs1
-@USE_PGP_TRUE@am__append_22 = plugins/pgp
-@USE_DNSKEY_TRUE@am__append_23 = plugins/dnskey
-@USE_PEM_TRUE@am__append_24 = plugins/pem
-@USE_CURL_TRUE@am__append_25 = plugins/curl
-@USE_LDAP_TRUE@am__append_26 = plugins/ldap
-@USE_MYSQL_TRUE@am__append_27 = plugins/mysql
-@USE_SQLITE_TRUE@am__append_28 = plugins/sqlite
-@USE_ATTR_SQL_TRUE@am__append_29 = plugins/attr_sql
-@USE_PADLOCK_TRUE@am__append_30 = plugins/padlock
-@USE_OPENSSL_TRUE@am__append_31 = plugins/openssl
-@USE_GCRYPT_TRUE@am__append_32 = plugins/gcrypt
-@USE_AGENT_TRUE@am__append_33 = plugins/agent
-@USE_TEST_VECTORS_TRUE@am__append_34 = plugins/test_vectors
+@MONOLITHIC_TRUE@@USE_AES_TRUE@am__append_8 = plugins/aes/libstrongswan-aes.la
+@USE_DES_TRUE@am__append_9 = plugins/des
+@MONOLITHIC_TRUE@@USE_DES_TRUE@am__append_10 = plugins/des/libstrongswan-des.la
+@USE_BLOWFISH_TRUE@am__append_11 = plugins/blowfish
+@MONOLITHIC_TRUE@@USE_BLOWFISH_TRUE@am__append_12 = plugins/blowfish/libstrongswan-blowfish.la
+@USE_MD4_TRUE@am__append_13 = plugins/md4
+@MONOLITHIC_TRUE@@USE_MD4_TRUE@am__append_14 = plugins/md4/libstrongswan-md4.la
+@USE_MD5_TRUE@am__append_15 = plugins/md5
+@MONOLITHIC_TRUE@@USE_MD5_TRUE@am__append_16 = plugins/md5/libstrongswan-md5.la
+@USE_SHA1_TRUE@am__append_17 = plugins/sha1
+@MONOLITHIC_TRUE@@USE_SHA1_TRUE@am__append_18 = plugins/sha1/libstrongswan-sha1.la
+@USE_SHA2_TRUE@am__append_19 = plugins/sha2
+@MONOLITHIC_TRUE@@USE_SHA2_TRUE@am__append_20 = plugins/sha2/libstrongswan-sha2.la
+@USE_GMP_TRUE@am__append_21 = plugins/gmp
+@MONOLITHIC_TRUE@@USE_GMP_TRUE@am__append_22 = plugins/gmp/libstrongswan-gmp.la
+@USE_RANDOM_TRUE@am__append_23 = plugins/random
+@MONOLITHIC_TRUE@@USE_RANDOM_TRUE@am__append_24 = plugins/random/libstrongswan-random.la
+@USE_HMAC_TRUE@am__append_25 = plugins/hmac
+@MONOLITHIC_TRUE@@USE_HMAC_TRUE@am__append_26 = plugins/hmac/libstrongswan-hmac.la
+@USE_XCBC_TRUE@am__append_27 = plugins/xcbc
+@MONOLITHIC_TRUE@@USE_XCBC_TRUE@am__append_28 = plugins/xcbc/libstrongswan-xcbc.la
+@USE_X509_TRUE@am__append_29 = plugins/x509
+@MONOLITHIC_TRUE@@USE_X509_TRUE@am__append_30 = plugins/x509/libstrongswan-x509.la
+@USE_PUBKEY_TRUE@am__append_31 = plugins/pubkey
+@MONOLITHIC_TRUE@@USE_PUBKEY_TRUE@am__append_32 = plugins/pubkey/libstrongswan-pubkey.la
+@USE_PKCS1_TRUE@am__append_33 = plugins/pkcs1
+@MONOLITHIC_TRUE@@USE_PKCS1_TRUE@am__append_34 = plugins/pkcs1/libstrongswan-pkcs1.la
+@USE_PGP_TRUE@am__append_35 = plugins/pgp
+@MONOLITHIC_TRUE@@USE_PGP_TRUE@am__append_36 = plugins/pgp/libstrongswan-pgp.la
+@USE_DNSKEY_TRUE@am__append_37 = plugins/dnskey
+@MONOLITHIC_TRUE@@USE_DNSKEY_TRUE@am__append_38 = plugins/dnskey/libstrongswan-dnskey.la
+@USE_PEM_TRUE@am__append_39 = plugins/pem
+@MONOLITHIC_TRUE@@USE_PEM_TRUE@am__append_40 = plugins/pem/libstrongswan-pem.la
+@USE_CURL_TRUE@am__append_41 = plugins/curl
+@MONOLITHIC_TRUE@@USE_CURL_TRUE@am__append_42 = plugins/curl/libstrongswan-curl.la
+@USE_LDAP_TRUE@am__append_43 = plugins/ldap
+@MONOLITHIC_TRUE@@USE_LDAP_TRUE@am__append_44 = plugins/ldap/libstrongswan-ldap.la
+@USE_MYSQL_TRUE@am__append_45 = plugins/mysql
+@MONOLITHIC_TRUE@@USE_MYSQL_TRUE@am__append_46 = plugins/mysql/libstrongswan-mysql.la
+@USE_SQLITE_TRUE@am__append_47 = plugins/sqlite
+@MONOLITHIC_TRUE@@USE_SQLITE_TRUE@am__append_48 = plugins/sqlite/libstrongswan-sqlite.la
+@USE_PADLOCK_TRUE@am__append_49 = plugins/padlock
+@MONOLITHIC_TRUE@@USE_PADLOCK_TRUE@am__append_50 = plugins/padlock/libstrongswan-padlock.la
+@USE_OPENSSL_TRUE@am__append_51 = plugins/openssl
+@MONOLITHIC_TRUE@@USE_OPENSSL_TRUE@am__append_52 = plugins/openssl/libstrongswan-openssl.la
+@USE_GCRYPT_TRUE@am__append_53 = plugins/gcrypt
+@MONOLITHIC_TRUE@@USE_GCRYPT_TRUE@am__append_54 = plugins/gcrypt/libstrongswan-gcrypt.la
+@USE_FIPS_PRF_TRUE@am__append_55 = plugins/fips_prf
+@MONOLITHIC_TRUE@@USE_FIPS_PRF_TRUE@am__append_56 = plugins/fips_prf/libstrongswan-fips-prf.la
+@USE_AGENT_TRUE@am__append_57 = plugins/agent
+@MONOLITHIC_TRUE@@USE_AGENT_TRUE@am__append_58 = plugins/agent/libstrongswan-agent.la
+@USE_TEST_VECTORS_TRUE@am__append_59 = plugins/test_vectors
+@MONOLITHIC_TRUE@@USE_TEST_VECTORS_TRUE@am__append_60 = plugins/test_vectors/libstrongswan-test-vectors.la
 subdir = src/libstrongswan
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -115,14 +141,20 @@ am__DEPENDENCIES_1 =
 libstrongswan_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__append_8) $(am__append_10) \
+	$(am__append_12) $(am__append_14) $(am__append_16) \
+	$(am__append_18) $(am__append_20) $(am__append_22) \
+	$(am__append_24) $(am__append_26) $(am__append_28) \
+	$(am__append_30) $(am__append_32) $(am__append_34) \
+	$(am__append_36) $(am__append_38) $(am__append_40) \
+	$(am__append_42) $(am__append_44) $(am__append_46) \
+	$(am__append_48) $(am__append_50) $(am__append_52) \
+	$(am__append_54) $(am__append_56) $(am__append_58) \
+	$(am__append_60)
 am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 	chunk.h debug.c debug.h enum.c enum.h settings.h settings.c \
 	printf_hook.c printf_hook.h asn1/asn1.c asn1/asn1.h \
 	asn1/asn1_parser.c asn1/asn1_parser.h asn1/oid.c asn1/oid.h \
-	attributes/attributes.c attributes/attributes.h \
-	attributes/attribute_provider.h attributes/attribute_handler.h \
-	attributes/attribute_manager.c attributes/attribute_manager.h \
 	crypto/crypters/crypter.c crypto/crypters/crypter.h \
 	crypto/hashers/hasher.h crypto/hashers/hasher.c crypto/pkcs9.c \
 	crypto/pkcs9.h crypto/proposal/proposal_keywords.c \
@@ -173,10 +205,10 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 @USE_INTEGRITY_TEST_TRUE@am__objects_2 = integrity_checker.lo
 am_libstrongswan_la_OBJECTS = library.lo chunk.lo debug.lo enum.lo \
 	settings.lo printf_hook.lo asn1.lo asn1_parser.lo oid.lo \
-	attributes.lo attribute_manager.lo crypter.lo hasher.lo \
-	pkcs9.lo proposal_keywords.lo prf.lo rng.lo prf_plus.lo \
-	signer.lo crypto_factory.lo crypto_tester.lo diffie_hellman.lo \
-	transform.lo credential_factory.lo builder.lo key_encoding.lo \
+	crypter.lo hasher.lo pkcs9.lo proposal_keywords.lo prf.lo \
+	rng.lo prf_plus.lo signer.lo crypto_factory.lo \
+	crypto_tester.lo diffie_hellman.lo transform.lo \
+	credential_factory.lo builder.lo key_encoding.lo \
 	private_key.lo public_key.lo shared_key.lo certificate.lo \
 	x509.lo crl.lo ocsp_response.lo ietf_attributes.lo \
 	database_factory.lo fetcher_manager.lo traffic_selector.lo \
@@ -215,13 +247,12 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = . plugins/aes plugins/des plugins/blowfish plugins/md4 \
-	plugins/md5 plugins/sha1 plugins/sha2 plugins/fips_prf \
-	plugins/gmp plugins/random plugins/hmac plugins/xcbc \
-	plugins/x509 plugins/pubkey plugins/pkcs1 plugins/pgp \
-	plugins/dnskey plugins/pem plugins/curl plugins/ldap \
-	plugins/mysql plugins/sqlite plugins/attr_sql plugins/padlock \
-	plugins/openssl plugins/gcrypt plugins/agent \
-	plugins/test_vectors
+	plugins/md5 plugins/sha1 plugins/sha2 plugins/gmp \
+	plugins/random plugins/hmac plugins/xcbc plugins/x509 \
+	plugins/pubkey plugins/pkcs1 plugins/pgp plugins/dnskey \
+	plugins/pem plugins/curl plugins/ldap plugins/mysql \
+	plugins/sqlite plugins/padlock plugins/openssl plugins/gcrypt \
+	plugins/fips_prf plugins/agent plugins/test_vectors
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -368,6 +399,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -407,9 +439,6 @@ libstrongswan_la_SOURCES = library.c library.h chunk.c chunk.h debug.c \
 	debug.h enum.c enum.h settings.h settings.c printf_hook.c \
 	printf_hook.h asn1/asn1.c asn1/asn1.h asn1/asn1_parser.c \
 	asn1/asn1_parser.h asn1/oid.c asn1/oid.h \
-	attributes/attributes.c attributes/attributes.h \
-	attributes/attribute_provider.h attributes/attribute_handler.h \
-	attributes/attribute_manager.c attributes/attribute_manager.h \
 	crypto/crypters/crypter.c crypto/crypters/crypter.h \
 	crypto/hashers/hasher.h crypto/hashers/hasher.c crypto/pkcs9.c \
 	crypto/pkcs9.h crypto/proposal/proposal_keywords.c \
@@ -456,14 +485,24 @@ libstrongswan_la_SOURCES = library.c library.h chunk.c chunk.h debug.c \
 	plugins/plugin_loader.h plugins/plugin.h $(am__append_2) \
 	$(am__append_5)
 libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) \
-	$(RTLIB) $(am__append_6)
+	$(RTLIB) $(am__append_6) $(am__append_8) $(am__append_10) \
+	$(am__append_12) $(am__append_14) $(am__append_16) \
+	$(am__append_18) $(am__append_20) $(am__append_22) \
+	$(am__append_24) $(am__append_26) $(am__append_28) \
+	$(am__append_30) $(am__append_32) $(am__append_34) \
+	$(am__append_36) $(am__append_38) $(am__append_40) \
+	$(am__append_42) $(am__append_44) $(am__append_46) \
+	$(am__append_48) $(am__append_50) $(am__append_52) \
+	$(am__append_54) $(am__append_56) $(am__append_58) \
+	$(am__append_60)
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DPLUGINDIR=\"${plugindir}\" \
 	-DSTRONGSWAN_CONF=\"${strongswan_conf}\" $(am__append_1) \
 	$(am__append_3) $(am__append_4)
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
-crypto/proposal/proposal_keywords.txt
+crypto/proposal/proposal_keywords.txt \
+Android.mk AndroidConfigLocal.h
 
 BUILT_SOURCES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
@@ -473,19 +512,37 @@ MAINTAINERCLEANFILES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
 $(srcdir)/crypto/proposal/proposal_keywords.c
 
+@MONOLITHIC_FALSE@SUBDIRS = . $(am__append_7) $(am__append_9) \
+@MONOLITHIC_FALSE@	$(am__append_11) $(am__append_13) \
+@MONOLITHIC_FALSE@	$(am__append_15) $(am__append_17) \
+@MONOLITHIC_FALSE@	$(am__append_19) $(am__append_21) \
+@MONOLITHIC_FALSE@	$(am__append_23) $(am__append_25) \
+@MONOLITHIC_FALSE@	$(am__append_27) $(am__append_29) \
+@MONOLITHIC_FALSE@	$(am__append_31) $(am__append_33) \
+@MONOLITHIC_FALSE@	$(am__append_35) $(am__append_37) \
+@MONOLITHIC_FALSE@	$(am__append_39) $(am__append_41) \
+@MONOLITHIC_FALSE@	$(am__append_43) $(am__append_45) \
+@MONOLITHIC_FALSE@	$(am__append_47) $(am__append_49) \
+@MONOLITHIC_FALSE@	$(am__append_51) $(am__append_53) \
+@MONOLITHIC_FALSE@	$(am__append_55) $(am__append_57) \
+@MONOLITHIC_FALSE@	$(am__append_59)
 
 # build plugins with their own Makefile
 #######################################
-SUBDIRS = . $(am__append_7) $(am__append_8) $(am__append_9) \
-	$(am__append_10) $(am__append_11) $(am__append_12) \
-	$(am__append_13) $(am__append_14) $(am__append_15) \
-	$(am__append_16) $(am__append_17) $(am__append_18) \
-	$(am__append_19) $(am__append_20) $(am__append_21) \
-	$(am__append_22) $(am__append_23) $(am__append_24) \
-	$(am__append_25) $(am__append_26) $(am__append_27) \
-	$(am__append_28) $(am__append_29) $(am__append_30) \
-	$(am__append_31) $(am__append_32) $(am__append_33) \
-	$(am__append_34)
+@MONOLITHIC_TRUE@SUBDIRS = $(am__append_7) $(am__append_9) \
+@MONOLITHIC_TRUE@	$(am__append_11) $(am__append_13) \
+@MONOLITHIC_TRUE@	$(am__append_15) $(am__append_17) \
+@MONOLITHIC_TRUE@	$(am__append_19) $(am__append_21) \
+@MONOLITHIC_TRUE@	$(am__append_23) $(am__append_25) \
+@MONOLITHIC_TRUE@	$(am__append_27) $(am__append_29) \
+@MONOLITHIC_TRUE@	$(am__append_31) $(am__append_33) \
+@MONOLITHIC_TRUE@	$(am__append_35) $(am__append_37) \
+@MONOLITHIC_TRUE@	$(am__append_39) $(am__append_41) \
+@MONOLITHIC_TRUE@	$(am__append_43) $(am__append_45) \
+@MONOLITHIC_TRUE@	$(am__append_47) $(am__append_49) \
+@MONOLITHIC_TRUE@	$(am__append_51) $(am__append_53) \
+@MONOLITHIC_TRUE@	$(am__append_55) $(am__append_57) \
+@MONOLITHIC_TRUE@	$(am__append_59)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -563,8 +620,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asn1.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asn1_parser.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attribute_manager.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attributes.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/backtrace.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/builder.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/certificate.Plo@am__quote@
@@ -656,20 +711,6 @@ oid.lo: asn1/oid.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='asn1/oid.c' object='oid.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o oid.lo `test -f 'asn1/oid.c' || echo '$(srcdir)/'`asn1/oid.c
-
-attributes.lo: attributes/attributes.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT attributes.lo -MD -MP -MF $(DEPDIR)/attributes.Tpo -c -o attributes.lo `test -f 'attributes/attributes.c' || echo '$(srcdir)/'`attributes/attributes.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/attributes.Tpo $(DEPDIR)/attributes.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='attributes/attributes.c' object='attributes.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o attributes.lo `test -f 'attributes/attributes.c' || echo '$(srcdir)/'`attributes/attributes.c
-
-attribute_manager.lo: attributes/attribute_manager.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT attribute_manager.lo -MD -MP -MF $(DEPDIR)/attribute_manager.Tpo -c -o attribute_manager.lo `test -f 'attributes/attribute_manager.c' || echo '$(srcdir)/'`attributes/attribute_manager.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/attribute_manager.Tpo $(DEPDIR)/attribute_manager.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='attributes/attribute_manager.c' object='attribute_manager.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o attribute_manager.lo `test -f 'attributes/attribute_manager.c' || echo '$(srcdir)/'`attributes/attribute_manager.c
 
 crypter.lo: crypto/crypters/crypter.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypter.lo -MD -MP -MF $(DEPDIR)/crypter.Tpo -c -o crypter.lo `test -f 'crypto/crypters/crypter.c' || echo '$(srcdir)/'`crypto/crypters/crypter.c

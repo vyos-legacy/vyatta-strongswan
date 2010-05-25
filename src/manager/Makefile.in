@@ -68,8 +68,9 @@ am_manager_fcgi_OBJECTS = main.$(OBJEXT) manager.$(OBJEXT) \
 	gateway_controller.$(OBJEXT)
 manager_fcgi_OBJECTS = $(am_manager_fcgi_OBJECTS)
 am__DEPENDENCIES_1 =
-manager_fcgi_DEPENDENCIES = $(top_builddir)/src/libfast/libfast.la \
-	$(am__DEPENDENCIES_1)
+manager_fcgi_DEPENDENCIES =  \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libfast/libfast.la $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -235,6 +236,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -278,7 +280,7 @@ controller/control_controller.c controller/control_controller.h \
 controller/config_controller.c controller/config_controller.h \
 controller/gateway_controller.c controller/gateway_controller.h
 
-manager_fcgi_LDADD = $(top_builddir)/src/libfast/libfast.la ${xml_LIBS}
+manager_fcgi_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la $(top_builddir)/src/libfast/libfast.la ${xml_LIBS}
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libfast ${xml_CFLAGS}
 AM_CFLAGS = -rdynamic \
   -DIPSECDIR=\"${ipsecdir}\" \
@@ -881,6 +883,7 @@ uninstall-am: uninstall-managerPROGRAMS \
 	uninstall-manager_templates_ikesaDATA \
 	uninstall-manager_templates_staticDATA
 
+main.o :	$(top_builddir)/config.status
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

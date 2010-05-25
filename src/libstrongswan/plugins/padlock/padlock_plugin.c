@@ -97,7 +97,7 @@ static padlock_feature_t get_padlock_features()
 			return d;
 		}
 	}
-	DBG1("Padlock not found, CPU is %s", vendor);
+	DBG1(DBG_LIB, "Padlock not found, CPU is %s", vendor);
 	return 0;
 }
 
@@ -131,7 +131,7 @@ static void destroy(private_padlock_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *padlock_plugin_create()
 {
 	private_padlock_plugin_t *this = malloc_thing(private_padlock_plugin_t);
 
@@ -143,7 +143,7 @@ plugin_t *plugin_create()
 		free(this);
 		return NULL;
 	}
-	DBG1("Padlock found, supports:%s%s%s%s%s, enabled:%s%s%s%s%s",
+	DBG1(DBG_LIB, "Padlock found, supports:%s%s%s%s%s, enabled:%s%s%s%s%s",
 		 this->features & PADLOCK_RNG_AVAILABLE ? " RNG" : "",
 		 this->features & PADLOCK_ACE_AVAILABLE ? " ACE" : "",
 		 this->features & PADLOCK_ACE2_AVAILABLE ? " ACE2" : "",

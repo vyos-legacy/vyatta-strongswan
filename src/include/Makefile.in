@@ -172,6 +172,7 @@ ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libhydra_plugins = @libhydra_plugins@
 libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
@@ -208,7 +209,7 @@ xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 EXTRA_DIST = linux/ipsec.h linux/netlink.h linux/rtnetlink.h \
              linux/pfkeyv2.h linux/udp.h linux/xfrm.h linux/types.h \
-             sys/queue.h
+             linux/jhash.h sys/queue.h
 
 all: all-am
 

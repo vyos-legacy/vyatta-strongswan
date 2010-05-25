@@ -27,6 +27,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <library.h>
+
 #include "stroke_msg.h"
 #include "stroke_keywords.h"
 
@@ -96,7 +98,7 @@ static int send_stroke_msg (stroke_msg_t *msg)
 		{
 			if (fgets(buffer, sizeof(buffer), stdin))
 			{
-				if (write(sock, buffer, strlen(buffer)));
+				ignore_result(write(sock, buffer, strlen(buffer)));
 			}
 		}
 	}
@@ -129,11 +131,13 @@ static int add_connection(char *name,
 
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
+	msg.add_conn.me.ikeport = 500;
 	msg.add_conn.me.subnets = push_string(&msg, my_nets);
 	msg.add_conn.me.sendcert = 1;
 
 	msg.add_conn.other.id = push_string(&msg, other_id);
 	msg.add_conn.other.address = push_string(&msg, other_addr);
+	msg.add_conn.other.ikeport = 500;
 	msg.add_conn.other.subnets = push_string(&msg, other_nets);
 	msg.add_conn.other.sendcert = 1;
 
@@ -354,6 +358,9 @@ int main(int argc, char *argv[])
 {
 	const stroke_token_t *token;
 	int res = 0;
+
+	library_init(NULL);
+	atexit(library_deinit);
 
 	if (argc < 2)
 	{

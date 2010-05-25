@@ -76,7 +76,8 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 							   char **absolute, struct stat *st)
 {
 	struct dirent *entry = readdir(this->dir);
-	size_t len, remaining;
+	size_t remaining;
+	int len;
 
 	if (!entry)
 	{
@@ -96,7 +97,8 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 		len = snprintf(this->full_end, remaining, "%s", entry->d_name);
 		if (len < 0 || len >= remaining)
 		{
-			DBG1("buffer too small to enumerate file '%s'", entry->d_name);
+			DBG1(DBG_LIB, "buffer too small to enumerate file '%s'",
+				 entry->d_name);
 			return FALSE;
 		}
 		if (absolute)
@@ -107,7 +109,8 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 		{
 			if (stat(this->full, st))
 			{
-				DBG1("stat() on '%s' failed: %s", this->full, strerror(errno));
+				DBG1(DBG_LIB, "stat() on '%s' failed: %s", this->full,
+					 strerror(errno));
 				return FALSE;
 			}
 		}
@@ -120,7 +123,7 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
  */
 enumerator_t* enumerator_create_directory(char *path)
 {
-	size_t len;
+	int len;
 	dir_enum_t *this = malloc_thing(dir_enum_t);
 	this->public.enumerate = (void*)enumerate_dir_enum;
 	this->public.destroy = (void*)destroy_dir_enum;
@@ -132,7 +135,7 @@ enumerator_t* enumerator_create_directory(char *path)
 	len = snprintf(this->full, sizeof(this->full)-1, "%s", path);
 	if (len < 0 || len >= sizeof(this->full)-1)
 	{
-		DBG1("path string '%s' too long", path);
+		DBG1(DBG_LIB, "path string '%s' too long", path);
 		free(this);
 		return NULL;
 	}
@@ -147,7 +150,7 @@ enumerator_t* enumerator_create_directory(char *path)
 	this->dir = opendir(path);
 	if (this->dir == NULL)
 	{
-		DBG1("opening directory '%s' failed: %s", path, strerror(errno));
+		DBG1(DBG_LIB, "opening directory '%s' failed: %s", path, strerror(errno));
 		free(this);
 		return NULL;
 	}

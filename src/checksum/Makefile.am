@@ -5,17 +5,28 @@ nodist_libchecksum_la_SOURCES = checksum.c
 libchecksum_la_LDFLAGS = -module -avoid-version
 
 checksum_builder_SOURCES = checksum_builder.c
-checksum_builder_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+checksum_builder_LDADD = \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(top_builddir)/src/libhydra/libhydra.la \
+	$(top_builddir)/src/libcharon/libcharon.la \
+	$(DLLIB)
 
 BUILT_SOURCES = checksum.c
 CLEANFILES = checksum.c
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -rdynamic
 
-libs =	$(shell find $(top_builddir)/src/libstrongswan $(top_builddir)/src/charon \
+libs =	$(shell find $(top_builddir)/src/libstrongswan \
+			$(top_builddir)/src/libcharon \
+			$(top_builddir)/src/libhydra \
 			-name 'libstrongswan*.so')
 
+if USE_LIBHYDRA
+  libs += $(top_builddir)/src/libhydra/.libs/libhydra.so
+endif
+
 if USE_CHARON
+  libs += $(top_builddir)/src/libcharon/.libs/libcharon.so
   libs += $(top_builddir)/src/charon/.libs/charon
 endif
 
@@ -30,7 +41,7 @@ if USE_TOOLS
 endif
 
 if USE_ATTR_SQL
-  libs += $(top_builddir)/src/libstrongswan/plugins/attr_sql/.libs/pool
+  libs += $(top_builddir)/src/libhydra/plugins/attr_sql/.libs/pool
 endif
 
 checksum.c : checksum_builder $(libs)

@@ -145,7 +145,7 @@ static bool verify(private_openssl_rsa_public_key_t *this, signature_scheme_t sc
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return verify_emsa_pkcs1_signature(this, NID_md5, data, signature);
 		default:
-			DBG1("signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -157,7 +157,7 @@ static bool verify(private_openssl_rsa_public_key_t *this, signature_scheme_t sc
 static bool encrypt_(private_openssl_rsa_public_key_t *this,
 					 chunk_t crypto, chunk_t *plain)
 {
-	DBG1("RSA public key encryption not implemented");
+	DBG1(DBG_LIB, "RSA public key encryption not implemented");
 	return FALSE;
 }
 
@@ -200,7 +200,7 @@ bool openssl_rsa_fingerprint(RSA *rsa, key_encoding_type_t type, chunk_t *fp)
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)
 	{
-		DBG1("SHA1 hash algorithm not supported, fingerprinting failed");
+		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, fingerprinting failed");
 		free(key.ptr);
 		return FALSE;
 	}
@@ -231,11 +231,24 @@ static bool get_encoding(private_openssl_rsa_public_key_t *this,
 	switch (type)
 	{
 		case KEY_PUB_SPKI_ASN1_DER:
+		case KEY_PUB_PEM:
 		{
+			bool success = TRUE;
+
 			*encoding = chunk_alloc(i2d_RSA_PUBKEY(this->rsa, NULL));
 			p = encoding->ptr;
 			i2d_RSA_PUBKEY(this->rsa, &p);
-			return TRUE;
+
+			if (type == KEY_PUB_PEM)
+			{
+				chunk_t asn1_encoding = *encoding;
+
+				success = lib->encoding->encode(lib->encoding, KEY_PUB_PEM,
+								NULL, encoding, KEY_PART_RSA_PUB_ASN1_DER,
+								asn1_encoding, KEY_PART_END);
+				chunk_clear(&asn1_encoding);
+			}
+			return success;
 		}
 		case KEY_PUB_ASN1_DER:
 		{
