@@ -2,6 +2,10 @@ strongswan (4.4.0-1) unstable; urgency=low
 
   * New upstream release, now with a high-availability plugin.
   * Enable building of ha, dhcp, and farp plugins.
+  * Enable capability dropping (now depends on libcap). Switching
+    user to new system user strongswan (with nogroup) after startup
+    is still disabled until the iptables updown script can be made
+    to work.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Tue, 25 May 2010 21:03:52 +0200
 

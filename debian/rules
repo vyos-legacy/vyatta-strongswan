@@ -13,7 +13,7 @@ export DEB_BUILD_HARDENING=1
 CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
 		--enable-ldap --enable-curl \
-		--enable-nonblocking --enable-thread \
+		--with-capabilities=libcap \
 		--enable-smartcard --enable-cisco-quirks \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-mediation --enable-medsrv --enable-medcli \
@@ -22,7 +22,6 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-eap-gtc --enable-eap-aka --enable-eap-mschapv2 \
 		--enable-sql --enable-integrity-test \
 		--enable-nm --enable-ha --enable-dhcp --enable-farp
-	#	--with-capabilities=libcap \
 	#	--with-user=strongswan --with-group=nogroup \
 	#	--enable-kernel-pfkey --enable-kernel-klips \
 	# Could enable --enable-nat-transport, but this is actually insecure,
@@ -61,7 +60,6 @@ clean:
 	#-$(MAKE) -C programs/fswcert/ clean
 	# after a make clean, no binaries _should_ be left, but ....
 	-find $(CURDIR) -name "*.o" | xargs --no-run-if-empty rm
-	-find $(CURDIR)/lib/libcrypto -name "*.a" | xargs --no-run-if-empty rm
 
 	# Really clean (#356716)
 	# This is a hack: should be better implemented

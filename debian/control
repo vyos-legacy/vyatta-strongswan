@@ -11,7 +11,8 @@ Build-Depends: debhelper (>= 7.1), libtool, libgmp3-dev,
                libpam0g-dev, libkrb5-dev, bison, flex, bzip2, po-debconf,
                hardening-wrapper, network-manager-dev, libfcgi-dev, clearsilver-dev,
                libxml2-dev, libsqlite3-dev, network-manager-dev (>= 0.7),
-               libnm-glib-vpn-dev (>= 0.7), libnm-util-dev (>= 0.7), gperf
+               libnm-glib-vpn-dev (>= 0.7), libnm-util-dev (>= 0.7),
+	       gperf, libcap-dev
 Homepage: http://www.strongswan.org
 
 Package: strongswan
