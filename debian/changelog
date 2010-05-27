@@ -1,3 +1,9 @@
+strongswan (4.3.2-1.1-vyatta10) unstable; urgency=low
+
+  * insert routes into main table instead of table 220
+
+ -- Mohit Mehta <mohit.mehta@vyatta.com>  Wed, 26 May 2010 20:14:43 -0700
+
 strongswan (4.3.2-1.1-vyatta9) unstable; urgency=low
 
   * UNRELEASED
