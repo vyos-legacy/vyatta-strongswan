@@ -173,8 +173,8 @@ _________________________ ipsec/status
 ipsec statusall
 _________________________ routing/tables
 ip rule list
-_________________________ ipsec/route
-ip route list table 220
+_________________________ ip/route
+/opt/vyatta/bin/vtyshow.pl show ip route
 _________________________ ipsec/directory
 ipsec --directory
 _________________________ ps

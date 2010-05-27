@@ -239,10 +239,15 @@ doroute() {
 	    if test "$1" = "add"
 	    then
 		addsource
-		if ! ip rule list | grep -q "lookup $SOURCEIP_ROUTING_TABLE"
-		then
-		    ip rule add pref $SOURCEIP_ROUTING_TABLE_PRIO table $SOURCEIP_ROUTING_TABLE
-		fi
+                if [	$SOURCEIP_ROUTING_TABLE != "253"      	\
+			-a $SOURCEIP_ROUTING_TABLE != "254"     \
+			-a $SOURCEIP_ROUTING_TABLE != "255" ]
+                then
+                    if ! ip rule list | grep -q "lookup $SOURCEIP_ROUTING_TABLE"
+                    then
+                        ip rule add pref $SOURCEIP_ROUTING_TABLE_PRIO table $SOURCEIP_ROUTING_TABLE
+                     fi
+                fi
 	    fi
 	    parms3="$parms3 src ${PLUTO_MY_SOURCEIP%/*} table $SOURCEIP_ROUTING_TABLE"
 	fi
