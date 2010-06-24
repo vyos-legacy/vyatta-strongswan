@@ -9,20 +9,20 @@ Subject: [PATCH] snprintf() fixes, version 4.4.0
  src/pluto/x509.c                                   |    4 ++++
  3 files changed, 27 insertions(+), 2 deletions(-)
 
-diff --git a/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c b/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c
-index ff3ddeb..de5b85b 100644
---- a/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c
-+++ b/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c
-@@ -159,7 +159,7 @@ static char* get_string(private_ietf_attributes_t *this)
+Index: strongswan/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c
+===================================================================
+--- strongswan.orig/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c	2010-06-24 20:43:01.000000000 +0200
++++ strongswan/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c	2010-06-24 20:45:07.000000000 +0200
+@@ -159,7 +159,7 @@
  		enumerator = this->list->create_enumerator(this->list);
  		while (enumerator->enumerate(enumerator, &attr))
  		{
 -			int written = 0;
 +			int written;
-
+ 
  			if (first)
  			{
-@@ -168,8 +168,12 @@ static char* get_string(private_ietf_attributes_t *this)
+@@ -168,6 +168,10 @@
  			else
  			{
  				written = snprintf(pos, len, ", ");
@@ -31,12 +31,9 @@ index ff3ddeb..de5b85b 100644
 +					break;
 +				}
  				pos += written;
--				len -= written;
-+				len -= written;
+ 				len -= written; 
  			}
-
- 			switch (attr->type)
-@@ -194,8 +198,13 @@ static char* get_string(private_ietf_attributes_t *this)
+@@ -194,8 +198,13 @@
  					break;
  				}
  				default:
@@ -50,11 +47,11 @@ index ff3ddeb..de5b85b 100644
  			pos += written;
  			len -= written;
  		}
-diff --git a/src/libstrongswan/utils/identification.c b/src/libstrongswan/utils/identification.c
-index b0da340..cff24d7 100644
---- a/src/libstrongswan/utils/identification.c
-+++ b/src/libstrongswan/utils/identification.c
-@@ -297,18 +297,30 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
+Index: strongswan/src/libstrongswan/utils/identification.c
+===================================================================
+--- strongswan.orig/src/libstrongswan/utils/identification.c	2010-06-24 20:43:01.000000000 +0200
++++ strongswan/src/libstrongswan/utils/identification.c	2010-06-24 20:44:09.348295306 +0200
+@@ -297,18 +297,30 @@
  		{
  			written = snprintf(buf, len,"%s=", oid_names[oid].name);
  		}
@@ -64,7 +61,7 @@ index b0da340..cff24d7 100644
 +		}
  		buf += written;
  		len -= written;
-
+ 
  		chunk_printable(data, &printable, '?');
  		written = snprintf(buf, len, "%.*s", printable.len, printable.ptr);
  		chunk_free(&printable);
@@ -74,7 +71,7 @@ index b0da340..cff24d7 100644
 +		}
  		buf += written;
  		len -= written;
-
+ 
  		if (data.ptr + data.len != dn.ptr + dn.len)
  		{
  			written = snprintf(buf, len, ", ");
@@ -85,11 +82,11 @@ index b0da340..cff24d7 100644
  			buf += written;
  			len -= written;
  		}
-diff --git a/src/pluto/x509.c b/src/pluto/x509.c
-index d8e8879..0dcc4fe 100644
---- a/src/pluto/x509.c
-+++ b/src/pluto/x509.c
-@@ -393,6 +393,10 @@ void list_x509cert_chain(const char *caption, cert_t* cert,
+Index: strongswan/src/pluto/x509.c
+===================================================================
+--- strongswan.orig/src/pluto/x509.c	2010-06-24 20:43:01.000000000 +0200
++++ strongswan/src/pluto/x509.c	2010-06-24 20:44:09.352296635 +0200
+@@ -393,6 +393,10 @@
  				{
  					written = snprintf(pos, len, ", %Y", id);
  				}
@@ -100,6 +97,3 @@ index d8e8879..0dcc4fe 100644
  				pos += written;
  				len -= written;
  			}
---
-1.7.0.4
-
