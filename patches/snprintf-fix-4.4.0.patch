@@ -1,0 +1,105 @@
+From 96e2f9f3a70a7c918772f7dde57c6cb8befbc60e Mon Sep 17 00:00:00 2001
+From: Martin Willi <martin@revosec.ch>
+Date: Fri, 18 Jun 2010 09:18:27 +0200
+Subject: [PATCH] snprintf() fixes, version 4.4.0
+
+---
+ .../credentials/ietf_attributes/ietf_attributes.c  |   13 +++++++++++--
+ src/libstrongswan/utils/identification.c           |   12 ++++++++++++
+ src/pluto/x509.c                                   |    4 ++++
+ 3 files changed, 27 insertions(+), 2 deletions(-)
+
+diff --git a/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c b/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c
+index ff3ddeb..de5b85b 100644
+--- a/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c
++++ b/src/libstrongswan/credentials/ietf_attributes/ietf_attributes.c
+@@ -159,7 +159,7 @@ static char* get_string(private_ietf_attributes_t *this)
+ 		enumerator = this->list->create_enumerator(this->list);
+ 		while (enumerator->enumerate(enumerator, &attr))
+ 		{
+-			int written = 0;
++			int written;
+
+ 			if (first)
+ 			{
+@@ -168,8 +168,12 @@ static char* get_string(private_ietf_attributes_t *this)
+ 			else
+ 			{
+ 				written = snprintf(pos, len, ", ");
++				if (written < 0 || written >= len)
++				{
++					break;
++				}
+ 				pos += written;
+-				len -= written;
++				len -= written;
+ 			}
+
+ 			switch (attr->type)
+@@ -194,8 +198,13 @@ static char* get_string(private_ietf_attributes_t *this)
+ 					break;
+ 				}
+ 				default:
++					written = 0;
+ 					break;
+ 			}
++			if (written < 0 || written >= len)
++			{
++				break;
++			}
+ 			pos += written;
+ 			len -= written;
+ 		}
+diff --git a/src/libstrongswan/utils/identification.c b/src/libstrongswan/utils/identification.c
+index b0da340..cff24d7 100644
+--- a/src/libstrongswan/utils/identification.c
++++ b/src/libstrongswan/utils/identification.c
+@@ -297,18 +297,30 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
+ 		{
+ 			written = snprintf(buf, len,"%s=", oid_names[oid].name);
+ 		}
++		if (written < 0 || written >= len)
++		{
++			break;
++		}
+ 		buf += written;
+ 		len -= written;
+
+ 		chunk_printable(data, &printable, '?');
+ 		written = snprintf(buf, len, "%.*s", printable.len, printable.ptr);
+ 		chunk_free(&printable);
++		if (written < 0 || written >= len)
++		{
++			break;
++		}
+ 		buf += written;
+ 		len -= written;
+
+ 		if (data.ptr + data.len != dn.ptr + dn.len)
+ 		{
+ 			written = snprintf(buf, len, ", ");
++			if (written < 0 || written >= len)
++			{
++				break;
++			}
+ 			buf += written;
+ 			len -= written;
+ 		}
+diff --git a/src/pluto/x509.c b/src/pluto/x509.c
+index d8e8879..0dcc4fe 100644
+--- a/src/pluto/x509.c
++++ b/src/pluto/x509.c
+@@ -393,6 +393,10 @@ void list_x509cert_chain(const char *caption, cert_t* cert,
+ 				{
+ 					written = snprintf(pos, len, ", %Y", id);
+ 				}
++				if (written < 0 || written >= len)
++				{
++					break;
++				}
+ 				pos += written;
+ 				len -= written;
+ 			}
+--
+1.7.0.4
+
