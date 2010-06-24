@@ -1,6 +1,7 @@
 strongswan (4.4.0-1) unstable; urgency=low
 
   * New upstream release, now with a high-availability plugin.
+  * Added patch to fix snprintf bug.
   * Enable building of ha, dhcp, and farp plugins.
   * Enable capability dropping (now depends on libcap). Switching
     user to new system user strongswan (with nogroup) after startup
