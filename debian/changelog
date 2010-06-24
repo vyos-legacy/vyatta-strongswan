@@ -1,4 +1,4 @@
-strongswan (4.4.0-1) unstable; urgency=low
+strongswan (4.4.0-1) unstable; urgency=HIGH
 
   * New upstream release, now with a high-availability plugin.
   * Added patch to fix snprintf bug.
