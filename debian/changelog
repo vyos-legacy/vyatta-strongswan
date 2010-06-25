@@ -1,7 +1,10 @@
 strongswan (4.4.0-1.1) unstable; urgency=low
 
-  * Updated fr debconf translations.
+  * Updated fr debconf translation.
     Closes: #587052: strongswan: [INTL:fr] French debconf templates 
+            translation update
+  * Updated ru debconf translation.
+    Closes: #587159: strongswan: [INTL:ru] Russian debconf templates 
             translation update
 
  -- Rene Mayrhofer <rmayr@debian.org>  Thu, 24 Jun 2010 22:32:18 +0200
