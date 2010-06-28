@@ -7,16 +7,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: strongswan 4.4.0-1\n"
 "Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
-"POT-Creation-Date: 2010-05-27 17:14+0000\n"
+"POT-Creation-Date: 2010-06-24 20:35+0200\n"
 "PO-Revision-Date: 2010-06-25 19:08+0400\n"
 "Last-Translator: Yuri Kozlov <yuray@komyakino.ru>\n"
 "Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
-"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Language: ru\n"
 "X-Generator: KBabel 1.11.4\n"
-"Plural-Forms:  nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms:  nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%"
+"10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #. Type: note
 #. Description
@@ -36,13 +37,13 @@ msgid ""
 "changed your strongSwan startup parameters, then please take a look at NEWS."
 "Debian for instructions on how to modify your setup accordingly."
 msgstr ""
-"В предыдущих версиях пакета strongSwan предлагался выбор между тремя уровнями "
-"запуска/останова. Из-за изменений стандартной процедуры запуска в системе "
-"это больше не требуется и ненужно. В новых установках, а также в старых, "
-"работающих на любом уровне, будут выбраны разумные уровни по умолчанию. Если "
-"выполнятся обновление предыдущей версии и вы изменяли параметры запуска "
-"strongSwan, прочитайте инструкции из файла NEWS.Debian о том, как изменить "
-"соответствующую настройку."
+"В предыдущих версиях пакета strongSwan предлагался выбор между тремя "
+"уровнями запуска/останова. Из-за изменений стандартной процедуры запуска в "
+"системе это больше не требуется и ненужно. В новых установках, а также в "
+"старых, работающих на любом уровне, будут выбраны разумные уровни по "
+"умолчанию. Если выполнятся обновление предыдущей версии и вы изменяли "
+"параметры запуска strongSwan, прочитайте инструкции из файла NEWS.Debian о "
+"том, как изменить соответствующую настройку."
 
 #. Type: boolean
 #. Description
@@ -53,10 +54,6 @@ msgstr "Перезапустить strongSwan прямо сейчас?"
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
-#| msgid ""
-#| "Restarting strongSwan is recommended, because if there is a security fix, "
-#| "it will not be applied until the daemon restarts. However, this might "
-#| "close existing connections and then bring them back up."
 msgid ""
 "Restarting strongSwan is recommended, since if there is a security fix, it "
 "will not be applied until the daemon restarts. Most people expect the daemon "
@@ -107,7 +104,6 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:6001
-#| msgid "Use an existing X.509 certificate for strongSwan?"
 msgid "Use an X.509 certificate for this host?"
 msgstr "Использовать существующий сертификат X.509 для этого узла?"
 
@@ -212,48 +208,38 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:8001
-#| msgid "File name of your X.509 certificate in PEM format:"
 msgid "File name of your PEM format X.509 certificate:"
 msgstr "Имя файла сертификата X.509 в формате PEM:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:8001
-#| msgid ""
-#| "Please enter the full location of the file containing your X.509 "
-#| "certificate in PEM format."
 msgid ""
 "Please enter the location of the file containing your X.509 certificate in "
 "PEM format."
-msgstr "Введите полный путь к файлу, содержащему ваш сертификат X.509 в формате PEM."
+msgstr ""
+"Введите полный путь к файлу, содержащему ваш сертификат X.509 в формате PEM."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:9001
-#| msgid "File name of your existing X.509 private key in PEM format:"
 msgid "File name of your PEM format X.509 private key:"
 msgstr "Имя файла сертификата X.509 в формате PEM с закрытым ключом:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:9001
-#| msgid ""
-#| "Please enter the full location of the file containing the private RSA key "
-#| "matching your X.509 certificate in PEM format. This can be the same file "
-#| "as the X.509 certificate."
 msgid ""
 "Please enter the location of the file containing the private RSA key "
 "matching your X.509 certificate in PEM format. This can be the same file "
 "that contains the X.509 certificate."
 msgstr ""
-"Введите путь к файлу, содержащему закрытый ключ RSA для вашего "
-"сертификата X.509 в формате PEM. Это может быть тот же файл, что и для "
-"сертификата X.509."
+"Введите путь к файлу, содержащему закрытый ключ RSA для вашего сертификата "
+"X.509 в формате PEM. Это может быть тот же файл, что и для сертификата X.509."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:10001
-#| msgid "File name of your X.509 certificate in PEM format:"
 msgid "File name of your PEM format X.509 RootCA:"
 msgstr "Имя файла сертификата X.509 в формате PEM для RootCA:"
 
@@ -296,7 +282,6 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:12001
-#| msgid "Create a self-signed X.509 certificate?"
 msgid "Create a self-signed X.509 certificate?"
 msgstr "Создать самоподписанный сертификат X.509?"
 
@@ -317,17 +302,13 @@ msgstr ""
 "подписи запроса сертификата. Созданный самоподписанный сертификат сразу "
 "можно использовать для подключения к другим машинам с IPSec, которые "
 "поддерживают сертификаты X.509 для аутентификации соединений IPSec. Однако, "
-"если вы хотите воспользоваться новыми возможностями PKI из strongSwan, то все "
-"ваши сертификаты X.509 должны быть подписаны единым сертификационным центром "
-"для создания доверительного пути."
+"если вы хотите воспользоваться новыми возможностями PKI из strongSwan, то "
+"все ваши сертификаты X.509 должны быть подписаны единым сертификационным "
+"центром для создания доверительного пути."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:12001
-#| msgid ""
-#| "If you do not accept this option, only the RSA private key will be "
-#| "created, along with a certificate request which you will need to have "
-#| "signed by a certificate authority."
 msgid ""
 "If you do not choose to create a self-signed certificate, only the RSA "
 "private key and the certificate request will be created, and you will have "
@@ -340,7 +321,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:13001
-#| msgid "Country code for the X.509 certificate request:"
 msgid "Country code for the X.509 certificate request:"
 msgstr "Код страны для запроса сертификата X.509:"
 
@@ -350,14 +330,16 @@ msgstr "Код страны для запроса сертификата X.509:"
 msgid ""
 "Please enter the two-letter code for the country the server resides in (such "
 "as \"AT\" for Austria)."
-msgstr "Введите двухбуквенный код страны, где расположен сервер (например, \"RU\" в России)."
+msgstr ""
+"Введите двухбуквенный код страны, где расположен сервер (например, \"RU\" в "
+"России)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:13001
 msgid ""
-"OpenSSL will refuse to generate a certificate unless this is a valid "
-"ISO-3166 country code; an empty field is allowed elsewhere in the X.509 "
+"OpenSSL will refuse to generate a certificate unless this is a valid ISO-"
+"3166 country code; an empty field is allowed elsewhere in the X.509 "
 "certificate, but not here."
 msgstr ""
 "Здесь нужно ввести правильный код страны согласно ISO-3166, так как OpenSSL "
@@ -367,16 +349,12 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
-#| msgid "State or province name for the X.509 certificate request:"
 msgid "State or province name for the X.509 certificate request:"
 msgstr "Название области или округа для запроса сертификата X.509:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
-#| msgid ""
-#| "Please enter the full name of the state or province to include in the "
-#| "certificate request."
 msgid ""
 "Please enter the full name of the state or province the server resides in "
 "(such as \"Upper Austria\")."
@@ -387,7 +365,6 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:15001
-#| msgid "Locality name for the X.509 certificate request:"
 msgid "Locality name for the X.509 certificate request:"
 msgstr "Название места для запроса сертификата X.509:"
 
@@ -404,43 +381,45 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:16001
-#| msgid "Organization name for the X.509 certificate request:"
 msgid "Organization name for the X.509 certificate request:"
 msgstr "Название организации для запроса сертификата X.509:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:16001
-msgid "Please enter the organization the server belongs to (such as \"Debian\")."
-msgstr "Укажите название организации, которой принадлежит сервер (например, \"Debian\")."
+msgid ""
+"Please enter the organization the server belongs to (such as \"Debian\")."
+msgstr ""
+"Укажите название организации, которой принадлежит сервер (например, \"Debian"
+"\")."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:17001
-#| msgid "Organizational unit for the X.509 certificate request:"
 msgid "Organizational unit for the X.509 certificate request:"
-msgstr "Название структурной единицы организации для запроса сертификата X.509:"
+msgstr ""
+"Название структурной единицы организации для запроса сертификата X.509:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:17001
-#| msgid "Organizational unit for the X.509 certificate request:"
 msgid ""
 "Please enter the organizational unit the server belongs to (such as "
 "\"security group\")."
-msgstr "Название структурной единицы организации для запроса сертификата X.509:"
+msgstr ""
+"Название структурной единицы организации для запроса сертификата X.509:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:18001
-#| msgid "Common name for the X.509 certificate request:"
 msgid "Common Name for the X.509 certificate request:"
 msgstr "Общеизвестное название для запроса сертификата X.509:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:18001
-msgid "Please enter the Common Name for this host (such as \"gateway.example.org\")."
+msgid ""
+"Please enter the Common Name for this host (such as \"gateway.example.org\")."
 msgstr ""
 "Укажите общеизвестное название (например, имя данного компьютера), например, "
 "\"gateway.example.org\")."
@@ -448,16 +427,12 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:19001
-#| msgid "Email address for the X.509 certificate request:"
 msgid "Email address for the X.509 certificate request:"
 msgstr "Адрес электронной почты для запроса сертификата X.509:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:19001
-#| msgid ""
-#| "Please enter the email address (for the individual or organization "
-#| "responsible) that should be used in the certificate request."
 msgid ""
 "Please enter the email address of the person or organization responsible for "
 "the X.509 certificate."
@@ -496,4 +471,3 @@ msgstr ""
 "Включайте гибкое шифрование, если вам это действительно нужно. Это может "
 "прервать соединение с интернетом (маршрут по умолчанию) при запуске службы "
 "pluto."
-
