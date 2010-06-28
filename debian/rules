@@ -83,7 +83,7 @@ install: build-stamp
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 
 	# install files from debian/tmp into proper package dirs
-	dh_install
+	dh_install --fail-missing
 	# special handling for padlock, as it is only built on i386
 ifeq ($(DEB_BUILD_ARCH_CPU),i386)
 	  install $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-padlock.so* $(CURDIR)/debian/libstrongswan/usr/lib/ipsec/plugins/

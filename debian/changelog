@@ -1,7 +1,8 @@
 strongswan (4.4.0-1.1) unstable; urgency=low
 
-  * Force enable-socket-raw configure option, as it doesn't seem to be enabled
-    by default anymore.
+  * Force enable-socket-raw configure option and enable fail-missing option 
+    for dh_install to make sure that all required plugins get built and 
+    installed.
     Closes: #587282: plugins missing
   * Updated fr debconf translations.
     Closes: #587052: strongswan: [INTL:fr] French debconf templates 
