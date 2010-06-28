@@ -1,4 +1,4 @@
-strongswan (4.4.0-1.1) unstable; urgency=low
+strongswan (4.4.0-2) unstable; urgency=low
 
   * Force enable-socket-raw configure option and enable list-missing option 
     for dh_install to make sure that all required plugins get built and 
