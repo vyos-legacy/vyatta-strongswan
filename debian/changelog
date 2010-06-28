@@ -1,6 +1,6 @@
 strongswan (4.4.0-1.1) unstable; urgency=low
 
-  * Force enable-socket-raw configure option and enable fail-missing option 
+  * Force enable-socket-raw configure option and enable list-missing option 
     for dh_install to make sure that all required plugins get built and 
     installed.
     Closes: #587282: plugins missing
