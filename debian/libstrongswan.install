@@ -1,7 +1,7 @@
 usr/lib/libstrongswan.so*                          usr/lib/
 usr/lib/libhydra.so*                               usr/lib/
 usr/lib/libfast.so*                                usr/lib/
-usr/lib/libchecksum.so*                            usr/lib/
+usr/lib/ipsec/libchecksum.so*                      usr/lib/
 usr/lib/ipsec/plugins/libstrongswan-gmp.so*        usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-openssl.so*    usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-x509.so*       usr/lib/ipsec/plugins/
