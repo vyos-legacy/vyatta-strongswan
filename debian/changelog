@@ -1,3 +1,10 @@
+strongswan (4.4.0-3) unstable; urgency=low
+
+  * Updated debconf translations.
+    Closes: #587562: strongswan: [INTL:de] updated German debconf translation
+
+ -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Wed, 30 Jun 2010 09:50:31 +0200
+
 strongswan (4.4.0-2) unstable; urgency=low
 
   * Force enable-socket-raw configure option and enable list-missing option 

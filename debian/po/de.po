@@ -1,25 +1,28 @@
 # German translation of strongswan templates
-# Helge Kreutzmann <debian@helgefjell.de>, 2007.
+# Matthias Julius <mdeb@julius-net.net>, 2007.
+# Martin Eberhard Schauer <Martin.E.Schauer@gmx.de>, 2010.
+# Helge Kreutzmann <debian@helgefjell.de>, 2007, 2010.
 # This file is distributed under the same license as the strongswan package.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: strongswan 4.1.4-1\n"
+"Project-Id-Version: strongswan 4.4.0-1\n"
 "Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
-"POT-Creation-Date: 2010-06-24 20:35+0200\n"
-"PO-Revision-Date: 2007-07-08 12:01+0200\n"
+"POT-Creation-Date: 2010-05-27 17:14+0000\n"
+"PO-Revision-Date: 2010-06-29 21:55+0200\n"
 "Last-Translator: Helge Kreutzmann <debian@helgefjell.de>\n"
 "Language-Team: German <debian-l10n-german@lists.debian.org>\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=ISO-8859-15\n"
-"Content-Transfer-Encoding: 8bit\n"
 "Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 
+# (mes) andere Übersetzungen für supersede: etw.Akk. ersetzen, für etw.Akk. Ersatz sein, an die Stelle von etw. Dat. treten, etw.Akk. überflüssig machen, etw.Akk. verdrängen
 #. Type: note
 #. Description
-#: ../strongswan-starter.templates:2001
+#: ../openswan.templates:1001
 msgid "Old runlevel management superseded"
-msgstr ""
+msgstr "Alte Verwaltung der Runlevel abgelöst"
 
 #. Type: note
 #. Description
@@ -33,24 +36,25 @@ msgid ""
 "changed your strongSwan startup parameters, then please take a look at NEWS."
 "Debian for instructions on how to modify your setup accordingly."
 msgstr ""
+"Frühere Versionen von strongSwan ermöglichten eine Wahl zwischen drei "
+"verschiedenen Start/Stop-Modi. Aufgrund von Änderungen des standardmäßigen "
+"Systemstarts ist dies nicht mehr notwendig oder nützlich. Sowohl für alle "
+"neuen als auch bestehende Installationen, die in einem der vordefinierten "
+"Modi betrieben wurden, werden jetzt vernünftige Standardwerte gesetzt. Wenn "
+"Sie jetzt ein Upgrade von einer früheren Version durchführen und Sie die "
+"strongSwan-Startparameter angepasst haben, werfen Sie bitte einen Blick auf "
+"NEWS.Debian. Die Datei enthält Anweisungen, wie Sie Ihren Installation "
+"entsprechend ändern."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
-#, fuzzy
-#| msgid "When to start strongSwan:"
 msgid "Restart strongSwan now?"
-msgstr "Wann soll strongSwan gestartet werden:"
+msgstr "StrongSwan jetzt starten?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
-#, fuzzy
-#| msgid ""
-#| "Restarting strongSwan is a good idea, since if there is a security fix, "
-#| "it will not be fixed until the daemon restarts. Most people expect the "
-#| "daemon to restart, so this is generally a good idea. However this might "
-#| "take down existing connections and then bring them back up."
 msgid ""
 "Restarting strongSwan is recommended, since if there is a security fix, it "
 "will not be applied until the daemon restarts. Most people expect the daemon "
@@ -59,16 +63,18 @@ msgid ""
 "an strongSwan tunnel to connect for this update, restarting is not "
 "recommended."
 msgstr ""
-"Es ist eine gute Idee, strongSwan neuzustarten, da eine Sicherheitskorrektur "
+"Es wird empfohlen, strongSwan neuzustarten, da eine Sicherheitskorrektur "
 "erst nach dem Neustart des Daemons greift. Die meisten Leute erwarten, dass "
 "der Daemon neu startet, daher ist diese Wahl eine gute Idee. Er kann "
-"allerdings existierende Verbindungen beenden und erneut aufbauen."
+"allerdings existierende Verbindungen beenden und erneut aufbauen. Falls Sie "
+"solch eine Verbindung für diese Aktualisierung verwenden, wird der Neustart "
+"nicht empfohlen." 
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:4001
 msgid "Start strongSwan's IKEv1 daemon?"
-msgstr ""
+msgstr "strongSwans IKEv1-Daemon starten?"
 
 #. Type: boolean
 #. Description
@@ -77,12 +83,14 @@ msgid ""
 "The pluto daemon must be running to support version 1 of the Internet Key "
 "Exchange protocol."
 msgstr ""
+"Der Pluto-Daemon muss laufen, um Version 1 des Internet Key Exchange-"
+"Protokolls zu unterstützen."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:5001
 msgid "Start strongSwan's IKEv2 daemon?"
-msgstr ""
+msgstr "strongSwans IKEv2-Daemon starten?"
 
 #. Type: boolean
 #. Description
@@ -91,27 +99,18 @@ msgid ""
 "The charon daemon must be running to support version 2 of the Internet Key "
 "Exchange protocol."
 msgstr ""
+"Der Charon-Daemon muss laufen, um Version 2 des Internet Key Exchange-"
+"Protokolls zu unterstützen."
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:6001
-#, fuzzy
-#| msgid "Do you have an existing X509 certificate file for strongSwan?"
+#: ../openswan.templates:3001
 msgid "Use an X.509 certificate for this host?"
-msgstr "Verfügen Sie über ein existierendes X509-Zertifikat für strongSwan?"
+msgstr "Für diesen Rechner ein X.509-Zertifikat verwenden?"
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:6001
-#, fuzzy
-#| msgid ""
-#| "This installer can automatically create a RSA public/private keypair for "
-#| "this host. This keypair can be used to authenticate IPSec connections to "
-#| "other hosts and is the preferred way for building up secure IPSec "
-#| "connections. The other possibility would be to use shared secrets "
-#| "(passwords that are the same on both sides of the tunnel) for "
-#| "authenticating an connection, but for a larger number of connections RSA "
-#| "authentication is easier to administer and more secure."
+#: ../openswan.templates:3001
 msgid ""
 "An X.509 certificate for this host can be automatically created or imported. "
 "It can be used to authenticate IPsec connections to other hosts and is the "
@@ -121,14 +120,14 @@ msgid ""
 "connections, key based authentication is easier to administer and more "
 "secure."
 msgstr ""
-"Das Installationsprogramm kann automatisch ein öffentliches/privates RSA-"
-"Schlüsselpaar für diesen Rechner erstellen. Dieses Schlüsselpaar kann zur "
-"Authentifizierung von IPSec-Verbindungen anderer Rechner verwendet werden "
-"und ist die bevorzugte Art, sichere IPSec-Verbindungen aufzubauen. Die "
-"andere Möglichkeit besteht darin, vorab-verteilte Geheimnisse (Passwörter, "
-"die auf beiden Seiten des Tunnels identisch sind) zur Authentifizierung "
-"einer Verbindung zu verwenden, aber für eine größere Anzahl an Verbindungen "
-"ist die RSA-Authentifizierung einfacher zu administrieren und sicherer."
+"Für diesen Rechner kann ein X.509-Zertifikat automatisch erstellt oder "
+"importiert werden, das zur Authentifizierung von IPSec-Verbindungen zu "
+"anderen Rechnern verwendet werden kann. Dieses Vorgehen ist für den Aufbau "
+"gesicherter IPSec-Verbindungen vorzuziehen. Die andere Möglichkeit ist die "
+"Verwendung von gemeinsamen Geheimnissen (engl.: shared secrets, gleiche "
+"Passwörter an beiden Enden des Tunnels) zur Authentifizierung einer "
+"Verbindung. Für eine größere Anzahl von Verbindungen ist aber die RSA-"
+"Authentifizierung einfacher zu verwalten und sicherer."
 
 #. Type: boolean
 #. Description
@@ -137,37 +136,45 @@ msgid ""
 "Alternatively you can reject this option and later use the command \"dpkg-"
 "reconfigure strongswan\" to come back."
 msgstr ""
+"Alternativ können Sie diese Option ablehnen und später den Befehl »dpkg-"
+"reconfigure strongswan« zur Rückkehr zu dieser Option verwenden."
 
 #. Type: select
 #. Choices
-#: ../strongswan-starter.templates:7001
+#: ../openswan.templates:4001
 msgid "create"
-msgstr ""
+msgstr "erstellen"
 
 #. Type: select
 #. Choices
-#: ../strongswan-starter.templates:7001
+#: ../openswan.templates:4001
 msgid "import"
-msgstr ""
+msgstr "importieren"
 
 #. Type: select
 #. Description
-#: ../strongswan-starter.templates:7002
+#: ../openswan.templates:4002
 msgid "Methods for using a X.509 certificate to authenticate this host:"
 msgstr ""
+"Methoden für die Authentifizierung dieses Rechners mittels eines X.509-"
+"Zertifikats:"
 
 #. Type: select
 #. Description
-#: ../strongswan-starter.templates:7002
+#: ../openswan.templates:4002
 msgid ""
 "It is possible to create a new X.509 certificate with user-defined settings "
 "or to import an existing public and private key stored in PEM file(s) for "
 "authenticating IPsec connections."
 msgstr ""
+"Es ist möglich, mit benutzerdefinierten Einstellungen ein neues X.509-"
+"Zertifikat zu erstellen oder einen vorhandenen, in PEM-Datei(en) "
+"gespeicherten, öffentlichen und privaten Schlüssel für die Authentifizierung "
+"von IPSec-Verbindungen zu verwenden."
 
 #. Type: select
 #. Description
-#: ../strongswan-starter.templates:7002
+#: ../openswan.templates:4002
 msgid ""
 "If you choose to create a new X.509 certificate you will first be asked a "
 "number of questions which must be answered before the creation can start. "
@@ -176,10 +183,19 @@ msgid ""
 "certificate and all the answers given must match exactly the requirements of "
 "the CA, otherwise the certificate request may be rejected."
 msgstr ""
+"Wenn Sie sich für die Erstellung eines neuen X.509-Zertifikats entscheiden, "
+"wird Ihnen zunächst eine Reihe von Fragen gestellt. Diese Fragen müssen "
+"beantwortet werden, damit das Zertifikat erstellt werden kann. Bitte beachten "
+"Sie: Wenn der öffentliche Schlüssel von einer bestehenden "
+"Zertifizierungsstelle (Certificate Authority, CA) bestätigen lassen wollen, "
+"sollten Sie nicht wählen, ein selbstsigniertes Zertifikat zu erstellen. "
+"Außerdem müssen dann alle gegebenen Antworten exakt den Anforderungen der CA "
+"entsprechen, da sonst der Antrag auf Zertifizierung zurückgewiesen werden "
+"kann."
 
 #. Type: select
 #. Description
-#: ../strongswan-starter.templates:7002
+#: ../openswan.templates:4002
 msgid ""
 "If you want to import an existing public and private key you will be "
 "prompted for their filenames (which may be identical if both parts are "
@@ -189,65 +205,59 @@ msgid ""
 "for the X.509 certificates has to be PEM and that the private key must not "
 "be encrypted or the import procedure will fail."
 msgstr ""
+"Wenn Sie bestehende öffentliche und private Schlüssel importieren wollen, "
+"werden Sie nach deren Dateinamen gefragt. (Die Namen können übereinstimmen, "
+"wenn beide Teile zusammen in einer Datei gespeichert werden.) Optional "
+"können Sie auch den Namen einer Datei angeben, die den/die öffentlichen "
+"Schlüssel Ihrer Zertifizierungsstelle enthält. Dieser Name muss von den "
+"Erstgenannten verschieden sein. Bitte beachten Sie auch, dass Sie für die "
+"X.509-Zertifikate das Format PEM verwenden und dass der private Schlüssel "
+"nicht verschlüsselt sein darf, weil sonst der Import-Vorgang fehlschlagen "
+"wird."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:8001
-#, fuzzy
-#| msgid "File name of your X509 certificate in PEM format:"
+#: ../openswan.templates:5001
 msgid "File name of your PEM format X.509 certificate:"
-msgstr "Dateiname Ihres X509-Zertifikates im PEM-Format:"
+msgstr "Dateiname Ihres X.509-Zertifikats im PEM-Format:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:8001
-#, fuzzy
-#| msgid ""
-#| "Please enter the full location of the file containing your X509 "
-#| "certificate in PEM format."
+#: ../openswan.templates:5001
 msgid ""
 "Please enter the location of the file containing your X.509 certificate in "
 "PEM format."
 msgstr ""
-"Bitte geben Sie den kompletten Ort der Datei an, die Ihr X509-Zertifikat im "
+"Bitte geben Sie den Speicherort der Datei ein, die Ihr X.509-Zertifikat im "
 "PEM-Format enthält."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:9001
-#, fuzzy
-#| msgid "File name of your X509 private key in PEM format:"
+#: ../openswan.templates:6001
 msgid "File name of your PEM format X.509 private key:"
-msgstr "Dateiname Ihres privaten X509-Schlüssels im PEM-Format:"
+msgstr "Dateiname des privaten X.509-Schlüssels im PEM-Format:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:9001
-#, fuzzy
-#| msgid ""
-#| "Please enter the full location of the file containing the private RSA key "
-#| "matching your X509 certificate in PEM format. This can be the same file "
-#| "that contains the X509 certificate."
+#: ../openswan.templates:6001
 msgid ""
 "Please enter the location of the file containing the private RSA key "
 "matching your X.509 certificate in PEM format. This can be the same file "
 "that contains the X.509 certificate."
 msgstr ""
-"Bitte geben Sie den kompletten Ort der Datei an, die den privaten RSA-"
-"Schlüssel enthält, der zu Ihrem X509-Zertifikat im PEM-Format passt. Dies "
-"kann die gleiche Datei sein, die auch das X509-Zertifikat enthält."
+"Bitte geben Sie den Speicherort der Datei ein, die den zu Ihrem X.509-"
+"Zertifikat passenden privaten RSA-Schlüssel im PEM-Format enthält. Dies kann "
+"dieselbe Datei sein, die das X.509-Zertifikat enthält."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:10001
-#, fuzzy
-#| msgid "File name of your X509 certificate in PEM format:"
+#: ../openswan.templates:7001
 msgid "File name of your PEM format X.509 RootCA:"
-msgstr "Dateiname Ihres X509-Zertifikates im PEM-Format:"
+msgstr "Dateinamen Ihrer PEM-Format-X.509-RootCA:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:10001
+#: ../openswan.templates:7001
 msgid ""
 "Optionally you can now enter the location of the file containing the X.509 "
 "Certificate Authority root used to sign your certificate in PEM format. If "
@@ -255,24 +265,23 @@ msgid ""
 "Please note that it's not possible to store the RootCA in the same file as "
 "your X.509 certificate or private key."
 msgstr ""
+"Optional können Sie nun den Speicherort der Datei mit dem »X.509 Certificate "
+"Authority Root« angeben, mit dem Ihr Zertifikat im PEM-Format unterzeichnet "
+"wurde. Wenn Sie keine haben oder diese nicht verwenden wollen, lassen Sie "
+"dieses Feld bitte leer. Bitte beachten Sie, dass es nicht möglich ist, die "
+"RootCA in der gleichen Datei wie Ihr X.509-Zertifikat oder den privaten "
+"Schlüssel zu speichern."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:11001
-#, fuzzy
-#| msgid "The length of the created RSA key (in bits):"
 msgid "Please enter which length the created RSA key should have:"
-msgstr "Die Länge des erstellten RSA-Schlüssels (in Bits):"
+msgstr ""
+"Bitte geben Sie ein, welche Länge der erstellte RSA-Schlüssels haben soll:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:11001
-#, fuzzy
-#| msgid ""
-#| "Please enter the length of the created RSA key. It should not be less "
-#| "than 1024 bits because this should be considered unsecure and you will "
-#| "probably not need anything more than 2048 bits because it only slows the "
-#| "authentication process down and is not needed at the moment."
 msgid ""
 "Please enter the length of the created RSA key. it should not be less than "
 "1024 bits because this should be considered unsecure and you will probably "
@@ -281,30 +290,18 @@ msgid ""
 msgstr ""
 "Bitte geben Sie die Länge des erstellten RSA-Schlüssels an. Er sollte nicht "
 "kürzer als 1024 Bits sein, da dies als unsicher betrachtet werden könnte und "
-"Sie benötigen nicht mehr als 2048 Bits, da dies nur den Authentifizierungs-"
+"Sie benötigen nicht mehr als 4096 Bits, da dies nur den Authentifizierungs-"
 "Prozess verlangsamt und derzeit nicht benötigt wird."
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:12001
-#, fuzzy
-#| msgid "Do you want to create a self-signed X509 certificate?"
+#: ../openswan.templates:9001
 msgid "Create a self-signed X.509 certificate?"
-msgstr "Möchten Sie ein selbst-signiertes X509-Zertifikat erstellen?"
+msgstr "Selbstsigniertes X.509-Zertifikat erstellen?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:12001
-#, fuzzy
-#| msgid ""
-#| "This installer can only create self-signed X509 certificates "
-#| "automatically, because otherwise a certificate authority is needed to "
-#| "sign the certificate request. If you want to create a self-signed "
-#| "certificate, you can use it immediately to connect to other IPSec hosts "
-#| "that support X509 certificate for authentication of IPSec connections. "
-#| "However, if you want to use the new PKI features of strongSwan >= 1.91, "
-#| "you will need to have all X509 certificates signed by a single "
-#| "certificate authority to create a trust path."
 msgid ""
 "Only self-signed X.509 certificates can be created automatically, because "
 "otherwise a Certificate Authority is needed to sign the certificate request. "
@@ -314,185 +311,156 @@ msgid ""
 "features requires all certificates to be signed by a single Certificate "
 "Authority to create a trust path."
 msgstr ""
-"Das Installationsprogramm kann nur selbst-signierte X509-Zertifikate "
-"automatisch erstellen, da andernfalls eine Zertifizierungsstelle zur "
-"Signatur der Zertifikatsanfrage benötigt wird. Falls Sie ein selbst-"
-"signiertes Zertifikat erstellen möchten, können Sie es sofort zur Verbindung "
-"mit anderen IPSec-Rechnern verwenden, die X509-Zertifikate zur "
-"Authentifizierung von IPSec-Verbindungen verwenden. Falls Sie allerdings die "
-"neuen PKI-Funktionalitäten von strongSwan >= 1.91 verwenden möchten, müssen "
-"alle X509-Zertifikate von einer einzigen Zertifizierungsstelle signiert "
-"sein, um einen vertrauensvollen Pfad zu etablieren."
+"Nur selbstsignierte X.509-Zertifikate können automatisch erstellt werden, da "
+"da andernfalls eine Zertifizierungsstelle zur Signatur der Zertifikatsanfrage "
+"benötigt wird. Falls Sie sich entscheiden, ein selbstsigniertes Zertifikat "
+"zu erstellen, können Sie es sofort zur Verbindung mit anderen IPSec-Rechnern "
+"verwenden, die X.509-Zertifikate zur "
+"Authentifizierung von IPSec-Verbindungen verwenden. Die Verwendung der PKI-"
+"Funktionalität von strongSwan verlangt allerdings, dass alle Zertifikate "
+"von einer Zertifizierungsstelle signiert sind, um einen Vertrauenspfad zu "
+"erstellen."
 
 #. Type: boolean
 #. Description
-#: ../strongswan-starter.templates:12001
-#, fuzzy
-#| msgid ""
-#| "If you do not want to create a self-signed certificate, then this "
-#| "installer will only create the RSA private key and the certificate "
-#| "request and you will have to get the certificate request signed by your "
-#| "certificate authority."
+#: ../openswan.templates:9001
 msgid ""
 "If you do not choose to create a self-signed certificate, only the RSA "
 "private key and the certificate request will be created, and you will have "
 "to sign the certificate request with your Certificate Authority."
 msgstr ""
-"Falls Sie kein selbst-signiertes Zertifikat erstellen möchten, wird dieses "
-"Installationsprogramm nur einen privaten RSA-Schlüssel und die "
-"Zertifikatsanfrage erstellen und Sie müssen die Zertifikatsanfrage von Ihrer "
-"Zertifizierungsstelle signiert bekommen."
+"Falls Sie kein selbstsigniertes Zertifikat erstellen möchten, wird nur der "
+"private RSA-Schlüssel und die Zertifikatsanforderung erstellt. Sie müssen "
+"diese Zertifikatsanforderung von Ihrer Zertifizierungsstelle signieren "
+"lassen."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:13001
-#, fuzzy
-#| msgid "Country code for the X509 certificate request:"
+#: ../openswan.templates:10001
 msgid "Country code for the X.509 certificate request:"
-msgstr "Ländercode für die X509-Zertifizierungsanfrage:"
+msgstr "Ländercode für die X.509-Zertifikatsanforderung:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:13001
+#: ../openswan.templates:10001
 msgid ""
 "Please enter the two-letter code for the country the server resides in (such "
 "as \"AT\" for Austria)."
 msgstr ""
+"Geben Sie den Ländercode (zwei Zeichen) für das Land ein, in dem der Server "
+"steht (z. B. »AT« für Österreich)."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:13001
-#, fuzzy
-#| msgid ""
-#| "You really need to enter a valid country code here, because openssl will "
-#| "refuse to generate certificates without one. An empty field is allowed "
-#| "for any other field of the X.509 certificate, but not for this one."
+#: ../openswan.templates:10001
 msgid ""
 "OpenSSL will refuse to generate a certificate unless this is a valid ISO-"
 "3166 country code; an empty field is allowed elsewhere in the X.509 "
 "certificate, but not here."
 msgstr ""
-"Sie müssen wirklich einen gültigen Ländercode hier eingeben, da OpenSSL es "
-"ablehnen wird, Zertifikate ohne diese zu erstellen. Jedes andere Feld im "
-"X509-Zertifikat darf leer bleiben; dieses aber nicht."
+"Ohne einen gültigen Ländercode nach ISO-3166 wird es OpenSSL ablehnen, ein "
+"Zertifikat zu generieren. Ein leeres Feld ist für andere Elemente des X.509-"
+"Zertifikats zulässig, aber nicht für dieses."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
-#, fuzzy
-#| msgid "State or province name for the X509 certificate request:"
 msgid "State or province name for the X.509 certificate request:"
-msgstr "Name des Landes oder der Provinz für diese X509-Zertifikatsanfrage:"
+msgstr "Name des Landes oder der Provinz für diese X.509-Zertifikatsanfrage:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
-#, fuzzy
-#| msgid ""
-#| "Please enter the full name of the state or province you live in. This "
-#| "name will be placed in the certificate request."
 msgid ""
 "Please enter the full name of the state or province the server resides in "
 "(such as \"Upper Austria\")."
 msgstr ""
 "Bitte geben Sie den kompletten Namen des Landes oder der Provinz ein, in der "
-"Sie leben. Dieser Name wird in der Zertifikatsanfrage verwendet."
+"sich der Server befindet (wie »Oberösterreich«)."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:15001
-#, fuzzy
-#| msgid "Locality name for the X509 certificate request:"
+#: ../openswan.templates:12001
 msgid "Locality name for the X.509 certificate request:"
-msgstr "Örtlichkeitsangabe für die X509-Zertifikatsanfrage:"
+msgstr "Ort für die X.509-Zertifikatsanforderung:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:15001
+#: ../openswan.templates:12001
 msgid ""
 "Please enter the locality the server resides in (often a city, such as "
 "\"Vienna\")."
 msgstr ""
+"Geben Sie bitte den Ort an, an dem der Server steht (oft ist das eine Stadt "
+"wie beispielsweise »Wien«)."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:16001
-#, fuzzy
-#| msgid "Organization name for the X509 certificate request:"
+#: ../openswan.templates:13001
 msgid "Organization name for the X.509 certificate request:"
-msgstr "Organisationsname für die X509-Zertifikatsanfrage:"
+msgstr "Organisationsname für die X.509-Zertifikatsanforderung:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:16001
+#: ../openswan.templates:13001
 msgid ""
 "Please enter the organization the server belongs to (such as \"Debian\")."
 msgstr ""
+"Bitte geben Sie die Organisation an, zu der der Server gehört (wie z.B. "
+"»Debian«)."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:17001
-#, fuzzy
-#| msgid "Organizational unit for the X509 certificate request:"
+#: ../openswan.templates:14001
 msgid "Organizational unit for the X.509 certificate request:"
-msgstr "Organisationseinheit für die X509-Zertifikatsanfrage:"
+msgstr "Organisationseinheit für die X.509-Zertifikatsanforderung:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:17001
-#, fuzzy
-#| msgid "Organizational unit for the X509 certificate request:"
+#: ../openswan.templates:14001
 msgid ""
 "Please enter the organizational unit the server belongs to (such as "
 "\"security group\")."
-msgstr "Organisationseinheit für die X509-Zertifikatsanfrage:"
+msgstr ""
+"Bitte geben Sie die Organisationseinheit für die X.509-"
+"Zertifikatsanforderung ein (z.B. »Sicherheitsgruppe«)."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:18001
-#, fuzzy
-#| msgid "Common name for the X509 certificate request:"
+#: ../openswan.templates:15001
 msgid "Common Name for the X.509 certificate request:"
-msgstr "Allgemeiner Name für die X509-Zertifikatsanfrage:"
+msgstr "»Common Name« für die X.509-Zertifikatsanforderung:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:18001
+#: ../openswan.templates:15001
 msgid ""
 "Please enter the Common Name for this host (such as \"gateway.example.org\")."
 msgstr ""
+"Bitte geben Sie den »Common Name« für diesen Rechner ein (wie z.B. »gateway."
+"example.org«)."
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:19001
-#, fuzzy
-#| msgid "Email address for the X509 certificate request:"
+#: ../openswan.templates:16001
 msgid "Email address for the X.509 certificate request:"
-msgstr "E-Mail-Adresse für die X509-Zertifikatsanfrage:"
+msgstr "E-Mail-Adresse für die X.509-Zertifikatsanforderung:"
 
 #. Type: string
 #. Description
-#: ../strongswan-starter.templates:19001
-#, fuzzy
-#| msgid ""
-#| "Please enter the email address of the person or organization who is "
-#| "responsible for the X509 certificate, This address will be placed in the "
-#| "certificate request."
+#: ../openswan.templates:16001
 msgid ""
 "Please enter the email address of the person or organization responsible for "
 "the X.509 certificate."
 msgstr ""
-"Bitte geben Sie die E-Mail-Adresse der Person oder Organisation ein, die für "
-"das X509-Zertifikat verantwortlich ist. Diese Adresse wird in der "
-"Zertifikatsanfrage verwandt."
+"Bitte geben Sie die E-Mail-Adresse der für das X.509-Zertifikat "
+"verantwortlichen Person oder Organisation ein."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:20001
-#, fuzzy
-#| msgid "Do you wish to enable opportunistic encryption in strongSwan?"
 msgid "Enable opportunistic encryption?"
-msgstr "Möchten Sie opportunistische Verschlüsselung in strongSwan aktivieren?"
+msgstr "Opportunistische Verschlüsselung aktivieren?"
 
 #. Type: boolean
 #. Description
@@ -503,6 +471,10 @@ msgid ""
 "deployed, activating it will cause a significant delay for every new "
 "outgoing connection."
 msgstr ""
+"Diese Version von strongSwan unterstützt opportunistische Verschlüsselung "
+"(OE), die IPSec-Authentifizierungsinformationen in DNS-Einträgen speichert. "
+"Bis dies weit verbreitet ist, führt die Verwendung zu einer deutlichen "
+"Verzögerung bei jeder ausgehenden Verbindung."
 
 #. Type: boolean
 #. Description
@@ -512,41 +484,143 @@ msgid ""
 "It may break the Internet connection (default route) as the pluto daemon "
 "starts."
 msgstr ""
+"Sie sollten opportunistische Verschlüsselung nur verwenden, falls Sie sich "
+"sicher sind, dass Sie sie verwenden möchten. Beim Starten des Pluto-Daemons "
+"könnte die Internetverbindung (Default Route) unterbrochen werden."
+
+#. Type: note
+#. Description
+#: ../openswan.templates:1001
+msgid ""
+"Previous versions of the Openswan package gave a choice between three "
+"different Start/Stop-Levels. Due to changes in the standard system startup "
+"procedure, this is no longer necessary or useful. For all new installations "
+"as well as old ones running in any of the predefined modes, sane default "
+"levels will now be set. If you are upgrading from a previous version and "
+"changed your Openswan startup parameters, then please take a look at NEWS."
+"Debian for instructions on how to modify your setup accordingly."
+msgstr ""
+"Frühere Versionen von Openswan ermöglichten eine Wahl zwischen drei "
+"verschiedenen Start/Stop-Ebenen. Aufgrund von Änderungen des standardmäßigen "
+"Systemstarts ist dies nicht mehr notwendig oder nützlich. Sowohl für alle "
+"neuen als auch bestehende Installationen, die in einem der vordefinierten "
+"Modi betrieben wurden, werden jetzt vernünftige Standardwerte gesetzt. Wenn "
+"Sie jetzt ein Upgrade von einer früheren Version durchführen und Sie die "
+"Openswan-Startparameter angepasst haben, werfen Sie bitte einen Blick auf "
+"NEWS.Debian. Die Datei enthält Anweisungen, wie Sie Ihren Setup entsprechend "
+"ändern."
+
+#. Type: boolean
+#. Description
+#: ../openswan.templates:2001
+msgid "Restart Openswan now?"
+msgstr "Möchten Sie jetzt Openswan neu starten?"
+
+#. Type: boolean
+#. Description
+#: ../openswan.templates:2001
+msgid ""
+"Restarting Openswan is recommended, since if there is a security fix, it "
+"will not be applied until the daemon restarts. Most people expect the daemon "
+"to restart, so this is generally a good idea. However, this might take down "
+"existing connections and then bring them back up, so if you are using such "
+"an Openswan tunnel to connect for this update, restarting is not recommended."
+msgstr ""
+"Der Neustart von Openswan wird empfohlen. Wenn mit dieser Version ein "
+"Sicherheitsproblem beseitigt wurde, wird dies erst nach dem Neustart des "
+"Daemons wirksam. Da die meisten Anwender einen Neustart des Daemons "
+"erwarten, "
+"ist dies grundsätzlich eine gute Idee. Der Neustart kann aber bestehende "
+"Verbindungen schließen und anschließend wiederherstellen. Wenn Sie einen "
+"solchen Openswan-Tunnel für die Verbindung bei dieser Aktualisierung "
+"verwenden, wird von einem Neustart abgeraten."
+
+#. Type: boolean
+#. Description
+#: ../openswan.templates:3001
+msgid ""
+"Alternatively you can reject this option and later use the command \"dpkg-"
+"reconfigure openswan\" to come back."
+msgstr ""
+" Alternativ können Sie diese Option ablehnen und später mit dem Befehl »dpkg-"
+"reconfigure openswan« zurückzukommen."
+
+#. Type: string
+#. Description
+#: ../openswan.templates:8001
+msgid "Length of RSA key to be created:"
+msgstr "Länge des zu erstellenden RSA-Schlüssels:"
+
+#. Type: string
+#. Description
+#: ../openswan.templates:8001
+msgid ""
+"Please enter the required RSA key-length. Anything under 1024 bits should be "
+"considered insecure; anything more than 4096 bits slows down the "
+"authentication process and is not useful at present."
+msgstr ""
+"Bitte geben Sie die Länge des zu erstellenden RSA-Schlüssels ein. Sie sollte "
+"nicht weniger als 1024 Bit sein, da dies als unsicher betrachtet wird. Alles "
+"über 4098 Bit verlangsamt den Authentifizierungs-Prozess und ist zur Zeit "
+"nicht nützlich."
+
+#. Type: boolean
+#. Description
+#: ../openswan.templates:9001
+msgid ""
+"Only self-signed X.509 certificates can be created automatically, because "
+"otherwise a Certificate Authority is needed to sign the certificate request. "
+"If you choose to create a self-signed certificate, you can use it "
+"immediately to connect to other IPsec hosts that support X.509 certificate "
+"for authentication of IPsec connections. However, using Openswan's PKI "
+"features requires all certificates to be signed by a single Certificate "
+"Authority to create a trust path."
+msgstr ""
+"Nur selbstsignierte X.509-Zertifikate können automatisch erstellt werden, da "
+"anderenfalls für die Unterzeichnung der Zertifikatsanforderung eine "
+"Zertifizierungsstelle benötigt wird. Falls Sie ein selbstsigniertes "
+"Zertifikat erstellen, können Sie dieses sofort verwenden, um sich mit anderen "
+"IPSec-Rechnern zu verbinden, die X.509-Zertifikate zur Authentifizierung von "
+"IPsec-Verbindungen benutzen. Falls Sie jedoch die PKI-Funktionen von "
+"Openswan verwenden möchten, müssen alle X.509-Zertifikate von einer einzigen "
+"Zertifizierungsstelle signiert sein, um einen Vertrauenspfad zu schaffen."
+
+#. Type: note
+#. Description
+#: ../openswan.templates:17001
+msgid "Modification of /etc/ipsec.conf"
+msgstr "Veränderung von /etc/ipsec.conf"
+
+#. Type: note
+#. Description
+#: ../openswan.templates:17001
+msgid ""
+"Due to a change in upstream Openswan, opportunistic encryption is no longer "
+"enabled by default. The no_oe.conf file that was shipped in earlier versions "
+"to explicitly disable it can therefore no longer be included by ipsec.conf. "
+"Any such include paragraph will now be automatically removed to ensure that "
+"Openswan can start correctly."
+msgstr ""
+"Aufgrund einer Änderung im Quelltext von Openswan ist opportunistische "
+"Verschlüsselung nicht mehr standardmäßig aktiviert. Ältere Versionen von "
+"Openswan enthielten die Datei no_oe.conf, die zur expliziten Deaktivierung "
+"der opportunistischen Verschlüsselung diente. Diese kann jetzt nicht mehr "
+"mittels ipsec.conf aufgenommen werden. Jeder entsprechende Absatz wird jetzt "
+"automatisch entfernt, um einen korrekten Start von Openswan sicherzustellen."
 
 #~ msgid "Do you wish to restart strongSwan?"
 #~ msgstr "Möchten Sie strongSwan neustarten?"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the full location of the file containing your X509 "
-#~| "certificate in PEM format."
 #~ msgid "Please enter the location of your X509 certificate in PEM format:"
 #~ msgstr ""
-#~ "Bitte geben Sie den kompletten Ort der Datei an, die Ihr X509-Zertifikat "
+#~ "Bitte geben Sie den Ort der Datei an, der Ihr X509-Zertifikat "
 #~ "im PEM-Format enthält."
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the full location of the file containing your X509 "
-#~| "certificate in PEM format."
 #~ msgid "Please enter the location of your X509 private key in PEM format:"
 #~ msgstr ""
-#~ "Bitte geben Sie den kompletten Ort der Datei an, die Ihr X509-Zertifikat "
+#~ "Bitte geben Sie den Ort der Datei an, der Ihr X509-Zertifikat "
 #~ "im PEM-Format enthält."
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the full location of the file containing your X509 "
-#~| "certificate in PEM format."
-#~ msgid "You may now enter the location of your X509 RootCA in PEM format:"
-#~ msgstr ""
-#~ "Bitte geben Sie den kompletten Ort der Datei an, die Ihr X509-Zertifikat "
-#~ "im PEM-Format enthält."
-
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the 2 letter country code for your country. This code will "
-#~| "be placed in the certificate request."
 #~ msgid ""
 #~ "Please enter the 2 letter country code for your country. This code will "
 #~ "be placed in the certificate request."
@@ -560,27 +634,9 @@ msgstr ""
 #~ msgid "Example: Upper Austria"
 #~ msgstr "Beispiel: Oberösterreich"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the organization (e.g. company) that the X509 certificate "
-#~| "should be created for. This name will be placed in the certificate "
-#~| "request."
-#~ msgid ""
-#~ "Please enter the locality (e.g. city) where you live. This name will be "
-#~ "placed in the certificate request."
-#~ msgstr ""
-#~ "Bitte geben Sie die Organisation (z.B. Firma) ein, für die das X509-"
-#~ "Zertifikat erstellt werden soll. Dieser Name wird in der "
-#~ "Zertifikatsanfrage verwandt."
-
 #~ msgid "Example: Vienna"
 #~ msgstr "Beispiel: Wien"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the organization (e.g. company) that the X509 certificate "
-#~| "should be created for. This name will be placed in the certificate "
-#~| "request."
 #~ msgid ""
 #~ "Please enter the organization (e.g. company) that the X509 certificate "
 #~ "should be created for. This name will be placed in the certificate "
@@ -593,36 +649,8 @@ msgstr ""
 #~ msgid "Example: Debian"
 #~ msgstr "Beispiel: Debian"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the organization (e.g. company) that the X509 certificate "
-#~| "should be created for. This name will be placed in the certificate "
-#~| "request."
-#~ msgid ""
-#~ "Please enter the organizational unit (e.g. section) that the X509 "
-#~ "certificate should be created for. This name will be placed in the "
-#~ "certificate request."
-#~ msgstr ""
-#~ "Bitte geben Sie die Organisation (z.B. Firma) ein, für die das X509-"
-#~ "Zertifikat erstellt werden soll. Dieser Name wird in der "
-#~ "Zertifikatsanfrage verwandt."
-
 #~ msgid "Example: security group"
 #~ msgstr "Beispiel: Sicherheitsgruppe"
-
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the organization (e.g. company) that the X509 certificate "
-#~| "should be created for. This name will be placed in the certificate "
-#~| "request."
-#~ msgid ""
-#~ "Please enter the common name (e.g. the host name of this machine) for "
-#~ "which the X509 certificate should be created for. This name will be "
-#~ "placed in the certificate request."
-#~ msgstr ""
-#~ "Bitte geben Sie die Organisation (z.B. Firma) ein, für die das X509-"
-#~ "Zertifikat erstellt werden soll. Dieser Name wird in der "
-#~ "Zertifikatsanfrage verwandt."
 
 #~ msgid "Example: gateway.debian.org"
 #~ msgstr "Beispiel: gateway.debian.org"
@@ -630,95 +658,12 @@ msgstr ""
 #~ msgid "When to start strongSwan:"
 #~ msgstr "Wann soll strongSwan gestartet werden:"
 
-#, fuzzy
-#~| msgid "Do you want to create a RSA public/private keypair for this host?"
-#~ msgid "Create an RSA public/private keypair for this host?"
-#~ msgstr ""
-#~ "Möchten Sie ein öffentlich/privates RSA-Schlüsselpaar für diesen Rechner "
-#~ "erstellen?"
-
-#, fuzzy
-#~| msgid ""
-#~| "If you do not want to create a new public/private keypair, you can "
-#~| "choose to use an existing one."
 #~ msgid ""
 #~ "If you do not want to create a new public/private keypair, you can choose "
 #~ "to use an existing one in the next step."
 #~ msgstr ""
 #~ "Falls Sie kein neues öffentliches/privates Schlüsselpaar erstellen "
-#~ "wollen, können Sie ein existierendes auswählen."
-
-#, fuzzy
-#~| msgid ""
-#~| "This installer can automatically extract the needed information from an "
-#~| "existing X509 certificate with a matching RSA private key. Both parts "
-#~| "can be in one file, if it is in PEM format. If you have such an existing "
-#~| "certificate and key file and want to use it for authenticating IPSec "
-#~| "connections, then please answer yes."
-#~ msgid ""
-#~ "The required information can automatically be extracted from an existing "
-#~ "X.509 certificate with a matching RSA private key. Both parts can be in "
-#~ "one file, if it is in PEM format. You should choose this option if you "
-#~ "have such an existing certificate and key file and want to use it for "
-#~ "authenticating IPSec connections."
-#~ msgstr ""
-#~ "Dieses Installationsprogramm kann automatisch die benötigten "
-#~ "Informationen aus einem existierenden X509-Zertifikat mit passendem "
-#~ "privatem RSA-Schlüssel extrahieren. Beide Teile können in einer Datei "
-#~ "sein, falls sie im PEM-Format vorliegt. Falls Sie über solch ein "
-#~ "existierendes Zertifikat und eine solche Schlüsseldatei verfügen, und "
-#~ "diese für die Authentifizierung von IPSec-Verbindungen verwenden möchten, "
-#~ "stimmen Sie bitte zu."
-
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the locality (e.g. city) where you live. This name will be "
-#~| "placed in the certificate request."
-#~ msgid ""
-#~ "Please enter the locality name (often a city) that should be used in the "
-#~ "certificate request."
-#~ msgstr ""
-#~ "Bitte geben Sie die Örtlichkeit (z.B. Stadt) ein, in der Sie leben. "
-#~ "Dieser Name wird in der Zertifikatsanfrage verwandt."
-
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the organizational unit (e.g. section) that the X509 "
-#~| "certificate should be created for. This name will be placed in the "
-#~| "certificate request."
-#~ msgid ""
-#~ "Please enter the organization name (often a company) that should be used "
-#~ "in the certificate request."
-#~ msgstr ""
-#~ "Bitte geben Sie die Organisationseinheit (z.B. Bereich) ein, für die das "
-#~ "X509-Zertifikat erstellt werden soll. Dieser Name wird in der "
-#~ "Zertifikatsanfrage verwandt."
-
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the organizational unit (e.g. section) that the X509 "
-#~| "certificate should be created for. This name will be placed in the "
-#~| "certificate request."
-#~ msgid ""
-#~ "Please enter the organizational unit name (often a department) that "
-#~ "should be used in the certificate request."
-#~ msgstr ""
-#~ "Bitte geben Sie die Organisationseinheit (z.B. Bereich) ein, für die das "
-#~ "X509-Zertifikat erstellt werden soll. Dieser Name wird in der "
-#~ "Zertifikatsanfrage verwandt."
-
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the common name (e.g. the host name of this machine) for "
-#~| "which the X509 certificate should be created for. This name will be "
-#~| "placed in the certificate request."
-#~ msgid ""
-#~ "Please enter the common name (such as the host name of this machine) that "
-#~ "should be used in the certificate request."
-#~ msgstr ""
-#~ "Bitte geben Sie den allgemeinen Namen (z.B. den Rechnernamen dieser "
-#~ "Maschine) ein, für den das X509-Zertifikat erstellt werden soll. Dieser "
-#~ "Name wird in der Zertifikatsanfrage verwandt."
+#~ "wollen, können Sie im nächsten Schritt ein existierendes auswählen."
 
 #~ msgid "earliest, \"after NFS\", \"after PCMCIA\""
 #~ msgstr "frühestmöglich, »nach NFS«, »nach PCMCIA«"
