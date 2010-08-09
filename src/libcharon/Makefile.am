@@ -10,7 +10,6 @@ config/child_cfg.c config/child_cfg.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
-config/auth_cfg.c config/auth_cfg.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \
@@ -93,12 +92,7 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
-sa/tasks/task.c sa/tasks/task.h \
-credentials/credential_manager.c credentials/credential_manager.h \
-credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
-credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
-credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
-credentials/credential_set.h
+sa/tasks/task.c sa/tasks/task.h
 
 daemon.lo :		$(top_builddir)/config.status
 
@@ -128,7 +122,7 @@ if USE_ME
     sa/tasks/ike_me.c sa/tasks/ike_me.h
 endif
 
-if USE_CAPABILITIES
+if USE_LIBCAP
   libcharon_la_LIBADD += -lcap
 endif
 
@@ -271,6 +265,14 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_SIMAKA_SQL
+  SUBDIRS += plugins/eap_simaka_sql
+  PLUGINS += eap-simaka-sql
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_simaka_sql/libstrongswan-eap-simaka-sql.la
+endif
+endif
+
 if USE_EAP_SIMAKA_PSEUDONYM
   SUBDIRS += plugins/eap_simaka_pseudonym
   PLUGINS += eap-simaka-pseudonym
@@ -374,14 +376,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_RESOLVE
-  SUBDIRS += plugins/resolve
-  PLUGINS += resolve
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/resolve/libstrongswan-resolve.la
-endif
-endif
-
 if USE_ANDROID
   SUBDIRS += plugins/android
   PLUGINS += android
@@ -403,6 +397,14 @@ if USE_UCI
   PLUGINS += uci
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/uci/libstrongswan-uci.la
+endif
+endif
+
+if USE_ADDRBLOCK
+  SUBDIRS += plugins/addrblock
+  PLUGINS += addrblock
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/uci/libstrongswan-addrblock.la
 endif
 endif
 

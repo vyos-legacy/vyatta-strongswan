@@ -12,7 +12,10 @@ endif
 
 libstrongswan_android_la_SOURCES = \
 	android_plugin.c android_plugin.h \
-	android_handler.c android_handler.h
+	android_service.c android_service.h \
+	android_handler.c android_handler.h \
+	android_logger.c android_logger.h \
+	android_creds.c android_creds.h
 
 libstrongswan_android_la_LDFLAGS = -module -avoid-version
 libstrongswan_android_la_LIBADD  = -lcutils

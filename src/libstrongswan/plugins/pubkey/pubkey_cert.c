@@ -82,10 +82,10 @@ static id_match_t has_subject(private_pubkey_cert_t *this,
 {
 	if (subject->get_type(subject) == ID_KEY_ID)
 	{
-		key_encoding_type_t type;
+		cred_encoding_type_t type;
 		chunk_t fingerprint;
 
-		for (type = 0; type < KEY_ENCODING_MAX; type++)
+		for (type = 0; type < CRED_ENCODING_MAX; type++)
 		{
 			if (this->key->get_fingerprint(this->key, type, &fingerprint) &&
 				chunk_equals(fingerprint, subject->get_encoding(subject)))
@@ -161,25 +161,12 @@ static bool get_validity(private_pubkey_cert_t *this, time_t *when,
 }
 
 /**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(certificate_t *this, certificate_t *that)
-{
-	return FALSE;
-}
-
-/**
  * Implementation of certificate_t.get_encoding.
  */
-static chunk_t get_encoding(private_pubkey_cert_t *this)
+static bool get_encoding(private_pubkey_cert_t *this, cred_encoding_type_t type,
+						 chunk_t *encoding)
 {
-	chunk_t encoding;
-
-	if (this->key->get_encoding(this->key, KEY_PUB_ASN1_DER, &encoding))
-	{
-		return encoding;
-	}
-	return chunk_empty;
+	return this->key->get_encoding(this->key, PUBKEY_ASN1_DER, encoding);
 }
 
 /**
@@ -221,8 +208,7 @@ static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 	this->public.interface.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
 	this->public.interface.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.get_validity = (bool (*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
-	this->public.interface.get_encoding = (chunk_t (*)(certificate_t*))get_encoding;
+	this->public.interface.get_encoding = (bool (*)(certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
 	this->public.interface.equals = (bool (*)(certificate_t*, certificate_t *other))equals;
 	this->public.interface.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(certificate_t *this))destroy;
@@ -230,7 +216,7 @@ static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 	this->ref = 1;
 	this->key = key;
 	this->issuer = identification_create_from_encoding(ID_ANY, chunk_empty);
-	if (key->get_fingerprint(key, KEY_ID_PUBKEY_INFO_SHA1, &fingerprint))
+	if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &fingerprint))
 	{
 		this->subject = identification_create_from_encoding(ID_KEY_ID, fingerprint);
 	}

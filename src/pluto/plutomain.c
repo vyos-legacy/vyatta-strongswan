@@ -33,7 +33,9 @@
 #include <grp.h>
 
 #ifdef CAPABILITIES
+#ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
+#endif /* HAVE_SYS_CAPABILITY_H */
 #endif /* CAPABILITIES */
 
 #include <freeswan.h>
@@ -68,7 +70,6 @@
 #include "ocsp.h"
 #include "crl.h"
 #include "fetch.h"
-#include "xauth.h"
 #include "crypto.h"
 #include "nat_traversal.h"
 #include "virtual.h"
@@ -76,6 +77,7 @@
 #include "vendor.h"
 #include "builder.h"
 #include "whack_attribute.h"
+#include "pluto.h"
 
 static void usage(const char *mess)
 {
@@ -258,7 +260,6 @@ int main(int argc, char **argv)
 	char *virtual_private = NULL;
 	int lockfd;
 #ifdef CAPABILITIES
-	cap_t caps;
 	int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
 #endif /* CAPABILITIES */
 
@@ -268,18 +269,18 @@ int main(int argc, char **argv)
 		library_deinit();
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
-	if (lib->integrity &&
-		!lib->integrity->check_file(lib->integrity, "pluto", argv[0]))
-	{
-		fprintf(stderr, "integrity check of pluto failed\n");
-		library_deinit();
-		exit(SS_RC_DAEMON_INTEGRITY);
-	}
 	if (!libhydra_init("pluto"))
 	{
 		libhydra_deinit();
 		library_deinit();
 		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+	if (!pluto_init(argv[0]))
+	{
+		pluto_deinit();
+		libhydra_deinit();
+		library_deinit();
+		exit(SS_RC_DAEMON_INTEGRITY);
 	}
 	options = options_create();
 
@@ -677,7 +678,6 @@ int main(int argc, char **argv)
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
 	init_virtual_ip(virtual_private);
 	scx_init(pkcs11_module_path, pkcs11_init_args);
-	xauth_init();
 	init_states();
 	init_demux();
 	init_kernel();
@@ -717,18 +717,41 @@ int main(int argc, char **argv)
 		}
 #endif
 
-#ifdef CAPABILITIES
-	caps = cap_init();
-	cap_set_flag(caps, CAP_EFFECTIVE, 2, keep, CAP_SET);
-	cap_set_flag(caps, CAP_INHERITABLE, 2, keep, CAP_SET);
-	cap_set_flag(caps, CAP_PERMITTED, 2, keep, CAP_SET);
-	if (cap_set_proc(caps) != 0)
+#ifdef CAPABILITIES_LIBCAP
 	{
-		plog("unable to drop daemon capabilities");
-		abort();
+		cap_t caps;
+		caps = cap_init();
+		cap_set_flag(caps, CAP_EFFECTIVE, countof(keep), keep, CAP_SET);
+		cap_set_flag(caps, CAP_INHERITABLE, countof(keep), keep, CAP_SET);
+		cap_set_flag(caps, CAP_PERMITTED, countof(keep), keep, CAP_SET);
+		if (cap_set_proc(caps) != 0)
+		{
+			plog("unable to drop daemon capabilities");
+			abort();
+		}
+		cap_free(caps);
 	}
-	cap_free(caps);
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	{
+		struct __user_cap_data_struct caps = { .effective = 0 };
+		struct __user_cap_header_struct header = {
+			.version = _LINUX_CAPABILITY_VERSION,
+		};
+		int i;
+		for (i = 0; i < countof(keep); i++)
+		{
+			caps.effective |= 1 << keep[i];
+			caps.permitted |= 1 << keep[i];
+			caps.inheritable |= 1 << keep[i];
+		}
+		if (capset(&header, &caps) != 0)
+		{
+			plog("unable to drop daemon capabilities");
+			abort();
+		}
+	}
+#endif /* CAPABILITIES_NATIVE */
 
 	/* loading X.509 CA certificates */
 	load_authcerts("ca", CA_CERT_PATH, X509_CA);
@@ -771,7 +794,6 @@ void exit_pluto(int status)
 	free_ifaces();
 	ac_finalize();              /* free X.509 attribute certificates */
 	scx_finalize();             /* finalize and unload PKCS #11 module */
-	xauth_finalize();           /* finalize and unload XAUTH module */
 	stop_adns();
 	free_md_pool();
 	free_crypto();
@@ -781,6 +803,7 @@ void exit_pluto(int status)
 	free_builder();
 	delete_lock();
 	options->destroy(options);
+	pluto_deinit();
 	lib->plugins->unload(lib->plugins);
 	libhydra_deinit();
 	library_deinit();

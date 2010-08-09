@@ -53,11 +53,6 @@ struct private_eap_radius_t {
 	u_int32_t vendor;
 
 	/**
-	 * EAP MSK, if method established one
-	 */
-	chunk_t msk;
-
-	/**
 	 * RADIUS client instance
 	 */
 	radius_client_t *client;
@@ -71,6 +66,11 @@ struct private_eap_radius_t {
 	 * Prefix to prepend to EAP identity
 	 */
 	char *id_prefix;
+
+	/**
+	 * Handle the Class attribute as group membership information?
+	 */
+	bool class_group;
 };
 
 /**
@@ -140,10 +140,8 @@ static bool radius2ike(private_eap_radius_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of eap_method_t.initiate
- */
-static status_t initiate(private_eap_radius_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate, status_t,
+	private_eap_radius_t *this, eap_payload_t **out)
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
@@ -177,10 +175,44 @@ static status_t initiate(private_eap_radius_t *this, eap_payload_t **out)
 }
 
 /**
- * Implementation of eap_method_t.process
+ * Handle the Class attribute as group membership information
  */
-static status_t process(private_eap_radius_t *this,
-						eap_payload_t *in, eap_payload_t **out)
+static void process_class(private_eap_radius_t *this, radius_message_t *msg)
+{
+	enumerator_t *enumerator;
+	chunk_t data;
+	int type;
+
+	enumerator = msg->create_enumerator(msg);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		if (type == RAT_CLASS)
+		{
+			identification_t *id;
+			ike_sa_t *ike_sa;
+			auth_cfg_t *auth;
+
+			if (data.len >= 44)
+			{	/* quirk: ignore long class attributes, these are used for
+				 * other purposes by some RADIUS servers (such as NPS). */
+				continue;
+			}
+
+			ike_sa = charon->bus->get_sa(charon->bus);
+			if (ike_sa)
+			{
+				auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
+				id = identification_create_from_data(data);
+				DBG1(DBG_CFG, "received group membership '%Y' from RADIUS", id);
+				auth->add(auth, AUTH_RULE_GROUP, id);
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(eap_method_t, process, status_t,
+	private_eap_radius_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	radius_message_t *request, *response;
 	status_t status = FAILED;
@@ -211,8 +243,10 @@ static status_t process(private_eap_radius_t *this,
 				status = FAILED;
 				break;
 			case RMC_ACCESS_ACCEPT:
-				this->msk = this->client->decrypt_msk(this->client,
-													  response, request);
+				if (this->class_group)
+				{
+					process_class(this, response);
+				}
 				status = SUCCESS;
 				break;
 			case RMC_ACCESS_REJECT:
@@ -228,32 +262,29 @@ static status_t process(private_eap_radius_t *this,
 	return status;
 }
 
-/**
- * Implementation of eap_method_t.get_type.
- */
-static eap_type_t get_type(private_eap_radius_t *this, u_int32_t *vendor)
+METHOD(eap_method_t, get_type, eap_type_t,
+	private_eap_radius_t *this, u_int32_t *vendor)
 {
 	*vendor = this->vendor;
 	return this->type;
 }
 
-/**
- * Implementation of eap_method_t.get_msk.
- */
-static status_t get_msk(private_eap_radius_t *this, chunk_t *msk)
+METHOD(eap_method_t, get_msk, status_t,
+	private_eap_radius_t *this, chunk_t *out)
 {
-	if (this->msk.ptr)
+	chunk_t msk;
+
+	msk = this->client->get_msk(this->client);
+	if (msk.len)
 	{
-		*msk = this->msk;
+		*out = msk;
 		return SUCCESS;
 	}
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.is_mutual.
- */
-static bool is_mutual(private_eap_radius_t *this)
+METHOD(eap_method_t, is_mutual, bool,
+	private_eap_radius_t *this)
 {
 	switch (this->type)
 	{
@@ -265,15 +296,12 @@ static bool is_mutual(private_eap_radius_t *this)
 	}
 }
 
-/**
- * Implementation of eap_method_t.destroy.
- */
-static void destroy(private_eap_radius_t *this)
+METHOD(eap_method_t, destroy, void,
+	private_eap_radius_t *this)
 {
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
 	this->client->destroy(this->client);
-	chunk_clear(&this->msk);
 	free(this);
 }
 
@@ -282,15 +310,26 @@ static void destroy(private_eap_radius_t *this)
  */
 eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer)
 {
-	private_eap_radius_t *this = malloc_thing(private_eap_radius_t);
+	private_eap_radius_t *this;
 
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process;
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
-	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
-	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
-	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-
+	INIT(this,
+		.public.eap_method_interface = {
+			.initiate = _initiate,
+			.process = _process,
+			.get_type = _get_type,
+			.is_mutual = _is_mutual,
+			.get_msk = _get_msk,
+			.destroy = _destroy,
+		},
+		/* initially EAP_RADIUS, but is set to the method selected by RADIUS */
+		.type = EAP_RADIUS,
+		.eap_start = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-radius.eap_start", FALSE),
+		.id_prefix = lib->settings->get_str(lib->settings,
+								"charon.plugins.eap-radius.id_prefix", ""),
+		.class_group = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-radius.class_group", FALSE),
+	);
 	this->client = radius_client_create();
 	if (!this->client)
 	{
@@ -299,14 +338,6 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	}
 	this->peer = peer->clone(peer);
 	this->server = server->clone(server);
-	/* initially EAP_RADIUS, but is set to the method selected by RADIUS */
-	this->type = EAP_RADIUS;
-	this->vendor = 0;
-	this->msk = chunk_empty;
-	this->eap_start = lib->settings->get_bool(lib->settings,
-								"charon.plugins.eap-radius.eap_start", FALSE);
-	this->id_prefix = lib->settings->get_str(lib->settings,
-								"charon.plugins.eap-radius.id_prefix", "");
 	return &this->public;
 }
 

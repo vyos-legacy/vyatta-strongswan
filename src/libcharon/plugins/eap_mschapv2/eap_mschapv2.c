@@ -614,8 +614,7 @@ static bool get_nt_hash(private_eap_mschapv2_t *this, identification_t *me,
 	chunk_t password;
 
 	/* try to find a stored NT_HASH first */
-	shared = charon->credentials->get_shared(charon->credentials,
-											SHARED_NT_HASH, me, other);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_NT_HASH, me, other);
 	if (shared )
 	{
 		*nt_hash = chunk_clone(shared->get_key(shared));
@@ -624,8 +623,7 @@ static bool get_nt_hash(private_eap_mschapv2_t *this, identification_t *me,
 	}
 
 	/* fallback to plaintext password */
-	shared = charon->credentials->get_shared(charon->credentials,
-											SHARED_EAP, me, other);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, me, other);
 	if (shared)
 	{
 		password = ascii_to_unicode(shared->get_key(shared));
@@ -820,7 +818,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	eap_mschapv2_header_t *eap;
 	chunk_t data;
 	char *message, *token, *msg = NULL;
-	int message_len, error, retryable;
+	int message_len, error = 0, retryable;
 	chunk_t challenge = chunk_empty;
 
 	data = in->get_data(in);

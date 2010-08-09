@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Copyright (C) 2008 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
@@ -67,7 +67,9 @@
 
 /** non linux specific */
 #ifndef IPPROTO_COMP
+#ifdef IPPROTO_IPCOMP
 #define IPPROTO_COMP IPPROTO_IPCOMP
+#endif
 #endif
 
 #ifndef SADB_X_AALG_SHA2_256HMAC
@@ -600,17 +602,43 @@ static int lookup_algorithm(kernel_algorithm_t *list, int ikev2)
 }
 
 /**
- * add a host behind a sadb_address extension
+ * Copy a host_t as sockaddr_t to the given memory location. Ports are
+ * reset to zero as per RFC 2367.
+ * @return		the number of bytes copied
+ */
+static size_t hostcpy(void *dest, host_t *host)
+{
+	sockaddr_t *addr = host->get_sockaddr(host), *dest_addr = dest;
+	socklen_t *len = host->get_sockaddr_len(host);
+	memcpy(dest, addr, *len);
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+	dest_addr->sa_len = *len;
+#endif
+	switch (dest_addr->sa_family)
+	{
+		case AF_INET:
+		{
+			struct sockaddr_in *sin = dest;
+			sin->sin_port = 0;
+			break;
+		}
+		case AF_INET6:
+		{
+			struct sockaddr_in6 *sin6 = dest;
+			sin6->sin6_port = 0;
+			break;
+		}
+	}
+	return *len;
+}
+
+/**
+ * add a host behind an sadb_address extension
  */
 static void host2ext(host_t *host, struct sadb_address *ext)
 {
-	sockaddr_t *host_addr = host->get_sockaddr(host);
-	socklen_t *len = host->get_sockaddr_len(host);
-#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
-	host_addr->sa_len = *len;
-#endif
-	memcpy((char*)(ext + 1), host_addr, *len);
-	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + *len);
+	size_t len = hostcpy(ext + 1, host);
+	ext->sadb_address_len = PFKEY_LEN(sizeof(*ext) + len);
 }
 
 /**
@@ -1019,7 +1047,7 @@ static void process_migrate(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 }
 #endif /*SADB_X_MIGRATE*/
 
-#ifdef HAVE_NATT
+#ifdef SADB_X_NAT_T_NEW_MAPPING
 /**
  * Process a SADB_X_NAT_T_NEW_MAPPING message from the kernel
  */
@@ -1075,7 +1103,7 @@ static void process_mapping(private_kernel_pfkey_ipsec_t *this, struct sadb_msg*
 		}
 	}
 }
-#endif /*HAVE_NATT*/
+#endif /*SADB_X_NAT_T_NEW_MAPPING*/
 
 /**
  * Receives events from kernel
@@ -1137,11 +1165,11 @@ static job_requeue_t receive_events(private_kernel_pfkey_ipsec_t *this)
 			process_migrate(this, msg);
 			break;
 #endif /*SADB_X_MIGRATE*/
-#ifdef HAVE_NATT
+#ifdef SADB_X_NAT_T_NEW_MAPPING
 		case SADB_X_NAT_T_NEW_MAPPING:
 			process_mapping(this, msg);
 			break;
-#endif /*HAVE_NATT*/
+#endif /*SADB_X_NAT_T_NEW_MAPPING*/
 		default:
 			break;
 	}
@@ -1217,10 +1245,11 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	protocol_id_t protocol, u_int32_t reqid, lifetime_cfg_t *lifetime,
-	u_int16_t enc_alg, chunk_t enc_key, u_int16_t int_alg, chunk_t int_key,
-	ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi, bool encap,
-	bool inbound, traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	protocol_id_t protocol, u_int32_t reqid, mark_t mark,
+	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
+	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
+	u_int16_t ipcomp, u_int16_t cpi, bool encap, bool inbound,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1364,7 +1393,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 METHOD(kernel_ipsec_t, update_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, u_int32_t spi, protocol_id_t protocol,
 	u_int16_t cpi, host_t *src, host_t *dst, host_t *new_src, host_t *new_dst,
-	bool encap, bool new_encap)
+	bool encap, bool new_encap, mark_t mark)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1497,7 +1526,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int64_t *bytes)
+	u_int32_t spi, protocol_id_t protocol, mark_t mark, u_int64_t *bytes)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1553,7 +1582,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
-	u_int32_t spi, protocol_id_t protocol, u_int16_t cpi)
+	u_int32_t spi, protocol_id_t protocol, u_int16_t cpi, mark_t mark)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1604,8 +1633,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts,
 	policy_dir_t direction, u_int32_t spi, protocol_id_t protocol,
-	u_int32_t reqid, ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,
-	bool routed)
+	u_int32_t reqid, mark_t mark, ipsec_mode_t mode, u_int16_t ipcomp,
+	u_int16_t cpi, bool routed)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1679,14 +1708,10 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	req->sadb_x_ipsecrequest_level = IPSEC_LEVEL_UNIQUE;
 	if (mode == MODE_TUNNEL)
 	{
-		sockaddr_t *sa;
-		socklen_t sl;
-		sa = src->get_sockaddr(src);
-		sl = *src->get_sockaddr_len(src);
-		memcpy(req + 1, sa, sl);
-		sa = dst->get_sockaddr(dst);
-		memcpy((u_int8_t*)(req + 1) + sl, sa, sl);
-		req->sadb_x_ipsecrequest_len += sl * 2;
+		len = hostcpy(req + 1, src);
+		req->sadb_x_ipsecrequest_len += len;
+		len = hostcpy((char*)(req + 1) + len, dst);
+		req->sadb_x_ipsecrequest_len += len;
 	}
 
 	pol->sadb_x_policy_len += PFKEY_LEN(req->sadb_x_ipsecrequest_len);
@@ -1771,22 +1796,30 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			route->dst_net = chunk_clone(policy->src.net->get_address(policy->src.net));
 			route->prefixlen = policy->src.mask;
 
-			switch (charon->kernel_interface->add_route(charon->kernel_interface,
-					route->dst_net, route->prefixlen, route->gateway,
-					route->src_ip, route->if_name))
+			if (route->if_name)
 			{
-				default:
-					DBG1(DBG_KNL, "unable to install source route for %H",
-						 route->src_ip);
-					/* FALL */
-				case ALREADY_DONE:
-					/* route exists, do not uninstall */
-					route_entry_destroy(route);
-					break;
-				case SUCCESS:
-					/* cache the installed route */
-					policy->route = route;
-					break;
+				switch (charon->kernel_interface->add_route(
+									charon->kernel_interface, route->dst_net,
+									route->prefixlen, route->gateway,
+									route->src_ip, route->if_name))
+				{
+					default:
+						DBG1(DBG_KNL, "unable to install source route for %H",
+							 route->src_ip);
+						/* FALL */
+					case ALREADY_DONE:
+						/* route exists, do not uninstall */
+						route_entry_destroy(route);
+						break;
+					case SUCCESS:
+						/* cache the installed route */
+						policy->route = route;
+						break;
+				}
+			}
+			else
+			{
+				route_entry_destroy(route);
 			}
 		}
 		else
@@ -1802,7 +1835,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 METHOD(kernel_ipsec_t, query_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, u_int32_t *use_time)
+	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
+	u_int32_t *use_time)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;
@@ -1905,7 +1939,8 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 
 METHOD(kernel_ipsec_t, del_policy, status_t,
 	private_kernel_pfkey_ipsec_t *this, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts, policy_dir_t direction, bool unrouted)
+	traffic_selector_t *dst_ts, policy_dir_t direction, mark_t mark,
+	bool unrouted)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
 	struct sadb_msg *msg, *out;

@@ -1,9 +1,15 @@
+strongswan (4.4.1-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Mon, 09 Aug 2010 11:37:25 +0200
+
 strongswan (4.4.0-3) unstable; urgency=low
 
   * Updated debconf translations.
     Closes: #587562: strongswan: [INTL:de] updated German debconf translation
 
- -- Rene Mayrhofer <rene@mayrhofer.eu.org>  Wed, 30 Jun 2010 09:50:31 +0200
+ -- Rene Mayrhofer <rmayr@debian.org>  Wed, 30 Jun 2010 09:50:31 +0200
 
 strongswan (4.4.0-2) unstable; urgency=low
 

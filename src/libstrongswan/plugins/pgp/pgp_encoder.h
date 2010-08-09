@@ -21,12 +21,12 @@
 #ifndef PGP_ENCODER_H_
 #define PGP_ENCODER_H_
 
-#include <credentials/keys/key_encoding.h>
+#include <credentials/cred_encoding.h>
 
 /**
  * Encoding function for PGP fingerprints.
  */
-bool pgp_encoder_encode(key_encoding_type_t type, chunk_t *encoding,
+bool pgp_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 						va_list args);
 
 #endif /** PGP_ENCODER_H_ @}*/

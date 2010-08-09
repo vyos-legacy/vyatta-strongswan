@@ -140,17 +140,26 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 		id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
 		if (id)
 		{
-			this->method = load_method(this, EAP_IDENTITY, 0, EAP_SERVER);
-			if (this->method)
+			if (id->get_type(id) == ID_ANY)
 			{
-				if (this->method->initiate(this->method, &out) == NEED_MORE)
+				this->method = load_method(this, EAP_IDENTITY, 0, EAP_SERVER);
+				if (this->method)
 				{
-					DBG1(DBG_IKE, "initiating EAP-Identity request");
-					return out;
+					if (this->method->initiate(this->method, &out) == NEED_MORE)
+					{
+						DBG1(DBG_IKE, "initiating EAP-Identity request");
+						return out;
+					}
+					this->method->destroy(this->method);
 				}
-				this->method->destroy(this->method);
+				DBG1(DBG_IKE, "EAP-Identity request configured, "
+					 "but not supported");
 			}
-			DBG1(DBG_IKE, "EAP-Identity request configured, but not supported");
+			else
+			{
+				DBG1(DBG_IKE, "using configured EAP-Identity %Y", id);
+				this->eap_identity = id->clone(id);
+			}
 		}
 	}
 	/* invoke real EAP method */
@@ -220,7 +229,6 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 	eap_type_t type, received_type;
 	u_int32_t vendor, received_vendor;
 	eap_payload_t *out;
-	auth_cfg_t *cfg;
 
 	if (in->get_code(in) != EAP_RESPONSE)
 	{
@@ -283,12 +291,6 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 			}
 			this->ike_sa->set_condition(this->ike_sa, COND_EAP_AUTHENTICATED,
 										TRUE);
-			cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-			cfg->add(cfg, AUTH_RULE_EAP_TYPE, type);
-			if (vendor)
-			{
-				cfg->add(cfg, AUTH_RULE_EAP_VENDOR, vendor);
-			}
 			this->eap_complete = TRUE;
 			return eap_payload_create_code(EAP_SUCCESS, in->get_identifier(in));
 		case FAILED:

@@ -273,7 +273,8 @@ static void schedule_inactivity_timeout(private_child_create_t *this)
  * - INVALID_ARG: diffie hellman group inacceptable
  * - NOT_FOUND: TS inacceptable
  */
-static status_t select_and_install(private_child_create_t *this, bool no_dh)
+static status_t select_and_install(private_child_create_t *this,
+								   bool no_dh, bool ike_auth)
 {
 	status_t status, status_i, status_o;
 	chunk_t nonce_i, nonce_r;
@@ -364,6 +365,25 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 	other_ts = this->config->get_traffic_selectors(this->config, FALSE, other_ts,
 												   other_vip);
 
+	if (this->initiator)
+	{
+		if (ike_auth)
+		{
+			charon->bus->narrow(charon->bus, this->child_sa,
+								NARROW_INITIATOR_POST_NOAUTH, my_ts, other_ts);
+		}
+		else
+		{
+			charon->bus->narrow(charon->bus, this->child_sa,
+								NARROW_INITIATOR_POST_AUTH, my_ts, other_ts);
+		}
+	}
+	else
+	{
+		charon->bus->narrow(charon->bus, this->child_sa,
+							NARROW_RESPONDER, my_ts, other_ts);
+	}
+
 	if (my_ts->get_count(my_ts) == 0 || other_ts->get_count(other_ts) == 0)
 	{
 		my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
@@ -418,66 +438,6 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		}
 	}
 
-	/* check for any certificate-based IP address block constraints */
-	if (this->mode == MODE_BEET || this->mode == MODE_TUNNEL)
-	{
-		auth_cfg_t *auth;
-		enumerator_t *auth_enum;
-		certificate_t *cert = NULL;
-
-		auth_enum = this->ike_sa->create_auth_cfg_enumerator(this->ike_sa, FALSE);
-		while (auth_enum->enumerate(auth_enum, &auth))
-		{
-			cert = auth->get(auth, AUTH_HELPER_SUBJECT_CERT);
-			if (cert)
-			{
-				break;
-			}
-		}
-		auth_enum->destroy(auth_enum);
-
-		if (cert && cert->get_type(cert) == CERT_X509)
-		{
-			x509_t *x509 = (x509_t*)cert;
-
-			if (x509->get_flags(x509) & X509_IP_ADDR_BLOCKS)
-			{
-				enumerator_t *enumerator, *block_enum;
-				traffic_selector_t *ts, *block_ts;
-
-				DBG1(DBG_IKE, "checking certificate-based traffic selector "
-							  "constraints [RFC 3779]");
-				enumerator = other_ts->create_enumerator(other_ts);
-				while (enumerator->enumerate(enumerator, &ts))
-				{
-					bool contained = FALSE;
-
-					block_enum = x509->create_ipAddrBlock_enumerator(x509);
-					while (block_enum->enumerate(block_enum, &block_ts))
-					{
-						if (ts->is_contained_in(ts, block_ts))
-						{
-							DBG1(DBG_IKE, "  TS %R is contained in address block"
-										  " constraint %R", ts, block_ts);
-							contained = TRUE;
-							break;
-						}
-					}
-					block_enum->destroy(block_enum);
-
-					if (!contained)
-					{
-						DBG1(DBG_IKE, "  TS %R is not contained in any"
-									  " address block constraint", ts);
-						enumerator->destroy(enumerator);
-						return FAILED;
-					}
-				}
-				enumerator->destroy(enumerator);
-			}
-		}
-	}
-
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
 	this->child_sa->set_ipcomp(this->child_sa, this->ipcomp);
 	this->child_sa->set_mode(this->child_sa, this->mode);
@@ -529,8 +489,8 @@ static status_t select_and_install(private_child_create_t *this, bool no_dh)
 		return NOT_FOUND;
 	}
 
-	charon->bus->child_keys(charon->bus, this->child_sa, this->dh,
-							nonce_i, nonce_r);
+	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
+							this->dh, nonce_i, nonce_r);
 
 	/* add to IKE_SA, and remove from task */
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
@@ -848,6 +808,17 @@ static status_t build_i(private_child_create_t *this, message_t *message)
 		add_ipcomp_notify(this, message, IPCOMP_DEFLATE);
 	}
 
+	if (message->get_exchange_type(message) == IKE_AUTH)
+	{
+		charon->bus->narrow(charon->bus, this->child_sa,
+							NARROW_INITIATOR_PRE_NOAUTH, this->tsi, this->tsr);
+	}
+	else
+	{
+		charon->bus->narrow(charon->bus, this->child_sa,
+							NARROW_INITIATOR_PRE_AUTH, this->tsi, this->tsr);
+	}
+
 	build_payloads(this, message);
 
 	this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
@@ -914,7 +885,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 	peer_cfg_t *peer_cfg;
 	payload_t *payload;
 	enumerator_t *enumerator;
-	bool no_dh = TRUE;
+	bool no_dh = TRUE, ike_auth = FALSE;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -934,6 +905,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}
+			ike_auth = TRUE;
 		default:
 			break;
 	}
@@ -1016,7 +988,7 @@ static status_t build_r(private_child_create_t *this, message_t *message)
 		}
 	}
 
-	switch (select_and_install(this, no_dh))
+	switch (select_and_install(this, no_dh, ike_auth))
 	{
 		case SUCCESS:
 			break;
@@ -1064,7 +1036,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
-	bool no_dh = TRUE;
+	bool no_dh = TRUE, ike_auth = FALSE;
 
 	switch (message->get_exchange_type(message))
 	{
@@ -1079,6 +1051,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}
+			ike_auth = TRUE;
 		default:
 			break;
 	}
@@ -1159,7 +1132,7 @@ static status_t process_i(private_child_create_t *this, message_t *message)
 		return SUCCESS;
 	}
 
-	if (select_and_install(this, no_dh) == SUCCESS)
+	if (select_and_install(this, no_dh, ike_auth) == SUCCESS)
 	{
 		DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
 			 "with SPIs %.8x_i %.8x_o and TS %#R=== %#R",
@@ -1229,11 +1202,11 @@ static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
-	if (this->tsi)
+	if (this->tsr)
 	{
 		this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
 	}
-	if (this->tsr)
+	if (this->tsi)
 	{
 		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
 	}

@@ -103,7 +103,22 @@ struct private_receiver_t {
 	/**
 	 * Delay for receiving incoming packets, to simulate larger RTT
 	 */
-	u_int receive_delay;
+	int receive_delay;
+
+	/**
+	 * Specific message type to delay, 0 for any
+	 */
+	int receive_delay_type;
+
+	/**
+	 * Delay request messages?
+	 */
+	bool receive_delay_request;
+
+	/**
+	 * Delay response messages?
+	 */
+	bool receive_delay_response;
 };
 
 /**
@@ -242,7 +257,7 @@ static bool cookie_required(private_receiver_t *this, message_t *message)
 /**
  * check if peer has to many half open IKE_SAs
  */
-static bool peer_to_aggressive(private_receiver_t *this, message_t *message)
+static bool peer_too_aggressive(private_receiver_t *this, message_t *message)
 {
 	if (charon->ike_sa_manager->get_half_open_count(charon->ike_sa_manager,
 						message->get_source(message)) >= this->block_threshold)
@@ -259,7 +274,6 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 {
 	packet_t *packet;
 	message_t *message;
-	job_t *job;
 
 	/* read in a packet */
 	if (charon->socket->receive(charon->socket, &packet) != SUCCESS)
@@ -321,7 +335,7 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 		}
 
 		/* check if peer has not too many IKE_SAs half open */
-		if (this->block_threshold && peer_to_aggressive(this, message))
+		if (this->block_threshold && peer_too_aggressive(this, message))
 		{
 			DBG1(DBG_NET, "ignoring IKE_SA setup from %H, "
 				 "peer too aggressive", message->get_source(message));
@@ -329,16 +343,25 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			return JOB_REQUEUE_DIRECT;
 		}
 	}
-	job = (job_t*)process_message_job_create(message);
 	if (this->receive_delay)
 	{
-		charon->scheduler->schedule_job_ms(charon->scheduler,
-										   job, this->receive_delay);
+		if (this->receive_delay_type == 0 ||
+			this->receive_delay_type == message->get_exchange_type(message))
+		{
+			if ((message->get_request(message) && this->receive_delay_request) ||
+				(!message->get_request(message) && this->receive_delay_response))
+			{
+				DBG1(DBG_NET, "using receive delay: %dms",
+					 this->receive_delay);
+				charon->scheduler->schedule_job_ms(charon->scheduler,
+								(job_t*)process_message_job_create(message),
+								this->receive_delay);
+				return JOB_REQUEUE_DIRECT;
+			}
+		}
 	}
-	else
-	{
-		charon->processor->queue_job(charon->processor, job);
-	}
+	charon->processor->queue_job(charon->processor,
+								 (job_t*)process_message_job_create(message));
 	return JOB_REQUEUE_DIRECT;
 }
 
@@ -374,6 +397,12 @@ receiver_t *receiver_create()
 	}
 	this->receive_delay = lib->settings->get_int(lib->settings,
 						"charon.receive_delay", 0);
+	this->receive_delay_type = lib->settings->get_int(lib->settings,
+						"charon.receive_delay_type", 0),
+	this->receive_delay_request = lib->settings->get_bool(lib->settings,
+						"charon.receive_delay_request", TRUE),
+	this->receive_delay_response = lib->settings->get_int(lib->settings,
+						"charon.receive_delay_response", TRUE),
 
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_PREFERRED);
 	if (this->hasher == NULL)

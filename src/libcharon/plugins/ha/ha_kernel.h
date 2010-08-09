@@ -31,13 +31,28 @@ typedef struct ha_kernel_t ha_kernel_t;
 struct ha_kernel_t {
 
 	/**
-	 * Check if a host is in a segment.
+	 * Get the segment a host is in.
 	 *
-	 * @param host		host to check
-	 * @param segment	segment
-	 * @return 			TRUE if host belongs to segment
+	 * @param host		host to get segment for
+	 * @return			segment number
 	 */
-	bool (*in_segment)(ha_kernel_t *this, host_t *host, u_int segment);
+	u_int (*get_segment)(ha_kernel_t *this, host_t *host);
+
+	/**
+	 * Get the segment a host/SPI is in, as used for CHILD_SA segmentation.
+	 *
+	 * @param host		host to get segment for
+	 * @param spi		SPI to include in hash
+	 * @return			segment number
+	 */
+	u_int (*get_segment_spi)(ha_kernel_t *this, host_t *host, u_int32_t spi);
+
+	/**
+	 * Get the segment an arbitrary integer is in.
+	 *
+	 * @param n			integer to segmentate
+	 */
+	u_int (*get_segment_int)(ha_kernel_t *this, int n);
 
 	/**
 	 * Activate a segment at kernel level for all cluster addresses.
@@ -63,8 +78,7 @@ struct ha_kernel_t {
  * Create a ha_kernel instance.
  *
  * @param count			total number of segments to use
- * @param active		bitmask of initially active segments
  */
 ha_kernel_t *ha_kernel_create(u_int count);
 
-#endif /* HA_KERNEL_ @}*/
+#endif /** HA_KERNEL_ @}*/

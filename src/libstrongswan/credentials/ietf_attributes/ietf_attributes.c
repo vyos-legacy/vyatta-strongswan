@@ -173,7 +173,7 @@ static char* get_string(private_ietf_attributes_t *this)
 					break;
 				}
 				pos += written;
-				len -= written; 
+				len -= written;
 			}
 
 			switch (attr->type)

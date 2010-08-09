@@ -36,22 +36,30 @@ struct private_ha_child_t {
 	 * tunnel securing sync messages
 	 */
 	ha_tunnel_t *tunnel;
+
+	/**
+	 * Segment handling
+	 */
+	ha_segments_t *segments;
+
+	/**
+	 * Kernel helper
+	 */
+	ha_kernel_t *kernel;
 };
 
-/**
- * Implementation of listener_t.child_keys
- */
-static bool child_keys(private_ha_child_t *this, ike_sa_t *ike_sa,
-					   child_sa_t *child_sa, diffie_hellman_t *dh,
-					   chunk_t nonce_i, chunk_t nonce_r)
+METHOD(listener_t, child_keys, bool,
+	private_ha_child_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	bool initiator, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
 {
 	ha_message_t *m;
 	chunk_t secret;
 	proposal_t *proposal;
 	u_int16_t alg, len;
-	linked_list_t *list;
+	linked_list_t *local_ts, *remote_ts;
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
+	u_int seg_i, seg_o;
 
 	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
@@ -61,6 +69,7 @@ static bool child_keys(private_ha_child_t *this, ike_sa_t *ike_sa,
 	m = ha_message_create(HA_CHILD_ADD);
 
 	m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+	m->add_attribute(m, HA_INITIATOR, (u_int8_t)initiator);
 	m->add_attribute(m, HA_INBOUND_SPI, child_sa->get_spi(child_sa, TRUE));
 	m->add_attribute(m, HA_OUTBOUND_SPI, child_sa->get_spi(child_sa, FALSE));
 	m->add_attribute(m, HA_INBOUND_CPI, child_sa->get_cpi(child_sa, TRUE));
@@ -90,31 +99,40 @@ static bool child_keys(private_ha_child_t *this, ike_sa_t *ike_sa,
 		chunk_clear(&secret);
 	}
 
-	list = child_sa->get_traffic_selectors(child_sa, TRUE);
-	enumerator = list->create_enumerator(list);
+	local_ts = child_sa->get_traffic_selectors(child_sa, TRUE);
+	enumerator = local_ts->create_enumerator(local_ts);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
 		m->add_attribute(m, HA_LOCAL_TS, ts);
 	}
 	enumerator->destroy(enumerator);
-	list = child_sa->get_traffic_selectors(child_sa, FALSE);
-	enumerator = list->create_enumerator(list);
+	remote_ts = child_sa->get_traffic_selectors(child_sa, FALSE);
+	enumerator = remote_ts->create_enumerator(remote_ts);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
 		m->add_attribute(m, HA_REMOTE_TS, ts);
 	}
 	enumerator->destroy(enumerator);
 
+	seg_i = this->kernel->get_segment_spi(this->kernel,
+			ike_sa->get_my_host(ike_sa), child_sa->get_spi(child_sa, TRUE));
+	seg_o = this->kernel->get_segment_spi(this->kernel,
+			ike_sa->get_other_host(ike_sa), child_sa->get_spi(child_sa, FALSE));
+	DBG1(DBG_CFG, "handling HA CHILD_SA %s{%d} %#R=== %#R "
+		"(segment in: %d%s, out: %d%s)", child_sa->get_name(child_sa),
+		child_sa->get_reqid(child_sa), local_ts, remote_ts,
+		seg_i, this->segments->is_active(this->segments, seg_i) ? "*" : "",
+		seg_o, this->segments->is_active(this->segments, seg_o) ? "*" : "");
+
 	this->socket->push(this->socket, m);
+	m->destroy(m);
 
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.child_state_change
- */
-static bool child_state_change(private_ha_child_t *this, ike_sa_t *ike_sa,
-							   child_sa_t *child_sa, child_sa_state_t state)
+METHOD(listener_t, child_state_change, bool,
+	private_ha_child_t *this, ike_sa_t *ike_sa,
+	child_sa_t *child_sa, child_sa_state_t state)
 {
 	if (!ike_sa ||
 		ike_sa->get_state(ike_sa) == IKE_PASSIVE ||
@@ -138,14 +156,13 @@ static bool child_state_change(private_ha_child_t *this, ike_sa_t *ike_sa,
 		m->add_attribute(m, HA_INBOUND_SPI,
 						 child_sa->get_spi(child_sa, TRUE));
 		this->socket->push(this->socket, m);
+		m->destroy(m);
 	}
 	return TRUE;
 }
 
-/**
- * Implementation of ha_child_t.destroy.
- */
-static void destroy(private_ha_child_t *this)
+METHOD(ha_child_t, destroy, void,
+	private_ha_child_t *this)
 {
 	free(this);
 }
@@ -153,17 +170,24 @@ static void destroy(private_ha_child_t *this)
 /**
  * See header
  */
-ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
+ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
+							ha_segments_t *segments, ha_kernel_t *kernel)
 {
-	private_ha_child_t *this = malloc_thing(private_ha_child_t);
+	private_ha_child_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.child_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, child_sa_t *child_sa, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r))child_keys;
-	this->public.listener.child_state_change = (bool(*)(listener_t*,ike_sa_t *ike_sa, child_sa_t *child_sa, child_sa_state_t state))child_state_change;
-	this->public.destroy = (void(*)(ha_child_t*))destroy;
-
-	this->socket = socket;
-	this->tunnel = tunnel;
+	INIT(this,
+		.public = {
+			.listener = {
+				.child_keys = _child_keys,
+				.child_state_change = _child_state_change,
+			},
+			.destroy = _destroy,
+		},
+		.socket = socket,
+		.tunnel = tunnel,
+		.segments = segments,
+		.kernel = kernel,
+	);
 
 	return &this->public;
 }

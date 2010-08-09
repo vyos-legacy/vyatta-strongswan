@@ -17,6 +17,8 @@
 
 #include "child_cfg.h"
 
+#include <stdint.h>
+
 #include <daemon.h>
 
 ENUM(action_names, ACTION_NONE, ACTION_RESTART,
@@ -111,6 +113,20 @@ struct private_child_cfg_t {
 	 */
 	u_int32_t inactivity;
 
+	/**
+	 * Reqid to install CHILD_SA with
+	 */
+	u_int32_t reqid;
+
+	/**
+	 * Optional mark to install inbound CHILD_SA with
+	 */
+	mark_t mark_in;
+
+	/**
+	 * Optional mark to install outbound CHILD_SA with
+	 */
+	mark_t mark_out;
 	/**
 	 * set up IPsec transport SA in MIPv6 proxy mode
 	 */
@@ -446,6 +462,22 @@ static u_int32_t get_inactivity(private_child_cfg_t *this)
 }
 
 /**
+ * Implementation of child_cfg_t.get_reqid.
+ */
+static u_int32_t get_reqid(private_child_cfg_t *this)
+{
+	return this->reqid;
+}
+
+/**
+ * Implementation of child_cfg_t.get_mark.
+ */
+static mark_t get_mark(private_child_cfg_t *this, bool inbound)
+{
+	return inbound ? this->mark_in : this->mark_out;
+}
+
+/**
  * Implementation of child_cfg_t.set_mipv6_options.
  */
 static void set_mipv6_options(private_child_cfg_t *this, bool proxy_mode,
@@ -506,7 +538,8 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
 							  ipsec_mode_t mode, action_t dpd_action,
 							  action_t close_action, bool ipcomp,
-							  u_int32_t inactivity)
+							  u_int32_t inactivity, u_int32_t reqid,
+							  mark_t *mark_in, mark_t *mark_out)
 {
 	private_child_cfg_t *this = malloc_thing(private_child_cfg_t);
 
@@ -526,6 +559,8 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->public.set_mipv6_options = (void (*) (child_cfg_t*,bool,bool))set_mipv6_options;
 	this->public.use_ipcomp = (bool (*) (child_cfg_t *))use_ipcomp;
 	this->public.get_inactivity = (u_int32_t (*) (child_cfg_t *))get_inactivity;
+	this->public.get_reqid = (u_int32_t (*) (child_cfg_t *))get_reqid;
+	this->public.get_mark = (mark_t (*) (child_cfg_t *,bool))get_mark;
 	this->public.use_proxy_mode = (bool (*) (child_cfg_t *))use_proxy_mode;
 	this->public.install_policy = (bool (*) (child_cfg_t *))install_policy;
 	this->public.get_ref = (child_cfg_t* (*) (child_cfg_t*))get_ref;
@@ -539,6 +574,27 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->close_action = close_action;
 	this->use_ipcomp = ipcomp;
 	this->inactivity = inactivity;
+	this->reqid = reqid;
+
+	if (mark_in)
+	{
+		this->mark_in = *mark_in;
+	}
+	else
+	{
+		this->mark_in.value = 0;
+		this->mark_in.mask  = 0;
+	}
+	if (mark_out)
+	{
+		this->mark_out = *mark_out;
+	}
+	else
+	{
+		this->mark_out.value = 0;
+		this->mark_out.mask  = 0;
+	}
+
 	this->proxy_mode = FALSE;
 	this->install_policy = TRUE;
 	this->refcount = 1;

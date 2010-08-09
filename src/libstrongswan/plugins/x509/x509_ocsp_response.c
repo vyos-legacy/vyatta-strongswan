@@ -167,7 +167,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 	{
 		hasher_t *hasher;
 		identification_t *id;
-		key_encoding_type_t type;
+		cred_encoding_type_t type;
 		chunk_t hash, fingerprint;
 
 		/* check serial first, is cheaper */
@@ -188,7 +188,7 @@ static cert_validation_t get_status(private_x509_ocsp_response_t *this,
 			switch (response->hashAlgorithm)
 			{
 				case OID_SHA1:
-					type = KEY_ID_PUBKEY_SHA1;
+					type = KEYID_PUBKEY_SHA1;
 					break;
 				default:
 					public->destroy(public);
@@ -698,7 +698,7 @@ static bool issued_by(private_x509_ocsp_response_t *this, certificate_t *issuer)
 
 		key = issuer->get_public_key(issuer);
 		if (!key ||
-			!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
+			!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fingerprint) ||
 			!chunk_equals(fingerprint,
 						  this->responderId->get_encoding(this->responderId)))
 		{
@@ -764,28 +764,18 @@ static bool get_validity(private_x509_ocsp_response_t *this, time_t *when,
 }
 
 /**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(certificate_t *this, certificate_t *that)
-{
-	time_t this_update, that_update, now = time(NULL);
-	bool new;
-
-	this->get_validity(this, &now, &this_update, NULL);
-	that->get_validity(that, &now, &that_update, NULL);
-	new = this_update > that_update;
-	DBG1(DBG_LIB, "  ocsp response from %T is %s - existing ocsp response "
-		 "from %T %s", &this_update, FALSE, new ? "newer" : "not newer",
-		 &that_update, FALSE, new ? "replaced" : "retained");
-	return new;
-}
-
-/**
  * Implementation of certificate_t.get_encoding.
  */
-static chunk_t get_encoding(private_x509_ocsp_response_t *this)
+static bool get_encoding(private_x509_ocsp_response_t *this,
+						 cred_encoding_type_t type, chunk_t *encoding)
 {
-	return chunk_clone(this->encoding);
+	if (type == CERT_ASN1_DER)
+	{
+		*encoding = chunk_clone(this->encoding);
+		return TRUE;
+	}
+	return lib->encoding->encode(lib->encoding, type, NULL, encoding,
+				CRED_PART_X509_OCSP_RES_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
 /**
@@ -808,7 +798,10 @@ static bool equals(private_x509_ocsp_response_t *this, certificate_t *other)
 	{	/* skip allocation if we have the same implementation */
 		return chunk_equals(this->encoding, ((private_x509_ocsp_response_t*)other)->encoding);
 	}
-	encoding = other->get_encoding(other);
+	if (!other->get_encoding(other, CERT_ASN1_DER, &encoding))
+	{
+		return FALSE;
+	}
 	equal = chunk_equals(this->encoding, encoding);
 	free(encoding.ptr);
 	return equal;
@@ -855,8 +848,7 @@ static x509_ocsp_response_t *load(chunk_t blob)
 	this->public.interface.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
 	this->public.interface.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.certificate.get_validity = (bool(*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
-	this->public.interface.certificate.get_encoding = (chunk_t(*)(certificate_t*))get_encoding;
+	this->public.interface.certificate.get_encoding = (bool(*)(certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
 	this->public.interface.certificate.equals = (bool(*)(certificate_t*, certificate_t *other))equals;
 	this->public.interface.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
 	this->public.interface.certificate.destroy = (void (*)(certificate_t *this))destroy;

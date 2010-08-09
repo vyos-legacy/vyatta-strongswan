@@ -110,13 +110,15 @@ struct listener_t {
 	 *
 	 * @param ike_sa	IKE_SA the child sa belongs to
 	 * @param child_sa	CHILD_SA this keymat is used for
+	 * @param initiator	initiator of the CREATE_CHILD_SA exchange
 	 * @param dh		diffie hellman shared secret
 	 * @param nonce_i	initiators nonce
 	 * @param nonce_r	responders nonce
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*child_keys)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
+					   bool initiator, diffie_hellman_t *dh,
+					   chunk_t nonce_i, chunk_t nonce_r);
 
 	/**
 	 * Hook called if an IKE_SA gets up or down.
@@ -173,6 +175,21 @@ struct listener_t {
 	 */
 	bool (*authorize)(listener_t *this, ike_sa_t *ike_sa,
 					  bool final, bool *success);
+
+	/**
+	 * CHILD_SA traffic selector narrowing hook.
+	 *
+	 * This hook is invoked for each CHILD_SA and allows plugins to modify
+	 * the traffic selector list negotiated for this CHILD_SA.
+	 *
+	 * @param ike_sa	IKE_SA the created CHILD_SA is created in
+	 * @param child_sa	CHILD_SA set up with these traffic selectors
+	 * @param type		type of hook getting invoked
+	 * @param local		list of local traffic selectors to narrow
+	 * @param remote	list of remote traffic selectors to narrow
+	 */
+	bool (*narrow)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+				narrow_hook_t type, linked_list_t *local, linked_list_t *remote);
 };
 
 #endif /** LISTENER_H_ @}*/

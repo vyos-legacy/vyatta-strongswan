@@ -1,3 +1,52 @@
+strongswan-4.4.1
+----------------
+
+- Support of xfrm marks in IPsec SAs and IPsec policies introduced
+  with the Linux 2.6.34 kernel. For details see the example scenarios
+  ikev2/nat-two-rw-mark, ikev2/rw-nat-mark-in-out and ikev2/net2net-psk-dscp.
+
+- The PLUTO_MARK_IN and PLUTO_ESP_ENC environment variables can be used
+  in a user-specific updown script to set marks on inbound ESP or
+  ESP_IN_UDP packets.
+
+- The openssl plugin now supports X.509 certificate and CRL functions.
+
+- OCSP/CRL checking in IKEv2 has been moved to the revocation plugin, enabled
+  by default. Plase update manual load directives in strongswan.conf.
+
+- RFC3779 ipAddrBlock constraint checking has been moved to the addrblock
+  plugin, disabled by default. Enable it and update manual load directives
+  in strongswan.conf, if required.
+
+- The pki utility supports CRL generation using the --signcrl command.
+
+- The ipsec pki --self, --issue and --req commands now support output in
+  PEM format using the --outform pem option.
+
+- The major refactoring of the IKEv1 Mode Config functionality now allows
+  the transport and handling of any Mode Config attribute.
+
+- The RADIUS proxy plugin eap-radius now supports multiple servers. Configured
+  servers are chosen randomly, with the option to prefer a specific server.
+  Non-responding servers are degraded by the selection process.
+
+- The ipsec pool tool manages arbitrary configuration attributes stored
+  in an SQL database. ipsec pool --help gives the details.
+
+- The new eap-simaka-sql plugin acts as a backend for EAP-SIM and EAP-AKA,
+  reading triplets/quintuplets from an SQL database.
+
+- The High Availability plugin now supports a HA enabled in-memory address
+  pool and Node reintegration without IKE_SA rekeying. The latter allows
+  clients without IKE_SA rekeying support to keep connected during
+  reintegration. Additionally, many other issues have been fixed in the ha
+  plugin.
+
+- Fixed a potential remote code execution vulnerability resulting from
+  the misuse of snprintf(). The vulnerability is exploitable by
+  unauthenticated users.
+
+
 strongswan-4.4.0
 ----------------
 

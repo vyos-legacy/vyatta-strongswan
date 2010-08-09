@@ -260,7 +260,7 @@ static linked_list_t* collect_rw_ca_candidates(struct msg_digest *md)
 				{
 					new_entry = FALSE;
 					break;
-				}					
+				}
 			}
 			enumerator->destroy(enumerator);
 
@@ -702,7 +702,7 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				   struct payload_digest *p)
 {
 	struct isakmp_delete *d = &(p->payload.delete);
-	identification_t *this_id, *that_id;
+	identification_t *this_id = NULL, *that_id = NULL;
 	ip_address peer_addr;
 	size_t sizespi;
 	int i;
@@ -1568,7 +1568,7 @@ static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 
 	s->tried_cnt++;
 	scheme = oakley_to_signature_scheme(s->st->st_oakley.auth);
-	pub_key->get_fingerprint(pub_key, KEY_ID_PUBKEY_INFO_SHA1, &keyid);
+	pub_key->get_fingerprint(pub_key, KEYID_PUBKEY_INFO_SHA1, &keyid);
 
 	if (pub_key->verify(pub_key, scheme, s->hash, s->sig))
 	{
@@ -1944,25 +1944,32 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	bool has_client = c->spd.this.has_client || c->spd.that.has_client ||
 					  c->spd.this.protocol || c->spd.that.protocol ||
 					  c->spd.this.port || c->spd.that.port;
-
 	bool send_natoa = FALSE;
 	u_int8_t np = ISAKMP_NEXT_NONE;
+	connection_t *ph1_c = isakmp_sa->st_connection;
 
 	if (c->spd.this.modecfg && !c->spd.this.has_client &&
-		isanyaddr(&c->spd.this.host_srcip))
+		c->spd.this.host_srcip->is_anyaddr(c->spd.this.host_srcip))
 	{
-		connection_t *ph1_c = isakmp_sa->st_connection;
+		host_t * ph1_srcip = ph1_c->spd.this.host_srcip;
 
-		if (ph1_c->spd.this.modecfg && !isanyaddr(&ph1_c->spd.this.host_srcip))
+		if (ph1_c->spd.this.modecfg && !ph1_srcip->is_anyaddr(ph1_srcip))
 		{
-			char srcip[ADDRTOT_BUF];
-
-			c->spd.this.host_srcip = ph1_c->spd.this.host_srcip;
+			c->spd.this.host_srcip->destroy(c->spd.this.host_srcip);
+			c->spd.this.host_srcip = ph1_srcip->clone(ph1_srcip);
 			c->spd.this.client = ph1_c->spd.this.client;
 			c->spd.this.has_client = TRUE;
-			addrtot(&c->spd.this.host_srcip, 0, srcip, sizeof(srcip));
-			plog("inheriting virtual IP source address %s from ModeCfg", srcip);
+			plog("inheriting virtual IP source address %H from ModeCfg", ph1_srcip);
 		}
+	}
+
+	if (ph1_c->policy & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK) &&
+		ph1_c->xauth_identity && !c->xauth_identity)
+	{
+		DBG(DBG_CONTROL,
+			DBG_log("inheriting XAUTH identity %Y", ph1_c->xauth_identity)
+		)
+		c->xauth_identity = ph1_c->xauth_identity->clone(ph1_c->xauth_identity);
 	}
 
 	st->st_whack_sock = whack_sock;
@@ -3535,7 +3542,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	struct state *const st = md->st;
 	pb_stream *const keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
 	pb_stream id_pbs;   /* ID Payload; also used for hash calculation */
-	
+
 	connection_t *c = st->st_connection;
 	certpolicy_t cert_policy = c->spd.this.sendcert;
 	cert_t *mycert = c->spd.this.cert;
@@ -3638,7 +3645,7 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	}
 	if (send_cert)
 	{
-		bool success;
+		bool success = FALSE;
 		chunk_t cert_encoding;
 		pb_stream cert_pbs;
 
@@ -3650,9 +3657,12 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		{
 			return STF_INTERNAL_ERROR;
 		}
-		cert_encoding = mycert->cert->get_encoding(mycert->cert);
-		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
-		free(cert_encoding.ptr);
+		if (mycert->cert->get_encoding(mycert->cert, CERT_ASN1_DER,
+									   &cert_encoding))
+		{
+			success = out_chunk(cert_encoding, &cert_pbs, "CERT");
+			free(cert_encoding.ptr);
+		}
 		if (!success)
 		{
 			return STF_INTERNAL_ERROR;
@@ -4079,7 +4089,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 	}
 	if (send_cert)
 	{
-		bool success;
+		bool success = FALSE;
 		chunk_t cert_encoding;
 		pb_stream cert_pbs;
 		struct isakmp_cert cert_hd;
@@ -4091,9 +4101,12 @@ main_inI3_outR3_tail(struct msg_digest *md
 		{
 			return STF_INTERNAL_ERROR;
 		}
-		cert_encoding = mycert->cert->get_encoding(mycert->cert);
-		success = out_chunk(cert_encoding, &cert_pbs, "CERT");
-		free(cert_encoding.ptr);
+		if (mycert->cert->get_encoding(mycert->cert, CERT_ASN1_DER,
+									   &cert_encoding))
+		{
+			success = out_chunk(cert_encoding, &cert_pbs, "CERT");
+			free(cert_encoding.ptr);
+		}
 		if (!success)
 		{
 			return STF_INTERNAL_ERROR;
@@ -4888,22 +4901,31 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					/* Plain Road Warrior:
 					 * instantiate, carrying over authenticated peer ID
 					 */
+					host_t *vip = c->spd.that.host_srcip;
+
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
 								, his_net, c->spd.that.id);
 
-					/* inherit any virtual IP assigned by a Mode Config exchange */ 
+					/* inherit any virtual IP assigned by a Mode Config exchange */
 					if (p->spd.that.modecfg && c->spd.that.modecfg &&
-						subnetisaddr(his_net, &c->spd.that.host_srcip))
+						subnetisaddr(his_net, (ip_address*)vip->get_sockaddr(vip)))
 					{
-						char srcip[ADDRTOT_BUF];
-
 						DBG(DBG_CONTROL,
-							addrtot(&c->spd.that.host_srcip, 0, srcip, sizeof(srcip));
-							DBG_log("inheriting virtual IP source address %s from ModeCfg", srcip)
+							DBG_log("inheriting virtual IP source address %H from ModeCfg", vip)
 						)
-						p->spd.that.host_srcip = c->spd.that.host_srcip;
+						p->spd.that.host_srcip->destroy(p->spd.that.host_srcip);
+						p->spd.that.host_srcip = vip->clone(vip);
 						p->spd.that.client = c->spd.that.client;
 						p->spd.that.has_client = TRUE;
+					}
+
+					if (c->policy & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK) &&
+						c->xauth_identity && !p->xauth_identity)
+					{
+						DBG(DBG_CONTROL,
+							DBG_log("inheriting XAUTH identity %Y", c->xauth_identity)
+						)
+						p->xauth_identity = c->xauth_identity->clone(c->xauth_identity);
 					}
 				}
 			}

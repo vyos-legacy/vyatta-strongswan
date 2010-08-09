@@ -26,7 +26,7 @@ crypto/diffie_hellman.c crypto/diffie_hellman.h \
 crypto/transform.c crypto/transform.h \
 credentials/credential_factory.c credentials/credential_factory.h \
 credentials/builder.c credentials/builder.h \
-credentials/keys/key_encoding.c credentials/keys/key_encoding.h \
+credentials/cred_encoding.c credentials/cred_encoding.h \
 credentials/keys/private_key.c credentials/keys/private_key.h \
 credentials/keys/public_key.c credentials/keys/public_key.h \
 credentials/keys/shared_key.c credentials/keys/shared_key.h \
@@ -39,6 +39,12 @@ credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_response.h credentials/certificates/ocsp_response.c \
 credentials/certificates/pgp_certificate.h \
 credentials/ietf_attributes/ietf_attributes.c credentials/ietf_attributes/ietf_attributes.h \
+credentials/credential_manager.c credentials/credential_manager.h \
+credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
+credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
+credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
+credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
+credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 selectors/traffic_selector.c selectors/traffic_selector.h \
@@ -68,7 +74,7 @@ LOCAL_SRC_FILES += $(call add_plugin, des)
 LOCAL_SRC_FILES += $(call add_plugin, fips-prf)
 
 LOCAL_SRC_FILES += $(call add_plugin, gmp)
-ifneq ($(call plugin_enabled, gmp)),)
+ifneq ($(call plugin_enabled, gmp),)
 LOCAL_C_INCLUDES += $(libgmp_PATH)
 LOCAL_SHARED_LIBRARIES += libgmp
 endif
@@ -80,7 +86,7 @@ LOCAL_SRC_FILES += $(call add_plugin, md4)
 LOCAL_SRC_FILES += $(call add_plugin, md5)
 
 LOCAL_SRC_FILES += $(call add_plugin, openssl)
-ifneq ($(call plugin_enabled, openssl)),)
+ifneq ($(call plugin_enabled, openssl),)
 LOCAL_C_INCLUDES += external/openssl/include
 LOCAL_SHARED_LIBRARIES += libcrypto
 endif

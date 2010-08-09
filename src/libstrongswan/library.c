@@ -18,12 +18,13 @@
 
 #include <stdlib.h>
 
-#include "debug.h"
-#include "threading/thread.h"
-#include "utils/identification.h"
-#include "utils/host.h"
+#include <debug.h>
+#include <threading/thread.h>
+#include <utils/identification.h>
+#include <utils/host.h>
+#include <selectors/traffic_selector.h>
 #ifdef LEAK_DETECTIVE
-#include "utils/leak_detective.h"
+#include <utils/leak_detective.h>
 #endif
 
 #define CHECKSUM_LIBRARY IPSEC_DIR"/libchecksum.so"
@@ -59,9 +60,14 @@ library_t *lib;
 void library_deinit()
 {
 	private_library_t *this = (private_library_t*)lib;
+	bool detailed;
+
+	detailed = lib->settings->get_bool(lib->settings,
+								"libstrongswan.leak_detective.detailed", TRUE);
 
 	this->public.plugins->destroy(this->public.plugins);
 	this->public.settings->destroy(this->public.settings);
+	this->public.credmgr->destroy(this->public.credmgr);
 	this->public.creds->destroy(this->public.creds);
 	this->public.encoding->destroy(this->public.encoding);
 	this->public.crypto->destroy(this->public.crypto);
@@ -76,6 +82,7 @@ void library_deinit()
 #ifdef LEAK_DETECTIVE
 	if (this->detective)
 	{
+		this->detective->report(this->detective, detailed);
 		this->detective->destroy(this->detective);
 	}
 #endif /* LEAK_DETECTIVE */
@@ -124,11 +131,14 @@ bool library_init(char *settings)
 					 PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'Y', identification_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'R', traffic_selector_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 
 	this->public.settings = settings_create(settings);
 	this->public.crypto = crypto_factory_create();
 	this->public.creds = credential_factory_create();
-	this->public.encoding = key_encoding_create();
+	this->public.credmgr = credential_manager_create();
+	this->public.encoding = cred_encoding_create();
 	this->public.fetcher = fetcher_manager_create();
 	this->public.db = database_factory_create();
 	this->public.plugins = plugin_loader_create();
