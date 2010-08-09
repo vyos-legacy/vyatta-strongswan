@@ -366,7 +366,17 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 				id_type = ID_DER_ASN1_DN;
 				break;
 			case GN_OBJ_IP_ADDRESS:
-				id_type = ID_IPV4_ADDR;
+				switch (object.len)
+				{
+					case 4:
+						id_type = ID_IPV4_ADDR;
+						break;
+					case 16:
+						id_type = ID_IPV6_ADDR;
+						break;
+					default:
+						break;
+				}
 				break;
 			case GN_OBJ_OTHER_NAME:
 				if (!parse_otherName(object, parser->get_level(parser)+1))
@@ -1209,28 +1219,18 @@ static bool get_validity(private_x509_cert_t *this, time_t *when,
 }
 
 /**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(certificate_t *this, certificate_t *that)
-{
-	time_t this_update, that_update, now = time(NULL);
-	bool new;
-
-	this->get_validity(this, &now, &this_update, NULL);
-	that->get_validity(that, &now, &that_update, NULL);
-	new = this_update > that_update;
-	DBG1(DBG_LIB, "  certificate from %T is %s - existing certificate "
-		 "from %T %s", &this_update, FALSE, new ? "newer":"not newer",
-		 &that_update, FALSE, new ? "replaced":"retained");
-	return new;
-}
-
-/**
  * Implementation of certificate_t.get_encoding.
  */
-static chunk_t get_encoding(private_x509_cert_t *this)
+static bool get_encoding(private_x509_cert_t *this, cred_encoding_type_t type,
+						 chunk_t *encoding)
 {
-	return chunk_clone(this->encoding);
+	if (type == CERT_ASN1_DER)
+	{
+		*encoding = chunk_clone(this->encoding);
+		return TRUE;
+	}
+	return lib->encoding->encode(lib->encoding, type, NULL, encoding,
+						CRED_PART_X509_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
 /**
@@ -1253,7 +1253,10 @@ static bool equals(private_x509_cert_t *this, certificate_t *other)
 	{	/* skip allocation if we have the same implementation */
 		return chunk_equals(this->encoding, ((private_x509_cert_t*)other)->encoding);
 	}
-	encoding = other->get_encoding(other);
+	if (!other->get_encoding(other, CERT_ASN1_DER, &encoding))
+	{
+		return FALSE;
+	}
 	equal = chunk_equals(this->encoding, encoding);
 	free(encoding.ptr);
 	return equal;
@@ -1281,7 +1284,7 @@ static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this)
 		chunk_t fingerprint;
 
 		if (this->public_key->get_fingerprint(this->public_key,
-					 				KEY_ID_PUBKEY_SHA1, &fingerprint))
+					 				KEYID_PUBKEY_SHA1, &fingerprint))
 		{
 			return fingerprint;
 		}
@@ -1383,8 +1386,7 @@ static private_x509_cert_t* create_empty(void)
 	this->public.interface.interface.issued_by = (bool (*) (certificate_t*, certificate_t*))issued_by;
 	this->public.interface.interface.get_public_key = (public_key_t* (*) (certificate_t*))get_public_key;
 	this->public.interface.interface.get_validity = (bool (*) (certificate_t*, time_t*, time_t*, time_t*))get_validity;
-	this->public.interface.interface.is_newer = (bool (*) (certificate_t*,certificate_t*))is_newer;
-	this->public.interface.interface.get_encoding = (chunk_t (*) (certificate_t*))get_encoding;
+	this->public.interface.interface.get_encoding = (bool (*) (certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
 	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
 	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;
 	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
@@ -1536,7 +1538,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	scheme = signature_scheme_from_oid(cert->algorithm);
 
 	if (!cert->public_key->get_encoding(cert->public_key,
-										KEY_PUB_SPKI_ASN1_DER, &key_info))
+										PUBKEY_SPKI_ASN1_DER, &key_info))
 	{
 		return FALSE;
 	}
@@ -1650,7 +1652,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		chunk_t keyid;
 
 		if (cert->public_key->get_fingerprint(cert->public_key,
-											  KEY_ID_PUBKEY_SHA1, &keyid))
+											  KEYID_PUBKEY_SHA1, &keyid))
 		{
 			subjectKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
 									asn1_build_known_oid(OID_SUBJECT_KEY_ID),
@@ -1664,7 +1666,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	{
 		chunk_t keyid;
 
-		if (sign_key->get_fingerprint(sign_key, KEY_ID_PUBKEY_SHA1, &keyid))
+		if (sign_key->get_fingerprint(sign_key, KEYID_PUBKEY_SHA1, &keyid))
 		{
 			authKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),

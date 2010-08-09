@@ -26,6 +26,7 @@
  */
 static int self()
 {
+	cred_encoding_type_t form = CERT_ASN1_DER;
 	key_type_t type = KEY_RSA;
 	hash_algorithm_t digest = HASH_SHA1;
 	certificate_t *cert = NULL;
@@ -34,7 +35,7 @@ static int self()
 	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL;
 	identification_t *id = NULL;
 	linked_list_t *san, *ocsp;
-	int lifetime = 1080;
+	int lifetime = 1095;
 	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
@@ -99,6 +100,26 @@ static int self()
 				continue;
 			case 'p':
 				pathlen = atoi(arg);
+				continue;
+			case 'e':
+				if (streq(arg, "serverAuth"))
+				{
+					flags |= X509_SERVER_AUTH;
+				}
+				else if (streq(arg, "clientAuth"))
+				{
+					flags |= X509_CLIENT_AUTH;
+				}
+				else if (streq(arg, "ocspSigning"))
+				{
+					flags |= X509_OCSP_SIGNER;
+				}
+				continue;
+			case 'f':
+				if (!get_form(arg, &form, CRED_CERTIFICATE))
+				{
+					return command_usage("invalid output format");
+				}
 				continue;
 			case 'o':
 				ocsp->insert_last(ocsp, arg);
@@ -179,8 +200,7 @@ static int self()
 		error = "generating certificate failed";
 		goto end;
 	}
-	encoding = cert->get_encoding(cert);
-	if (!encoding.ptr)
+	if (!cert->get_encoding(cert, form, &encoding))
 	{
 		error = "encoding certificate failed";
 		goto end;
@@ -225,19 +245,22 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512]"},
+		 "[--flag serverAuth|clientAuth|ocspSigning]+",
+		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "private key input file, default: stdin"},
 			{"type",	't', 1, "type of input key, default: rsa"},
 			{"dn",		'd', 1, "subject and issuer distinguished name"},
 			{"san",		'a', 1, "subjectAltName to include in certificate"},
-			{"lifetime",'l', 1, "days the certificate is valid, default: 1080"},
+			{"lifetime",'l', 1, "days the certificate is valid, default: 1095"},
 			{"serial",	's', 1, "serial number in hex, default: random"},
 			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
 			{"pathlen",	'p', 1, "set path length constraint"},
+			{"flag",	'e', 1, "include extendedKeyUsage flag"},
 			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",	'f', 1, "encoding of generated cert, default: der"},
 		}
 	});
 }

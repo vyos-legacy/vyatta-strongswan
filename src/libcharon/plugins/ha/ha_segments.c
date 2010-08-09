@@ -22,8 +22,8 @@
 #include <utils/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
-#define HEARTBEAT_DELAY 1000
-#define HEARTBEAT_TIMEOUT 2100
+#define DEFAULT_HEARTBEAT_DELAY 1000
+#define DEFAULT_HEARTBEAT_TIMEOUT 2100
 
 typedef struct private_ha_segments_t private_ha_segments_t;
 
@@ -81,6 +81,16 @@ struct private_ha_segments_t {
 	 * Node number
 	 */
 	u_int node;
+
+	/**
+	 * Interval we send hearbeats
+	 */
+	int heartbeat_delay;
+
+	/**
+	 * Timeout for heartbeats received from other node
+	 */
+	int heartbeat_timeout;
 };
 
 /**
@@ -168,8 +178,8 @@ static void enable_disable(private_ha_segments_t *this, u_int segment,
 			{
 				continue;
 			}
-			if (this->kernel->in_segment(this->kernel,
-									ike_sa->get_other_host(ike_sa), segment))
+			if (this->kernel->get_segment(this->kernel,
+									ike_sa->get_other_host(ike_sa)) == segment)
 			{
 				ike_sa->set_state(ike_sa, new);
 			}
@@ -183,6 +193,7 @@ static void enable_disable(private_ha_segments_t *this, u_int segment,
 		message = ha_message_create(type);
 		message->add_attribute(message, HA_SEGMENT, segment);
 		this->socket->push(this->socket, message);
+		message->destroy(message);
 	}
 }
 
@@ -209,132 +220,34 @@ static void enable_disable_all(private_ha_segments_t *this, u_int segment,
 	this->mutex->unlock(this->mutex);
 }
 
-/**
- * Implementation of ha_segments_t.activate
- */
-static void activate(private_ha_segments_t *this, u_int segment, bool notify)
+METHOD(ha_segments_t, activate, void,
+	private_ha_segments_t *this, u_int segment, bool notify)
 {
 	enable_disable_all(this, segment, TRUE, notify);
 }
 
-/**
- * Implementation of ha_segments_t.deactivate
- */
-static void deactivate(private_ha_segments_t *this, u_int segment, bool notify)
+METHOD(ha_segments_t, deactivate, void,
+	private_ha_segments_t *this, u_int segment, bool notify)
 {
 	enable_disable_all(this, segment, FALSE, notify);
 }
 
-/**
- * Rekey all children of an IKE_SA
- */
-static status_t rekey_children(ike_sa_t *ike_sa)
-{
-	iterator_t *iterator;
-	child_sa_t *child_sa;
-	status_t status = SUCCESS;
-
-	iterator = ike_sa->create_child_sa_iterator(ike_sa);
-	while (iterator->iterate(iterator, (void**)&child_sa))
-	{
-		DBG1(DBG_CFG, "resyncing CHILD_SA");
-		status = ike_sa->rekey_child_sa(ike_sa, child_sa->get_protocol(child_sa),
-										child_sa->get_spi(child_sa, TRUE));
-		if (status == DESTROY_ME)
-		{
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	return status;
-}
-
-/**
- * Implementation of ha_segments_t.resync
- */
-static void resync(private_ha_segments_t *this, u_int segment)
-{
-	ike_sa_t *ike_sa;
-	enumerator_t *enumerator;
-	linked_list_t *list;
-	ike_sa_id_t *id;
-
-	list = linked_list_create();
-	this->mutex->lock(this->mutex);
-
-	if (segment > 0 && segment <= this->count)
-	{
-		DBG1(DBG_CFG, "resyncing HA segment %d", segment);
-
-		/* we do the actual rekeying in a seperate loop to avoid rekeying
-		 * an SA twice. */
-		enumerator = charon->ike_sa_manager->create_enumerator(
-													charon->ike_sa_manager);
-		while (enumerator->enumerate(enumerator, &ike_sa))
-		{
-			if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
-				this->kernel->in_segment(this->kernel,
-									ike_sa->get_other_host(ike_sa), segment))
-			{
-				id = ike_sa->get_id(ike_sa);
-				list->insert_last(list, id->clone(id));
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-	this->mutex->unlock(this->mutex);
-
-	while (list->remove_last(list, (void**)&id) == SUCCESS)
-	{
-		ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
-		id->destroy(id);
-		if (ike_sa)
-		{
-			DBG1(DBG_CFG, "resyncing IKE_SA");
-			if (ike_sa->rekey(ike_sa) != DESTROY_ME)
-			{
-				if (rekey_children(ike_sa) != DESTROY_ME)
-				{
-					charon->ike_sa_manager->checkin(
-										charon->ike_sa_manager, ike_sa);
-					continue;
-				}
-			}
-			charon->ike_sa_manager->checkin_and_destroy(
-										charon->ike_sa_manager, ike_sa);
-		}
-	}
-	list->destroy(list);
-}
-
-/**
- * Implementation of listener_t.alert
- */
-static bool alert_hook(private_ha_segments_t *this, ike_sa_t *ike_sa,
-					   alert_t alert, va_list args)
+METHOD(listener_t, alert_hook, bool,
+	private_ha_segments_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
 {
 	if (alert == ALERT_SHUTDOWN_SIGNAL)
 	{
-		deactivate(this, 0, TRUE);
+		if (this->job)
+		{
+			DBG1(DBG_CFG, "HA heartbeat active, dropping all segments");
+			deactivate(this, 0, TRUE);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "no HA heartbeat active, closing IKE_SAs");
+		}
 	}
 	return TRUE;
-}
-
-/**
- * Request a resync of all segments
- */
-static job_requeue_t request_resync(private_ha_segments_t *this)
-{
-	ha_message_t *message;
-	int i;
-
-	message = ha_message_create(HA_RESYNC);
-	for (i = 1; i <= this->count; i++)
-	{
-		message->add_attribute(message, HA_SEGMENT, i);
-	}
-	this->socket->push(this->socket, message);
-	return JOB_REQUEUE_NONE;
 }
 
 /**
@@ -349,7 +262,7 @@ static job_requeue_t watchdog(private_ha_segments_t *this)
 	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	timeout = this->condvar->timed_wait(this->condvar, this->mutex,
-										HEARTBEAT_TIMEOUT);
+										this->heartbeat_timeout);
 	pthread_setcancelstate(oldstate, NULL);
 	pthread_cleanup_pop(TRUE);
 	if (timeout)
@@ -373,10 +286,8 @@ static void start_watchdog(private_ha_segments_t *this)
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);
 }
 
-/**
- * Implementation of ha_segments_t.handle_status
- */
-static void handle_status(private_ha_segments_t *this, segment_mask_t mask)
+METHOD(ha_segments_t, handle_status, void,
+	private_ha_segments_t *this, segment_mask_t mask)
 {
 	segment_mask_t missing;
 	int i;
@@ -431,20 +342,25 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	}
 
 	this->socket->push(this->socket, message);
+	message->destroy(message);
 
 	/* schedule next invocation */
 	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
 									callback_job_create((callback_job_cb_t)
 										send_status, this, NULL, NULL),
-									HEARTBEAT_DELAY);
+									this->heartbeat_delay);
 
 	return JOB_REQUEUE_NONE;
 }
 
-/**
- * Implementation of ha_segments_t.destroy.
- */
-static void destroy(private_ha_segments_t *this)
+METHOD(ha_segments_t, is_active, bool,
+	private_ha_segments_t *this, u_int segment)
+{
+	return (this->active & SEGMENTS_BIT(segment)) != 0;
+}
+
+METHOD(ha_segments_t, destroy, void,
+	private_ha_segments_t *this)
 {
 	if (this->job)
 	{
@@ -460,42 +376,38 @@ static void destroy(private_ha_segments_t *this)
  */
 ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 								  ha_tunnel_t *tunnel, u_int count, u_int node,
-								  bool monitor, bool sync)
+								  bool monitor)
 {
-	private_ha_segments_t *this = malloc_thing(private_ha_segments_t);
+	private_ha_segments_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.alert = (bool(*)(listener_t*, ike_sa_t *, alert_t, va_list))alert_hook;
-	this->public.activate = (void(*)(ha_segments_t*, u_int segment,bool))activate;
-	this->public.deactivate = (void(*)(ha_segments_t*, u_int segment,bool))deactivate;
-	this->public.resync = (void(*)(ha_segments_t*, u_int segment))resync;
-	this->public.handle_status = (void(*)(ha_segments_t*, segment_mask_t mask))handle_status;
-	this->public.destroy = (void(*)(ha_segments_t*))destroy;
-
-	this->socket = socket;
-	this->tunnel = tunnel;
-	this->kernel = kernel;
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
-	this->count = count;
-	this->node = node;
-	this->job = NULL;
-
-	/* initially all segments are deactivated */
-	this->active = 0;
+	INIT(this,
+		.public = {
+			.listener.alert = _alert_hook,
+			.activate = _activate,
+			.deactivate = _deactivate,
+			.handle_status = _handle_status,
+			.is_active = _is_active,
+			.destroy = _destroy,
+		},
+		.socket = socket,
+		.tunnel = tunnel,
+		.kernel = kernel,
+		.count = count,
+		.node = node,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.heartbeat_delay = lib->settings->get_int(lib->settings,
+			"charon.plugins.ha.heartbeat_delay", DEFAULT_HEARTBEAT_DELAY),
+		.heartbeat_timeout = lib->settings->get_int(lib->settings,
+			"charon.plugins.ha.heartbeat_timeout", DEFAULT_HEARTBEAT_TIMEOUT),
+	);
 
 	if (monitor)
 	{
+		DBG1(DBG_CFG, "starting HA heartbeat, delay %dms, timeout %dms",
+			 this->heartbeat_delay, this->heartbeat_timeout);
 		send_status(this);
 		start_watchdog(this);
-	}
-
-	if (sync)
-	{
-		/* request a resync as soon as we are up */
-		charon->processor->queue_job(charon->processor, (job_t*)
-						callback_job_create((callback_job_cb_t)request_resync,
-											this, NULL, NULL));
 	}
 
 	return &this->public;

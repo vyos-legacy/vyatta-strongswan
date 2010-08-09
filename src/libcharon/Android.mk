@@ -12,7 +12,6 @@ config/child_cfg.c config/child_cfg.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
 config/proposal.c config/proposal.h \
-config/auth_cfg.c config/auth_cfg.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \
@@ -95,17 +94,13 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
-sa/tasks/task.c sa/tasks/task.h \
-credentials/credential_manager.c credentials/credential_manager.h \
-credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
-credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
-credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
-credentials/credential_set.h
+sa/tasks/task.c sa/tasks/task.h
 
 # adding the plugin source files
 
 LOCAL_SRC_FILES += $(call add_plugin, android)
-ifneq ($(call plugin_enabled, android)),)
+ifneq ($(call plugin_enabled, android),)
+LOCAL_C_INCLUDES += frameworks/base/cmds/keystore
 LOCAL_SHARED_LIBRARIES += libcutils
 endif
 
@@ -114,7 +109,7 @@ LOCAL_SRC_FILES += $(call add_plugin, attr)
 LOCAL_SRC_FILES += $(call add_plugin, eap-aka)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-aka-3gpp2)
-ifneq ($(call plugin_enabled, eap-aka-3gpp2)),)
+ifneq ($(call plugin_enabled, eap-aka-3gpp2),)
 LOCAL_C_INCLUDES += $(libgmp_PATH)
 LOCAL_SHARED_LIBRARIES += libgmp
 endif
@@ -128,6 +123,8 @@ LOCAL_SRC_FILES += $(call add_plugin, eap-md5)
 LOCAL_SRC_FILES += $(call add_plugin, eap-mschapv2)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-sim)
+
+LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-sql)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-simaka-pseudonym)
 
@@ -145,6 +142,8 @@ LOCAL_SRC_FILES += $(addprefix ../libsimaka/, \
 endif
 
 LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
+
+LOCAL_SRC_FILES += $(call add_plugin, kernel-pfkey)
 
 LOCAL_SRC_FILES += $(call add_plugin, load-tester)
 

@@ -17,6 +17,10 @@
 
 #include <time.h>
 
+#ifdef HAVE_MALLINFO
+#include <malloc.h>
+#endif /* HAVE_MALLINFO */
+
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
@@ -53,6 +57,33 @@ struct private_stroke_list_t {
 	 */
 	stroke_attribute_t *attribute;
 };
+
+/**
+ * Log tasks of a specific queue to out
+ */
+static void log_task_q(FILE *out, ike_sa_t *ike_sa, task_queue_t q, char *name)
+{
+	enumerator_t *enumerator;
+	bool has = FALSE;
+	task_t *task;
+
+	enumerator = ike_sa->create_task_enumerator(ike_sa, q);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (!has)
+		{
+			fprintf(out, "%12s[%d]: Tasks %s: ", ike_sa->get_name(ike_sa),
+					ike_sa->get_unique_id(ike_sa), name);
+			has = TRUE;
+		}
+		fprintf(out, "%N ", task_type_names, task->get_type(task));
+	}
+	enumerator->destroy(enumerator);
+	if (has)
+	{
+		fprintf(out, "\n");
+	}
+}
 
 /**
  * log an IKE_SA to out
@@ -140,6 +171,10 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 					buf+4);
 		}
+
+		log_task_q(out, ike_sa, TASK_QUEUE_QUEUED, "queued");
+		log_task_q(out, ike_sa, TASK_QUEUE_ACTIVE, "active");
+		log_task_q(out, ike_sa, TASK_QUEUE_PASSIVE, "passive");
 	}
 }
 
@@ -342,7 +377,7 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 		rules = auth->create_enumerator(auth);
 		while (rules->enumerate(rules, &rule, &id))
 		{
-			if (rule == AUTH_RULE_AC_GROUP)
+			if (rule == AUTH_RULE_GROUP)
 			{
 				fprintf(out, "%12s:    group: %Y\n", name, id);
 			}
@@ -373,12 +408,19 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		u_int32_t dpd;
 		time_t since, now;
 		u_int size, online, offline;
-
 		now = time_monotonic(NULL);
 		since = time(NULL) - (now - this->uptime);
 
 		fprintf(out, "Status of IKEv2 charon daemon (strongSwan "VERSION"):\n");
 		fprintf(out, "  uptime: %V, since %T\n", &now, &this->uptime, &since, FALSE);
+#ifdef HAVE_MALLINFO
+		{
+			struct mallinfo mi = mallinfo();
+
+			fprintf(out, "  malloc: sbrk %d, mmap %d, used %d, free %d\n",
+				    mi.arena, mi.hblkhd, mi.uordblks, mi.fordblks);
+		}
+#endif /* HAVE_MALLINFO */
 		fprintf(out, "  worker threads: %d idle of %d,",
 				charon->processor->get_idle_threads(charon->processor),
 				charon->processor->get_total_threads(charon->processor));
@@ -534,9 +576,8 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 static linked_list_t* create_unique_cert_list(certificate_type_t type)
 {
 	linked_list_t *list = linked_list_create();
-	enumerator_t *enumerator = charon->credentials->create_cert_enumerator(
-									charon->credentials, type, KEY_ANY,
-									NULL, FALSE);
+	enumerator_t *enumerator = lib->credmgr->create_cert_enumerator(
+									lib->credmgr, type, KEY_ANY, NULL, FALSE);
 	certificate_t *cert;
 
 	while (enumerator->enumerate(enumerator, (void**)&cert))
@@ -585,11 +626,11 @@ static void list_public_key(public_key_t *public, FILE *out)
 	identification_t *id;
 	auth_cfg_t *auth;
 
-	if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid))
+	if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &keyid))
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, keyid);
 		auth = auth_cfg_create();
-		private = charon->credentials->get_private(charon->credentials,
+		private = lib->credmgr->get_private(lib->credmgr,
 									public->get_type(public), id, auth);
 		auth->destroy(auth);
 		id->destroy(id);
@@ -599,11 +640,11 @@ static void list_public_key(public_key_t *public, FILE *out)
 			key_type_names, public->get_type(public),
 			public->get_keysize(public) * 8,
 			private ? ", has private key" : "");
-	if (public->get_fingerprint(public, KEY_ID_PUBKEY_INFO_SHA1, &keyid))
+	if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 	{
 		fprintf(out, "  keyid:     %#B\n", &keyid);
 	}
-	if (public->get_fingerprint(public, KEY_ID_PUBKEY_SHA1, &keyid))
+	if (public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &keyid))
 	{
 		fprintf(out, "  subjkey:   %#B\n", &keyid);
 	}

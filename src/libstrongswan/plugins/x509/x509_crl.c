@@ -26,6 +26,7 @@ typedef struct revoked_t revoked_t;
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/keys/private_key.h>
 #include <utils/linked_list.h>
 
 /**
@@ -117,6 +118,11 @@ struct private_x509_crl_t {
 	 * Signature
 	 */
 	chunk_t signature;
+
+	/**
+	 * has this CRL been generated
+	 */
+	bool generated;
 
 	/**
 	 * reference counter
@@ -236,7 +242,7 @@ static bool parse(private_x509_crl_t *this)
 				break;
 			case CRL_OBJ_REVOCATION_DATE:
 				revoked = malloc_thing(revoked_t);
-				revoked->serial = userCertificate;
+				revoked->serial = chunk_clone(userCertificate);
 				revoked->date = asn1_parse_time(object, level);
 				revoked->reason = CRL_REASON_UNSPECIFIED;
 				this->revoked->insert_last(this->revoked, (void *)revoked);
@@ -267,7 +273,6 @@ static bool parse(private_x509_crl_t *this)
 					}
 					else if (extn_oid == OID_AUTHORITY_KEY_ID)
 					{
-
 						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
 														level, &this->authKeySerialNumber);
 					}
@@ -327,52 +332,40 @@ static bool filter(void *data, revoked_t **revoked, chunk_t *serial, void *p2,
 	return TRUE;
 }
 
-/**
- * Implementation of crl_t.get_serial.
- */
-static chunk_t get_serial(private_x509_crl_t *this)
+METHOD(crl_t, get_serial, chunk_t,
+	private_x509_crl_t *this)
 {
 	return this->crlNumber;
 }
 
-/**
- * Implementation of crl_t.get_authKeyIdentifier.
- */
-static chunk_t get_authKeyIdentifier(private_x509_crl_t *this)
+METHOD(crl_t, get_authKeyIdentifier, chunk_t,
+	private_x509_crl_t *this)
 {
 	return this->authKeyIdentifier;
 }
 
-/**
- * Implementation of crl_t.create_enumerator.
- */
-static enumerator_t* create_enumerator(private_x509_crl_t *this)
+METHOD(crl_t, create_enumerator, enumerator_t*,
+	private_x509_crl_t *this)
 {
 	return enumerator_create_filter(
 								this->revoked->create_enumerator(this->revoked),
 								(void*)filter, NULL, NULL);
 }
 
-/**
- * Implementation of certificate_t.get_type
- */
-static certificate_type_t get_type(private_x509_crl_t *this)
+METHOD(certificate_t, get_type, certificate_type_t,
+	private_x509_crl_t *this)
 {
 	return CERT_X509_CRL;
 }
 
-/**
- * Implementation of certificate_t.get_issuer and get_subject
- */
-static identification_t* get_issuer(private_x509_crl_t *this)
+METHOD(certificate_t, get_issuer, identification_t*,
+	private_x509_crl_t *this)
 {
 	return this->issuer;
 }
 
-/**
- * Implementation of certificate_t.has_subject and has_issuer.
- */
-static id_match_t has_issuer(private_x509_crl_t *this, identification_t *issuer)
+METHOD(certificate_t, has_issuer, id_match_t,
+	private_x509_crl_t *this, identification_t *issuer)
 {
 	if (issuer->get_type(issuer) == ID_KEY_ID && this->authKeyIdentifier.ptr &&
 		chunk_equals(this->authKeyIdentifier, issuer->get_encoding(issuer)))
@@ -382,10 +375,8 @@ static id_match_t has_issuer(private_x509_crl_t *this, identification_t *issuer)
 	return this->issuer->matches(this->issuer, issuer);
 }
 
-/**
- * Implementation of certificate_t.issued_by
- */
-static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
+METHOD(certificate_t, issued_by, bool,
+	private_x509_crl_t *this, certificate_t *issuer)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -410,7 +401,7 @@ static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
 	{
 		chunk_t fingerprint;
 
-		if (!key->get_fingerprint(key, KEY_ID_PUBKEY_SHA1, &fingerprint) ||
+		if (!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fingerprint) ||
 			!chunk_equals(fingerprint, this->authKeyIdentifier))
 		{
 			return FALSE;
@@ -436,28 +427,22 @@ static bool issued_by(private_x509_crl_t *this, certificate_t *issuer)
 	return valid;
 }
 
-/**
- * Implementation of certificate_t.get_public_key
- */
-static public_key_t* get_public_key(private_x509_crl_t *this)
+METHOD(certificate_t, get_public_key, public_key_t*,
+	private_x509_crl_t *this)
 {
 	return NULL;
 }
 
-/**
- * Implementation of certificate_t.asdf
- */
-static private_x509_crl_t* get_ref(private_x509_crl_t *this)
+METHOD(certificate_t, get_ref, certificate_t*,
+	private_x509_crl_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.crl.certificate;
 }
 
-/**
- * Implementation of certificate_t.get_validity.
- */
-static bool get_validity(private_x509_crl_t *this, time_t *when,
-						 time_t *not_before, time_t *not_after)
+METHOD(certificate_t, get_validity, bool,
+	private_x509_crl_t *this, time_t *when,
+	time_t *not_before, time_t *not_after)
 {
 	time_t t = when ? *when : time(NULL);
 
@@ -472,51 +457,20 @@ static bool get_validity(private_x509_crl_t *this, time_t *when,
 	return (t <= this->nextUpdate);
 }
 
-/**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(private_x509_crl_t *this, crl_t *that)
+METHOD(certificate_t, get_encoding, bool,
+	private_x509_crl_t *this, cred_encoding_type_t type, chunk_t *encoding)
 {
-	chunk_t that_crlNumber = that->get_serial(that);
-	bool new;
-
-	/* compare crlNumbers if available - otherwise use thisUpdate */
-	if (this->crlNumber.ptr != NULL && that_crlNumber.ptr != NULL)
+	if (type == CERT_ASN1_DER)
 	{
-		new = chunk_compare(this->crlNumber, that_crlNumber) > 0;
-		DBG1(DBG_LIB, "  crl #%#B is %s - existing crl #%#B %s",
-				&this->crlNumber, new ? "newer":"not newer",
-				&that_crlNumber,  new ? "replaced":"retained");
+		*encoding = chunk_clone(this->encoding);
+		return TRUE;
 	}
-	else
-	{
-		certificate_t *this_cert = &this->public.crl.certificate;
-		certificate_t *that_cert = &that->certificate;
-
-		time_t this_update, that_update, now = time(NULL);
-
-		this_cert->get_validity(this_cert, &now, &this_update, NULL);
-		that_cert->get_validity(that_cert, &now, &that_update, NULL);
-		new = this_update > that_update;
-		DBG1(DBG_LIB, "  crl from %T is %s - existing crl from %T %s",
-				&this_update, FALSE, new ? "newer":"not newer",
-				&that_update, FALSE, new ? "replaced":"retained");
-	}
-	return new;
+	return lib->encoding->encode(lib->encoding, type, NULL, encoding,
+					CRED_PART_X509_CRL_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
-/**
- * Implementation of certificate_t.get_encoding.
- */
-static chunk_t get_encoding(private_x509_crl_t *this)
-{
-	return chunk_clone(this->encoding);
-}
-
-/**
- * Implementation of certificate_t.equals.
- */
-static bool equals(private_x509_crl_t *this, certificate_t *other)
+METHOD(certificate_t, equals, bool,
+	private_x509_crl_t *this, certificate_t *other)
 {
 	chunk_t encoding;
 	bool equal;
@@ -529,23 +483,39 @@ static bool equals(private_x509_crl_t *this, certificate_t *other)
 	{	/* skip allocation if we have the same implementation */
 		return chunk_equals(this->encoding, ((private_x509_crl_t*)other)->encoding);
 	}
-	encoding = other->get_encoding(other);
+	if (!other->get_encoding(other, CERT_ASN1_DER, &encoding))
+	{
+		return FALSE;
+	}
 	equal = chunk_equals(this->encoding, encoding);
 	free(encoding.ptr);
 	return equal;
 }
 
 /**
- * Implementation of certificate_t.destroy
+ * Destroy a revoked_t entry
  */
-static void destroy(private_x509_crl_t *this)
+static void revoked_destroy(revoked_t *revoked)
+{
+	free(revoked->serial.ptr);
+	free(revoked);
+}
+
+METHOD(certificate_t, destroy, void,
+	private_x509_crl_t *this)
 {
 	if (ref_put(&this->ref))
 	{
-		this->revoked->destroy_function(this->revoked, free);
+		this->revoked->destroy_function(this->revoked, (void*)revoked_destroy);
 		DESTROY_IF(this->issuer);
 		free(this->authKeyIdentifier.ptr);
 		free(this->encoding.ptr);
+		if (this->generated)
+		{
+			free(this->crlNumber.ptr);
+			free(this->signature.ptr);
+			free(this->tbsCertList.ptr);
+		}
 		free(this);
 	}
 }
@@ -555,34 +525,33 @@ static void destroy(private_x509_crl_t *this)
  */
 static private_x509_crl_t* create_empty(void)
 {
-	private_x509_crl_t *this = malloc_thing(private_x509_crl_t);
+	private_x509_crl_t *this;
 
-	this->public.crl.get_serial = (chunk_t (*)(crl_t*))get_serial;
-	this->public.crl.get_authKeyIdentifier = (chunk_t (*)(crl_t*))get_authKeyIdentifier;
-	this->public.crl.create_enumerator = (enumerator_t* (*)(crl_t*))create_enumerator;
-	this->public.crl.certificate.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
-	this->public.crl.certificate.get_subject = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.crl.certificate.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
-	this->public.crl.certificate.has_subject = (id_match_t (*)(certificate_t*, identification_t *subject))has_issuer;
-	this->public.crl.certificate.has_issuer = (id_match_t (*)(certificate_t*, identification_t *issuer))has_issuer;
-	this->public.crl.certificate.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
-	this->public.crl.certificate.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
-	this->public.crl.certificate.get_validity = (bool (*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.crl.certificate.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
-	this->public.crl.certificate.get_encoding = (chunk_t (*)(certificate_t*))get_encoding;
-	this->public.crl.certificate.equals = (bool (*)(certificate_t*, certificate_t *other))equals;
-	this->public.crl.certificate.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
-	this->public.crl.certificate.destroy = (void (*)(certificate_t *this))destroy;
-
-	this->encoding = chunk_empty;
-	this->tbsCertList = chunk_empty;
-	this->issuer = NULL;
-	this->crlNumber = chunk_empty;
-	this->revoked = linked_list_create();
-	this->authKeyIdentifier = chunk_empty;
-	this->authKeySerialNumber = chunk_empty;
-	this->ref = 1;
-
+	INIT(this,
+		.public = {
+			.crl = {
+				.certificate = {
+					.get_type = _get_type,
+					.get_subject = _get_issuer,
+					.get_issuer = _get_issuer,
+					.has_subject = _has_issuer,
+					.has_issuer = _has_issuer,
+					.issued_by = _issued_by,
+					.get_public_key = _get_public_key,
+					.get_validity = _get_validity,
+					.get_encoding = _get_encoding,
+					.equals = _equals,
+					.get_ref = _get_ref,
+					.destroy = _destroy,
+				},
+				.get_serial = _get_serial,
+				.get_authKeyIdentifier = _get_authKeyIdentifier,
+				.create_enumerator = _create_enumerator,
+			},
+		},
+		.revoked = linked_list_create(),
+		.ref = 1,
+	);
 	return this;
 }
 
@@ -621,3 +590,166 @@ x509_crl_t *x509_crl_load(certificate_type_t type, va_list args)
 	return NULL;
 };
 
+/**
+ * Read certificate status from enumerator, copy to crl
+ */
+static void read_revoked(private_x509_crl_t *crl, enumerator_t *enumerator)
+{
+	revoked_t *revoked;
+	chunk_t serial;
+	time_t date;
+	crl_reason_t reason;
+
+	while (enumerator->enumerate(enumerator, &serial, &date, &reason))
+	{
+		INIT(revoked,
+			.serial = chunk_clone(serial),
+			.date = date,
+			.reason = reason,
+		);
+		crl->revoked->insert_last(crl->revoked, revoked);
+	}
+}
+
+/**
+ * Generate CRL encoding, sign CRL
+ */
+static bool generate(private_x509_crl_t *this, certificate_t *cert,
+					 private_key_t *key, hash_algorithm_t digest_alg)
+{
+	chunk_t extensions = chunk_empty, certList = chunk_empty, serial;
+	enumerator_t *enumerator;
+	crl_reason_t reason;
+	time_t date;
+	x509_t *x509;
+
+	x509 = (x509_t*)cert;
+
+	this->issuer = cert->get_issuer(cert);
+	this->issuer = this->issuer->clone(this->issuer);
+
+	this->authKeyIdentifier = chunk_clone(x509->get_subjectKeyIdentifier(x509));
+
+	/* select signature scheme */
+	this->algorithm = hasher_signature_algorithm_to_oid(digest_alg,
+														key->get_type(key));
+	if (this->algorithm == OID_UNKNOWN)
+	{
+		return FALSE;
+	}
+
+	enumerator = create_enumerator(this);
+	while (enumerator->enumerate(enumerator, &serial, &date, &reason))
+	{
+		chunk_t revoked, entry_ext = chunk_empty;
+
+		if (reason != CRL_REASON_UNSPECIFIED)
+		{
+			entry_ext = asn1_wrap(ASN1_SEQUENCE, "m",
+							asn1_wrap(ASN1_SEQUENCE, "mm",
+								asn1_build_known_oid(OID_CRL_REASON_CODE),
+								asn1_wrap(ASN1_OCTET_STRING, "m",
+									asn1_wrap(ASN1_ENUMERATED, "c",
+										chunk_from_chars(reason)))));
+		}
+		revoked = asn1_wrap(ASN1_SEQUENCE, "mmm",
+							asn1_integer("c", serial),
+							asn1_from_time(&date, ASN1_UTCTIME),
+							entry_ext);
+		certList = chunk_cat("mm", certList, revoked);
+	}
+	enumerator->destroy(enumerator);
+
+	extensions = asn1_wrap(ASN1_CONTEXT_C_0, "m",
+					asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "m",
+									asn1_wrap(ASN1_CONTEXT_S_0, "c",
+											  this->authKeyIdentifier)))),
+						asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_CRL_NUMBER),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_integer("c", this->crlNumber))
+							)
+						));
+
+	this->tbsCertList = asn1_wrap(ASN1_SEQUENCE, "cmcmmmm",
+							ASN1_INTEGER_1,
+							asn1_algorithmIdentifier(this->algorithm),
+							this->issuer->get_encoding(this->issuer),
+							asn1_from_time(&this->thisUpdate, ASN1_UTCTIME),
+							asn1_from_time(&this->nextUpdate, ASN1_UTCTIME),
+							asn1_wrap(ASN1_SEQUENCE, "m", certList),
+							extensions);
+
+	if (!key->sign(key, signature_scheme_from_oid(this->algorithm),
+				   this->tbsCertList, &this->signature))
+	{
+		return FALSE;
+	}
+	this->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
+							this->tbsCertList,
+							asn1_algorithmIdentifier(this->algorithm),
+							asn1_bitstring("c", this->signature));
+	return TRUE;
+}
+
+/**
+ * See header.
+ */
+x509_crl_t *x509_crl_gen(certificate_type_t type, va_list args)
+{
+	hash_algorithm_t digest_alg = HASH_SHA1;
+	private_x509_crl_t *crl;
+	certificate_t *cert = NULL;
+	private_key_t *key = NULL;
+
+	crl = create_empty();
+	crl->generated = TRUE;
+	while (TRUE)
+	{
+		builder_part_t part = va_arg(args, builder_part_t);
+
+		switch (part)
+		{
+			case BUILD_SIGNING_KEY:
+				key = va_arg(args, private_key_t*);
+				continue;
+			case BUILD_SIGNING_CERT:
+				cert = va_arg(args, certificate_t*);
+				continue;
+			case BUILD_NOT_BEFORE_TIME:
+				crl->thisUpdate = va_arg(args, time_t);
+				continue;
+			case BUILD_NOT_AFTER_TIME:
+				crl->nextUpdate = va_arg(args, time_t);
+				continue;
+			case BUILD_SERIAL:
+				crl->crlNumber = va_arg(args, chunk_t);
+				crl->crlNumber = chunk_clone(crl->crlNumber);
+				continue;
+			case BUILD_DIGEST_ALG:
+				digest_alg = va_arg(args, int);
+				continue;
+			case BUILD_REVOKED_ENUMERATOR:
+				read_revoked(crl, va_arg(args, enumerator_t*));
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				destroy(crl);
+				return NULL;
+		}
+		break;
+	}
+
+	if (key && cert && cert->get_type(cert) == CERT_X509 &&
+		generate(crl, cert, key, digest_alg))
+	{
+		return &crl->public;
+	}
+	destroy(crl);
+	return NULL;
+}

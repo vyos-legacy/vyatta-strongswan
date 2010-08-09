@@ -45,6 +45,11 @@ struct private_ha_ctl_t {
 	ha_segments_t *segments;
 
 	/**
+	 * Resynchronization message cache
+	 */
+	ha_cache_t *cache;
+
+	/**
 	 * FIFO reader thread
 	 */
 	callback_job_t *job;
@@ -84,7 +89,7 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 					this->segments->deactivate(this->segments, segment, TRUE);
 					break;
 				case '*':
-					this->segments->resync(this->segments, segment);
+					this->cache->resync(this->cache, segment);
 					break;
 				default:
 					break;
@@ -96,10 +101,8 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 	return JOB_REQUEUE_DIRECT;
 }
 
-/**
- * Implementation of ha_ctl_t.destroy.
- */
-static void destroy(private_ha_ctl_t *this)
+METHOD(ha_ctl_t, destroy, void,
+	private_ha_ctl_t *this)
 {
 	this->job->cancel(this->job);
 	free(this);
@@ -108,11 +111,17 @@ static void destroy(private_ha_ctl_t *this)
 /**
  * See header
  */
-ha_ctl_t *ha_ctl_create(ha_segments_t *segments)
+ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 {
-	private_ha_ctl_t *this = malloc_thing(private_ha_ctl_t);
+	private_ha_ctl_t *this;
 
-	this->public.destroy = (void(*)(ha_ctl_t*))destroy;
+	INIT(this,
+		.public = {
+			.destroy = _destroy,
+		},
+		.segments = segments,
+		.cache = cache,
+	);
 
 	if (access(HA_FIFO, R_OK|W_OK) != 0)
 	{
@@ -123,7 +132,6 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments)
 		}
 	}
 
-	this->segments = segments;
 	this->job = callback_job_create((callback_job_cb_t)dispatch_fifo,
 									this, NULL, NULL);
 	charon->processor->queue_job(charon->processor, (job_t*)this->job);

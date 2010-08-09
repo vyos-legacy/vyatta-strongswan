@@ -36,6 +36,11 @@ struct private_ha_ike_t {
 	 * tunnel securing sync messages
 	 */
 	ha_tunnel_t *tunnel;
+
+	/**
+	 * message cache
+	 */
+	ha_cache_t *cache;
 };
 
 /**
@@ -62,12 +67,9 @@ static ike_extension_t copy_extension(ike_sa_t *ike_sa, ike_extension_t ext)
 	return 0;
 }
 
-/**
- * Implementation of listener_t.ike_keys
- */
-static bool ike_keys(private_ha_ike_t *this, ike_sa_t *ike_sa,
-					 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
-					 ike_sa_t *rekey)
+METHOD(listener_t, ike_keys, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
+	chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey)
 {
 	ha_message_t *m;
 	chunk_t secret;
@@ -120,14 +122,13 @@ static bool ike_keys(private_ha_ike_t *this, ike_sa_t *ike_sa,
 	chunk_clear(&secret);
 
 	this->socket->push(this->socket, m);
+	this->cache->cache(this->cache, ike_sa, m);
 
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.ike_updown
- */
-static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
+METHOD(listener_t, ike_updown, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 {
 	ha_message_t *m;
 
@@ -147,6 +148,7 @@ static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 		u_int32_t extension, condition;
 		host_t *addr;
 		ike_sa_id_t *id;
+		identification_t *eap_id;
 
 		peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 
@@ -168,6 +170,11 @@ static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 		m->add_attribute(m, HA_IKE_ID, id);
 		m->add_attribute(m, HA_LOCAL_ID, ike_sa->get_my_id(ike_sa));
 		m->add_attribute(m, HA_REMOTE_ID, ike_sa->get_other_id(ike_sa));
+		eap_id = ike_sa->get_other_eap_id(ike_sa);
+		if (!eap_id->equals(eap_id, ike_sa->get_other_id(ike_sa)))
+		{
+			m->add_attribute(m, HA_REMOTE_EAP_ID, eap_id);
+		}
 		m->add_attribute(m, HA_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
 		m->add_attribute(m, HA_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
 		m->add_attribute(m, HA_CONDITIONS, condition);
@@ -186,24 +193,31 @@ static bool ike_updown(private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 	}
 	this->socket->push(this->socket, m);
+	this->cache->cache(this->cache, ike_sa, m);
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.ike_rekey
- */
-static bool ike_rekey(private_ha_ike_t *this, ike_sa_t *old, ike_sa_t *new)
+METHOD(listener_t, ike_rekey, bool,
+	private_ha_ike_t *this, ike_sa_t *old, ike_sa_t *new)
 {
 	ike_updown(this, old, FALSE);
 	ike_updown(this, new, TRUE);
 	return TRUE;
 }
 
-/**
- * Implementation of listener_t.message
- */
-static bool message_hook(private_ha_ike_t *this, ike_sa_t *ike_sa,
-						 message_t *message, bool incoming)
+METHOD(listener_t, ike_state_change, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, ike_sa_state_t new)
+{
+	/* delete any remaining cache entry if IKE_SA gets destroyed */
+	if (new == IKE_DESTROYING)
+	{
+		this->cache->delete(this->cache, ike_sa);
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, message_hook, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, message_t *message, bool incoming)
 {
 	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
@@ -214,20 +228,19 @@ static bool message_hook(private_ha_ike_t *this, ike_sa_t *ike_sa,
 		message->get_request(message))
 	{	/* we sync on requests, but skip it on IKE_SA_INIT */
 		ha_message_t *m;
-		u_int32_t mid;
 
-		m = ha_message_create(HA_IKE_UPDATE);
-		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
-		mid = message->get_message_id(message) + 1;
 		if (incoming)
 		{
-			m->add_attribute(m, HA_RESPOND_MID, mid);
+			m = ha_message_create(HA_IKE_MID_RESPONDER);
 		}
 		else
 		{
-			m->add_attribute(m, HA_INITIATE_MID, mid);
+			m = ha_message_create(HA_IKE_MID_INITIATOR);
 		}
+		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+		m->add_attribute(m, HA_MID, message->get_message_id(message) + 1);
 		this->socket->push(this->socket, m);
+		this->cache->cache(this->cache, ike_sa, m);
 	}
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED &&
 		message->get_exchange_type(message) == IKE_AUTH &&
@@ -245,15 +258,14 @@ static bool message_hook(private_ha_ike_t *this, ike_sa_t *ike_sa,
 			m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 			m->add_attribute(m, HA_REMOTE_VIP, vip);
 			this->socket->push(this->socket, m);
+			this->cache->cache(this->cache, ike_sa, m);
 		}
 	}
 	return TRUE;
 }
 
-/**
- * Implementation of ha_ike_t.destroy.
- */
-static void destroy(private_ha_ike_t *this)
+METHOD(ha_ike_t, destroy, void,
+	private_ha_ike_t *this)
 {
 	free(this);
 }
@@ -261,19 +273,26 @@ static void destroy(private_ha_ike_t *this)
 /**
  * See header
  */
-ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel)
+ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
+						ha_cache_t *cache)
 {
-	private_ha_ike_t *this = malloc_thing(private_ha_ike_t);
+	private_ha_ike_t *this;
 
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.ike_keys = (bool(*)(listener_t*, ike_sa_t *ike_sa, diffie_hellman_t *dh,chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey))ike_keys;
-	this->public.listener.ike_updown = (bool(*)(listener_t*,ike_sa_t *ike_sa, bool up))ike_updown;
-	this->public.listener.ike_rekey = (bool(*)(listener_t*,ike_sa_t *old, ike_sa_t *new))ike_rekey;
-	this->public.listener.message = (bool(*)(listener_t*, ike_sa_t *, message_t *,bool))message_hook;
-	this->public.destroy = (void(*)(ha_ike_t*))destroy;
-
-	this->socket = socket;
-	this->tunnel = tunnel;
+	INIT(this,
+		.public = {
+			.listener = {
+				.ike_keys = _ike_keys,
+				.ike_updown = _ike_updown,
+				.ike_rekey = _ike_rekey,
+				.ike_state_change = _ike_state_change,
+				.message = _message_hook,
+			},
+			.destroy = _destroy,
+		},
+		.socket = socket,
+		.tunnel = tunnel,
+		.cache = cache,
+	);
 
 	return &this->public;
 }

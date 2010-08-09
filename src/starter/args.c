@@ -230,9 +230,14 @@ static const token_info_t token_info[] =
 	{ ARG_TIME, offsetof(starter_conn_t, inactivity), NULL                         },
 	{ ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
 	{ ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
+	{ ARG_STR,  offsetof(starter_conn_t, xauth_identity), NULL                     },
 	{ ARG_ENUM, offsetof(starter_conn_t, me_mediation), LST_bool                   },
 	{ ARG_STR,  offsetof(starter_conn_t, me_mediated_by), NULL                     },
 	{ ARG_STR,  offsetof(starter_conn_t, me_peerid), NULL                          },
+	{ ARG_UINT, offsetof(starter_conn_t, reqid), NULL                              },
+	{ ARG_MISC, 0, NULL  /* KW_MARK */                                             },
+	{ ARG_MISC, 0, NULL  /* KW_MARK_IN */                                          },
+	{ ARG_MISC, 0, NULL  /* KW_MARK_OUT */                                         },
 
 	/* ca section keywords */
 	{ ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },

@@ -93,6 +93,7 @@ static int send_whack_msg (whack_message_t *msg)
 	||  !pack_str(&msg->sc_data,        &str_next, &str_roof)
 	||  !pack_str(&msg->whack_lease_ip, &str_next, &str_roof)
 	||  !pack_str(&msg->whack_lease_id, &str_next, &str_roof)
+	||  !pack_str(&msg->xauth_identity, &str_next, &str_roof)
 	||  (str_roof - str_next < msg->keyval.len))
 	{
 		plog("send_wack_msg(): can't pack strings");
@@ -285,6 +286,12 @@ int starter_whack_add_conn(starter_conn_t *conn)
 	msg.sa_rekey_fuzz         = conn->sa_rekey_fuzz;
 	msg.sa_keying_tries       = conn->sa_keying_tries;
 	msg.policy                = conn->policy;
+	msg.xauth_identity        = conn->xauth_identity;
+	msg.reqid                 = conn->reqid;
+	msg.mark_in.value         = conn->mark_in.value;
+	msg.mark_in.mask          = conn->mark_in.mask;
+	msg.mark_out.value        = conn->mark_out.value;
+	msg.mark_out.mask         = conn->mark_out.mask;
 
 	/*
 	 * Make sure the IKEv2-only policy bits are unset for IKEv1 connections

@@ -38,10 +38,20 @@
 #include <utils/backtrace.h>
 #include <threading/thread.h>
 
+#ifdef ANDROID
+#include <private/android_filesystem_config.h>
+#endif
+
+
 /**
  * PID file, in which charon stores its process id
  */
 #define PID_FILE IPSEC_PIDDIR "/charon.pid"
+
+/**
+ * Global reference to PID file (required to truncate, if undeletable)
+ */
+static FILE *pidfile = NULL;
 
 /**
  * hook in library for debugging messages
@@ -178,6 +188,9 @@ static bool lookup_uid_gid()
 		charon->gid = grp->gr_gid;
 	}
 #endif
+#ifdef ANDROID
+	charon->uid = AID_VPN;
+#endif
 	return TRUE;
 }
 
@@ -190,7 +203,7 @@ static void segv_handler(int signal)
 
 	DBG1(DBG_DMN, "thread %u received %d", thread_current_id(), signal);
 	backtrace = backtrace_create(2);
-	backtrace->log(backtrace, stderr);
+	backtrace->log(backtrace, stderr, TRUE);
 	backtrace->destroy(backtrace);
 
 	DBG1(DBG_DMN, "killing ourself, received critical signal");
@@ -203,22 +216,21 @@ static void segv_handler(int signal)
 static bool check_pidfile()
 {
 	struct stat stb;
-	FILE *file;
 
 	if (stat(PID_FILE, &stb) == 0)
 	{
-		file = fopen(PID_FILE, "r");
-		if (file)
+		pidfile = fopen(PID_FILE, "r");
+		if (pidfile)
 		{
 			char buf[64];
 			pid_t pid = 0;
 
 			memset(buf, 0, sizeof(buf));
-			if (fread(buf, 1, sizeof(buf), file))
+			if (fread(buf, 1, sizeof(buf), pidfile))
 			{
 				pid = atoi(buf);
 			}
-			fclose(file);
+			fclose(pidfile);
 			if (pid && kill(pid, 0) == 0)
 			{	/* such a process is running */
 				return TRUE;
@@ -229,15 +241,33 @@ static bool check_pidfile()
 	}
 
 	/* create new pidfile */
-	file = fopen(PID_FILE, "w");
-	if (file)
+	pidfile = fopen(PID_FILE, "w");
+	if (pidfile)
 	{
-		fprintf(file, "%d\n", getpid());
-		ignore_result(fchown(fileno(file), charon->uid, charon->gid));
-		fclose(file);
+		ignore_result(fchown(fileno(pidfile), charon->uid, charon->gid));
+		fprintf(pidfile, "%d\n", getpid());
+		fflush(pidfile);
 	}
 	return FALSE;
 }
+
+/**
+ * Delete/truncate the PID file
+ */
+static void unlink_pidfile()
+{
+	/* because unlinking the PID file may fail, we truncate it to ensure the
+	 * daemon can be properly restarted.  one probable cause for this is the
+	 * combination of not running as root and the effective user lacking
+	 * permissions on the parent dir(s) of the PID file */
+	if (pidfile)
+	{
+		ignore_result(ftruncate(fileno(pidfile), 0));
+		fclose(pidfile);
+	}
+	unlink(PID_FILE);
+}
+
 
 /**
  * print command line usage and exit
@@ -258,7 +288,6 @@ static void usage(const char *msg)
 					"                                    2 = controlmore, 3 = raw, 4 = private)\n"
 					"\n"
 		   );
-	exit(msg == NULL? 0 : 1);
 }
 
 /**
@@ -337,7 +366,8 @@ int main(int argc, char *argv[])
 				break;
 			case 'h':
 				usage(NULL);
-				break;
+				status = 0;
+				goto deinit;
 			case 'v':
 				printf("Linux strongSwan %s\n", VERSION);
 				status = 0;
@@ -351,7 +381,8 @@ int main(int argc, char *argv[])
 				continue;
 			default:
 				usage("");
-				break;
+				status = 1;
+				goto deinit;
 		}
 		break;
 	}
@@ -405,7 +436,7 @@ int main(int argc, char *argv[])
 	run();
 
 	/* normal termination, cleanup and exit */
-	unlink(PID_FILE);
+	unlink_pidfile();
 	status = 0;
 
 deinit:

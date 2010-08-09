@@ -188,28 +188,18 @@ static bool get_validity(private_pgp_cert_t *this, time_t *when,
 }
 
 /**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(certificate_t *this, certificate_t *that)
-{
-	time_t this_update, that_update, now = time(NULL);
-	bool new;
-
-	this->get_validity(this, &now, &this_update, NULL);
-	that->get_validity(that, &now, &that_update, NULL);
-	new = this_update > that_update;
-	DBG1(DBG_LIB, "  certificate from %T is %s - existing certificate"
-		 " from %T %s", &this_update, FALSE, new ? "newer" : "not newer",
-		 &that_update, FALSE, new ? "replaced" : "retained");
-	return new;
-}
-
-/**
  * Implementation of certificate_t.get_encoding.
  */
-static chunk_t get_encoding(private_pgp_cert_t *this)
+static bool get_encoding(private_pgp_cert_t *this, cred_encoding_type_t type,
+						 chunk_t *encoding)
 {
-	return chunk_clone(this->encoding);
+	if (type == CERT_PGP_PKT)
+	{
+		*encoding = chunk_clone(this->encoding);
+		return TRUE;
+	}
+	return lib->encoding->encode(lib->encoding, type, NULL, encoding,
+						CRED_PART_PGP_CERT, this->encoding, CRED_PART_END);
 }
 
 /**
@@ -232,7 +222,10 @@ static bool equals(private_pgp_cert_t *this, certificate_t *other)
 	{	/* skip allocation if we have the same implementation */
 		return chunk_equals(this->encoding, ((private_pgp_cert_t*)other)->encoding);
 	}
-	encoding = other->get_encoding(other);
+	if (!other->get_encoding(other, CERT_PGP_PKT, &encoding))
+	{
+		return FALSE;
+	}
 	equal = chunk_equals(this->encoding, encoding);
 	free(encoding.ptr);
 	return equal;
@@ -276,8 +269,7 @@ private_pgp_cert_t *create_empty()
 	this->public.interface.interface.issued_by = (bool (*) (certificate_t*, certificate_t*))issued_by;
 	this->public.interface.interface.get_public_key = (public_key_t* (*) (certificate_t*))get_public_key;
 	this->public.interface.interface.get_validity = (bool (*) (certificate_t*, time_t*, time_t*, time_t*))get_validity;
-	this->public.interface.interface.is_newer = (bool (*) (certificate_t*,certificate_t*))is_newer;
-	this->public.interface.interface.get_encoding = (chunk_t (*) (certificate_t*))get_encoding;
+	this->public.interface.interface.get_encoding = (bool (*) (certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
 	this->public.interface.interface.equals = (bool (*)(certificate_t*, certificate_t*))equals;
 	this->public.interface.interface.get_ref = (certificate_t* (*)(certificate_t*))get_ref;
 	this->public.interface.interface.destroy = (void (*)(certificate_t*))destroy;
@@ -365,7 +357,7 @@ static bool parse_public_key(private_pgp_cert_t *this, chunk_t packet)
 	else
 	{
 		/* V3 fingerprint is computed by public_key_t class */
-		if (!this->key->get_fingerprint(this->key, KEY_ID_PGPV3,
+		if (!this->key->get_fingerprint(this->key, KEYID_PGPV3,
 										&this->fingerprint))
 		{
 			return FALSE;

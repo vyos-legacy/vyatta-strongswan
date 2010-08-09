@@ -30,7 +30,7 @@
 /**
  * Protocol version of this implementation
  */
-#define HA_MESSAGE_VERSION 1
+#define HA_MESSAGE_VERSION 2
 
 typedef struct ha_message_t ha_message_t;
 typedef enum ha_message_type_t ha_message_type_t;
@@ -43,8 +43,12 @@ typedef union ha_message_value_t ha_message_value_t;
 enum ha_message_type_t {
 	/** add a completely new IKE_SA */
 	HA_IKE_ADD = 1,
-	/** update an existing IKE_SA (message IDs, address update, ...) */
+	/** update an existing IKE_SA (identities, address update, ...) */
 	HA_IKE_UPDATE,
+	/** update initiator message id */
+	HA_IKE_MID_INITIATOR,
+	/** update responder message id */
+	HA_IKE_MID_RESPONDER,
 	/** delete an existing IKE_SA */
 	HA_IKE_DELETE,
 	/** add a new CHILD_SA */
@@ -62,6 +66,11 @@ enum ha_message_type_t {
 };
 
 /**
+ * Enum names for message types
+ */
+extern enum_name_t *ha_message_type_names;
+
+/**
  * Type of attributes contained in a message
  */
 enum ha_message_attribute_t {
@@ -73,6 +82,8 @@ enum ha_message_attribute_t {
 	HA_LOCAL_ID,
 	/** identification_t*, remote identity */
 	HA_REMOTE_ID,
+	/** identification_t*, remote EAP identity */
+	HA_REMOTE_EAP_ID,
 	/** host_t*, local address */
 	HA_LOCAL_ADDR,
 	/** host_t*, remote address */
@@ -89,6 +100,8 @@ enum ha_message_attribute_t {
 	HA_REMOTE_VIP,
 	/** host_t*, additional MOBIKE peer address */
 	HA_ADDITIONAL_ADDR,
+	/** u_int8_t, initiator of an exchange, TRUE for local */
+	HA_INITIATOR,
 	/** chunk_t, initiators nonce */
 	HA_NONCE_I,
 	/** chunk_t, responders nonce */
@@ -123,10 +136,8 @@ enum ha_message_attribute_t {
 	HA_LOCAL_TS,
 	/** traffic_selector_t*, remote traffic selector */
 	HA_REMOTE_TS,
-	/** u_int32_t, initiating message ID */
-	HA_INITIATE_MID,
-	/** u_int32_t, responding message ID */
-	HA_RESPOND_MID,
+	/** u_int32_t, message ID */
+	HA_MID,
 	/** u_int16_t, HA segment */
 	HA_SEGMENT,
 };
@@ -190,7 +201,6 @@ struct ha_message_t {
 /**
  * Create a new ha_message instance, ready for adding attributes
  *
- * @param version			protocol version to create a message from
  * @param type				type of the message
  */
 ha_message_t *ha_message_create(ha_message_type_t type);
@@ -202,4 +212,4 @@ ha_message_t *ha_message_create(ha_message_type_t type);
  */
 ha_message_t *ha_message_parse(chunk_t data);
 
-#endif /* HA_MESSAGE_ @}*/
+#endif /** HA_MESSAGE_ @}*/

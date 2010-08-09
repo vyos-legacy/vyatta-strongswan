@@ -68,23 +68,19 @@ struct ha_segments_t {
 	void (*deactivate)(ha_segments_t *this, u_int segment, bool notify);
 
 	/**
-	 * Resync an active segment.
-	 *
-	 * To reintegrade a node into the cluster, resynchronization is reqired.
-	 * IKE_SAs and CHILD_SAs are synced automatically during rekeying. A call
-	 * to this method enforces a rekeying immediately sync all state of a
-	 * segment.
-	 *
-	 * @param segment	segment to resync
-	 */
-	void (*resync)(ha_segments_t *this, u_int segment);
-
-	/**
 	 * Handle a status message from the remote node.
 	 *
 	 * @param mask		segments the remote node is serving actively
 	 */
 	void (*handle_status)(ha_segments_t *this, segment_mask_t mask);
+
+	/**
+	 * Check if a given segment is currently active.
+	 *
+	 * @param segment	segment to check
+	 * @return			TRUE if segment active
+	 */
+	bool (*is_active)(ha_segments_t *this, u_int segment);
 
 	/**
 	 * Destroy a ha_segments_t.
@@ -101,11 +97,10 @@ struct ha_segments_t {
  * @param count			number of segments the cluster uses
  * @param node			node, currently 1 or 0
  * @param monitor		should we use monitoring functionality
- * @param resync		request a complete resync on startup
  * @return				segment object
  */
 ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 								  ha_tunnel_t *tunnel, u_int count, u_int node,
-								  bool monitor, bool resync);
+								  bool monitor);
 
-#endif /* HA_SEGMENTS_ @}*/
+#endif /** HA_SEGMENTS_ @}*/

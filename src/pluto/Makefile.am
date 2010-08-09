@@ -37,6 +37,7 @@ nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
 pkcs7.c pkcs7.h \
+pluto.c pluto.h \
 plutomain.c \
 rcv_whack.c rcv_whack.h \
 server.c server.h \
@@ -47,7 +48,8 @@ timer.c timer.h \
 vendor.c vendor.h \
 virtual.c virtual.h \
 whack_attribute.c whack_attribute.h \
-xauth.c xauth.h \
+xauth/xauth_manager.c xauth/xauth_manager.h \
+xauth/xauth_provider.h xauth/xauth_verifier.h \
 x509.c x509.h \
 builder.c builder.h \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
@@ -67,12 +69,12 @@ INCLUDES = \
 -I$(top_srcdir)/src/libhydra \
 -I$(top_srcdir)/src/whack
 
-AM_CFLAGS = \
+AM_CFLAGS = -rdynamic \
 -DIPSEC_DIR=\"${ipsecdir}\" \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${sysconfdir}/ipsec.secrets\" \
--DPLUGINS=\""${pluto_plugins}\"" \
+-DPLUGINS=\""${pluto_plugins} ${libhydra_plugins}\"" \
 -DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG
@@ -87,7 +89,12 @@ _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)
 
+CLEANFILES = ipsec.secrets.5
 dist_man_MANS = pluto.8 ipsec.secrets.5
+EXTRA_DIST = ipsec.secrets.5.in
+
+# compile options
+#################
 
 # This compile option activates the sending of a strongSwan VID
 if USE_VENDORID
@@ -114,10 +121,25 @@ if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
 endif
 
-if USE_CAPABILITIES
+if USE_LIBCAP
   pluto_LDADD += -lcap
 endif
 
 if USE_THREADS
   AM_CFLAGS += -DTHREADS
 endif
+
+# build optional plugins
+########################
+
+SUBDIRS = .
+
+if USE_XAUTH
+  SUBDIRS += plugins/xauth
+endif
+
+ipsec.secrets.5 : ipsec.secrets.5.in
+	sed \
+	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
+	$(srcdir)/$@.in > $@
+

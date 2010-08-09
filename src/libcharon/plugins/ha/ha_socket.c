@@ -58,8 +58,8 @@ struct private_ha_socket_t {
  * Data to pass to the send_message() callback job
  */
 typedef struct {
-	ha_message_t *message;
-	private_ha_socket_t *this;
+	chunk_t chunk;
+	int fd;
 } job_data_t;
 
 /**
@@ -67,7 +67,7 @@ typedef struct {
  */
 static void job_data_destroy(job_data_t *this)
 {
-	this->message->destroy(this->message);
+	free(this->chunk.ptr);
 	free(this);
 }
 
@@ -76,22 +76,15 @@ static void job_data_destroy(job_data_t *this)
  */
 static job_requeue_t send_message(job_data_t *data)
 {
-	private_ha_socket_t *this;
-	chunk_t chunk;
-
-	this = data->this;
-	chunk = data->message->get_encoding(data->message);
-	if (send(this->fd, chunk.ptr, chunk.len, 0) < chunk.len)
+	if (send(data->fd, data->chunk.ptr, data->chunk.len, 0) < data->chunk.len)
 	{
 		DBG1(DBG_CFG, "pushing HA message failed: %s", strerror(errno));
 	}
 	return JOB_REQUEUE_NONE;
 }
 
-/**
- * Implementation of ha_socket_t.push
- */
-static void push(private_ha_socket_t *this, ha_message_t *message)
+METHOD(ha_socket_t, push, void,
+	private_ha_socket_t *this, ha_message_t *message)
 {
 	chunk_t chunk;
 
@@ -107,9 +100,10 @@ static void push(private_ha_socket_t *this, ha_message_t *message)
 			/* Fallback to asynchronous transmission. This is required, as sendto()
 			 * is a blocking call if it acquires a policy. We could end up in a
 			 * deadlock, as we own an IKE_SA. */
-			data = malloc_thing(job_data_t);
-			data->message = message;
-			data->this = this;
+			INIT(data,
+				.chunk = chunk_clone(chunk),
+				.fd = this->fd,
+			);
 
 			job = callback_job_create((callback_job_cb_t)send_message,
 									  data, (void*)job_data_destroy, NULL);
@@ -118,13 +112,10 @@ static void push(private_ha_socket_t *this, ha_message_t *message)
 		}
 		DBG1(DBG_CFG, "pushing HA message failed: %s", strerror(errno));
 	}
-	message->destroy(message);
 }
 
-/**
- * Implementation of ha_socket_t.pull
- */
-static ha_message_t *pull(private_ha_socket_t *this)
+METHOD(ha_socket_t, pull, ha_message_t*,
+	private_ha_socket_t *this)
 {
 	while (TRUE)
 	{
@@ -189,10 +180,8 @@ static bool open_socket(private_ha_socket_t *this)
 	return TRUE;
 }
 
-/**
- * Implementation of ha_socket_t.destroy.
- */
-static void destroy(private_ha_socket_t *this)
+METHOD(ha_socket_t, destroy, void,
+	private_ha_socket_t *this)
 {
 	if (this->fd != -1)
 	{
@@ -208,15 +197,18 @@ static void destroy(private_ha_socket_t *this)
  */
 ha_socket_t *ha_socket_create(char *local, char *remote)
 {
-	private_ha_socket_t *this = malloc_thing(private_ha_socket_t);
+	private_ha_socket_t *this;
 
-	this->public.push = (void(*)(ha_socket_t*, ha_message_t*))push;
-	this->public.pull = (ha_message_t*(*)(ha_socket_t*))pull;
-	this->public.destroy = (void(*)(ha_socket_t*))destroy;
-
-	this->local = host_create_from_dns(local, 0, HA_PORT);
-	this->remote = host_create_from_dns(remote, 0, HA_PORT);
-	this->fd = -1;
+	INIT(this,
+		.public = {
+			.push = _push,
+			.pull = _pull,
+			.destroy = _destroy,
+		},
+		.local = host_create_from_dns(local, 0, HA_PORT),
+		.remote = host_create_from_dns(remote, 0, HA_PORT),
+		.fd = -1,
+	);
 
 	if (!this->local || !this->remote)
 	{

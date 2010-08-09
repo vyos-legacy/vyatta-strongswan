@@ -63,6 +63,7 @@
 #include "nat_traversal.h"
 #include "virtual.h"
 #include "whack_attribute.h"
+#include "modecfg.h"
 
 static void flush_pending_by_connection(connection_t *c);  /* forward */
 
@@ -294,8 +295,10 @@ void release_connection(connection_t *c, bool relations)
 
 void delete_connection(connection_t *c, bool relations)
 {
-	connection_t *old_cur_connection
-		= cur_connection == c? NULL : cur_connection;
+	modecfg_attribute_t *ca;
+	connection_t *old_cur_connection;
+
+	old_cur_connection = cur_connection == c? NULL : cur_connection;
 #ifdef DEBUG
 	lset_t old_cur_debugging = cur_debugging;
 #endif
@@ -366,14 +369,29 @@ void delete_connection(connection_t *c, bool relations)
 
 	/* release virtual IP address lease if any */
 	if (c->spd.that.modecfg && c->spd.that.pool &&
-		!isanyaddr(&c->spd.that.host_srcip))
+		!c->spd.that.host_srcip->is_anyaddr(c->spd.that.host_srcip))
 	{
-		host_t *vip;
-
-		vip = host_create_from_sockaddr((sockaddr_t*)&c->spd.that.host_srcip);
 		hydra->attributes->release_address(hydra->attributes, c->spd.that.pool,
-										   vip, c->spd.that.id);
-		vip->destroy(vip);
+										   c->spd.that.host_srcip, c->spd.that.id);
+	}
+
+	/* release requested attributes if any */
+	if (c->requested)
+	{
+		c->requested->destroy_function(c->requested,
+									  (void*)modecfg_attribute_destroy);
+	}
+
+	/* release other attributes if any */
+	if (c->attributes)
+	{
+		while (c->attributes->remove_last(c->attributes, (void **)&ca) == SUCCESS)
+		{
+			hydra->attributes->release(hydra->attributes, ca->handler,
+									   c->spd.that.id, ca->type, ca->value);
+			modecfg_attribute_destroy(ca);
+		}
+		c->attributes->destroy(c->attributes);
 	}
 
 	if (c->kind != CK_GOING_AWAY)
@@ -386,14 +404,17 @@ void delete_connection(connection_t *c, bool relations)
 	cur_debugging = old_cur_debugging;
 #endif
 	free(c->name);
+	DESTROY_IF(c->xauth_identity);
 	DESTROY_IF(c->spd.this.id);
 	DESTROY_IF(c->spd.this.ca);
 	DESTROY_IF(c->spd.this.groups);
+	DESTROY_IF(c->spd.this.host_srcip);
 	free(c->spd.this.updown);
 	free(c->spd.this.pool);
 	DESTROY_IF(c->spd.that.id);
 	DESTROY_IF(c->spd.that.ca);
 	DESTROY_IF(c->spd.that.groups);
+	DESTROY_IF(c->spd.that.host_srcip);
 	free(c->spd.that.updown);
 	free(c->spd.that.pool);
 	if (c->requested_ca)
@@ -656,7 +677,7 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 			subnettot(&this->client, 0, client, sizeof(client));
 		}
 	}
-	else if (this->modecfg && isanyaddr(&this->host_srcip))
+	else if (this->modecfg && this->host_srcip->is_anyaddr(this->host_srcip))
 	{
 		/* we are mode config client, or a server with a pool */
 		client_sep = "===";
@@ -738,9 +759,14 @@ static size_t format_connection(char *buf, size_t buf_len,
 static void unshare_connection_strings(connection_t *c)
 {
 	c->name = clone_str(c->name);
+	if (c->xauth_identity)
+	{
+		c->xauth_identity = c->xauth_identity->clone(c->xauth_identity);
+	}
 	c->spd.this.id = c->spd.this.id->clone(c->spd.this.id);
 	c->spd.this.pool = clone_str(c->spd.this.pool);
 	c->spd.this.updown = clone_str(c->spd.this.updown);
+	c->spd.this.host_srcip = c->spd.this.host_srcip->clone(c->spd.this.host_srcip);
 	scx_share(c->spd.this.sc);
 	cert_share(c->spd.this.cert);
 	if (c->spd.this.ca)
@@ -754,6 +780,7 @@ static void unshare_connection_strings(connection_t *c)
 	c->spd.that.id = c->spd.that.id->clone(c->spd.that.id);
 	c->spd.that.pool = clone_str(c->spd.that.pool);
 	c->spd.that.updown = clone_str(c->spd.that.updown);
+	c->spd.that.host_srcip = c->spd.that.host_srcip->clone(c->spd.that.host_srcip);
 	scx_share(c->spd.that.sc);
 	cert_share(c->spd.that.cert);
 	if (c->spd.that.ca)
@@ -902,7 +929,7 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	/* the rest is simple copying of corresponding fields */
 	dst->host_addr = src->host_addr;
 	dst->host_nexthop = src->host_nexthop;
-	dst->host_srcip = src->host_srcip;
+	dst->host_srcip = host_create_from_sockaddr((sockaddr_t*)&src->host_srcip);
 	dst->has_natip = src->has_natip;
 	dst->client = src->client;
 	dst->protocol = src->protocol;
@@ -927,10 +954,14 @@ static bool extract_end(struct end *dst, const whack_end_t *src,
 	/* if host sourceip is defined but no client is present
 	 * behind the host then set client to sourceip/32
 	 */
-	if (addrbytesptr(&dst->host_srcip, NULL) &&
-		!isanyaddr(&dst->host_srcip) && !dst->has_natip && !dst->has_client)
+	if (!dst->host_srcip->is_anyaddr(dst->host_srcip) &&
+		!dst->has_natip && !dst->has_client)
 	{
-		err_t ugh = addrtosubnet(&dst->host_srcip, &dst->client);
+		ip_address addr;
+		err_t ugh;
+
+		addr = *(ip_address*)dst->host_srcip->get_sockaddr(dst->host_srcip);
+		ugh = addrtosubnet(&addr, &dst->client);
 
 		if (ugh)
 		{
@@ -1110,6 +1141,12 @@ void add_connection(const whack_message_t *wm)
 			}
 		}
 
+		if (wm->xauth_identity)
+		{
+			c->xauth_identity
+					= identification_create_from_string(wm->xauth_identity);
+		}
+
 		c->sa_ike_life_seconds = wm->sa_ike_life_seconds;
 		c->sa_ipsec_life_seconds = wm->sa_ipsec_life_seconds;
 		c->sa_rekey_margin = wm->sa_rekey_margin;
@@ -1211,7 +1248,8 @@ void add_connection(const whack_message_t *wm)
 			c->spd.that.modecfg = TRUE;
 			c->spd.that.has_client = FALSE;
 			/* reset the host_srcip so that it gets assigned in modecfg */
-			anyaddr(AF_INET, &c->spd.that.host_srcip);
+			DESTROY_IF(c->spd.that.host_srcip);
+			c->spd.that.host_srcip = host_create_any(AF_INET);
 		}
 
 		if (c->ikev1)
@@ -3046,7 +3084,8 @@ void ISAKMP_SA_established(connection_t *c, so_serial_t serial)
 	/* the connection is now oriented so that we are able to determine
 	 * whether we are a mode config server with a virtual IP to send.
 	 */
-	if (!isanyaddr(&c->spd.that.host_srcip) && !c->spd.that.has_natip)
+	if (!c->spd.that.host_srcip->is_anyaddr(c->spd.that.host_srcip) &&
+	    !c->spd.that.has_natip)
 	{
 		c->spd.that.modecfg = TRUE;
 	}
@@ -3693,8 +3732,10 @@ static connection_t *fc_try(const connection_t *c, struct host_pair *hp,
 			}
 			else
 			{
+				host_t *vip = c->spd.that.host_srcip;
+
 				if (!peer_net_is_host && !(sr->that.modecfg && c->spd.that.modecfg &&
-						subnetisaddr(peer_net, &c->spd.that.host_srcip)))
+						subnetisaddr(peer_net, (ip_address*)vip->get_sockaddr(vip))))
 				{
 					continue;
 				}

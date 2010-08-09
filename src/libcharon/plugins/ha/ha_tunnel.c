@@ -92,10 +92,8 @@ struct private_ha_tunnel_t {
 	ha_creds_t creds;
 };
 
-/**
- * Implementation of ha_tunnel_t.is_sa
- */
-static bool is_sa(private_ha_tunnel_t *this, ike_sa_t *ike_sa)
+METHOD(ha_tunnel_t, is_sa, bool,
+	private_ha_tunnel_t *this, ike_sa_t *ike_sa)
 {
 	peer_cfg_t *cfg = this->backend.cfg;
 
@@ -112,11 +110,8 @@ typedef struct {
 	shared_key_t *key;
 } shared_enum_t;
 
-/**
- * Implementation of shared_enum_t.enumerate
- */
-static bool shared_enumerate(shared_enum_t *this, shared_key_t **key,
-							 id_match_t *me, id_match_t *other)
+METHOD(enumerator_t, shared_enumerate, bool,
+	shared_enum_t *this, shared_key_t **key, id_match_t *me, id_match_t *other)
 {
 	if (this->key)
 	{
@@ -135,12 +130,9 @@ static bool shared_enumerate(shared_enum_t *this, shared_key_t **key,
 	return FALSE;
 }
 
-/**
- * Implements ha_creds_t.create_shared_enumerator
- */
-static enumerator_t* create_shared_enumerator(ha_creds_t *this,
-							shared_key_type_t type, identification_t *me,
-							identification_t *other)
+METHOD(ha_creds_t, create_shared_enumerator, enumerator_t*,
+	ha_creds_t *this, shared_key_type_t type,
+	identification_t *me, identification_t *other)
 {
 	shared_enum_t *enumerator;
 
@@ -157,28 +149,25 @@ static enumerator_t* create_shared_enumerator(ha_creds_t *this,
 		return NULL;
 	}
 
-	enumerator = malloc_thing(shared_enum_t);
-	enumerator->public.enumerate = (void*)shared_enumerate;
-	enumerator->public.destroy = (void*)free;
-	enumerator->key = this->key;
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_shared_enumerate,
+			.destroy = (void*)free,
+		},
+		.key = this->key,
+	);
 
 	return &enumerator->public;
 }
 
-/**
- * Implementation of backend_t.create_peer_cfg_enumerator.
- */
-static enumerator_t* create_peer_cfg_enumerator(ha_backend_t *this,
-								identification_t *me, identification_t *other)
+METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
+	ha_backend_t *this, identification_t *me, identification_t *other)
 {
 	return enumerator_create_single(this->cfg, NULL);
 }
 
-/**
- * Implementation of backend_t.create_ike_cfg_enumerator.
- */
-static enumerator_t* create_ike_cfg_enumerator(ha_backend_t *this,
-											   host_t *me, host_t *other)
+METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
+	ha_backend_t *this, host_t *me, host_t *other)
 {
 	return enumerator_create_single(this->cfg->get_ike_cfg(this->cfg), NULL);
 }
@@ -207,11 +196,11 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 							chunk_clone(chunk_create(secret, strlen(secret))));
 	this->creds.public.create_private_enumerator = (void*)return_null;
 	this->creds.public.create_cert_enumerator = (void*)return_null;
-	this->creds.public.create_shared_enumerator = (void*)create_shared_enumerator;
+	this->creds.public.create_shared_enumerator = (void*)_create_shared_enumerator;
 	this->creds.public.create_cdp_enumerator = (void*)return_null;
 	this->creds.public.cache_cert = (void*)nop;
 
-	charon->credentials->add_set(charon->credentials, &this->creds.public);
+	lib->credmgr->add_set(lib->credmgr, &this->creds.public);
 
 	/* create config and backend */
 	ike_cfg = ike_cfg_create(FALSE, FALSE, local, IKEV2_UDP_PORT,
@@ -233,8 +222,9 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 				  identification_create_from_string(remote));
 	peer_cfg->add_auth_cfg(peer_cfg, auth_cfg, FALSE);
 
-	child_cfg = child_cfg_create("ha", &lifetime, NULL, TRUE,
-						MODE_TRANSPORT, ACTION_NONE, ACTION_NONE, FALSE, 0);
+	child_cfg = child_cfg_create("ha", &lifetime, NULL, TRUE, MODE_TRANSPORT,
+					 			 ACTION_NONE, ACTION_NONE, FALSE, 0, 0,
+								 NULL, NULL);
 	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_PORT, HA_PORT);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
@@ -247,8 +237,8 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 
 	this->backend.cfg = peer_cfg;
-	this->backend.public.create_peer_cfg_enumerator = (void*)create_peer_cfg_enumerator;
-	this->backend.public.create_ike_cfg_enumerator = (void*)create_ike_cfg_enumerator;
+	this->backend.public.create_peer_cfg_enumerator = (void*)_create_peer_cfg_enumerator;
+	this->backend.public.create_ike_cfg_enumerator = (void*)_create_ike_cfg_enumerator;
 	this->backend.public.get_peer_cfg_by_name = (void*)return_null;
 
 	charon->backends->add_backend(charon->backends, &this->backend.public);
@@ -257,10 +247,8 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	this->trap = charon->traps->install(charon->traps, peer_cfg, child_cfg);
 }
 
-/**
- * Implementation of ha_tunnel_t.destroy.
- */
-static void destroy(private_ha_tunnel_t *this)
+METHOD(ha_tunnel_t, destroy, void,
+	private_ha_tunnel_t *this)
 {
 	if (this->backend.cfg)
 	{
@@ -269,7 +257,7 @@ static void destroy(private_ha_tunnel_t *this)
 	}
 	if (this->creds.key)
 	{
-		charon->credentials->remove_set(charon->credentials, &this->creds.public);
+		lib->credmgr->remove_set(lib->credmgr, &this->creds.public);
 		this->creds.key->destroy(this->creds.key);
 	}
 	this->creds.local->destroy(this->creds.local);
@@ -286,10 +274,14 @@ static void destroy(private_ha_tunnel_t *this)
  */
 ha_tunnel_t *ha_tunnel_create(char *local, char *remote, char *secret)
 {
-	private_ha_tunnel_t *this = malloc_thing(private_ha_tunnel_t);
+	private_ha_tunnel_t *this;
 
-	this->public.is_sa = (bool(*)(ha_tunnel_t*, ike_sa_t *ike_sa))is_sa;
-	this->public.destroy = (void(*)(ha_tunnel_t*))destroy;
+	INIT(this,
+		.public = {
+			.is_sa = _is_sa,
+			.destroy = _destroy,
+		},
+	);
 
 	setup_tunnel(this, local, remote, secret);
 

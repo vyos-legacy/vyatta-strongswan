@@ -461,6 +461,41 @@ static void handle_firewall(const char *label, starter_end_t *end,
 	}
 }
 
+static bool handle_mark(char *value, mark_t *mark)	
+{
+	char *pos, *endptr;
+
+	pos = strchr(value, '/');
+	if (pos)
+	{
+		*pos = '\0';
+		mark->mask = strtoul(pos+1, &endptr, 0);
+		if (*endptr != '\0')
+		{
+			plog("# invalid mark mask: %s", pos+1);
+			return FALSE;
+		}
+	}
+	else
+	{
+		mark->mask = 0xffffffff;
+	}
+	if (value == '\0')
+	{
+		mark->value = 0;
+	}
+	else
+	{
+		mark->value = strtoul(value, &endptr, 0);
+		if (*endptr != '\0')
+		{
+			plog("# invalid mark value: %s", value);
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /*
  * parse a conn section
  */
@@ -671,6 +706,26 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 			}
 			break;
 		}
+		case KW_MARK:
+			if (!handle_mark(kw->value, &conn->mark_in))
+			{
+				cfg->err++;
+				break;
+			}
+			conn->mark_out = conn->mark_in;
+			break;
+		case KW_MARK_IN:
+			if (!handle_mark(kw->value, &conn->mark_in))
+			{
+				cfg->err++;
+			}
+			break;
+		case KW_MARK_OUT:
+			if (!handle_mark(kw->value, &conn->mark_out))
+			{
+				cfg->err++;
+			}
+			break;
 		case KW_KEYINGTRIES:
 			if (streq(kw->value, "%forever"))
 			{

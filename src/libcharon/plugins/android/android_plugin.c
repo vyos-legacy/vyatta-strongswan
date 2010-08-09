@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,7 +15,10 @@
  */
 
 #include "android_plugin.h"
+#include "android_logger.h"
 #include "android_handler.h"
+#include "android_creds.h"
+#include "android_service.h"
 
 #include <hydra.h>
 #include <daemon.h>
@@ -32,16 +36,38 @@ struct private_android_plugin_t {
 	android_plugin_t public;
 
 	/**
+	 * Android specific logger
+	 */
+	android_logger_t *logger;
+
+	/**
 	 * Android specific DNS handler
 	 */
 	android_handler_t *handler;
+
+	/**
+	 * Android specific credential set
+	 */
+	android_creds_t *creds;
+
+	/**
+	 * Service that interacts with the Android Settings frontend
+	 */
+	android_service_t *service;
+
 };
 
 METHOD(plugin_t, destroy, void,
-	private_android_plugin_t *this)
+	   private_android_plugin_t *this)
 {
-	hydra->attributes->remove_handler(hydra->attributes, &this->handler->handler);
+	hydra->attributes->remove_handler(hydra->attributes,
+									  &this->handler->handler);
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+	charon->bus->remove_listener(charon->bus, &this->logger->listener);
+	this->creds->destroy(this->creds);
 	this->handler->destroy(this->handler);
+	this->logger->destroy(this->logger);
+	DESTROY_IF(this->service);
 	free(this);
 }
 
@@ -56,10 +82,21 @@ plugin_t *android_plugin_create()
 		.public.plugin = {
 			.destroy = _destroy,
 		},
+		.logger = android_logger_create(),
 		.handler = android_handler_create(),
+		.creds = android_creds_create(),
 	);
 
+	charon->bus->add_listener(charon->bus, &this->logger->listener);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	hydra->attributes->add_handler(hydra->attributes, &this->handler->handler);
+
+	this->service = android_service_create(this->creds);
+	if (!this->service)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public.plugin;
 }

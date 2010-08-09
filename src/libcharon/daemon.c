@@ -19,16 +19,19 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <syslog.h>
 #include <time.h>
 #include <errno.h>
+
 #ifdef CAPABILITIES
+#ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
+#endif /* HAVE_SYS_CAPABILITY_H */
 #endif /* CAPABILITIES */
 
 #include "daemon.h"
 
 #include <library.h>
-#include <selectors/traffic_selector.h>
 #include <config/proposal.h>
 
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
@@ -46,12 +49,16 @@ struct private_daemon_t {
 	 */
 	daemon_t public;
 
-#ifdef CAPABILITIES
 	/**
 	 * capabilities to keep
 	 */
+#ifdef CAPABILITIES_LIBCAP
 	cap_t caps;
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	struct __user_cap_data_struct caps;
+#endif /* CAPABILITIES_NATIVE */
+
 };
 
 /**
@@ -97,11 +104,12 @@ static void destroy(private_daemon_t *this)
 		this->public.ike_sa_manager->flush(this->public.ike_sa_manager);
 	}
 	DESTROY_IF(this->public.receiver);
+	DESTROY_IF(this->public.sender);
 	/* unload plugins to release threads */
 	lib->plugins->unload(lib->plugins);
-#ifdef CAPABILITIES
+#ifdef CAPABILITIES_LIBCAP
 	cap_free(this->caps);
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.kernel_interface);
@@ -114,8 +122,6 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.mediation_manager);
 #endif /* ME */
 	DESTROY_IF(this->public.backends);
-	DESTROY_IF(this->public.credentials);
-	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.socket);
 	/* wait until all threads are gone */
 	DESTROY_IF(this->public.processor);
@@ -133,22 +139,36 @@ static void destroy(private_daemon_t *this)
 METHOD(daemon_t, keep_cap, void,
 	   private_daemon_t *this, u_int cap)
 {
-#ifdef CAPABILITIES
+#ifdef CAPABILITIES_LIBCAP
 	cap_set_flag(this->caps, CAP_EFFECTIVE, 1, &cap, CAP_SET);
 	cap_set_flag(this->caps, CAP_INHERITABLE, 1, &cap, CAP_SET);
 	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	this->caps.effective |= 1 << cap;
+	this->caps.permitted |= 1 << cap;
+	this->caps.inheritable |= 1 << cap;
+#endif /* CAPABILITIES_NATIVE */
 }
 
 METHOD(daemon_t, drop_capabilities, bool,
 	   private_daemon_t *this)
 {
-#ifdef CAPABILITIES
+#ifdef CAPABILITIES_LIBCAP
 	if (cap_set_proc(this->caps) != 0)
 	{
 		return FALSE;
 	}
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	struct __user_cap_header_struct header = {
+		.version = _LINUX_CAPABILITY_VERSION,
+	};
+	if (capset(&header, &this->caps) != 0)
+	{
+		return FALSE;
+	}
+#endif /* CAPABILITIES_NATIVE */
 	return TRUE;
 }
 
@@ -254,8 +274,15 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 					 filename, strerror(errno));
 				continue;
 			}
+			if (lib->settings->get_bool(lib->settings,
+							"charon.filelog.%s.flush_line", FALSE, filename))
+			{
+				setlinebuf(file);
+			}
 		}
-		file_logger = file_logger_create(file);
+		file_logger = file_logger_create(file,
+						lib->settings->get_str(lib->settings,
+							"charon.filelog.%s.time_format", NULL, filename));
 		def = lib->settings->get_int(lib->settings,
 									 "charon.filelog.%s.default", 1, filename);
 		for (group = 0; group < DBG_MAX; group++)
@@ -276,7 +303,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	if (!loggers_defined)
 	{
 		/* set up default stdout file_logger */
-		file_logger = file_logger_create(stdout);
+		file_logger = file_logger_create(stdout, NULL);
 		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
 		this->public.file_loggers->insert_last(this->public.file_loggers,
 											   file_logger);
@@ -331,7 +358,6 @@ METHOD(daemon_t, initialize, bool,
 	/* load secrets, ca certificates and crls */
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();
-	this->public.credentials = credential_manager_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.sim = sim_manager_create();
@@ -392,7 +418,9 @@ private_daemon_t *daemon_create()
 	);
 
 #ifdef CAPABILITIES
+#ifdef CAPABILITIES_LIBCAP
 	this->caps = cap_init();
+#endif /* CAPABILITIES_LIBCAP */
 	keep_cap(this, CAP_NET_ADMIN);
 	if (lib->leak_detective)
 	{
@@ -423,10 +451,6 @@ bool libcharon_init()
 	this = daemon_create();
 	charon = &this->public;
 
-	lib->printf_hook->add_handler(lib->printf_hook, 'R',
-								  traffic_selector_printf_hook,
-								  PRINTF_HOOK_ARGTYPE_POINTER,
-								  PRINTF_HOOK_ARGTYPE_END);
 	lib->printf_hook->add_handler(lib->printf_hook, 'P',
 								  proposal_printf_hook,
 								  PRINTF_HOOK_ARGTYPE_POINTER,

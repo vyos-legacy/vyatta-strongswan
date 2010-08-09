@@ -95,6 +95,13 @@ struct also {
 		also_t          *next;
 };
 
+typedef struct mark_t mark_t;
+
+struct mark_t{
+		u_int32_t value;
+		u_int32_t mask;
+};
+
 typedef struct starter_conn starter_conn_t;
 
 struct starter_conn {
@@ -110,6 +117,7 @@ struct starter_conn {
 		u_int32_t       eap_type;
 		u_int32_t       eap_vendor;
 		char            *eap_identity;
+		char            *xauth_identity;
 		lset_t          policy;
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;
@@ -120,6 +128,9 @@ struct starter_conn {
 		u_int64_t	sa_ipsec_margin_packets;
 		unsigned long   sa_keying_tries;
 		unsigned long   sa_rekey_fuzz;
+		u_int32_t       reqid;
+		mark_t			mark_in;
+		mark_t			mark_out;
 		sa_family_t     addr_family;
 		sa_family_t     tunnel_addr_family;
 		bool            install_policy;

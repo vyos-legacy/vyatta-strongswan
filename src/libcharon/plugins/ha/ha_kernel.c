@@ -52,24 +52,57 @@ struct private_ha_kernel_t {
 };
 
 /**
- * Implementation of ha_kernel_t.in_segment
+ * Segmentate a calculated hash
  */
-static bool in_segment(private_ha_kernel_t *this, host_t *host, u_int segment)
+static u_int hash2segment(private_ha_kernel_t *this, u_int64_t hash)
+{
+	return ((hash * this->count) >> 32) + 1;
+}
+
+/**
+ * Get a host as an integer for hashing
+ */
+static u_int32_t host2int(host_t *host)
 {
 	if (host->get_family(host) == AF_INET)
 	{
-		unsigned long hash;
-		u_int32_t addr;
-
-		addr = *(u_int32_t*)host->get_address(host).ptr;
-		hash = jhash_1word(ntohl(addr), this->initval);
-
-		if ((((u_int64_t)hash * this->count) >> 32) + 1 == segment)
-		{
-			return TRUE;
-		}
+		return *(u_int32_t*)host->get_address(host).ptr;
 	}
-	return FALSE;
+	return 0;
+}
+
+METHOD(ha_kernel_t, get_segment, u_int,
+	private_ha_kernel_t *this, host_t *host)
+{
+	unsigned long hash;
+	u_int32_t addr;
+
+	addr = host2int(host);
+	hash = jhash_1word(ntohl(addr), this->initval);
+
+	return hash2segment(this, hash);
+}
+
+METHOD(ha_kernel_t, get_segment_spi, u_int,
+	private_ha_kernel_t *this, host_t *host, u_int32_t spi)
+{
+	unsigned long hash;
+	u_int32_t addr;
+
+	addr = host2int(host);
+	hash = jhash_2words(ntohl(addr), ntohl(spi), this->initval);
+
+	return hash2segment(this, hash);
+}
+
+METHOD(ha_kernel_t, get_segment_int, u_int,
+	private_ha_kernel_t *this, int n)
+{
+	unsigned long hash;
+
+	hash = jhash_1word(ntohl(n), this->initval);
+
+	return hash2segment(this, hash);
 }
 
 /**
@@ -142,10 +175,8 @@ static segment_mask_t get_active(private_ha_kernel_t *this, char *file)
 	return mask;
 }
 
-/**
- * Implementation of ha_kernel_t.activate
- */
-static void activate(private_ha_kernel_t *this, u_int segment)
+METHOD(ha_kernel_t, activate, void,
+	private_ha_kernel_t *this, u_int segment)
 {
 	enumerator_t *enumerator;
 	char *file;
@@ -158,10 +189,8 @@ static void activate(private_ha_kernel_t *this, u_int segment)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of ha_kernel_t.deactivate
- */
-static void deactivate(private_ha_kernel_t *this, u_int segment)
+METHOD(ha_kernel_t, deactivate, void,
+	private_ha_kernel_t *this, u_int segment)
 {
 	enumerator_t *enumerator;
 	char *file;
@@ -199,10 +228,8 @@ static void disable_all(private_ha_kernel_t *this)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Implementation of ha_kernel_t.destroy.
- */
-static void destroy(private_ha_kernel_t *this)
+METHOD(ha_kernel_t, destroy, void,
+	private_ha_kernel_t *this)
 {
 	free(this);
 }
@@ -212,15 +239,20 @@ static void destroy(private_ha_kernel_t *this)
  */
 ha_kernel_t *ha_kernel_create(u_int count)
 {
-	private_ha_kernel_t *this = malloc_thing(private_ha_kernel_t);
+	private_ha_kernel_t *this;
 
-	this->public.in_segment = (bool(*)(ha_kernel_t*, host_t *host, u_int segment))in_segment;
-	this->public.activate = (void(*)(ha_kernel_t*, u_int segment))activate;
-	this->public.deactivate = (void(*)(ha_kernel_t*, u_int segment))deactivate;
-	this->public.destroy = (void(*)(ha_kernel_t*))destroy;
-
-	this->initval = 0;
-	this->count = count;
+	INIT(this,
+		.public = {
+			.get_segment = _get_segment,
+			.get_segment_spi = _get_segment_spi,
+			.get_segment_int = _get_segment_int,
+			.activate = _activate,
+			.deactivate = _deactivate,
+			.destroy = _destroy,
+		},
+		.initval = 0,
+		.count = count,
+	);
 
 	disable_all(this);
 

@@ -21,13 +21,14 @@
 #ifndef HA_CHILD_H_
 #define HA_CHILD_H_
 
+typedef struct ha_child_t ha_child_t;
+
 #include "ha_socket.h"
 #include "ha_tunnel.h"
 #include "ha_segments.h"
+#include "ha_kernel.h"
 
 #include <daemon.h>
-
-typedef struct ha_child_t ha_child_t;
 
 /**
  * Listener to synchronize CHILD_SAs.
@@ -50,8 +51,11 @@ struct ha_child_t {
  *
  * @param socket		socket to use for sending synchronization messages
  * @param tunnel		tunnel securing sync messages, if any
+ * @param segments		segment handling
+ * @param kernel		kernel helper
  * @return				CHILD listener
  */
-ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel);
+ha_child_t *ha_child_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
+							ha_segments_t *segments, ha_kernel_t *kernel);
 
-#endif /* HA_CHILD_ @}*/
+#endif /** HA_CHILD_ @}*/
