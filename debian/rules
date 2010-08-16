@@ -136,9 +136,6 @@ endif
 	find $(CURDIR)/debian/*strongswan*/ -name ".cvsignore" | xargs --no-run-if-empty rm -f
 	find $(CURDIR)/debian/*strongswan*/ -name "/.svn/" | xargs --no-run-if-empty rm -rf
 
-	# and lintian overrides
-	install --mode=0644 $(CURDIR)/debian/strongswan.lintian-overrides $(CURDIR)/debian/libstrongswan/usr/share/lintian/overrides/strongswan
-
 binary-common:
 	dh_testdir
 	dh_testroot
