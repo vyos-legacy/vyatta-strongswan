@@ -25,4 +25,5 @@ usr/lib/ipsec/plugins/libstrongswan-fips-prf.so*   usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-resolve.so*    usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-sql.so*        usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-ha.so*         usr/lib/ipsec/plugins/
+usr/lib/ipsec/plugins/libstrongswan-xauth.so*      usr/lib/ipsec/plugins/
 etc/strongswan.conf                                etc/

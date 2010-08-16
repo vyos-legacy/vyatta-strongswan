@@ -3,6 +3,7 @@ strongswan (4.4.1-1) unstable; urgency=low
   * New upstream release.
     Closes: #587583: strongswan 4.4.0-2 does not work here: charon seems not 
                      to ignore all incoming requests/answers
+    Closes: #506320: strongswan: include directives error and ikev2
   * Fix typo in debconf templates.
     Closes: #587564: strongswan: Minor typos in Debconf template
   * Updated debconf translations.
