@@ -3,6 +3,10 @@ strongswan (4.4.1-1) unstable; urgency=low
   * New upstream release.
   * Fix typo in debconf templates.
     Closes: #587564: strongswan: Minor typos in Debconf template
+  * Updated debconf translations.
+    Closes: #587562: strongswan: [INTL:de] updated German debconf translation
+    Closes: #580954: [INTL:es] Spanish debconf template translation for 
+                     strongswan
 
  -- Rene Mayrhofer <rmayr@debian.org>  Mon, 09 Aug 2010 11:37:25 +0200
 
@@ -19,7 +23,7 @@ strongswan (4.4.0-2) unstable; urgency=low
     for dh_install to make sure that all required plugins get built and 
     installed.
     Closes: #587282: plugins missing
-  * Updated fr debconf translations.
+  * Updated debconf translations.
     Closes: #587052: strongswan: [INTL:fr] French debconf templates 
             translation update
     Closes: #587159: strongswan: [INTL:ru] Russian debconf templates 
