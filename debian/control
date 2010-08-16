@@ -2,7 +2,7 @@ Source: strongswan
 Section: net
 Priority: optional
 Maintainer: Rene Mayrhofer <rmayr@debian.org>
-Standards-Version: 3.8.4
+Standards-Version: 3.9.1
 Vcs-Browser: http://wiki.strongswan.org/repositories/show/strongswan
 Vcs-Git: http://wiki.strongswan.org/repositories/show/strongswan
 Build-Depends: debhelper (>= 7.1), libtool, libgmp3-dev, 
@@ -17,7 +17,7 @@ Homepage: http://www.strongswan.org
 
 Package: strongswan
 Architecture: all
-Depends: strongswan-ikev1, strongswan-ikev2
+Depends: ${misc:Depends}, strongswan-ikev1, strongswan-ikev2
 Suggests: network-manager-strongswan
 Description: IPsec VPN solution metapackage
  The strongSwan VPN suite is based on the IPsec stack in standard Linux 2.6
@@ -34,7 +34,7 @@ Description: IPsec VPN solution metapackage
 Package: libstrongswan
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, openssl
-Conflicts: strongswan (< 4.2.12-1)
+Conflicts: strongswan (<< 4.2.12-1)
 Description: strongSwan utility and crypto library
  StrongSwan is an IPsec-based VPN solution for the Linux kernel. It uses the
  native IPsec stack and runs on any recent 2.6 kernel (no patching required).
@@ -48,7 +48,7 @@ Package: strongswan-dbg
 Architecture: any
 Section: debug
 Priority: extra
-Depends: ${misc:Depends}, strongswan
+Depends: ${misc:Depends}, strongswan, libstrongswan
 Description: strongSwan library and binaries - debugging symbols
  StrongSwan is an IPsec-based VPN solution for the Linux kernel. It uses the
  native IPsec stack and runs on any recent 2.6 kernel (no patching required).
@@ -59,7 +59,7 @@ Description: strongSwan library and binaries - debugging symbols
 Package: strongswan-starter
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libstrongswan, strongswan-ikev1 | strongswan-ikev2
-Conflicts: strongswan (< 4.2.12-1)
+Conflicts: strongswan (<< 4.2.12-1)
 Description: strongSwan daemon starter and configuration file parser
  StrongSwan is an IPsec-based VPN solution for the Linux kernel. It uses the
  native IPsec stack and runs on any recent 2.6 kernel (no patching required).
@@ -76,7 +76,7 @@ Pre-Depends: debconf | debconf-2.0
 Depends: ${shlibs:Depends}, ${misc:Depends}, strongswan-starter, bsdmainutils, debianutils (>=1.7), ipsec-tools, host, iproute
 Suggests: curl
 Provides: ike-server
-Conflicts: freeswan (<< 2.04-12), openswan, strongswan (< 4.2.12-1)
+Conflicts: freeswan (<< 2.04-12), openswan, strongswan (<< 4.2.12-1)
 Replaces: openswan
 Description: strongSwan Internet Key Exchange (v1) daemon
  StrongSwan is an IPsec-based VPN solution for the Linux kernel. It uses the
@@ -94,7 +94,7 @@ Pre-Depends: debconf | debconf-2.0
 Depends: ${shlibs:Depends}, ${misc:Depends}, libstrongswan, strongswan-starter | strongswan-nm, bsdmainutils, debianutils (>=1.7), ipsec-tools, host, iproute
 Suggests: curl
 Provides: ike-server
-Conflicts: freeswan (<< 2.04-12), openswan, strongswan (< 4.2.12-1)
+Conflicts: freeswan (<< 2.04-12), openswan, strongswan (<< 4.2.12-1)
 Description: strongSwan Internet Key Exchange (v2) daemon
  StrongSwan is an IPsec-based VPN solution for the Linux kernel. It uses the
  native IPsec stack and runs on any recent 2.6 kernel (no patching required).
@@ -108,7 +108,7 @@ Description: strongSwan Internet Key Exchange (v2) daemon
 
 Package: strongswan-nm
 Architecture: any
-Depends: ${shlibs:Depends}, strongswan-ikev2
+Depends: ${shlibs:Depends}, ${misc:Depends}, strongswan-ikev2
 Recommends: network-manager-strongswan
 Description: strongSwan plugin to interact with NetworkManager
  StrongSwan is an IPsec-based VPN solution for the Linux kernel. It uses the
