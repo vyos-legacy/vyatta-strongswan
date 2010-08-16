@@ -1,5 +1,3 @@
-libstrongswan: package-name-doesnt-match-sonames libchecksum libfast0 libhydra0 libstrongswan0
-libstrongswan: possible-gpl-code-linked-with-openssl
 # as here private data is stored we need tighter perms here
 strongswan-starter: non-standard-dir-perm etc/ipsec.d/private/ 0700 != 0755
 strongswan-starter: non-standard-file-perm etc/ipsec.secrets 0600 != 0644
