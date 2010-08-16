@@ -1,6 +1,8 @@
 strongswan (4.4.1-1) unstable; urgency=low
 
   * New upstream release.
+  * Fix typo in debconf templates.
+    Closes: #587564: strongswan: Minor typos in Debconf template
 
  -- Rene Mayrhofer <rmayr@debian.org>  Mon, 09 Aug 2010 11:37:25 +0200
 
