@@ -1,11 +1,11 @@
 usr/lib/libcharon.so*      usr/lib/
 usr/lib/ipsec/charon       usr/lib/ipsec/
 usr/lib/ipsec/plugins/libstrongswan-kernel-netlink.so*     usr/lib/ipsec/plugins/
-usr/lib/ipsec/plugins/libstrongswan-socket*     usr/lib/ipsec/plugins/
+usr/lib/ipsec/plugins/libstrongswan-socket*.so*     usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-eap*.so*     usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-agent.so*      usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-curl.so*       usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-ldap.so*       usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-medsrv.so*       usr/lib/ipsec/plugins/
 usr/lib/ipsec/plugins/libstrongswan-medcli.so*       usr/lib/ipsec/plugins/
-usr/lib/ipsec/plugins/libstrongswan-attr*       usr/lib/ipsec/plugins/
+usr/lib/ipsec/plugins/libstrongswan-attr*.so*       usr/lib/ipsec/plugins/
