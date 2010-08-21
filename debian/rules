@@ -12,7 +12,6 @@ export DEB_BUILD_HARDENING=1
 
 CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
-		--enable-socket-raw --enable-socket-dynamic \
 		--enable-ldap --enable-curl \
 		--with-capabilities=libcap \
 		--enable-smartcard \

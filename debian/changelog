@@ -1,3 +1,19 @@
+strongswan (4.4.1-1.1) unstable; urgency=low
+
+  * Recompiled with dpkg-buildpackage instead of svn-buildpackage to
+    make the clean target work. I am still looking for the root cause of 
+    this quilt 3.0 format and svn-buildpackage incompatibility.
+    Closes: Bug#593313: strongswan: FTBFS because clean rule fails
+  * Removed the --enable-socket-* configure options again. Having multiple
+    socket variants for charon would force to explicitly enable one (in case
+    of pluto co-existance the socket-raw) in strongswan.conf. Disabling the
+    other variants for now at build-time relieves us from changing the 
+    default config file and might be more future-proof concerning future
+    upstream changes to configure options.
+    Really closes: #587583
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sat, 21 Aug 2010 23:28:47 +0200
+
 strongswan (4.4.1-1) unstable; urgency=low
 
   * New upstream release.
