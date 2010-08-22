@@ -1,3 +1,11 @@
+strongswan (4.4.1-3) unstable; urgency=low
+
+  * Change make clean to make distclean to make package building
+    idempotent.
+    Really closes: Bug#593313: strongswan: FTBFS because clean rule fails
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 22 Aug 2010 21:39:03 +0200
+
 strongswan (4.4.1-2) unstable; urgency=low
 
   * Recompiled with dpkg-buildpackage instead of svn-buildpackage to
