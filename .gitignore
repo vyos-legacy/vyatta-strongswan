@@ -8,6 +8,7 @@
 .dirstamp
 libtool
 /aclocal.m4
+/ltmain.sh
 /autom4te.cache
 /build-stamp
 /config

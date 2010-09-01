@@ -41,22 +41,15 @@ ifeq ($(DEB_BUILD_ARCH_CPU),i386)
   CONFIGUREARGS += --enable-padlock
 endif
 
-patch:
-	autoreconf -i
-	dh_testdir
-	#dpatch apply-all
-
-unpatch:
-	#dpatch deapply-all
-
 build: build-stamp
-build-stamp: patch
+build-stamp:
+	autoreconf -i
 	dh_testdir
 	./configure $(CONFIGUREARGS)
 	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS)"
 	touch build-stamp
 
-clean: unpatch
+clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp
@@ -75,9 +68,6 @@ clean: unpatch
 	# just in case something went wrong
 	rm -f $(CURDIR)/debian/ipsec.secrets
 	
-	# and make sure that template are up-to-date
-	debconf-updatepo
-
 	dh_clean
 
 install: build-stamp
