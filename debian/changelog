@@ -1,3 +1,9 @@
+strongswan (4.3.2-1.1-vyatta13) unstable; urgency=low
+
+  * UNRELEASED
+
+ -- An-Cheng Huang <ancheng@vyatta.com>  Thu, 02 Sep 2010 18:30:50 -0700
+
 strongswan (4.3.2-1.1-vyatta12) unstable; urgency=low
 
   * fix squeeze build and clean up
