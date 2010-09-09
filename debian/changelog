@@ -1,3 +1,10 @@
+strongswan (4.4.1-4) unstable; urgency=low
+
+  * Rewrote parts of the init.d script to make stop/restart more robust
+    when pluto or charon fail.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 09 Sep 2010 13:08:36 +0200
+
 strongswan (4.4.1-3) unstable; urgency=low
 
   * Change make clean to make distclean to make package building
