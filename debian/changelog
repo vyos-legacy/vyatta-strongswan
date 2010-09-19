@@ -1,6 +1,8 @@
 strongswan (4.4.1-4) unstable; urgency=medium
 
-  * Rebuild package to get strongswan meta package into the archive.
+  * dh_clean should not be called by the install target. This caused the
+    arch: all package strongswan to be built but not included in the changes
+    file.
     Closes: #593768: strongswan: 4.4.1 unavailable in testing notwhistanding 
                      a freeze-exception request
   * Rewrote parts of the init.d script to make stop/restart more robust

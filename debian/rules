@@ -77,7 +77,6 @@ clean:
 install: build-stamp
 	dh_testdir
 	dh_testroot
-	dh_clean
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 
