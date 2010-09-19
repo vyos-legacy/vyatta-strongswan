@@ -1,9 +1,15 @@
-strongswan (4.4.1-4) unstable; urgency=low
+strongswan (4.4.1-4) unstable; urgency=medium
 
+  * Rebuild package to get strongswan meta package into the archive.
+    Closes: #593768: strongswan: 4.4.1 unavailable in testing notwhistanding 
+                     a freeze-exception request
   * Rewrote parts of the init.d script to make stop/restart more robust
     when pluto or charon fail.
+  * Closes: #595885: strongswan: FTBFS in squeeze: No package 'libnm_glib_vpn' 
+                     found
+    This bug was actually closed in 4.4.0 with changed dependencies.
 
- -- Rene Mayrhofer <rmayr@debian.org>  Thu, 09 Sep 2010 13:08:36 +0200
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 19 Sep 2010 13:08:36 +0200
 
 strongswan (4.4.1-3) unstable; urgency=low
 
