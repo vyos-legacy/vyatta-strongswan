@@ -17,6 +17,8 @@ NAME=ipsec
 STARTER=/usr/sbin/$NAME
 PIDFILE1=/var/run/pluto.pid
 PIDFILE2=/var/run/charon.pid
+PLUTO=/usr/lib/ipsec/pluto
+CHARON=/usr/lib/ipsec/charon
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed
@@ -43,10 +45,14 @@ do_start()
 	#   2 if daemon could not be started
 
 	# test if either charon or pluto are currently running (PIDFILE1 or PIDFILE2)
-	start-stop-daemon --start --quiet --pidfile $PIDFILE1 --exec $STARTER --test > /dev/null \
+	if [ -e $PLUTO ]; then
+	  start-stop-daemon --start --quiet --pidfile $PIDFILE1 --exec $STARTER --test > /dev/null \
 		|| return 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE2 --exec $STARTER --test > /dev/null \
+	fi
+	if [ -e $CHARON ]; then
+	  start-stop-daemon --start --quiet --pidfile $PIDFILE2 --exec $STARTER --test > /dev/null \
 		|| return 1
+	fi
 
 	$STARTER start || return 2
 }
@@ -82,16 +88,20 @@ do_stop()
 	# that waits for the process to drop all resources that could be
 	# needed by services started subsequently.  A last resort is to
 	# sleep for some time.
-	start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec /usr/lib/ipsec/pluto
-	[ "$?" = 2 ] && return 2
-	start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec /usr/lib/ipsec/charon
-	[ "$?" = 2 ] && return 2
+	if [ -e $PLUTO ]; then
+	  start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $PLUTO
+	  [ "$?" = 2 ] && return 2
+	fi
+	if [ -e $CHARON ]; then
+	  start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $CHARON
+	  [ "$?" = 2 ] && return 2
+	fi
 
 	# strongswan is known to leave PID files behind when something goes wrong, cleanup here
 	rm -f $PIDFILE1 $PIDFILE2
 	# and just to make sure they are really really dead at this point...
-	killall -9 /usr/lib/ipsec/pluto 2>/dev/null
-	killall -9 /usr/lib/ipsec/charon 2>/dev/null
+	killall -9 $PLUTO 2>/dev/null
+	killall -9 $CHARON 2>/dev/null
 
 	return "$RETVAL"
 }
@@ -149,5 +159,3 @@ case "$1" in
 	exit 3
 	;;
 esac
-
-:

@@ -1,3 +1,11 @@
+strongswan (4.4.1-5) unstable; urgency=low
+
+  * Fixed init script for restart to work when either pluto or charon
+    are not installed.
+    Closes: #598074: init script doesn't re-start the service on restart
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 26 Sep 2010 13:48:00 +0200
+
 strongswan (4.4.1-4) unstable; urgency=medium
 
   * dh_clean should not be called by the install target. This caused the
