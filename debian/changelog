@@ -1,4 +1,4 @@
-strongswan (4.4.1-5) unstable; urgency=low
+strongswan (4.4.1-5) unstable; urgency=medium
 
   * Fixed init script for restart to work when either pluto or charon
     are not installed.
@@ -7,8 +7,7 @@ strongswan (4.4.1-5) unstable; urgency=low
     Closes: #598136: strongswan: Please enable --enable-test-vectors 
                      configure option
   * Install libchecksum.so into correct directory (/usr/lib/ipsec instead of
-    /usr/lib).
-    Closes: #598138: libstrongswan: integrity checking broken
+    /usr/lib). It still doesn't fix #598138 because of the size mismatch.
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 26 Sep 2010 13:48:00 +0200
 
