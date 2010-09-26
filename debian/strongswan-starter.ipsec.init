@@ -70,6 +70,7 @@ do_stop()
 	# give the proper signal to stop
 	$STARTER stop || return 2
 
+	RETVAL=0
 	# but kill if that didn't work
 	if [ -e $PIDFILE1 ]; then
 		start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE1 --name $NAME
