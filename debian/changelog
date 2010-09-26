@@ -6,6 +6,9 @@ strongswan (4.4.1-5) unstable; urgency=low
   * Enable built-in crypto test vectors.
     Closes: #598136: strongswan: Please enable --enable-test-vectors 
                      configure option
+  * Install libchecksum.so into correct directory (/usr/lib/ipsec instead of
+    /usr/lib).
+    Closes: #598138: libstrongswan: integrity checking broken
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 26 Sep 2010 13:48:00 +0200
 
