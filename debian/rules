@@ -21,7 +21,8 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-eap-radius --enable-eap-identity --enable-eap-md5 \
 		--enable-eap-gtc --enable-eap-aka --enable-eap-mschapv2 \
 		--enable-sql --enable-integrity-test \
-		--enable-nm --enable-ha --enable-dhcp --enable-farp
+		--enable-nm --enable-ha --enable-dhcp --enable-farp \
+		--enable-test-vectors
 	#	--with-user=strongswan --with-group=nogroup \
 	#	--enable-kernel-pfkey --enable-kernel-klips \
 	# Could enable --enable-nat-transport, but this is actually insecure,

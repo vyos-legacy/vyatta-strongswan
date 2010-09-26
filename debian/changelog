@@ -3,6 +3,9 @@ strongswan (4.4.1-5) unstable; urgency=low
   * Fixed init script for restart to work when either pluto or charon
     are not installed.
     Closes: #598074: init script doesn't re-start the service on restart
+  * Enable built-in crypto test vectors.
+    Closes: #598136: strongswan: Please enable --enable-test-vectors 
+                     configure option
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 26 Sep 2010 13:48:00 +0200
 
