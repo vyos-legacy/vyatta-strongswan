@@ -7,8 +7,28 @@ strongswan (4.5.0-1) unstable; urgency=low
   * Enable NAT-Traversal with transport mode support so that strongswan
     can be used for an L2TP/IPsec gateway (e.g. for Windows or mobile phone
     clients).
+  * Install test-vectors and revocation plugins for libstrongswan.
+    Closes: #600996: strongswan-starter: plugin 'revocation' failed to load
+  * Acknowledge translations NMU.
+    Closes: #598925: Intent to NMU or help for an l10n upload of strongswan 
+                     to fix pending po-debconf l10n bugs
+    Closes: #598925 #599888 #600354 #600409 #602449 #603723 #603779
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 28 Nov 2010 13:09:42 +0100
+
+strongswan (4.4.1-5.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+    - Fix pending l10n issues. Debconf translations:
+    - Vietnamese (Clytie Siddall).  Closes: #598925
+    - Japanese (Hideki Yamane).  Closes: #599888
+    - Czech (Miroslav Kure).  Closes: #600354
+    - Spanish (Francisco Javier Cuadrado).  Closes: #600409
+    - Danish (Joe Hansen).  Closes: #602449
+    - Basque (Iñaki Larrañaga Murgoitio).  Closes: #603723
+    - Italian (Vincenzo Campanella).  Closes: #603779
+
+ -- Christian Perrier <bubulle@debian.org>  Wed, 17 Nov 2010 20:21:21 +0100
 
 strongswan (4.4.1-5) unstable; urgency=medium
 

@@ -1,24 +1,24 @@
-# 
+#
 #    Translators, if you are not familiar with the PO format, gettext
 #    documentation is worth reading, especially sections dedicated to
 #    this format, e.g. by running:
 #         info -n '(gettext)PO Files'
 #         info -n '(gettext)Header Entry'
-# 
+#
 #    Some information specific to po-debconf are available at
 #            /usr/share/doc/po-debconf/README-trans
 #         or http://www.debian.org/intl/l10n/po-debconf/README-trans
-# 
+#
 #    Developers do not need to manually edit POT or PO files.
-# 
-# 
+#
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: strongswan 4.2.14-1\n"
-"Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
-"POT-Creation-Date: 2010-08-09 12:15+0200\n"
-"PO-Revision-Date: 2009-04-23 06:52+0900\n"
-"Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
+"Project-Id-Version: strongswan 4.4.1-4\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2010-09-26 10:33+0200\n"
+"PO-Revision-Date: 2010-09-27 20:52+0900\n"
+"Last-Translator: Hideki Yamane <henrich@debian.org>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "Language: ja\n"
 "MIME-Version: 1.0\n"
@@ -29,7 +29,7 @@ msgstr ""
 #. Description
 #: ../strongswan-starter.templates:2001
 msgid "Old runlevel management superseded"
-msgstr ""
+msgstr "以前のランレベル管理は不要になりました"
 
 #. Type: note
 #. Description
@@ -43,42 +43,41 @@ msgid ""
 "changed your strongSwan startup parameters, then please take a look at NEWS."
 "Debian for instructions on how to modify your setup accordingly."
 msgstr ""
+"strongSwan パッケージの以前のバージョンでは、3 つの異なった Start/Stop レベル"
+"から選べるようになっていました。標準のシステム起動手順が変更されたことによっ"
+"て、これはもう必要ではなくなったりあるいは役立たなくなったりしています。これ"
+"まで事前定義されていたモードで動作していたのものと同様に、新規にインストール"
+"したものは適切なデフォルトのレベルが設定されるようになっています。以前のバー"
+"ジョンからのアップグレードで strongSwan の起動パラメータを変更していた場合"
+"は、どのように設定を修正するかは NEWS.Debian の指示を参照してください。"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
-#, fuzzy
-#| msgid "When to start strongSwan:"
 msgid "Restart strongSwan now?"
-msgstr "strongSwan の起動タイミング:"
+msgstr "strongSwan を今すぐ再起動しますか?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
-#, fuzzy
-#| msgid ""
-#| "Restarting strongSwan is a good idea, since if there is a security fix, "
-#| "it will not be fixed until the daemon restarts. Most people expect the "
-#| "daemon to restart, so this is generally a good idea. However this might "
-#| "take down existing connections and then bring them back up."
 msgid ""
 "Restarting strongSwan is recommended, since if there is a security fix, it "
 "will not be applied until the daemon restarts. Most people expect the daemon "
 "to restart, so this is generally a good idea. However, this might take down "
-"existing connections and then bring them back up, so if you are using such "
-"a strongSwan tunnel to connect for this update, restarting is not "
-"recommended."
+"existing connections and then bring them back up, so if you are using such a "
+"strongSwan tunnel to connect for this update, restarting is not recommended."
 msgstr ""
-"セキュリティ修正があった場合にはデーモンが再起動されるまで修正が反映されませ"
-"ん。ですので、strongSwan を再起動するのは良い考えです。ほとんどの人はデーモン"
-"を再起動しようとしますが、これは大抵問題ありません。しかし、この作業で現在の"
-"接続は切断され、再度繋ぎなおすことになります。"
+"セキュリティ修正があった場合など、デーモンが再起動されるまでは修正が反映されない"
+"ので、strongSwan の再起動をお勧めします。多くの人はデーモンが再起動するのを予"
+"期していますので、これは大抵の場合問題ありません。しかし、この作業では現在の"
+"接続が一旦切断されてから再度繋ぎなおすことになるので、今回のアップデートに "
+"strongSwan のトンネルを使っているような場合は、再起動はお勧めしません。"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:4001
 msgid "Start strongSwan's IKEv1 daemon?"
-msgstr ""
+msgstr "strongSwan の IKEv1 デーモンを起動しますか?"
 
 #. Type: boolean
 #. Description
@@ -87,12 +86,14 @@ msgid ""
 "The pluto daemon must be running to support version 1 of the Internet Key "
 "Exchange protocol."
 msgstr ""
+"Internet Key Exchange プロトコルバージョン 1 をサポートするには pluto デーモ"
+"ンが実行されている必要があります。"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:5001
 msgid "Start strongSwan's IKEv2 daemon?"
-msgstr ""
+msgstr "strongSwan の IKEv2 デーモンを起動しますか?"
 
 #. Type: boolean
 #. Description
@@ -101,29 +102,18 @@ msgid ""
 "The charon daemon must be running to support version 2 of the Internet Key "
 "Exchange protocol."
 msgstr ""
+"Internet Key Exchange プロトコルバージョン 2 をサポートするには charon デーモ"
+"ンが実行されている必要があります。"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:6001
-#, fuzzy
-#| msgid "Do you have an existing X.509 certificate file for strongSwan?"
 msgid "Use an X.509 certificate for this host?"
-msgstr "既に存在している X.509 証明書ファイルを strongSwan で利用しますか?"
+msgstr "このホストに対して X.509 証明書を利用しますか?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:6001
-#, fuzzy
-#| msgid ""
-#| "This installer can automatically create a RSA public/private keypair with "
-#| "an X.509 certificate for this host. This can be used to authenticate  "
-#| "IPSec connections to other hosts and is the preferred way for building "
-#| "up  secure IPSec connections. The other possibility would be to use pre-"
-#| "shared  secrets (PSKs, passwords that are the same on both sides of the "
-#| "tunnel) for authenticating an connection, but for a larger number of "
-#| "connections RSA authentication is easier to administer and more secure. "
-#| "Note that having a keypair allows to use both X.509 and PSK "
-#| "authentication for IPsec  tunnels."
 msgid ""
 "An X.509 certificate for this host can be automatically created or imported. "
 "It can be used to authenticate IPsec connections to other hosts and is the "
@@ -133,14 +123,11 @@ msgid ""
 "connections, key based authentication is easier to administer and more "
 "secure."
 msgstr ""
-"このインストーラはこのホストの X.509 認証用の RSA 公開鍵・秘密鍵のキーペアを"
-"自動的に生成できます。このキーペアは他のホストとの IPSec 通信での認証に利用可"
-"能で、セキュアな IPSec 通信を確立する方法として好まれています。他に利用可能な"
-"方法としては事前に設定してある共通鍵 (PSK、トンネルの双方で同じパスワードをを"
-"利用する) を通信の認証に利用するというのがありますが、多数の接続に対しては、"
-"RSA 認証のほうが管理がより簡単でよりセキュアです。キーペアを利用することは、"
-"X.509 認証と PSK 認証の双方を IPsec トンネルに許可することに注意してくださ"
-"い。"
+"このホスト用に X.509 証明書を自動的に生成あるいはインポートできます。他のホス"
+"トとの IPSec 通信での認証に利用可能で、セキュアな IPSec 通信を確立する方法と"
+"して好まれています。他に利用可能な方法としては共通鍵 (PSK、トンネルの双方で同"
+"じパスワードを利用する) を通信の認証に利用するというのがありますが、多数の接"
+"続に対しては RSA 認証のほうが管理がより簡単でよりセキュアです。"
 
 #. Type: boolean
 #. Description
@@ -149,24 +136,26 @@ msgid ""
 "Alternatively you can reject this option and later use the command \"dpkg-"
 "reconfigure strongswan\" to come back."
 msgstr ""
+"または、この選択肢を選ばないでおいて、後ほど「dpkg-reconfigure strongswan」を"
+"実行して再度呼び出すこともできます。"
 
 #. Type: select
 #. Choices
 #: ../strongswan-starter.templates:7001
 msgid "create"
-msgstr ""
+msgstr "作成する"
 
 #. Type: select
 #. Choices
 #: ../strongswan-starter.templates:7001
 msgid "import"
-msgstr ""
+msgstr "インポートする"
 
 #. Type: select
 #. Description
 #: ../strongswan-starter.templates:7002
 msgid "Methods for using a X.509 certificate to authenticate this host:"
-msgstr ""
+msgstr "このホストを認証するのに利用する X.509 証明書をどうするか:"
 
 #. Type: select
 #. Description
@@ -176,6 +165,9 @@ msgid ""
 "or to import an existing public and private key stored in PEM file(s) for "
 "authenticating IPsec connections."
 msgstr ""
+"ユーザが定義した設定で新規に X.509 証明書を作成することも、IPsec 接続認証用の"
+"既存の PEM ファイル形式で保存されている公開鍵および秘密鍵をインポートすること"
+"も可能です。"
 
 #. Type: select
 #. Description
@@ -188,6 +180,11 @@ msgid ""
 "certificate and all the answers given must match exactly the requirements of "
 "the CA, otherwise the certificate request may be rejected."
 msgstr ""
+"新規に X.509 証明書を作るのを選択した場合は、作成を始める前に答える必要がある"
+"質問をまず大量に尋ねられます。既存の認証局によって署名された公開鍵が必要な場"
+"合は、自己署名認証を作成するのを選んではならず、回答はすべて認証局 (CA) の要"
+"求項目に完全に一致している必要があることに留意してください。そうでない場合"
+"は、証明書要求は拒否されることになるでしょう。"
 
 #. Type: select
 #. Description
@@ -201,60 +198,49 @@ msgid ""
 "for the X.509 certificates has to be PEM and that the private key must not "
 "be encrypted or the import procedure will fail."
 msgstr ""
+"既存の公開鍵および秘密鍵をインポートしたい場合は、ファイル名を尋ねられます "
+"(両方が一つのファイルに保存されている場合は全く同じになるかもしれません)。ど"
+"こに認証局の公開鍵が保存されているかを指定することも任意で可能ですが、この"
+"ファイルは先ほどのものと同じにはできません。X.509 証明書は PEM 形式であり、秘"
+"密鍵は暗号化されていないことが必要なことにも注意ください。さもなくばインポー"
+"ト作業は失敗します。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:8001
-#, fuzzy
-#| msgid "File name of your X.509 certificate in PEM format:"
 msgid "File name of your PEM format X.509 certificate:"
 msgstr "PEM 形式の X.509 証明書のファイル名:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:8001
-#, fuzzy
-#| msgid ""
-#| "Please enter the full location of the file containing your X.509 "
-#| "certificate in PEM format."
 msgid ""
 "Please enter the location of the file containing your X.509 certificate in "
 "PEM format."
-msgstr ""
-"PEM 形式の X.509 証明書を含むファイルの場所を絶対パスで入力してください。"
+msgstr "PEM 形式の X.509 証明書を含んでいるファイルの場所を入力してください。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:9001
-#, fuzzy
-#| msgid "File name of your X.509 private key in PEM format:"
 msgid "File name of your PEM format X.509 private key:"
 msgstr "PEM 形式の X.509 秘密鍵のファイル名:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:9001
-#, fuzzy
-#| msgid ""
-#| "Please enter the full location of the file containing the private RSA key "
-#| "matching your X.509 certificate in PEM format. This can be the same file "
-#| "that contains the X.509 certificate."
 msgid ""
 "Please enter the location of the file containing the private RSA key "
 "matching your X.509 certificate in PEM format. This can be the same file "
 "that contains the X.509 certificate."
 msgstr ""
-"PEM 形式の X.509 証明書に対応する RSA 秘密鍵を含んでいるファイルの場所を絶対"
-"パスで入力してください。これは X.509 証明書を含んでいるファイルと同じで構いま"
-"せん。"
+"PEM 形式の X.509 証明書に対応する RSA 秘密鍵を含むファイルの場所を入力してく"
+"ださい。これは X.509 証明書を含んでいるファイルと同じで構いません。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:10001
-#, fuzzy
-#| msgid "File name of your X.509 certificate in PEM format:"
 msgid "File name of your PEM format X.509 RootCA:"
-msgstr "PEM 形式の X.509 証明書のファイル名:"
+msgstr "PEM 形式の X.509 ルート CA のファイル名:"
 
 #. Type: string
 #. Description
@@ -266,24 +252,21 @@ msgid ""
 "Please note that it's not possible to store the RootCA in the same file as "
 "your X.509 certificate or private key."
 msgstr ""
+"X.509 認証局のルートが証明書に署名するのに使った PEM 形式のファイルを含んだ"
+"ファイルの場所を入力することも任意で可能です。これを持っていない、あるいは利"
+"用したくないという場合にはこの欄を空のままにしておいてください。ルート CA を "
+"X.509 証明書や秘密鍵と同じファイルに保存するのはできないことにご注意くださ"
+"い。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:11001
-#, fuzzy
-#| msgid "The length of the created RSA key (in bits):"
 msgid "Please enter which length the created RSA key should have:"
-msgstr "RSA 鍵の鍵長（ビット数）:"
+msgstr "作成する RSA 鍵の鍵長を入力してください:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:11001
-#, fuzzy
-#| msgid ""
-#| "Please enter the length of the created RSA key. It should not be less "
-#| "than 1024 bits because this should be considered unsecure and you will "
-#| "probably not need anything more than 2048 bits because it only slows the "
-#| "authentication process down and is not needed at the moment."
 msgid ""
 "Please enter the length of the created RSA key. It should not be less than "
 "1024 bits because this should be considered unsecure and you will probably "
@@ -291,30 +274,18 @@ msgid ""
 "authentication process down and is not needed at the moment."
 msgstr ""
 "生成する RSA 鍵の長さを入力してください。安全のため、1024 ビット未満にすべき"
-"ではありません。2048 ビットより大きなものにする必要もないでしょう。認証プロセ"
+"ではありません。4096 ビットより大きなものにする必要もないでしょう。認証プロセ"
 "スが遅くなりますし、現時点ではおそらく必要ありません。"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:12001
-#, fuzzy
-#| msgid "Do you want to create a self-signed X.509 certificate?"
 msgid "Create a self-signed X.509 certificate?"
 msgstr "自己署名 X.509 証明書を生成しますか?"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:12001
-#, fuzzy
-#| msgid ""
-#| "This installer can only create self-signed X.509 certificates "
-#| "automatically, because otherwise a certificate authority is needed to "
-#| "sign the certificate request. If you want to create a self-signed "
-#| "certificate, you can use it immediately to connect to other IPSec hosts "
-#| "that support X.509 certificate for authentication of IPSec connections. "
-#| "However, if you want to use the new PKI features of strongSwan >= 1.91, "
-#| "you will need to have all X.509 certificates signed by a single "
-#| "certificate authority to create a trust path."
 msgid ""
 "Only self-signed X.509 certificates can be created automatically, because "
 "otherwise a Certificate Authority is needed to sign the certificate request. "
@@ -324,36 +295,27 @@ msgid ""
 "features requires all certificates to be signed by a single Certificate "
 "Authority to create a trust path."
 msgstr ""
-"証明書要求に署名するためには認証局が必要となるので、このインストーラでは自己"
-"署名 X.509 証明書を自動的に生成する事だけが可能です。自己署名証明書を生成した"
-"い場合、これを使用してすぐに X.509 証明書をサポートしている他の IPSec ホスト"
-"に接続可能です。しかし、strongSwan バージョン 1.91 以上での新しい PKI 機能を"
-"使いたい場合は、trust path を生成するために単一の認証局によってすべての "
-"X.509 証明書に署名してもらう必要があります。"
+"証明書要求に署名するためには認証局が必要となるので、自動的に行うには自己署名 "
+"X.509 証明書のみが生成が可能です。自己署名証明書の作成を選んだ場合は、すぐに"
+"これを利用して、IPSec 接続の認証に X.509 証明書を利用している他の IPSec ホス"
+"トへの接続が可能になります。しかし、strongSwan の PKI 機能を使いたい場合は、"
+"trust path を生成するために単一の認証局によってすべての X.509 証明書に署名し"
+"てもらう必要があります。"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:12001
-#, fuzzy
-#| msgid ""
-#| "If you do not want to create a self-signed certificate, then this "
-#| "installer will only create the RSA private key and the certificate "
-#| "request and you will have to get the certificate request signed by your "
-#| "certificate authority."
 msgid ""
 "If you do not choose to create a self-signed certificate, only the RSA "
 "private key and the certificate request will be created, and you will have "
 "to sign the certificate request with your Certificate Authority."
 msgstr ""
-"自己署名証明書を生成したくないという場合は、このインストーラでは RSA 秘密鍵と"
-"証明書要求のみを生成します。そのため、認証局に証明書要求へ署名をしてもらう必"
-"要があります。"
+"自己署名証明書を作成したくない場合、RSA 秘密鍵と対応する証明書要求のみが作成"
+"されるので、認証局に対して証明書要求に署名をしてもらう必要が生じます。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:13001
-#, fuzzy
-#| msgid "Country code for the X.509 certificate request:"
 msgid "Country code for the X.509 certificate request:"
 msgstr "X.509 証明書要求に記載する国コード:"
 
@@ -364,51 +326,38 @@ msgid ""
 "Please enter the two-letter code for the country the server resides in (such "
 "as \"AT\" for Austria)."
 msgstr ""
+"サーバが存在する場所の二文字の国コード (例えば日本の場合は「JP」) を入力して"
+"ください。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:13001
-#, fuzzy
-#| msgid ""
-#| "You really need to enter a valid country code here, because openssl will "
-#| "refuse to generate certificates without one. An empty field is allowed "
-#| "for any other field of the X.509 certificate, but not for this one."
 msgid ""
 "OpenSSL will refuse to generate a certificate unless this is a valid "
 "ISO-3166 country code; an empty field is allowed elsewhere in the X.509 "
 "certificate, but not here."
 msgstr ""
-"openssl が国コードなしでは証明書の生成を拒否するので、正しい国コードをここで"
-"入力する必要があります。X.509 証明書では、他のフィールドについては空でも構い"
-"ませんが、これについては許可されていません。"
+"OpenSSL は、正規の ISO-3166 国コードが無いと証明書の生成を拒否します。X.509 "
+"証明書において、他のフィールドについては空でも構いませんが、これについては許"
+"可されていません。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
-#, fuzzy
-#| msgid "State or province name for the X.509 certificate request:"
 msgid "State or province name for the X.509 certificate request:"
 msgstr "X.509 証明書要求に記載する都道府県名:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
-#, fuzzy
-#| msgid ""
-#| "Please enter the full name of the state or province you live in. This "
-#| "name will be placed in the certificate request."
 msgid ""
 "Please enter the full name of the state or province the server resides in "
 "(such as \"Upper Austria\")."
-msgstr ""
-"あなたが在住している都道府県を入力してください。これは証明書要求に記載されま"
-"す。"
+msgstr "サーバ所在地の都道府県名 (例:「Tokyo」)を入力してください。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:15001
-#, fuzzy
-#| msgid "Locality name for the X.509 certificate request:"
 msgid "Locality name for the X.509 certificate request:"
 msgstr "X.509 証明書要求に記載する地域名:"
 
@@ -418,13 +367,11 @@ msgstr "X.509 証明書要求に記載する地域名:"
 msgid ""
 "Please enter the locality the server resides in (often a city, such as "
 "\"Vienna\")."
-msgstr ""
+msgstr "サーバ所在地 (大抵は「Shinjuku」のような市区名)を入力してください。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:16001
-#, fuzzy
-#| msgid "Organization name for the X.509 certificate request:"
 msgid "Organization name for the X.509 certificate request:"
 msgstr "X.509 証明書要求に記載する組織名:"
 
@@ -433,31 +380,25 @@ msgstr "X.509 証明書要求に記載する組織名:"
 #: ../strongswan-starter.templates:16001
 msgid ""
 "Please enter the organization the server belongs to (such as \"Debian\")."
-msgstr ""
+msgstr "サーバが所属する組織 (「Debian」など) を入力してください。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:17001
-#, fuzzy
-#| msgid "Organizational unit for the X.509 certificate request:"
 msgid "Organizational unit for the X.509 certificate request:"
-msgstr "X.509 証明書要求に記載する組織単位:"
+msgstr "X.509 証明書要求に記載する部署名:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:17001
-#, fuzzy
-#| msgid "Organizational unit for the X.509 certificate request:"
 msgid ""
 "Please enter the organizational unit the server belongs to (such as "
 "\"security group\")."
-msgstr "X.509 証明書要求に記載する組織単位:"
+msgstr "サーバが所属する部署名 (「security group」など) を入力してください。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:18001
-#, fuzzy
-#| msgid "Common name for the X.509 certificate request:"
 msgid "Common Name for the X.509 certificate request:"
 msgstr "X.509 証明書要求に記載するコモンネーム:"
 
@@ -467,37 +408,30 @@ msgstr "X.509 証明書要求に記載するコモンネーム:"
 msgid ""
 "Please enter the Common Name for this host (such as \"gateway.example.org\")."
 msgstr ""
+"このホスト用の (「gateway.example.org」のような) コモンネームを入力してくださ"
+"い。"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:19001
-#, fuzzy
-#| msgid "Email address for the X.509 certificate request:"
 msgid "Email address for the X.509 certificate request:"
 msgstr "X.509 証明書要求に記載するメールアドレス:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:19001
-#, fuzzy
-#| msgid ""
-#| "Please enter the email address of the person or organization who is "
-#| "responsible for the X.509 certificate. This address will be placed in the "
-#| "certificate request."
 msgid ""
 "Please enter the email address of the person or organization responsible for "
 "the X.509 certificate."
 msgstr ""
-"X.509 証明書の責任者となる人物・団体のメールアドレスを入力してください。この"
-"アドレスは証明書要求に記載されます。"
+"X.509 証明書についての対応を行う、個人あるいは団体のメールアドレスを入力して"
+"ください。"
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:20001
-#, fuzzy
-#| msgid "Do you wish to enable opportunistic encryption in strongSwan?"
 msgid "Enable opportunistic encryption?"
-msgstr "strongSwan で opportunistic encryption を有効にしますか?"
+msgstr "opportunistic encryption を有効にしますか?"
 
 #. Type: boolean
 #. Description
@@ -508,6 +442,10 @@ msgid ""
 "deployed, activating it will cause a significant delay for every new "
 "outgoing connection."
 msgstr ""
+"このバージョンの strongSwan は opportunistic encryption (OE) をサポートしてい"
+"ます。OE は IPSec 認証情報を DNS レコードに含めたものです。これが広く適用され"
+"るようになるまでは、これを有効にすると全ての新規の外部接続に著しい遅延を引き"
+"起こします。"
 
 #. Type: boolean
 #. Description
@@ -517,245 +455,164 @@ msgid ""
 "It may break the Internet connection (default route) as the pluto daemon "
 "starts."
 msgstr ""
+"opportunistic encryption を有効にするのは、本当に利用したいと考えた時のみにす"
+"べきです。この設定は、pluto デーモンの起動などインターネット接続 (デフォルト"
+"ルート) を切断する可能性があります。"
 
-#~ msgid "Do you wish to restart strongSwan?"
-#~ msgstr "strongSwan を再起動しますか?"
+msgid ""
+"Please enter the 2 letter country code for your country. This code will be "
+"placed in the certificate request."
+msgstr ""
+"あなたの国の国コードを2文字で入力してください。このコードは証明書要求に記載さ"
+"れます。"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the full location of the file containing your X.509 "
-#~| "certificate in PEM format."
-#~ msgid "Please enter the location of your X509 certificate in PEM format:"
-#~ msgstr ""
-#~ "PEM 形式の X.509 証明書を含むファイルの場所を絶対パスで入力してください。"
+msgid "Example: AT"
+msgstr "例: JP"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the full location of the file containing your X.509 "
-#~| "certificate in PEM format."
-#~ msgid "Please enter the location of your X509 private key in PEM format:"
-#~ msgstr ""
-#~ "PEM 形式の X.509 証明書を含むファイルの場所を絶対パスで入力してください。"
+msgid "Example: Upper Austria"
+msgstr "例: Tokyo"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the full location of the file containing your X.509 "
-#~| "certificate in PEM format."
-#~ msgid "You may now enter the location of your X509 RootCA in PEM format:"
-#~ msgstr ""
-#~ "PEM 形式の X.509 証明書を含むファイルの場所を絶対パスで入力してください。"
+msgid ""
+"Please enter the locality (e.g. city) where you live. This name will be "
+"placed in the certificate request."
+msgstr ""
+"あなたの在住している地域の名前 (例: 市町村名) を入力してください。これは証明"
+"書要求に記載されます。"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the 2 letter country code for your country. This code will "
-#~| "be placed in the certificate request."
-#~ msgid ""
-#~ "Please enter the 2 letter country code for your country. This code will "
-#~ "be placed in the certificate request."
-#~ msgstr ""
-#~ "あなたの国の国コードを2文字で入力してください。このコードは証明書要求に記"
-#~ "載されます。"
+msgid "Example: Vienna"
+msgstr "例: Shinjuku-ku"
 
-#~ msgid "Example: AT"
-#~ msgstr "例: JP"
+msgid "Example: Debian"
+msgstr "例: Debian"
 
-#~ msgid "Example: Upper Austria"
-#~ msgstr "例: Tokyo"
+msgid "Example: security group"
+msgstr "例: security group"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the locality (e.g. city) where you live. This name will be "
-#~| "placed in the certificate request."
-#~ msgid ""
-#~ "Please enter the locality (e.g. city) where you live. This name will be "
-#~ "placed in the certificate request."
-#~ msgstr ""
-#~ "あなたの在住している地域の名前 (例: 市町村名) を入力してください。これは証"
-#~ "明書要求に記載されます。"
+msgid ""
+"Please enter the common name (e.g. the host name of this machine) for which "
+"the X509 certificate should be created for. This name will be placed in the "
+"certificate request."
+msgstr ""
+"X.509 証明書の生成対象となるべきコモンネーム (例: このマシンのホスト名) を入"
+"力してください。これは証明書要求に記載されます。"
 
-#~ msgid "Example: Vienna"
-#~ msgstr "例: Shinjuku-ku"
+msgid "Example: gateway.debian.org"
+msgstr "例: gateway.debian.org"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the organization (e.g. company) that the X.509 certificate "
-#~| "should be created for. This name will be placed in the certificate "
-#~| "request."
-#~ msgid ""
-#~ "Please enter the organization (e.g. company) that the X509 certificate "
-#~ "should be created for. This name will be placed in the certificate "
-#~ "request."
-#~ msgstr ""
-#~ "X.509 証明書の生成対象となるべき組織 (例: 会社) を入力してください。これは"
-#~ "証明書要求に記載されます。"
+msgid ""
+"If you do not want to create a new public/private keypair, you can choose to "
+"use an existing one in the next step."
+msgstr ""
+"新たな公開鍵・秘密鍵のキーペアを生成したくない場合は、次の段階で既存のキーペ"
+"アの利用を選択することも可能です。"
 
-#~ msgid "Example: Debian"
-#~ msgstr "例: Debian"
+msgid ""
+"The required information can automatically be extracted from an existing "
+"X.509 certificate with a matching RSA private key. Both parts can be in one "
+"file, if it is in PEM format. You should choose this option if you have such "
+"an existing certificate and key file and want to use it for authenticating "
+"IPSec connections."
+msgstr ""
+"要求情報は X.509 証明書から RSA 秘密鍵と照らし合わせて必要な情報を自動的に"
+"展開する事が可能です。 PEM 形式の場合、双方を一つのファイルにまとめることも"
+"可能です。そのような証明書と鍵のファイルが既にあり、これらを IPSec 通信での"
+"認証に使用したい場合はこのオプションを有効にしてください。"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the organizational unit (e.g. section) that the X.509 "
-#~| "certificate should be created for. This name will be placed in the "
-#~| "certificate request."
-#~ msgid ""
-#~ "Please enter the organizational unit (e.g. section) that the X509 "
-#~ "certificate should be created for. This name will be placed in the "
-#~ "certificate request."
-#~ msgstr ""
-#~ "X.509 証明書の生成対象となるべき組織単位 (例: 部署名) を入力してください。"
-#~ "これは証明書要求に記載されます。"
+msgid "earliest, \"after NFS\", \"after PCMCIA\""
+msgstr "可能な限り早く, \"NFS 起動後\", \"PCMCIA 起動後\""
 
-#~ msgid "Example: security group"
-#~ msgstr "例: security group"
+msgid ""
+"There are three possibilities when strongSwan can start: before or after the "
+"NFS services and after the PCMCIA services. The correct answer depends on "
+"your specific setup."
+msgstr ""
+"strongSwan を起動させるタイミングの選択肢としては3つが考えられます: NFS サー"
+"ビスの開始前・開始後・PCMCIA サービスの開始後、です。正解はあなたの設定次第で"
+"す。"
 
-#, fuzzy
-#~| msgid ""
-#~| "Please enter the common name (e.g. the host name of this machine) for "
-#~| "which the X.509 certificate should be created for. This name will be "
-#~| "placed in the certificate request."
-#~ msgid ""
-#~ "Please enter the common name (e.g. the host name of this machine) for "
-#~ "which the X509 certificate should be created for. This name will be "
-#~ "placed in the certificate request."
-#~ msgstr ""
-#~ "X.509 証明書の生成対象となるべきコモンネーム (例: このマシンのホスト名) を"
-#~ "入力してください。これは証明書要求に記載されます。"
+msgid ""
+"If you do not have your /usr tree mounted via NFS (either you only mount "
+"other, less vital trees via NFS or don't use NFS mounted trees at all) and "
+"don't use a PCMCIA network card, then it's best to start strongSwan at the "
+"earliest possible time, thus allowing the NFS mounts to be secured by IPSec. "
+"In this case (or if you don't understand or care about this issue), answer "
+"\"earliest\" to this question (the default)."
+msgstr ""
+"NFS 経由で /usr をマウントせず (他のパーティションやあまり重要ではないパー"
+"ティションを NFS 経由でマウントするか、または NFS マウントを全く使わない)、加"
+"えて PCMCIA ネットワークカードを利用していない場合、可能な限り早いタイミング"
+"で strongSwan を起動するのがベストです。この設定によって、NFS でのマウントは "
+"IPSec で保護されます。この場合 (またはこの問題を理解していないか特に気にしな"
+"い場合) 、\"可能な限り早く\"と質問に答えてください (標準設定です) 。"
 
-#~ msgid "Example: gateway.debian.org"
-#~ msgstr "例: gateway.debian.org"
+msgid ""
+"If you have your /usr tree mounted via NFS and don't use a PCMCIA network "
+"card, then you will need to start strongSwan after NFS so that all necessary "
+"files are available. In this case, answer \"after NFS\" to this question. "
+"Please note that the NFS mount of /usr can not be secured by IPSec in this "
+"case."
+msgstr ""
+"NFS 経由で /usr をマウントしていて PCMCIA ネットワークカードを使用していない"
+"場合は、必要なファイルを利用可能にするために strongSwan を NFS の後で起動しな"
+"ければなりません。この場合、\"NFS 起動後\" と答えてください。この時に NFS 経"
+"由でマウントされる /usr は、IPSec によるセキュアな状態にはならないということ"
+"に注意してください。"
 
-#~ msgid "When to start strongSwan:"
-#~ msgstr "strongSwan の起動タイミング:"
+msgid ""
+"If you use a PCMCIA network card for your IPSec connections, then you only "
+"have to choose to start it after the PCMCIA services. Answer \"after PCMCIA"
+"\" in this case. This is also the correct answer if you want to fetch keys "
+"from a locally running DNS server with DNSSec support."
+msgstr ""
+"IPSec 接続に PCMCIA ネットワークカードを利用していた場合、PCMCIA サービスの起"
+"動後に strongSwan を起動する以外に選択はありません。この場合、\"PCMCIA 起動後"
+"\" と答えてください。ローカルで動作している DNSSec 機能を使用している DNS "
+"サーバから鍵を取得したい場合でも、この答えをしてください。"
 
-#, fuzzy
-#~| msgid "Do you want to create a RSA public/private keypair for this host?"
-#~ msgid "Create an RSA public/private keypair for this host?"
-#~ msgstr "このホストの RSA 公開鍵・秘密鍵のキーペアを生成しますか?"
+msgid "Do you wish to support IKEv1?"
+msgstr "IKEv1 をサポートしますか?"
 
-#~ msgid ""
-#~ "If you do not want to create a new public/private keypair, you can choose "
-#~ "to use an existing one in the next step."
-#~ msgstr ""
-#~ "新たな公開鍵・秘密鍵のキーペアを生成したくない場合は、次の段階で既存のキー"
-#~ "ペアの利用を選択することも可能です。"
+msgid ""
+"strongSwan supports both versions of the Internet Key Exchange protocol, "
+"IKEv1 and IKEv2. Do you want to start the \"pluto\" daemon for IKEv1 support "
+"when strongSwan is started?"
+msgstr ""
+"strongSwan は IKEv1 と IKEv2 の両方のインターネット鍵交換プロトコルをサポート"
+"しています。strongSwan が起動する際、IKEv1 サポートのため \"pluto\" デーモン"
+"を起動しますか?"
 
-#, fuzzy
-#~| msgid ""
-#~| "This installer can automatically extract the needed information from an "
-#~| "existing X.509 certificate with a matching RSA private key. Both parts "
-#~| "can be in one file, if it is in PEM format. If you have such an existing "
-#~| "certificate and key file and want to use it for authenticating IPSec "
-#~| "connections, then please answer yes."
-#~ msgid ""
-#~ "The required information can automatically be extracted from an existing "
-#~ "X.509 certificate with a matching RSA private key. Both parts can be in "
-#~ "one file, if it is in PEM format. You should choose this option if you "
-#~ "have such an existing certificate and key file and want to use it for "
-#~ "authenticating IPSec connections."
-#~ msgstr ""
-#~ "このインストーラは既に存在している X.509 証明書から RSA 秘密鍵と照らし合わ"
-#~ "せて必要な情報を自動的に展開する事が可能です。 PEM 形式の場合、双方を一つ"
-#~ "のファイルにまとめることも可能です。そのような証明書と鍵のファイルがあり、"
-#~ "これらを IPSec 通信での認証に使用したい場合は「はい」と答えてください。"
+msgid "Do you wish to support IKEv2?"
+msgstr "IKEv2 をサポートしますか?"
 
-#~ msgid "earliest, \"after NFS\", \"after PCMCIA\""
-#~ msgstr "可能な限り早く, \"NFS 起動後\", \"PCMCIA 起動後\""
+msgid ""
+"strongSwan supports both versions of the Internet Key Exchange protocol, "
+"IKEv1 and IKEv2. Do you want to start the \"charon\" daemon for IKEv2 "
+"support when strongSwan is started?"
+msgstr ""
+"strongSwan は IKEv1 と IKEv2 の両方のインターネット鍵交換プロトコルをサポート"
+"しています。strongSwan が起動する際、IKEv2 サポートのため \"pluto\" デーモン"
+"を起動しますか?"
 
-#~ msgid ""
-#~ "There are three possibilities when strongSwan can start: before or after "
-#~ "the NFS services and after the PCMCIA services. The correct answer "
-#~ "depends on your specific setup."
-#~ msgstr ""
-#~ "strongSwan を起動させるタイミングの選択肢としては3つが考えられます: NFS "
-#~ "サービスの開始前・開始後・PCMCIA サービスの開始後、です。正解はあなたの設"
-#~ "定次第です。"
+msgid ""
+"strongSwan comes with support for opportunistic encryption (OE), which "
+"stores IPSec authentication information (i.e. RSA public keys) in "
+"(preferably secure) DNS records. Until this is widely deployed, activating "
+"it will cause a significant slow-down for every new, outgoing connection. "
+"Since version 2.0, strongSwan upstream comes with OE enabled by default and "
+"is thus likely to break your existing connection to the Internet (i.e. your "
+"default route) as soon as pluto (the strongSwan keying daemon) is started."
+msgstr ""
+"strongSwan は、IPSec 認証情報 (例: RSA 公開鍵) を (願わくはセキュアな) DNS レ"
+"コード内に保存する opportunistic encryption (OE) をサポートしています。これは"
+"広く利用されるようになるまで、有効にすると外部への新規接続は全て格段に遅くな"
+"ります。バージョン 2.0 より strongSwan の開発元はデフォルトで OE を有効にして"
+"います。そのため pluto (strongSwan 鍵署名デーモン) が開始するとすぐ、既存のイ"
+"ンターネット接続 (つまりデフォルトルート) が中断されるかもしれません。"
 
-#~ msgid ""
-#~ "If you do not have your /usr tree mounted via NFS (either you only mount "
-#~ "other, less vital trees via NFS or don't use NFS mounted trees at all) "
-#~ "and don't use a PCMCIA network card, then it's best to start strongSwan "
-#~ "at the earliest possible time, thus allowing the NFS mounts to be secured "
-#~ "by IPSec. In this case (or if you don't understand or care about this "
-#~ "issue), answer \"earliest\" to this question (the default)."
-#~ msgstr ""
-#~ "NFS 経由で /usr をマウントせず (他のパーティションやあまり重要ではないパー"
-#~ "ティションを NFS 経由でマウントするか、または NFS マウントを全く使わな"
-#~ "い)、加えて PCMCIA ネットワークカードを利用していない場合、可能な限り早い"
-#~ "タイミングで strongSwan を起動するのがベストです。この設定によって、NFS で"
-#~ "のマウントは IPSec で保護されます。この場合 (またはこの問題を理解していな"
-#~ "いか特に気にしない場合) 、\"可能な限り早く\"と質問に答えてください (標準設"
-#~ "定です) 。"
+msgid ""
+"Please choose whether you want to enable support for OE. If unsure, do not "
+"enable it."
+msgstr ""
+"OE のサポートを有効にするかどうかを選んでください。よくわからない場合は、有効"
+"にはしないでください。"
 
-#~ msgid ""
-#~ "If you have your /usr tree mounted via NFS and don't use a PCMCIA network "
-#~ "card, then you will need to start strongSwan after NFS so that all "
-#~ "necessary files are available. In this case, answer \"after NFS\" to this "
-#~ "question. Please note that the NFS mount of /usr can not be secured by "
-#~ "IPSec in this case."
-#~ msgstr ""
-#~ "NFS 経由で /usr をマウントしていて PCMCIA ネットワークカードを使用していな"
-#~ "い場合は、必要なファイルを利用可能にするために strongSwan を NFS の後で起"
-#~ "動しなければなりません。この場合、\"NFS 起動後\" と答えてください。この時"
-#~ "に NFS 経由でマウントされる /usr は、IPSec によるセキュアな状態にはならな"
-#~ "いということに注意してください。"
-
-#~ msgid ""
-#~ "If you use a PCMCIA network card for your IPSec connections, then you "
-#~ "only have to choose to start it after the PCMCIA services. Answer \"after "
-#~ "PCMCIA\" in this case. This is also the correct answer if you want to "
-#~ "fetch keys from a locally running DNS server with DNSSec support."
-#~ msgstr ""
-#~ "IPSec 接続に PCMCIA ネットワークカードを利用していた場合、PCMCIA サービス"
-#~ "の起動後に strongSwan を起動する以外に選択はありません。この場"
-#~ "合、\"PCMCIA 起動後\" と答えてください。ローカルで動作している DNSSec 機能"
-#~ "を使用している DNS サーバから鍵を取得したい場合でも、この答えをしてくださ"
-#~ "い。"
-
-#~ msgid "Do you wish to support IKEv1?"
-#~ msgstr "IKEv1 をサポートしますか?"
-
-#~ msgid ""
-#~ "strongSwan supports both versions of the Internet Key Exchange protocol, "
-#~ "IKEv1 and IKEv2. Do you want to start the \"pluto\" daemon for IKEv1 "
-#~ "support when strongSwan is started?"
-#~ msgstr ""
-#~ "strongSwan は IKEv1 と IKEv2 の両方のインターネット鍵交換プロトコルをサ"
-#~ "ポートしています。strongSwan が起動する際、IKEv1 サポートのため \"pluto\" "
-#~ "デーモンを起動しますか?"
-
-#~ msgid "Do you wish to support IKEv2?"
-#~ msgstr "IKEv2 をサポートしますか?"
-
-#~ msgid ""
-#~ "strongSwan supports both versions of the Internet Key Exchange protocol, "
-#~ "IKEv1 and IKEv2. Do you want to start the \"charon\" daemon for IKEv2 "
-#~ "support when strongSwan is started?"
-#~ msgstr ""
-#~ "strongSwan は IKEv1 と IKEv2 の両方のインターネット鍵交換プロトコルをサ"
-#~ "ポートしています。strongSwan が起動する際、IKEv2 サポートのため \"pluto\" "
-#~ "デーモンを起動しますか?"
-
-#~ msgid ""
-#~ "strongSwan comes with support for opportunistic encryption (OE), which "
-#~ "stores IPSec authentication information (i.e. RSA public keys) in "
-#~ "(preferably secure) DNS records. Until this is widely deployed, "
-#~ "activating it will cause a significant slow-down for every new, outgoing "
-#~ "connection. Since version 2.0, strongSwan upstream comes with OE enabled "
-#~ "by default and is thus likely to break your existing connection to the "
-#~ "Internet (i.e. your default route) as soon as pluto (the strongSwan "
-#~ "keying daemon) is started."
-#~ msgstr ""
-#~ "strongSwan は、IPSec 認証情報 (例: RSA 公開鍵) を (願わくはセキュアな) "
-#~ "DNS レコード内に保存する opportunistic encryption (OE) をサポートしていま"
-#~ "す。これは広く利用されるようになるまで、有効にすると外部への新規接続は全て"
-#~ "格段に遅くなります。バージョン 2.0 より strongSwan の開発元はデフォルトで "
-#~ "OE を有効にしています。そのため pluto (strongSwan 鍵署名デーモン) が開始す"
-#~ "るとすぐ、既存のインターネット接続 (つまりデフォルトルート) が中断されるか"
-#~ "もしれません。"
-
-#~ msgid ""
-#~ "Please choose whether you want to enable support for OE. If unsure, do "
-#~ "not enable it."
-#~ msgstr ""
-#~ "OE のサポートを有効にするかどうかを選んでください。よくわからない場合は、"
-#~ "有効にはしないでください。"

@@ -1,29 +1,27 @@
-# translation of strongswan_4.4.1-5.1_eu.po to Basque
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
+# ITALIAN TRANSLATION OF STRONGSWAN'S PO-DEBCONF FILE.
+# COPYRIGHT (C) YEAR THE STRONGSWAN'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the strongswan package.
 #
-# Piarres Beobide <pi@beobide.net>, 2009.
-# Iñaki Larrañaga Murgoitio <dooteo@zundan.com>, 2010.
+# Vincenzo Campanella <vinz65@gmail.com>, 2010.
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: strongswan_4.4.1-5.1_eu\n"
+"Project-Id-Version: strongswan\n"
 "Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
 "POT-Creation-Date: 2010-08-16 14:23+0200\n"
-"PO-Revision-Date: 2010-11-16 20:23+0100\n"
-"Last-Translator: Iñaki Larrañaga Murgoitio <dooteo@zundan.com>\n"
-"Language-Team: Basque <debian-l10n-basque@lists.debian.org>\n"
-"Language: eu\n"
+"PO-Revision-Date: 2010-11-13 16:03+0100\n"
+"Last-Translator: Vincenzo Campanella <vinz65@gmail.com>\n"
+"Language-Team: Italian <tp@lists.linux.it>\n"
+"Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: KBabel 1.11.4\n"
 
 #. Type: note
 #. Description
 #: ../strongswan-starter.templates:2001
 msgid "Old runlevel management superseded"
-msgstr "Exekuzio-mailaren kudeaketa zaharra ordeztuta"
+msgstr "Vecchia gestione del runlevel sostituita"
 
 #. Type: note
 #. Description
@@ -37,20 +35,20 @@ msgid ""
 "changed your strongSwan startup parameters, then please take a look at NEWS."
 "Debian for instructions on how to modify your setup accordingly."
 msgstr ""
-"strongSwan paketearen aurreko bertsioak hiru Abiarazte-/Gelditzen-maila "
-"desberdinen arteko aukera eskaintzen zuen. Sistemaren abioaren prozedura "
-"arruntean aldaketak gertatu direnez, ez dira beharrezkoak edo erabilgarriak. "
-"Instalazio berri guztientzako, aurredefinitutako moduetako batean "
-"exekutatzen diren zaharretan ere, zentzuzko maila lehenetsiak ezarriko dira "
-"orain. Aurreko bertsiotik eguneratzen ari bazara, eta strongSwan-en abioko "
-"parametroak aldatu bazenituen, irakur ezazu NEWS.Debian fitxategia.  "
-"konfigurazioa modu egokian nola aldatzen den jakiteko."
+"Le versioni precedenti di strongSwan lasciavano la scelta fra tre diversi "
+"livelli di avvio/arresto. A seguito dei cambiamenti nella procedura standard "
+"di avvio, questo non è più necessario né utile. Per tutte le nuove "
+"installazioni e per quelle già esistenti che vengono eseguite in qualsiasi "
+"modalità predefinita vengono ora impostati dei livelli predefiniti "
+"ragionevoli. Se si sta aggiornando da una versione precedente e si sono "
+"modificati i parametri di strongSwan, consultare le NEWS.Debian su come "
+"modificare le impostazioni."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:3001
 msgid "Restart strongSwan now?"
-msgstr "Berrabiarazi StrongSwan orain?"
+msgstr "Riavviare strongSwan adesso?"
 
 #. Type: boolean
 #. Description
@@ -62,18 +60,18 @@ msgid ""
 "existing connections and then bring them back up, so if you are using such a "
 "strongSwan tunnel to connect for this update, restarting is not recommended."
 msgstr ""
-"StrongSwan berrabiaraztea gomendatzen da segurtasunezko konponketa bat "
-"badago ez baita ezarriko daemona berrabiarazi artea. Erabiltzaile gehienek "
-"daemona berrabiaraztea espero dutenez, burutazio ona da hori. Hala ere, "
-"honek martxan dauden konexioak itxi eta gero berriz abiaraziko ditu. Hori "
-"dela eta, eguneraketa honetan strongSwan tunela erabiltzen ari bazara, ez da "
-"gomendatzen berrabiaraztea."
+"È raccomandato il riavvio di strongSwan, in quanto un'eventuale correzione "
+"di sicurezza non verrà applicata fino al riavvio del demone. La maggior "
+"parte degli utenti si attende che il demone si riavvii, per cui in genere è "
+"una buona scelta. Il riavvio potrebbe però interrompere e riavviare le "
+"connessioni esistenti, per cui se si sta utilizzando un tunnel strongSwan "
+"per l'aggiornamento il riavvio non è raccomandabile."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:4001
 msgid "Start strongSwan's IKEv1 daemon?"
-msgstr "StrongSwan-ren IKEv1 daemona abiarazi?"
+msgstr "Avviare il demone di strongSwan IKEv1?"
 
 #. Type: boolean
 #. Description
@@ -82,14 +80,14 @@ msgid ""
 "The pluto daemon must be running to support version 1 of the Internet Key "
 "Exchange protocol."
 msgstr ""
-"'pluto' daemona exekutatzen egon behar da Interneteko Gakoen Trukaketa (IKE) "
-"protokoloaren lehen bertsioa onartzeko."
+"Per il supporto alla versione 1 del protocollo IKE (Internet Key Exchange) è "
+"necessario che il demone pluto sia in esecuzione."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:5001
 msgid "Start strongSwan's IKEv2 daemon?"
-msgstr "StrongSwan-ren IKEv2 daemona abiarazi?"
+msgstr "Avviare il demone di strongSwan IKEv2?"
 
 #. Type: boolean
 #. Description
@@ -98,14 +96,14 @@ msgid ""
 "The charon daemon must be running to support version 2 of the Internet Key "
 "Exchange protocol."
 msgstr ""
-"'charon' daemona exekutatzen egon behar da Interneteko Gakoen Trukaketa "
-"(IKE) protokoloaren lehen bertsioa onartzeko."
+"Per il supporto alla versione 2 del protocollo IKE (Internet Key Exchange) è "
+"necessario che il demone charon sia in esecuzione."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:6001
 msgid "Use an X.509 certificate for this host?"
-msgstr "X.509 ziurtagiria erabili ostalari honentzako?"
+msgstr "Utilizzare un certificato X.509 per questo host?"
 
 #. Type: boolean
 #. Description
@@ -119,13 +117,12 @@ msgid ""
 "connections, key based authentication is easier to administer and more "
 "secure."
 msgstr ""
-"Ostalari honentzako X.509 ziurtagiri bat automatikoki sor edo inportatu "
-"daiteke. Beste ostalariekin IPsec bidez konektatzean autentifikatzeko "
-"erabili daiteke, eta hobetsitako bidea da IPsec konexio seguruak "
-"eraikitzeko. Beste aukera bat ezkutukoak (tunelaren bi aldeetan berdinak "
-"diren pasahitzak) partekatzea litzateke konexio bat autentifikatzeko, baina "
-"konexio kopuru handi batentzako gakoetan oinarritutako autentifikazioa "
-"errazagoa eta askoz ere seguruagoa da kudeatzeko."
+"Per questo host è possibile la creazione o la creazione automatica di un "
+"certificato X.509 per l'autenticazione di connessioni IPsec ad altri host; è "
+"la modalità preferita per la creazione di connessioni IPsec sicure. L'altra "
+"possibilità è l'utilizzo di password segrete condivise e identiche fra le "
+"due estremità del tunnel, ma il funzionamento tramite chiavi è più agevole "
+"da amministrare e più sicuro per un elevato numero di connessioni."
 
 #. Type: boolean
 #. Description
@@ -134,26 +131,27 @@ msgid ""
 "Alternatively you can reject this option and later use the command \"dpkg-"
 "reconfigure strongswan\" to come back."
 msgstr ""
-"Bestela, aukera hau ukatu dezakezu eta beranduago itzuli \"dpkg-reconfigure "
-"strongswan\" komandoa erabiliz."
+"In alternativa è possibile rifiutare questa opzione e ritornare sulla scelta "
+"in un secondo tempo, eseguendo «dpkg-reconfigure strongswan»."
 
 #. Type: select
 #. Choices
 #: ../strongswan-starter.templates:7001
 msgid "create"
-msgstr "sortu"
+msgstr "creare"
 
 #. Type: select
 #. Choices
 #: ../strongswan-starter.templates:7001
 msgid "import"
-msgstr "inportatu"
+msgstr "importare"
 
 #. Type: select
 #. Description
 #: ../strongswan-starter.templates:7002
 msgid "Methods for using a X.509 certificate to authenticate this host:"
-msgstr "Metodoa ostalari hau X.509 ziurtagiria erabiliz autentifikatzeko:"
+msgstr ""
+"Metodi per l'utilizzo di un certificato X.509 per autenticare questo host:"
 
 #. Type: select
 #. Description
@@ -163,9 +161,9 @@ msgid ""
 "or to import an existing public and private key stored in PEM file(s) for "
 "authenticating IPsec connections."
 msgstr ""
-"X.509 ziurtagiri berri bat sor daiteke erabiltzaileak definitutako "
-"ezarpenekin edo PEM fitxategietan gordetako gako publiko eta pribatuak "
-"inportatu daiteke IPsec konexioak autentifikatzeko."
+"È possibile creare un nuovo certificato X.509 con impostazioni definite "
+"dall'utente, oppure importare una chiave esistente pubblica e privata "
+"memorizzata in file PEM per l'autenticazione di connessioni IPsec."
 
 #. Type: select
 #. Description
@@ -178,13 +176,13 @@ msgid ""
 "certificate and all the answers given must match exactly the requirements of "
 "the CA, otherwise the certificate request may be rejected."
 msgstr ""
-"X.509 ziurtagiri berri bat sortzea hautatzen baduzu aurrenik, eta sortzeko "
-"lanak hasi aurretik, erantzun beharreko galdera batzuk egingo zaizkizu. "
-"Jakin ezazu gako publikoa existitzen den Ziurtagiri-emaile batek sinatzea "
-"nahi baduzu, ez zenukeela sortu beharko auto-sinatutako sinatzen duen "
-"ziurtagiririk, eta emandako erantzun guztiak zehatz-meatz ZEren "
-"eskakizunekin bat etorri beharko dutela, bestela ziurtagiriaren eskaera "
-"ukatu egingo baita."
+"Se si sceglie di creare un nuovo certificato X.509 verranno poste alcune "
+"domande cui è necessario rispondere prima che la creazione venga avviata. È "
+"da ricordare che, se si desidera che la chiave pubblica venga firmata da "
+"un'autorità di certificazione (CA) esistente, non si dovrebbe creare un "
+"certificato auto-firmato e inoltre tutte le risposte fornite devono "
+"adempiere esattamente i requisiti della CA, in quanto altrimenti la "
+"richiesta di certificato potrebbe essere rifiutata."
 
 #. Type: select
 #. Description
@@ -198,19 +196,20 @@ msgid ""
 "for the X.509 certificates has to be PEM and that the private key must not "
 "be encrypted or the import procedure will fail."
 msgstr ""
-"Existitzen den gako publiko eta pribatua inportatzea nahi izanez gero, haien "
-"fitxategi-izenak eskatuko zaizkizu (berdinak izango dira bi zatiak fitxategi "
-"batean gordeta badaude). Aukeran ziurtagiri-emailearen gako publikoa duen "
-"fitxategia ere zehaz dezakezu, baina fitxategi hau ezin da aurrekoen berdina "
-"izan. Kontuz ibili, X.509 ziurtagirien formatua PEM izan behar duelako, eta "
-"gako pribatua ezin delako enkriptatuta egon, bestela inportatzeko prozesuak "
-"huts egingo bait luke."
+"Se si desidera importare una chiave esistente pubblica e privata verrà "
+"richiesto il loro nome file, che può essere identico se entrambe le parti "
+"sono memorizzate insieme in un solo file. Opzionalmente si può specificare "
+"un nome file in cui vengono mantenute le chiavi pubbliche dell'autorità di "
+"certificazione, ma in questo caso il file non può essere il medesimo dei "
+"precedenti. Si presti attenzione anche al fatto che il formato dei "
+"certificati X.509 deve essere PEM e che la chiave privata non deve essere "
+"cifrata, altrimenti la procedura d'importazione fallirà."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:8001
 msgid "File name of your PEM format X.509 certificate:"
-msgstr "Zure PEM formatuko X.509 ziurtagiriaren fitxategi-izena :"
+msgstr "Nome file del proprio certificato X.509 formato PEM:"
 
 #. Type: string
 #. Description
@@ -219,14 +218,14 @@ msgid ""
 "Please enter the location of the file containing your X.509 certificate in "
 "PEM format."
 msgstr ""
-"Idatzi zure PEM formatuko X.509 ziurtagiria duen fitxategiaren bide-izen "
-"osoa."
+"Inserire la posizione del file che contiene il proprio certificato X.509 in "
+"formato PEM."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:9001
 msgid "File name of your PEM format X.509 private key:"
-msgstr "PEM formatuko X.509 gako pribatuaren fitxategi-izena :"
+msgstr "Nome file della propria chiave privata X.509 formato PEM:"
 
 #. Type: string
 #. Description
@@ -236,15 +235,15 @@ msgid ""
 "matching your X.509 certificate in PEM format. This can be the same file "
 "that contains the X.509 certificate."
 msgstr ""
-"Idatzi dagoen zure PEM formatuko X.509 ziurtagiriaren pareko RSA gako "
-"pribatua duen fitxategiaren kokapen osoa. Hau X.509 ziurtagiriaren fitxategi "
-"berdina izan daiteke."
+"Inserire la posizione del file che contiene la chiave privata RSA "
+"corrispondente al proprio certificato X.509 in formato PEM. Può essere il "
+"medesimo file che contiene il certificato X.509."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:10001
 msgid "File name of your PEM format X.509 RootCA:"
-msgstr "PEM formatuko X.509 ziurtagiriaren fitxategi-izena:"
+msgstr "Nome file del proprio RootCA X.509 formato PEM:"
 
 #. Type: string
 #. Description
@@ -256,17 +255,18 @@ msgid ""
 "Please note that it's not possible to store the RootCA in the same file as "
 "your X.509 certificate or private key."
 msgstr ""
-"Aukeran X.509 Ziurtagiri-emailearen erroa duen fitxategiaren kokalekua idatz "
-"dezakezu zure ziurtagiria PEM formatuan sinatzeko. Ez badaukazu do ez baduzu "
-"hori erabiltzerik nahi, utzi eremu hau hutsik. Jakin ezazu ezin dela gorde "
-"erroko ZE (RootCA) zure X.509 ziurtagiria edo gako pribatua duen fitxategi "
-"berdinean."
+"Opzionalmente è possibile inserire la posizione del file che contiene "
+"l'autorità di certificazione root (RootCA) utilizzata per la firma del "
+"proprio certificato in formato PEM. Se non se ne possiede uno o non si "
+"desidera utilizzarlo lasciare il campo vuoto. Notare che non è possibile "
+"memorizzare il RootCA nello stesso file del proprio certificato o chiave "
+"privata X.509."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:11001
 msgid "Please enter which length the created RSA key should have:"
-msgstr "Sartu sortutako RSA gakoak edukiko duen luzera:"
+msgstr "Inserire la lunghezza che la chiave RSA creata dovrà avere:"
 
 #. Type: string
 #. Description
@@ -277,16 +277,16 @@ msgid ""
 "not need anything more than 4096 bits because it only slows the "
 "authentication process down and is not needed at the moment."
 msgstr ""
-"Sartu sortutako RSA gakoaren luzera. Ez luke 1024 bit baino txikiagoa izan "
-"behar ez-segurutzat jotzen delako, eta litekeena da 4096 bit baino luzeagoa "
-"behar ez izatea, autentifikatzeko prozesua soilik moteltzen duelako eta "
-"unean ez delako behar."
+"Inserire la lunghezza della chiave RSA creata. Non dovrebbe essere minore di "
+"1024 bit, in quanto altrimenti potrebbe essere considerata insicura, né "
+"superiore a 4096 bit, in quanto altrimenti rallenterebbe il processo di "
+"autenticazione e al momento attuale non è una misura necessaria."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:12001
 msgid "Create a self-signed X.509 certificate?"
-msgstr "Sortu auto-sinatutako X.509 ziurtagiria?"
+msgstr "Creare un certificato X.509 auto-firmato?"
 
 #. Type: boolean
 #. Description
@@ -300,13 +300,14 @@ msgid ""
 "features requires all certificates to be signed by a single Certificate "
 "Authority to create a trust path."
 msgstr ""
-"Soilik auto-sinatutako X.509 ziurtagiriak sor daitezke automatikoki, bestela "
-"Ziurtagiri-emailea behar delako ziurtagiriaren eskaera sinatzeko. Auto-"
-"sinatutako ziurtagiria sortzea aukeratzen baduzu, ziurtagiri hori berehala "
-"erabil dezakezu X.509 ziurtagiria onartzen duten beste IPsec ostalariekin "
-"IPsec konexioak autentifikatzeko. Hala ere, strongSwan-en PKI eginbidea "
-"erabiltzeak ziurtagiri guztiak Ziurtagiri-emaile batek sinatuta egotea "
-"eskatzen du bide fidagarri bat sortzeko."
+"È possibile creare automaticamente solo certificati X.509 auto-firmati, in "
+"quanto altrimenti è necessario l'intervento di un'autorità di certificazione "
+"per firmare la richiesta di certificato. Se si sceglie di creare un "
+"certificato auto-firmato è possibile utilizzarlo immediatamente per "
+"collegarsi ad altri host IPsec che supportano il certificato X.509 per "
+"l'autenticazione di connessioni IPsec. L'utilizzo delle funzionalità PKI di "
+"strongSwan richiede però che tutti i certificati vengano firmati da una "
+"singola autorità di certificazione per creare un percorso fidato."
 
 #. Type: boolean
 #. Description
@@ -316,15 +317,15 @@ msgid ""
 "private key and the certificate request will be created, and you will have "
 "to sign the certificate request with your Certificate Authority."
 msgstr ""
-"Ez baduzu auto-sinatutako ziurtagiri bat sortzea aukeratzen, soilik RSAren "
-"gako pribatua eta ziurtagiriaren eskaera sortuko dira, eta ziurtagiriaren "
-"eskaera zure Ziurtagiri-emailearekin sinatu beharko duzu."
+"Se non si sceglie di creare un certificato auto-firmato verranno creati solo "
+"la chiave privata RSA e la richiesta di certificato che andrà poi firmata "
+"con l'autorità di certificazione scelta."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:13001
 msgid "Country code for the X.509 certificate request:"
-msgstr "X.509 ziurtagiriaren eskaeraren herrialdearen kodea:"
+msgstr "Codice paese per la richiesta di certificato X.509:"
 
 #. Type: string
 #. Description
@@ -333,8 +334,8 @@ msgid ""
 "Please enter the two-letter code for the country the server resides in (such "
 "as \"AT\" for Austria)."
 msgstr ""
-"Sartu zerbitzaria kokatuta dagoen herrialdeari dagokion bi hizkiko kodea "
-"(hala nola \"AT\" Austriarentzako)."
+"Inserire il codice a due lettere corrispondente al paese in cui il server "
+"risiede (per esempio, «IT» per l'Italia)."
 
 #. Type: string
 #. Description
@@ -344,15 +345,16 @@ msgid ""
 "ISO-3166 country code; an empty field is allowed elsewhere in the X.509 "
 "certificate, but not here."
 msgstr ""
-"OpenSSL-ek ukatu egingo du ziurtagiri bat sortzea baldin eta herrialdearen "
-"baliozko ISO-3166 kodea ez bada. X.509 ziurtagiriko beste edozer eremu "
-"hutsik egon daiteke, baina ez eremu hau."
+"OpenSSL rifiuterà di generare un certificato se il codice paese non è valido "
+"e conforme a ISO-3166. È permesso un campo vuoto altrove nel certificato "
+"X.509, ma non in questo campo."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:14001
 msgid "State or province name for the X.509 certificate request:"
-msgstr "X.509 ziurtagiri eskaeraren estatu edo probintziaren izena:"
+msgstr ""
+"Nome dello stato o della provincia per la richiesta di certificato X.509:"
 
 #. Type: string
 #. Description
@@ -361,14 +363,14 @@ msgid ""
 "Please enter the full name of the state or province the server resides in "
 "(such as \"Upper Austria\")."
 msgstr ""
-"Idatzi zerbitzaria kokatuta dagoen estatu edo probintziaren izen osoa "
-"(adibidez, \"Goiko Austria\")."
+"Inserire il nome completo dello stato o della provincia il in cui il server "
+"risiede (per esempio, «Milano»)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:15001
 msgid "Locality name for the X.509 certificate request:"
-msgstr "X.509 ziurtagiri eskaeraren herriaren izena:"
+msgstr "Nome della località per la richiesta di certificato X.509:"
 
 #. Type: string
 #. Description
@@ -377,27 +379,29 @@ msgid ""
 "Please enter the locality the server resides in (often a city, such as "
 "\"Vienna\")."
 msgstr ""
-"Idatzi zerbitzaria kokatuta dagoen kokalekua (normalean herria, adibidez, "
-"\"Bilbo\"). "
+"Inserire il nome della località in cui il server risiede (spesso una città, "
+"per esempio «Milano»)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:16001
 msgid "Organization name for the X.509 certificate request:"
-msgstr "X.509 ziurtagiri eskaeraren erakundearen izena:"
+msgstr "Nome dell'organizzazione per la richiesta di certificato X.509:"
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:16001
 msgid ""
 "Please enter the organization the server belongs to (such as \"Debian\")."
-msgstr "Idatzi zerbitzaria duen erakundea (adibidez, \"Debian\")"
+msgstr ""
+"Inserire il nome dell'organizzazione cui il server appartiene (per esempio, "
+"«Debian»)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:17001
 msgid "Organizational unit for the X.509 certificate request:"
-msgstr "X.509 ziurtagiri eskaeraren saila:"
+msgstr "Unità organizzativa per la richiesta di certificato X.509:"
 
 #. Type: string
 #. Description
@@ -405,13 +409,15 @@ msgstr "X.509 ziurtagiri eskaeraren saila:"
 msgid ""
 "Please enter the organizational unit the server belongs to (such as "
 "\"security group\")."
-msgstr "Idatzi zerbitzaria duen saila (adibidez, \"segurtasunaren taldea\")"
+msgstr ""
+"Inserire l'unità organizzativa cui il server appartiene (per esempio, "
+"«gruppo sicurezza»)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:18001
 msgid "Common Name for the X.509 certificate request:"
-msgstr "X.509 ziurtagiri eskaeraren izen arrunta:"
+msgstr "Nome comune host per la richiesta di certificato X.509:"
 
 #. Type: string
 #. Description
@@ -419,13 +425,13 @@ msgstr "X.509 ziurtagiri eskaeraren izen arrunta:"
 msgid ""
 "Please enter the Common Name for this host (such as \"gateway.example.org\")."
 msgstr ""
-"Idatzi ostalari honen izen arrunta (adibidez, \"atebidea.adibidea.org\")."
+"Inserire il nome comune di questo host (per esempio, «gateway.esempio.it»)."
 
 #. Type: string
 #. Description
 #: ../strongswan-starter.templates:19001
 msgid "Email address for the X.509 certificate request:"
-msgstr "X.509 ziurtagiri eskaeraren helbide elektronikoa:"
+msgstr "Indirizzo e-mail per la richiesta di certificato X.509:"
 
 #. Type: string
 #. Description
@@ -434,14 +440,14 @@ msgid ""
 "Please enter the email address of the person or organization responsible for "
 "the X.509 certificate."
 msgstr ""
-"Idatzi X.509 ziurtagiriaren ardura duen pertsona edo erakundearen helbide "
-"elektronikoa."
+"Inserire l'indirizzo di posta elettronica della persona o "
+"dell'organizzazione responsabile per il certificato X.509."
 
 #. Type: boolean
 #. Description
 #: ../strongswan-starter.templates:20001
 msgid "Enable opportunistic encryption?"
-msgstr "Gaitu enkriptazio oportunista?"
+msgstr "Abilitare la cifratura opportunistica?"
 
 #. Type: boolean
 #. Description
@@ -452,10 +458,10 @@ msgid ""
 "deployed, activating it will cause a significant delay for every new "
 "outgoing connection."
 msgstr ""
-"StrongSwan bertsio honek aukerako enkriptazio oportunistaren (OE) euskarria "
-"du, honek IPSec autentifikazio informazioa DNS erregistroetan gordetzen "
-"ditu. Hau guztiz garatua ez dagoenez gaitzeak kanporako konexio berri "
-"guztien atzerapen esanguratsu bat eragin dezake."
+"Questa versione di strongSwan supporta la cifratura opportunistica (OE), la "
+"quale memorizza le informazioni di autenticazione IPsec in record DNS. "
+"Finché non sarà una soluzione largamente applicata, l'attivazione dell'OE "
+"causerà un ritardo significativo per ogni connessione in uscita."
 
 #. Type: boolean
 #. Description
@@ -465,6 +471,6 @@ msgid ""
 "It may break the Internet connection (default route) as the pluto daemon "
 "starts."
 msgstr ""
-"Enkriptazio oportunista behar duzula ziur bazaude bakarrik gaitu beharko "
-"zenuke. Interneteko konexioak moztuko dira (lehenetsitako atebidea) pluto "
-"daemona abiaraztean."
+"Si dovrebbe abilitare l'OE solo se lo si desidera veramente. Potrebbe "
+"interrompere la connessione Internet (route predefinita) durante l'avvio del "
+"demone pluto."
