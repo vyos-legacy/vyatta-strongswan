@@ -57,12 +57,6 @@ enum builder_part_t {
 	BUILD_BLOB_PGP,
 	/** DNS public key blob (RFC 4034, RSA specifc RFC 3110), chunk_t */
 	BUILD_BLOB_DNSKEY,
-	/** passphrase for e.g. PEM decryption, chunk_t */
-	BUILD_PASSPHRASE,
-	/** passphrase callback, chunk_t(*fn)(void *user, int try), void *user.
-	 *  The callback is invoked until the returned passphrase is accepted, or
-	 *  a zero-length passphrase is returned. Try starts at 1. */
-	BUILD_PASSPHRASE_CALLBACK,
 	/** key size in bits, as used for key generation, u_int */
 	BUILD_KEY_SIZE,
 	/** private key to use for signing, private_key_t* */
@@ -103,10 +97,14 @@ enum builder_part_t {
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */
 	BUILD_REVOKED_ENUMERATOR,
-	/** key ID of a key on a smartcard, null terminated char* ([slot:]keyid) */
-	BUILD_SMARTCARD_KEYID,
-	/** pin to access a key on a smartcard, null terminated char* */
-	BUILD_SMARTCARD_PIN,
+	/** PKCS#10 challenge password */
+	BUILD_CHALLENGE_PWD,
+	/** friendly name of a PKCS#11 module, null terminated char* */
+	BUILD_PKCS11_MODULE,
+	/** slot specifier for a token in a PKCS#11 module, int */
+	BUILD_PKCS11_SLOT,
+	/** key ID of a key on a token, chunk_t */
+	BUILD_PKCS11_KEYID,
 	/** modulus (n) of a RSA key, chunk_t */
 	BUILD_RSA_MODULUS,
 	/** public exponent (e) of a RSA key, chunk_t */

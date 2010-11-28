@@ -54,7 +54,7 @@ struct stroke_token {
     stroke_keyword_t kw;
 };
 
-#define TOTAL_KEYWORDS 33
+#define TOTAL_KEYWORDS 34
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 15
 #define MIN_HASH_VALUE 3
@@ -79,15 +79,15 @@ hash (str, len)
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 17, 40, 40, 40, 40,
+      40, 40, 40, 40, 40, 18, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40,  0,  4,  1,
-       1,  0, 40, 17, 40, 18, 40,  4,  0, 40,
-      40, 12, 17, 40,  6,  3, 19, 12, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+       1,  0, 40, 17, 40, 20, 40,  3,  0, 40,
+      40, 12, 19, 40,  6,  3, 20, 12, 40, 40,
+      10, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
       40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
@@ -148,14 +148,15 @@ static const struct stroke_token wordlist[] =
     {"listocsp",        STROKE_LIST_OCSP},
     {"statusall",       STROKE_STATUSALL},
     {"listalgs",        STROKE_LIST_ALGS},
+    {"exportx509",      STROKE_EXPORT_X509},
     {"delete",          STROKE_DELETE},
-    {"purgeocsp",       STROKE_PURGE_OCSP},
     {"listocspcerts",   STROKE_LIST_OCSPCERTS},
+    {"purgeocsp",       STROKE_PURGE_OCSP},
     {"purgeike",        STROKE_PURGE_IKE},
-    {"listcainfos",     STROKE_LIST_CAINFOS},
     {"unroute",         STROKE_UNROUTE},
-    {"listpubkeys",     STROKE_LIST_PUBKEYS},
+    {"listcainfos",     STROKE_LIST_CAINFOS},
     {"rereadocspcerts", STROKE_REREAD_OCSPCERTS},
+    {"listpubkeys",     STROKE_LIST_PUBKEYS},
     {"down-srcip",      STROKE_DOWN_SRCIP},
     {"listgroups",      STROKE_LIST_GROUPS}
   };
@@ -164,7 +165,7 @@ static const short lookup[] =
   {
     -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,
     11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-    25, 26, 27, 28, 29, 30, 31, -1, -1, -1, -1, 32
+    25, 26, 27, 28, 29, 30, 31, 32, -1, -1, -1, 33
   };
 
 #ifdef __GNUC__

@@ -37,7 +37,7 @@
  * @defgroup payloads payloads
  * @ingroup encoding
  *
- * @defgroup kernel kernel
+ * @defgroup ckernel kernel
  * @ingroup libcharon
  *
  * @defgroup network network
@@ -46,11 +46,11 @@
  * @defgroup cplugins plugins
  * @ingroup libcharon
  *
- * @defgroup processing processing
+ * @defgroup cprocessing processing
  * @ingroup libcharon
  *
- * @defgroup jobs jobs
- * @ingroup processing
+ * @defgroup cjobs jobs
+ * @ingroup cprocessing
  *
  * @defgroup sa sa
  * @ingroup libcharon
@@ -140,9 +140,6 @@ typedef struct daemon_t daemon_t;
 #include <network/sender.h>
 #include <network/receiver.h>
 #include <network/socket_manager.h>
-#include <processing/scheduler.h>
-#include <processing/processor.h>
-#include <kernel/kernel_interface.h>
 #include <control/controller.h>
 #include <bus/bus.h>
 #include <bus/listeners/file_logger.h>
@@ -152,6 +149,7 @@ typedef struct daemon_t daemon_t;
 #include <config/backend_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
+#include <tnccs/tnccs_manager.h>
 
 #ifdef ME
 #include <sa/connect_manager.h>
@@ -209,16 +207,6 @@ struct daemon_t {
 	receiver_t *receiver;
 
 	/**
-	 * The Scheduler-Thread.
-	 */
-	scheduler_t *scheduler;
-
-	/**
-	 * Job processing using a thread pool.
-	 */
-	processor_t *processor;
-
-	/**
 	 * The signaling bus.
 	 */
 	bus_t *bus;
@@ -234,11 +222,6 @@ struct daemon_t {
 	linked_list_t *sys_loggers;
 
 	/**
-	 * Kernel Interface to communicate with kernel
-	 */
-	kernel_interface_t *kernel_interface;
-
-	/**
 	 * Controller to control the daemon
 	 */
 	controller_t *controller;
@@ -252,6 +235,11 @@ struct daemon_t {
 	 * SIM manager to maintain (U)SIM cards/providers
 	 */
 	sim_manager_t *sim;
+
+	/**
+	 * TNCCS manager to maintain registered TNCCS protocols
+	 */
+	tnccs_manager_t *tnccs;
 
 #ifdef ME
 	/**

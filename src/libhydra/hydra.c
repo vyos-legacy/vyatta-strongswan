@@ -42,6 +42,7 @@ void libhydra_deinit()
 {
 	private_hydra_t *this = (private_hydra_t*)hydra;
 	this->public.attributes->destroy(this->public.attributes);
+	this->public.kernel_interface->destroy(this->public.kernel_interface);
 	free((void*)this->public.daemon);
 	free(this);
 	hydra = NULL;
@@ -57,6 +58,7 @@ bool libhydra_init(const char *daemon)
 	INIT(this,
 		.public = {
 			.attributes = attribute_manager_create(),
+			.kernel_interface = kernel_interface_create(),
 			.daemon = strdup(daemon ?: "libhydra"),
 		},
 	);

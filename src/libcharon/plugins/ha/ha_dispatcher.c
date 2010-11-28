@@ -136,7 +136,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		diffie_hellman_t dh = { .get_shared_secret = get_shared_secret,
 								.destroy = (void*)&secret };
 
-		proposal = proposal_create(PROTO_IKE);
+		proposal = proposal_create(PROTO_IKE, 0);
 		keymat = ike_sa->get_keymat(ike_sa);
 		if (integ)
 		{
@@ -549,7 +549,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	child_sa->set_protocol(child_sa, PROTO_ESP);
 	child_sa->set_ipcomp(child_sa, ipcomp);
 
-	proposal = proposal_create(PROTO_ESP);
+	proposal = proposal_create(PROTO_ESP, 0);
 	if (integ)
 	{
 		proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, integ, 0);
@@ -869,7 +869,7 @@ ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 	);
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

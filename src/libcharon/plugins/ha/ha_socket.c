@@ -107,7 +107,7 @@ METHOD(ha_socket_t, push, void,
 
 			job = callback_job_create((callback_job_cb_t)send_message,
 									  data, (void*)job_data_destroy, NULL);
-			charon->processor->queue_job(charon->processor, (job_t*)job);
+			lib->processor->queue_job(lib->processor, (job_t*)job);
 			return;
 		}
 		DBG1(DBG_CFG, "pushing HA message failed: %s", strerror(errno));

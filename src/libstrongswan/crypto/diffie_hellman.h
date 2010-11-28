@@ -57,6 +57,8 @@ enum diffie_hellman_group_t {
 	ECP_224_BIT   = 26,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
 	MODP_NULL = 1024,
+	/** MODP group with custon generator, prime */
+	MODP_CUSTOM = 1025,
 };
 
 /**
@@ -144,5 +146,13 @@ struct diffie_hellman_params_t {
  * @return				The parameters or NULL, if the group is not supported
  */
 diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group);
+
+/**
+ * Check if a given DH group is an ECDH group
+ *
+ * @param group			group to check
+ * @return				TUE if group is an ECP group
+ */
+bool diffie_hellman_group_is_ec(diffie_hellman_group_t group);
 
 #endif /** DIFFIE_HELLMAN_H_ @}*/

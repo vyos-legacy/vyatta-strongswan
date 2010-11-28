@@ -481,9 +481,8 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		{
 			this->ike_sa->enable_extension(this->ike_sa, EXT_MULTIPLE_AUTH);
 		}
-		if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN) &&
-			message->get_notify(message, EAP_ONLY_AUTHENTICATION))
-		{	/* EAP-only has no official notify, accept only from strongSwan */
+		if (message->get_notify(message, EAP_ONLY_AUTHENTICATION))
+		{
 			this->ike_sa->enable_extension(this->ike_sa,
 										   EXT_EAP_ONLY_AUTHENTICATION);
 		}
@@ -537,6 +536,11 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			if (id)
 			{
 				cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
+			}
+			id = (identification_t*)cand->get(cand, AUTH_RULE_AAA_IDENTITY);
+			if (id)
+			{
+				cfg->add(cfg, AUTH_RULE_AAA_IDENTITY, id->clone(id));
 			}
 		}
 
@@ -821,7 +825,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 					break;
 				default:
 				{
-					if (type < 16383)
+					if (type <= 16383)
 					{
 						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);

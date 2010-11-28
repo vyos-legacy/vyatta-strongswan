@@ -33,13 +33,13 @@ struct private_gmp_plugin_t {
 	gmp_plugin_t public;
 };
 
-/**
- * Implementation of gmp_plugin_t.gmptroy
- */
-static void destroy(private_gmp_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_gmp_plugin_t *this)
 {
 	lib->crypto->remove_dh(lib->crypto,
 						(dh_constructor_t)gmp_diffie_hellman_create);
+	lib->crypto->remove_dh(lib->crypto,
+						(dh_constructor_t)gmp_diffie_hellman_create_custom);
 	lib->creds->remove_builder(lib->creds,
 						(builder_function_t)gmp_rsa_private_key_gen);
 	lib->creds->remove_builder(lib->creds,
@@ -54,9 +54,15 @@ static void destroy(private_gmp_plugin_t *this)
  */
 plugin_t *gmp_plugin_create()
 {
-	private_gmp_plugin_t *this = malloc_thing(private_gmp_plugin_t);
+	private_gmp_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT,
 						(dh_constructor_t)gmp_diffie_hellman_create);
@@ -81,11 +87,14 @@ plugin_t *gmp_plugin_create()
 	lib->crypto->add_dh(lib->crypto, MODP_768_BIT,
 						(dh_constructor_t)gmp_diffie_hellman_create);
 
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM,
+						(dh_constructor_t)gmp_diffie_hellman_create_custom);
+
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 						(builder_function_t)gmp_rsa_private_key_gen);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, TRUE,
 						(builder_function_t)gmp_rsa_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
 						(builder_function_t)gmp_rsa_public_key_load);
 
 	return &this->public.plugin;

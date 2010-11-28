@@ -41,85 +41,57 @@ struct private_openssl_crypter_t {
 };
 
 /**
- * Mapping from the algorithms defined in IKEv2 to
- * OpenSSL algorithm names and their key length
- */
-typedef struct {
-	/**
-	 * Identifier specified in IKEv2
-	 */
-	int ikev2_id;
-
-	/**
-	 * Name of the algorithm, as used in OpenSSL
-	 */
-	char *name;
-
-	/**
-	 * Minimum valid key length in bytes
-	 */
-	size_t key_size_min;
-
-	/**
-	 * Maximum valid key length in bytes
-	 */
-	size_t key_size_max;
-} openssl_algorithm_t;
-
-#define END_OF_LIST -1
-
-/**
- * Algorithms for encryption
- */
-static openssl_algorithm_t encryption_algs[] = {
-/*	{ENCR_DES_IV64, 	"***", 			0,	0}, */
-	{ENCR_DES, 			"des",			8,	8},		/* 64 bits */
-	{ENCR_3DES, 		"des3",			24,	24},	/* 192 bits */
-	{ENCR_RC5, 			"rc5", 			5,	255},	/* 40 to 2040 bits, RFC 2451 */
-	{ENCR_IDEA, 		"idea",			16,	16},	/* 128 bits, RFC 2451 */
-	{ENCR_CAST, 		"cast",			5,	16},	/* 40 to 128 bits, RFC 2451 */
-	{ENCR_BLOWFISH, 	"blowfish",		5,	56},	/* 40 to 448 bits, RFC 2451 */
-/*	{ENCR_3IDEA, 		"***",			0,	0}, */
-/*	{ENCR_DES_IV32, 	"***",			0,	0}, */
-/*	{ENCR_NULL, 		"***",			0,	0}, */ /* handled separately */
-/*	{ENCR_AES_CBC, 		"***",			0,	0}, */ /* handled separately */
-/*	{ENCR_CAMELLIA_CBC,	"***",			0,	0}, */ /* handled separately */
-/*	{ENCR_AES_CTR, 		"***",			0,	0}, */ /* disabled in evp.h */
-	{END_OF_LIST, 		NULL,			0,	0},
-};
-
-/**
  * Look up an OpenSSL algorithm name and validate its key size
  */
-static char* lookup_algorithm(openssl_algorithm_t *openssl_algo,
-					   u_int16_t ikev2_algo, size_t *key_size)
+static char* lookup_algorithm(u_int16_t ikev2_algo, size_t *key_size)
 {
-	while (openssl_algo->ikev2_id != END_OF_LIST)
+	struct {
+		/* identifier specified in IKEv2 */
+		int ikev2_id;
+		/* name of the algorithm, as used in OpenSSL */
+		char *name;
+		/* default key size in bytes */
+		size_t key_def;
+		/* minimum key size */
+		size_t key_min;
+		/* maximum key size */
+		size_t key_max;
+	} mappings[] = {
+		{ENCR_DES, 			"des",			 8,		 8,		  8},
+		{ENCR_3DES, 		"des3",			24,		24,		 24},
+		{ENCR_RC5, 			"rc5", 			16,		 5,		255},
+		{ENCR_IDEA, 		"idea",			16,		16,		 16},
+		{ENCR_CAST, 		"cast",			16,		 5,		 16},
+		{ENCR_BLOWFISH, 	"blowfish",		16,		 5,		 56},
+	};
+	int i;
+
+	for (i = 0; i < countof(mappings); i++)
 	{
-		if (ikev2_algo == openssl_algo->ikev2_id)
+		if (ikev2_algo == mappings[i].ikev2_id)
 		{
 			/* set the key size if it is not set */
-			if (*key_size == 0 &&
-				(openssl_algo->key_size_min == openssl_algo->key_size_max))
+			if (*key_size == 0)
 			{
-				*key_size = openssl_algo->key_size_min;
+				*key_size = mappings[i].key_def;
 			}
-
 			/* validate key size */
-			if (*key_size < openssl_algo->key_size_min ||
-				*key_size > openssl_algo->key_size_max)
+			if (*key_size < mappings[i].key_min ||
+				*key_size > mappings[i].key_max)
 			{
 				return NULL;
 			}
-			return openssl_algo->name;
+			return mappings[i].name;
 		}
-		openssl_algo++;
 	}
 	return NULL;
 }
 
-static void crypt(private_openssl_crypter_t *this, chunk_t data,
-					chunk_t iv, chunk_t *dst, int enc)
+/**
+ * Do the actual en/decryption in an EVP context
+ */
+static void crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
+				  chunk_t *dst, int enc)
 {
 	int len;
 	u_char *out;
@@ -141,53 +113,44 @@ static void crypt(private_openssl_crypter_t *this, chunk_t data,
 	EVP_CIPHER_CTX_cleanup(&ctx);
 }
 
-/**
- * Implementation of crypter_t.decrypt.
- */
-static void decrypt(private_openssl_crypter_t *this, chunk_t data,
-						chunk_t iv, chunk_t *dst)
+METHOD(crypter_t, decrypt, void,
+	private_openssl_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	crypt(this, data, iv, dst, 0);
 }
 
-
-/**
- * Implementation of crypter_t.encrypt.
- */
-static void encrypt (private_openssl_crypter_t *this, chunk_t data,
-							chunk_t iv, chunk_t *dst)
+METHOD(crypter_t, encrypt, void,
+	private_openssl_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	crypt(this, data, iv, dst, 1);
 }
 
-/**
- * Implementation of crypter_t.get_block_size.
- */
-static size_t get_block_size(private_openssl_crypter_t *this)
+METHOD(crypter_t, get_block_size, size_t,
+	private_openssl_crypter_t *this)
 {
 	return this->cipher->block_size;
 }
 
-/**
- * Implementation of crypter_t.get_key_size.
- */
-static size_t get_key_size(private_openssl_crypter_t *this)
+METHOD(crypter_t, get_iv_size, size_t,
+	private_openssl_crypter_t *this)
+{
+	return this->cipher->block_size;
+}
+
+METHOD(crypter_t, get_key_size, size_t,
+	private_openssl_crypter_t *this)
 {
 	return this->key.len;
 }
 
-/**
- * Implementation of crypter_t.set_key.
- */
-static void set_key(private_openssl_crypter_t *this, chunk_t key)
+METHOD(crypter_t, set_key, void,
+	private_openssl_crypter_t *this, chunk_t key)
 {
 	memcpy(this->key.ptr, key.ptr, min(key.len, this->key.len));
 }
 
-/**
- * Implementation of crypter_t.destroy.
- */
-static void destroy (private_openssl_crypter_t *this)
+METHOD(crypter_t, destroy, void,
+	private_openssl_crypter_t *this)
 {
 	free(this->key.ptr);
 	free(this);
@@ -201,16 +164,32 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 {
 	private_openssl_crypter_t *this;
 
-	this = malloc_thing(private_openssl_crypter_t);
+	INIT(this,
+		.public = {
+			.crypter = {
+				.encrypt = _encrypt,
+				.decrypt = _decrypt,
+				.get_block_size = _get_block_size,
+				.get_iv_size = _get_iv_size,
+				.get_key_size = _get_key_size,
+				.set_key = _set_key,
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	switch (algo)
 	{
 		case ENCR_NULL:
 			this->cipher = EVP_enc_null();
+			key_size = 0;
 			break;
 		case ENCR_AES_CBC:
 			switch (key_size)
 			{
+				case 0:
+					key_size = 16;
+					/* FALL */
 				case 16:        /* AES 128 */
 					this->cipher = EVP_get_cipherbyname("aes128");
 					break;
@@ -228,6 +207,9 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 		case ENCR_CAMELLIA_CBC:
 			switch (key_size)
 			{
+				case 0:
+					key_size = 16;
+					/* FALL */
 				case 16:        /* CAMELLIA 128 */
 					this->cipher = EVP_get_cipherbyname("camellia128");
 					break;
@@ -243,11 +225,14 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 			}
 			break;
 		case ENCR_DES_ECB:
+			key_size = 8;
 			this->cipher = EVP_des_ecb();
 			break;
 		default:
 		{
-			char* name = lookup_algorithm(encryption_algs, algo, &key_size);
+			char* name;
+
+			name = lookup_algorithm(algo, &key_size);
 			if (!name)
 			{
 				/* algo unavailable or key_size invalid */
@@ -267,13 +252,6 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 	}
 
 	this->key = chunk_alloc(key_size);
-
-	this->public.crypter_interface.encrypt = (void (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
-	this->public.crypter_interface.decrypt = (void (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
-	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
-	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
-	this->public.crypter_interface.set_key = (void (*) (crypter_t *,chunk_t)) set_key;
-	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
 
 	return &this->public;
 }

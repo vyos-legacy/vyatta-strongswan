@@ -25,6 +25,7 @@ typedef struct crypto_factory_t crypto_factory_t;
 
 #include <library.h>
 #include <crypto/crypters/crypter.h>
+#include <crypto/aead.h>
 #include <crypto/signers/signer.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
@@ -37,6 +38,11 @@ typedef struct crypto_factory_t crypto_factory_t;
  */
 typedef crypter_t* (*crypter_constructor_t)(encryption_algorithm_t algo,
 											size_t key_size);
+/**
+ * Constructor function for aead transforms
+ */
+typedef aead_t* (*aead_constructor_t)(encryption_algorithm_t algo,
+									  size_t key_size);
 /**
  * Constructor function for signers
  */
@@ -59,8 +65,11 @@ typedef rng_t* (*rng_constructor_t)(rng_quality_t quality);
 
 /**
  * Constructor function for diffie hellman
+ *
+ * The DH constructor accepts additional arguments for:
+ * - MODP_CUSTOM: chunk_t generator, chunk_t prime
  */
-typedef diffie_hellman_t* (*dh_constructor_t)(diffie_hellman_group_t group);
+typedef diffie_hellman_t* (*dh_constructor_t)(diffie_hellman_group_t group, ...);
 
 /**
  * Handles crypto modules and creates instances.
@@ -76,6 +85,16 @@ struct crypto_factory_t {
 	 */
 	crypter_t* (*create_crypter)(crypto_factory_t *this,
 								 encryption_algorithm_t algo, size_t key_size);
+
+	/**
+	 * Create a aead instance.
+	 *
+	 * @param algo			encryption algorithm
+	 * @param key_size		length of the key in bytes
+	 * @return				aead_t instance, NULL if not supported
+	 */
+	aead_t* (*create_aead)(crypto_factory_t *this,
+						   encryption_algorithm_t algo, size_t key_size);
 
 	/**
 	 * Create a symmetric signer instance.
@@ -113,11 +132,13 @@ struct crypto_factory_t {
 	/**
 	 * Create a diffie hellman instance.
 	 *
+	 * Additional arguments are passed to the DH constructor.
+	 *
 	 * @param group			diffie hellman group
 	 * @return				diffie_hellman_t instance, NULL if not supported
 	 */
 	diffie_hellman_t* (*create_dh)(crypto_factory_t *this,
-								   diffie_hellman_group_t group);
+								   diffie_hellman_group_t group, ...);
 
 	/**
 	 * Register a crypter constructor.
@@ -135,6 +156,23 @@ struct crypto_factory_t {
 	 * @param create		constructor function to unregister
 	 */
 	void (*remove_crypter)(crypto_factory_t *this, crypter_constructor_t create);
+
+	/**
+	 * Unregister a aead constructor.
+	 *
+	 * @param create		constructor function to unregister
+	 */
+	void (*remove_aead)(crypto_factory_t *this, aead_constructor_t create);
+
+	/**
+	 * Register a aead constructor.
+	 *
+	 * @param algo			algorithm to constructor
+	 * @param create		constructor function for that algorithm
+	 * @return
+	 */
+	void (*add_aead)(crypto_factory_t *this, encryption_algorithm_t algo,
+					 aead_constructor_t create);
 
 	/**
 	 * Register a signer constructor.
@@ -230,6 +268,13 @@ struct crypto_factory_t {
 	enumerator_t* (*create_crypter_enumerator)(crypto_factory_t *this);
 
 	/**
+	 * Create an enumerator over all registered aead algorithms.
+	 *
+	 * @return				enumerator over encryption_algorithm_t
+	 */
+	enumerator_t* (*create_aead_enumerator)(crypto_factory_t *this);
+
+	/**
 	 * Create an enumerator over all registered signer algorithms.
 	 *
 	 * @return				enumerator over integrity_algorithm_t
@@ -261,9 +306,10 @@ struct crypto_factory_t {
 	 * Add a test vector to the crypto factory.
 	 *
 	 * @param type			type of the test vector
-	 * @param ...			pointer to a test vector, defined in crypto_tester.h
+	 * @param vector		pointer to a test vector, defined in crypto_tester.h
 	 */
-	void (*add_test_vector)(crypto_factory_t *this, transform_type_t type, ...);
+	void (*add_test_vector)(crypto_factory_t *this, transform_type_t type,
+							void *vector);
 
 	/**
 	 * Destroy a crypto_factory instance.

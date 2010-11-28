@@ -64,32 +64,29 @@ struct entry_t {
 	credential_type_t type;
 	/** subtype of credential, e.g. certificate_type_t */
 	int subtype;
+	/** registered with final flag? */
+	bool final;
 	/** builder function */
 	builder_function_t constructor;
 };
 
-/**
- * Implementation of credential_factory_t.add_builder_constructor.
- */
-static void add_builder(private_credential_factory_t *this,
-						credential_type_t type, int subtype,
-						builder_function_t constructor)
+METHOD(credential_factory_t, add_builder, void,
+	private_credential_factory_t *this, credential_type_t type, int subtype,
+	bool final, builder_function_t constructor)
 {
 	entry_t *entry = malloc_thing(entry_t);
 
 	entry->type = type;
 	entry->subtype = subtype;
+	entry->final = final;
 	entry->constructor = constructor;
 	this->lock->write_lock(this->lock);
 	this->constructors->insert_last(this->constructors, entry);
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of credential_factory_t.remove_builder.
- */
-static void remove_builder(private_credential_factory_t *this,
-						   builder_function_t constructor)
+METHOD(credential_factory_t, remove_builder, void,
+	private_credential_factory_t *this, builder_function_t constructor)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -108,11 +105,8 @@ static void remove_builder(private_credential_factory_t *this,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of credential_factory_t.create.
- */
-static void* create(private_credential_factory_t *this, credential_type_t type,
-					int subtype, ...)
+METHOD(credential_factory_t, create, void*,
+	private_credential_factory_t *this, credential_type_t type, int subtype, ...)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -159,9 +153,31 @@ static void* create(private_credential_factory_t *this, credential_type_t type,
 }
 
 /**
- * Implementation of credential_factory_t.destroy
+ * Filter function for builder enumerator
  */
-static void destroy(private_credential_factory_t *this)
+static bool builder_filter(void *null, entry_t **entry, credential_type_t *type,
+						   void *dummy1, int *subtype)
+{
+	if ((*entry)->final)
+	{
+		*type = (*entry)->type;
+		*subtype = (*entry)->subtype;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(credential_factory_t, create_builder_enumerator, enumerator_t*,
+	private_credential_factory_t *this)
+{
+	this->lock->read_lock(this->lock);
+	return enumerator_create_filter(
+				this->constructors->create_enumerator(this->constructors),
+				(void*)builder_filter, this->lock, (void*)this->lock->unlock);
+}
+
+METHOD(credential_factory_t, destroy, void,
+	private_credential_factory_t *this)
 {
 	this->constructors->destroy_function(this->constructors, free);
 	this->recursive->destroy(this->recursive);
@@ -174,16 +190,20 @@ static void destroy(private_credential_factory_t *this)
  */
 credential_factory_t *credential_factory_create()
 {
-	private_credential_factory_t *this = malloc_thing(private_credential_factory_t);
+	private_credential_factory_t *this;
 
-	this->public.create = (void*(*)(credential_factory_t*, credential_type_t type, int subtype, ...))create;
-	this->public.add_builder = (void(*)(credential_factory_t*,credential_type_t type, int subtype, builder_function_t constructor))add_builder;
-	this->public.remove_builder = (void(*)(credential_factory_t*,builder_function_t constructor))remove_builder;
-	this->public.destroy = (void(*)(credential_factory_t*))destroy;
-
-	this->constructors = linked_list_create();
-	this->recursive = thread_value_create(NULL);
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	INIT(this,
+		.public = {
+			.create = _create,
+			.create_builder_enumerator = _create_builder_enumerator,
+			.add_builder = _add_builder,
+			.remove_builder = _remove_builder,
+			.destroy = _destroy,
+		},
+		.constructors = linked_list_create(),
+		.recursive = thread_value_create(NULL),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+	);
 
 	return &this->public;
 }

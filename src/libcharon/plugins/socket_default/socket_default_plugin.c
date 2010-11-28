@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -31,17 +33,13 @@ struct private_socket_default_plugin_t {
 	 */
 	socket_default_plugin_t public;
 
-	/**
-	 * Socket instance.
-	 */
-	socket_default_socket_t *socket;
 };
 
 METHOD(plugin_t, destroy, void,
 	private_socket_default_plugin_t *this)
 {
-	charon->socket->remove_socket(charon->socket, &this->socket->socket);
-	this->socket->destroy(this->socket);
+	charon->socket->remove_socket(charon->socket,
+						(socket_constructor_t)socket_default_socket_create);
 	free(this);
 }
 
@@ -53,16 +51,15 @@ plugin_t *socket_default_plugin_create()
 	private_socket_default_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
-		.socket = socket_default_socket_create(),
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
 	);
 
-	if (!this->socket)
-	{
-		free(this);
-		return NULL;
-	}
-	charon->socket->add_socket(charon->socket, &this->socket->socket);
+	charon->socket->add_socket(charon->socket,
+						(socket_constructor_t)socket_default_socket_create);
 
 	return &this->public.plugin;
 }

@@ -58,6 +58,22 @@ struct nm_creds_t {
 	 */
 	void (*set_username_password)(nm_creds_t *this, identification_t *id,
 								  char *password);
+
+	/**
+	 * Set the passphrase to use for private key decryption.
+	 *
+	 * @param password	password to use
+	 */
+	void (*set_key_password)(nm_creds_t *this, char *password);
+
+	/**
+	 * Set the PIN to unlock a smartcard.
+	 *
+	 * @param keyid		keyid of the smartcard key
+	 * @param pin		PIN
+	 */
+	void (*set_pin)(nm_creds_t *this, chunk_t keyid, char *pin);
+
 	/**
 	 * Set the certificate and private key to use for client authentication.
 	 *
@@ -66,6 +82,7 @@ struct nm_creds_t {
 	 */
 	void (*set_cert_and_key)(nm_creds_t *this, certificate_t *cert,
 							 private_key_t *key);
+
 	/**
 	 * Clear the stored credentials.
 	 */

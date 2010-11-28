@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -36,13 +36,14 @@
 #include <netinet/udp.h>
 #include <net/if.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <threading/rwlock.h>
 #include <utils/hashtable.h>
 
 /* Maximum size of a packet */
-#define MAX_PACKET 5000
+#define MAX_PACKET 10000
 
 /* length of non-esp marker */
 #define MARKER_LEN sizeof(u_int32_t)
@@ -100,6 +101,11 @@ struct private_socket_dynamic_socket_t {
 	 * Notification pipe to signal receiver
 	 */
 	int notify[2];
+
+	/**
+	 * Maximum packet size to receive
+	 */
+	int max_packet;
 };
 
 /**
@@ -197,7 +203,7 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 {
 	host_t *source = NULL, *dest = NULL;
 	ssize_t len;
-	char buffer[MAX_PACKET];
+	char buffer[this->max_packet];
 	chunk_t data;
 	packet_t *packet;
 	struct msghdr msg;
@@ -212,7 +218,7 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 	msg.msg_name = &src;
 	msg.msg_namelen = sizeof(src);
 	iov.iov_base = buffer;
-	iov.iov_len = sizeof(buffer);
+	iov.iov_len = this->max_packet;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = ancillary;
@@ -222,6 +228,11 @@ static packet_t *receive_packet(private_socket_dynamic_socket_t *this,
 	if (len < 0)
 	{
 		DBG1(DBG_NET, "error reading socket: %s", strerror(errno));
+		return NULL;
+	}
+	if (msg.msg_flags & MSG_TRUNC)
+	{
+		DBG1(DBG_NET, "receive buffer too small, packet discarded");
 		return NULL;
 	}
 	DBG3(DBG_NET, "received packet %b", buffer, len);
@@ -412,8 +423,8 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 		return 0;
 	}
 
-	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
-												 fd, family))
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												fd, family))
 	{
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}
@@ -495,12 +506,6 @@ METHOD(socket_t, sender, status_t,
 		!(data.len == 1 && data.ptr[0] == 0xFF))
 	{
 		/* add non esp marker to packet */
-		if (data.len > MAX_PACKET - MARKER_LEN)
-		{
-			DBG1(DBG_NET, "unable to send packet: it's too big (%d bytes)",
-				 data.len);
-			return FAILED;
-		}
 		marked = chunk_alloc(data.len + MARKER_LEN);
 		memset(marked.ptr, 0, MARKER_LEN);
 		memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
@@ -567,7 +572,7 @@ METHOD(socket_t, sender, status_t,
 	return SUCCESS;
 }
 
-METHOD(socket_dynamic_socket_t, destroy, void,
+METHOD(socket_t, destroy, void,
 	private_socket_dynamic_socket_t *this)
 {
 	enumerator_t *enumerator;
@@ -600,10 +605,12 @@ socket_dynamic_socket_t *socket_dynamic_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.destroy = _destroy,
 			},
-			.destroy = _destroy,
 		},
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.max_packet = lib->settings->get_int(lib->settings,
+										"charon.max_packet", MAX_PACKET),
 	);
 
 	if (pipe(this->notify) != 0)

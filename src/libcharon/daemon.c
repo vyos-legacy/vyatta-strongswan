@@ -33,6 +33,7 @@
 
 #include <library.h>
 #include <config/proposal.h>
+#include <kernel/kernel_handler.h>
 
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
 #define LOG_AUTHPRIV LOG_AUTH
@@ -48,6 +49,11 @@ struct private_daemon_t {
 	 * Public members of daemon_t.
 	 */
 	daemon_t public;
+
+	/**
+	 * Handler for kernel events
+	 */
+	kernel_handler_t *kernel_handler;
 
 	/**
 	 * capabilities to keep
@@ -94,10 +100,8 @@ static void dbg_bus(debug_t group, level_t level, char *fmt, ...)
 static void destroy(private_daemon_t *this)
 {
 	/* terminate all idle threads */
-	if (this->public.processor)
-	{
-		this->public.processor->set_threads(this->public.processor, 0);
-	}
+	lib->processor->set_threads(lib->processor, 0);
+
 	/* close all IKE_SAs */
 	if (this->public.ike_sa_manager)
 	{
@@ -110,21 +114,19 @@ static void destroy(private_daemon_t *this)
 #ifdef CAPABILITIES_LIBCAP
 	cap_free(this->caps);
 #endif /* CAPABILITIES_LIBCAP */
+	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.ike_sa_manager);
-	DESTROY_IF(this->public.kernel_interface);
-	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
 	DESTROY_IF(this->public.sim);
+	DESTROY_IF(this->public.tnccs);
 #ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
 #endif /* ME */
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.socket);
-	/* wait until all threads are gone */
-	DESTROY_IF(this->public.processor);
 
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_old;
@@ -176,7 +178,7 @@ METHOD(daemon_t, start, void,
 	   private_daemon_t *this)
 {
 	/* start the engine, go multithreaded */
-	charon->processor->set_threads(charon->processor,
+	lib->processor->set_threads(lib->processor,
 						lib->settings->get_int(lib->settings, "charon.threads",
 											   DEFAULT_THREADS));
 }
@@ -213,7 +215,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	int loggers_defined = 0;
 	debug_t group;
 	level_t  def;
-	bool append;
+	bool append, ike_name;
 	FILE *file;
 
 	/* setup sysloggers */
@@ -222,13 +224,16 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	while (enumerator->enumerate(enumerator, &facility))
 	{
 		loggers_defined++;
+
+		ike_name = lib->settings->get_bool(lib->settings,
+								"charon.syslog.%s.ike_name", FALSE, facility);
 		if (streq(facility, "daemon"))
 		{
-			sys_logger = sys_logger_create(LOG_DAEMON);
+			sys_logger = sys_logger_create(LOG_DAEMON, ike_name);
 		}
 		else if (streq(facility, "auth"))
 		{
-			sys_logger = sys_logger_create(LOG_AUTHPRIV);
+			sys_logger = sys_logger_create(LOG_AUTHPRIV, ike_name);
 		}
 		else
 		{
@@ -282,7 +287,9 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 		}
 		file_logger = file_logger_create(file,
 						lib->settings->get_str(lib->settings,
-							"charon.filelog.%s.time_format", NULL, filename));
+							"charon.filelog.%s.time_format", NULL, filename),
+						lib->settings->get_bool(lib->settings,
+							"charon.filelog.%s.ike_name", FALSE, filename));
 		def = lib->settings->get_int(lib->settings,
 									 "charon.filelog.%s.default", 1, filename);
 		for (group = 0; group < DBG_MAX; group++)
@@ -303,12 +310,12 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 	if (!loggers_defined)
 	{
 		/* set up default stdout file_logger */
-		file_logger = file_logger_create(stdout, NULL);
+		file_logger = file_logger_create(stdout, NULL, FALSE);
 		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
 		this->public.file_loggers->insert_last(this->public.file_loggers,
 											   file_logger);
 		/* set up default daemon sys_logger */
-		sys_logger = sys_logger_create(LOG_DAEMON);
+		sys_logger = sys_logger_create(LOG_DAEMON, FALSE);
 		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.sys_loggers->insert_last(this->public.sys_loggers,
 											  sys_logger);
@@ -322,7 +329,7 @@ static void initialize_loggers(private_daemon_t *this, bool use_stderr,
 		}
 
 		/* set up default auth sys_logger */
-		sys_logger = sys_logger_create(LOG_AUTHPRIV);
+		sys_logger = sys_logger_create(LOG_AUTHPRIV, FALSE);
 		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
 		this->public.sys_loggers->insert_last(this->public.sys_loggers,
 											  sys_logger);
@@ -356,15 +363,14 @@ METHOD(daemon_t, initialize, bool,
 	}
 
 	/* load secrets, ca certificates and crls */
-	this->public.processor = processor_create();
-	this->public.scheduler = scheduler_create();
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
 	this->public.sim = sim_manager_create();
+	this->public.tnccs = tnccs_manager_create();
 	this->public.backends = backend_manager_create();
-	this->public.kernel_interface = kernel_interface_create();
 	this->public.socket = socket_manager_create();
 	this->public.traps = trap_manager_create();
+	this->kernel_handler = kernel_handler_create();
 
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, NULL,

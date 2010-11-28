@@ -40,16 +40,12 @@ encoding/payloads/transform_substructure.c encoding/payloads/transform_substruct
 encoding/payloads/ts_payload.c encoding/payloads/ts_payload.h \
 encoding/payloads/unknown_payload.c encoding/payloads/unknown_payload.h \
 encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
-kernel/kernel_interface.c kernel/kernel_interface.h \
-kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
-kernel/kernel_net.h \
+kernel/kernel_handler.c kernel/kernel_handler.h \
 network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
 network/socket_manager.c network/socket_manager.h network/socket.h \
-processing/jobs/job.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
-processing/jobs/callback_job.c processing/jobs/callback_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \
 processing/jobs/migrate_job.c processing/jobs/migrate_job.h \
@@ -62,8 +58,6 @@ processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
-processing/scheduler.c processing/scheduler.h \
-processing/processor.c processing/processor.h  \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
 sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
@@ -94,7 +88,9 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
-sa/tasks/task.c sa/tasks/task.h
+sa/tasks/task.c sa/tasks/task.h \
+tnccs/tnccs.c tnccs/tnccs.h \
+tnccs/tnccs_manager.h tnccs/tnccs_manager.c
 
 # adding the plugin source files
 
@@ -140,10 +136,6 @@ LOCAL_SRC_FILES += $(addprefix ../libsimaka/, \
 		simaka_crypto.h simaka_crypto.c \
 	)
 endif
-
-LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
-
-LOCAL_SRC_FILES += $(call add_plugin, kernel-pfkey)
 
 LOCAL_SRC_FILES += $(call add_plugin, load-tester)
 

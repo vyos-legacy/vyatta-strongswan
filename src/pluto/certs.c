@@ -74,20 +74,21 @@ void cert_free(cert_t *cert)
 cert_t* cert_add(cert_t *cert)
 {
 	certificate_t *certificate = cert->cert;
-	cert_t *c = certs;
+	cert_t *c;
 
-	while (c != NULL)
+	lock_certs_and_keys("cert_add");
+
+	for (c = certs; c != NULL; c = c->next)
 	{
-		if (certificate->equals(certificate, c->cert)) /* already in chain, free cert */
-		{
+		if (certificate->equals(certificate, c->cert))
+		{	/* already in chain, free cert */
+			unlock_certs_and_keys("cert_add");
 			cert_free(cert);
 			return c;
 		}
-		c = c->next;
 	}
 
 	/* insert new cert at the root of the chain */
-	lock_certs_and_keys("cert_add");
 	cert->next = certs;
 	certs = cert;
 	DBG(DBG_CONTROL | DBG_PARSING,
@@ -95,90 +96,6 @@ cert_t* cert_add(cert_t *cert)
 	)
 	unlock_certs_and_keys("cert_add");
 	return cert;
-}
-
-/**
- * Passphrase callback to read from whack fd
- */
-chunk_t whack_pass_cb(prompt_pass_t *pass, int try)
-{
-	int n;
-
-	if (try > MAX_PROMPT_PASS_TRIALS)
-	{
-		whack_log(RC_LOG_SERIOUS, "invalid passphrase, too many trials");
-		return chunk_empty;
-	}
-	if (try == 1)
-	{
-		whack_log(RC_ENTERSECRET, "need passphrase for 'private key'");
-	}
-	else
-	{
-		whack_log(RC_ENTERSECRET, "invalid passphrase, please try again");
-	}
-
-	n = read(pass->fd, pass->secret, PROMPT_PASS_LEN);
-
-	if (n == -1)
-	{
-		whack_log(RC_LOG_SERIOUS, "read(whackfd) failed");
-		return chunk_empty;
-	}
-
-	pass->secret[n-1] = '\0';
-
-	if (strlen(pass->secret) == 0)
-	{
-		whack_log(RC_LOG_SERIOUS, "no passphrase entered, aborted");
-		return chunk_empty;
-	}
-	return chunk_create(pass->secret, strlen(pass->secret));
-}
-
-/**
- *  Loads a PKCS#1 or PGP private key file
- */
-private_key_t* load_private_key(char* filename, prompt_pass_t *pass,
-								key_type_t type)
-{
-	private_key_t *key = NULL;
-	char *path;
-
-	path = concatenate_paths(PRIVATE_KEY_PATH, filename);
-	if (pass && pass->prompt && pass->fd != NULL_FD)
-	{	/* use passphrase callback */
-		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-								 BUILD_FROM_FILE, path,
-								 BUILD_PASSPHRASE_CALLBACK, whack_pass_cb, pass,
-								 BUILD_END);
-		if (key)
-		{
-			whack_log(RC_SUCCESS, "valid passphrase");
-		}
-	}
-	else if (pass)
-	{	/* use a given passphrase */
-		chunk_t password = chunk_create(pass->secret, strlen(pass->secret));
-		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-								 BUILD_FROM_FILE, path,
-								 BUILD_PASSPHRASE, password, BUILD_END);
-	}
-	else
-	{	/* no passphrase */
-		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-								 BUILD_FROM_FILE, path, BUILD_END);
-
-	}
-	if (key)
-	{
-		plog("  loaded private key from '%s'", filename);
-	}
-	else
-	{
-		plog("  syntax error in private key file");
-	}
-	return key;
 }
 
 /**
@@ -316,7 +233,7 @@ void list_pgp_end_certs(bool utc)
 
 				whack_log(RC_COMMENT, "  pubkey:    %N %4d bits%s",
 						key_type_names, key->get_type(key),
-						key->get_keysize(key) * BITS_PER_BYTE,
+						key->get_keysize(key),
 						has_private_key(cert)? ", has private key" : "");
 				if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &keyid))
 				{

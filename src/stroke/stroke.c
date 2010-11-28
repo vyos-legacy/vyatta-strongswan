@@ -56,9 +56,8 @@ static char* push_string(stroke_msg_t *msg, char *string)
 static int send_stroke_msg (stroke_msg_t *msg)
 {
 	struct sockaddr_un ctl_addr;
-	int sock;
-	char buffer[512];
-	int byte_count;
+	int sock, byte_count;
+	char buffer[512], *pass;
 
 	ctl_addr.sun_family = AF_UNIX;
 	strcpy(ctl_addr.sun_path, STROKE_SOCKET);
@@ -90,16 +89,29 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	while ((byte_count = read(sock, buffer, sizeof(buffer)-1)) > 0)
 	{
 		buffer[byte_count] = '\0';
-		printf("%s", buffer);
 
-		/* we prompt if we receive the "Passphrase:" magic keyword */
-		if (byte_count >= 12 &&
-			strcmp(buffer + byte_count - 12, "Passphrase:\n") == 0)
+		/* we prompt if we receive the "Passphrase:"/"PIN:" magic keyword */
+		if ((byte_count >= 12 &&
+			 strcmp(buffer + byte_count - 12, "Passphrase:\n") == 0) ||
+			(byte_count >= 5 &&
+			 strcmp(buffer + byte_count - 5, "PIN:\n") == 0))
 		{
-			if (fgets(buffer, sizeof(buffer), stdin))
+			/* remove trailing newline */
+			pass = strrchr(buffer, '\n');
+			if (pass)
 			{
-				ignore_result(write(sock, buffer, strlen(buffer)));
+				*pass = ' ';
 			}
+			pass = getpass(buffer);
+			if (pass)
+			{
+				ignore_result(write(sock, pass, strlen(pass)));
+				ignore_result(write(sock, "\n", 1));
+			}
+		}
+		else
+		{
+			printf("%s", buffer);
 		}
 	}
 	if (byte_count < 0)
@@ -276,9 +288,23 @@ static int purge(stroke_keyword_t kw)
 	return send_stroke_msg(&msg);
 }
 
+static int export_flags[] = {
+	EXPORT_X509,
+};
+
+static int export(stroke_keyword_t kw, char *selector)
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_EXPORT;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.export.selector = push_string(&msg, selector);
+	msg.export.flags = export_flags[kw - STROKE_EXPORT_FIRST];
+	return send_stroke_msg(&msg);
+}
+
 static int leases(stroke_keyword_t kw, char *pool, char *address)
 {
-
 	stroke_msg_t msg;
 
 	msg.type = STR_LEASES;
@@ -349,6 +375,8 @@ static void exit_usage(char *error)
 	printf("    stroke purgeocsp\n");
 	printf("  Purge IKE_SAs without a CHILD_SA:\n");
 	printf("    stroke purgeike\n");
+	printf("  Export credentials to the console:\n");
+	printf("    stroke exportx509 DN\n");
 	printf("  Show leases of a pool:\n");
 	printf("    stroke leases [POOL [ADDRESS]]\n");
 	exit_error(error);
@@ -465,6 +493,13 @@ int main(int argc, char *argv[])
 		case STROKE_PURGE_OCSP:
 		case STROKE_PURGE_IKE:
 			res = purge(token->kw);
+			break;
+		case STROKE_EXPORT_X509:
+			if (argc != 3)
+			{
+				exit_usage("\"exportx509\" needs a distinguished name");
+			}
+			res = export(token->kw, argv[2]);
 			break;
 		case STROKE_LEASES:
 			res = leases(token->kw, argc > 2 ? argv[2] : NULL,

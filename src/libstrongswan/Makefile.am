@@ -21,6 +21,7 @@ crypto/signers/signer.c crypto/signers/signer.h \
 crypto/crypto_factory.c crypto/crypto_factory.h \
 crypto/crypto_tester.c crypto/crypto_tester.h \
 crypto/diffie_hellman.c crypto/diffie_hellman.h \
+crypto/aead.c crypto/aead.h \
 crypto/transform.c crypto/transform.h \
 credentials/credential_factory.c credentials/credential_factory.h \
 credentials/builder.c credentials/builder.h \
@@ -41,10 +42,18 @@ credentials/credential_manager.c credentials/credential_manager.h \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
 credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
+credentials/sets/mem_cred.c credentials/sets/mem_cred.h \
+credentials/sets/callback_cred.c credentials/sets/callback_cred.h \
 credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
 credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
+eap/eap.h eap/eap.c \
+plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h \
+processing/jobs/job.h \
+processing/jobs/callback_job.c processing/jobs/callback_job.h \
+processing/processor.c processing/processor.h \
+processing/scheduler.c processing/scheduler.h \
 selectors/traffic_selector.c selectors/traffic_selector.h \
 threading/thread.h threading/thread.c \
 threading/thread_value.h threading/thread_value.c \
@@ -60,8 +69,10 @@ utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
-utils/backtrace.c utils/backtrace.h \
-plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
+utils/backtrace.c utils/backtrace.h
+
+
+library.lo :	$(top_builddir)/config.status
 
 libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB)
 
@@ -311,6 +322,34 @@ if USE_AGENT
   SUBDIRS += plugins/agent
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/agent/libstrongswan-agent.la
+endif
+endif
+
+if USE_PKCS11
+  SUBDIRS += plugins/pkcs11
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pkcs11/libstrongswan-pkcs11.la
+endif
+endif
+
+if USE_CTR
+  SUBDIRS += plugins/ctr
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ctr/libstrongswan-ctr.la
+endif
+endif
+
+if USE_CCM
+  SUBDIRS += plugins/ccm
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ccm/libstrongswan-ccm.la
+endif
+endif
+
+if USE_GCM
+  SUBDIRS += plugins/gcm
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/gcm/libstrongswan-gcm.la
 endif
 endif
 

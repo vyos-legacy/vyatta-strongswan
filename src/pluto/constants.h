@@ -18,6 +18,8 @@
 
 #include <freeswan.h>
 
+#include <kernel/kernel_ipsec.h>
+
 #include <utils.h>
 #include <utils/identification.h>
 #include <crypto/hashers/hasher.h>
@@ -193,15 +195,8 @@ extern enum_names esp_transform_names;
 
 /* IPCOMP transform values
  * RFC2407 The Internet IP security Domain of Interpretation for ISAKMP 4.4.5
+ * now defined in kernel/kernel_ipsec.h
  */
-
-enum ipsec_comp_algo {
-	IPSCOMP_NONE   = 0,
-	IPCOMP_OUI     = 1,
-	IPCOMP_DEFLATE = 2,
-	IPCOMP_LZS     = 3,
-	IPCOMP_LZJH    = 4
-};
 
 extern enum_names ipcomp_transformid_names;
 
@@ -251,9 +246,6 @@ extern enum_name_t *timer_event_names;
 enum event_type {
 	EVENT_NULL, /* non-event */
 	EVENT_REINIT_SECRET,        /* Refresh cookie secret */
-#ifdef KLIPS
-	EVENT_SHUNT_SCAN,           /* scan shunt eroutes known to kernel */
-#endif
 	EVENT_SO_DISCARD,           /* discard unfinished state object */
 	EVENT_RETRANSMIT,           /* Retransmit packet */
 	EVENT_SA_REPLACE,           /* SA replacement event */
@@ -325,7 +317,7 @@ extern const char *const debug_bit_names[];
 #define DBG_EMITTING    LELEM(3)        /* show encoding of messages */
 #define DBG_CONTROL     LELEM(4)        /* control flow within Pluto */
 #define DBG_LIFECYCLE   LELEM(5)        /* SA lifecycle */
-#define DBG_KLIPS       LELEM(6)        /* messages to KLIPS */
+#define DBG_KERNEL      LELEM(6)        /* messages to kernel */
 #define DBG_DNS         LELEM(7)        /* DNS activity */
 #define DBG_NATT        LELEM(8)        /* NAT-T */
 #define DBG_OPPO        LELEM(9)        /* opportunism */
@@ -375,11 +367,6 @@ extern const char *const state_story[];
 
 enum state_kind {
 	STATE_UNDEFINED,    /* 0 -- most likely accident */
-
-	/*  Opportunism states: see "Opportunistic Encryption" 2.2 */
-
-	OPPO_ACQUIRE,       /* got an ACQUIRE message for this pair */
-	OPPO_GW_DISCOVERED, /* got TXT specifying gateway */
 
 	/* IKE states */
 

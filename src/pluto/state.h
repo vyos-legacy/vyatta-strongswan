@@ -127,10 +127,8 @@ struct state
 	struct ipsec_proto_info st_ah;
 	struct ipsec_proto_info st_esp;
 	struct ipsec_proto_info st_ipcomp;
-#ifdef KLIPS
 	ipsec_spi_t        st_tunnel_in_spi;          /* KLUDGE */
 	ipsec_spi_t        st_tunnel_out_spi;         /* KLUDGE */
-#endif
 
 	const struct dh_desc *st_pfs_group;        /* group for Phase 2 PFS */
 
@@ -267,7 +265,6 @@ extern struct state
 
 extern void show_states_status(bool all, const char *name);
 extern void for_each_state(void *(f)(struct state *, void *data), void *data);
-extern void find_my_cpi_gap(cpi_t *latest_cpi, cpi_t *first_busy_cpi);
 extern ipsec_spi_t uniquify_his_cpi(ipsec_spi_t cpi, struct state *st);
 extern void fmt_state(bool all, struct state *st, time_t n
 					 , char *state_buf, size_t state_buf_len

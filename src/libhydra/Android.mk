@@ -7,13 +7,21 @@ hydra.c hydra.h \
 attributes/attributes.c attributes/attributes.h \
 attributes/attribute_provider.h attributes/attribute_handler.h \
 attributes/attribute_manager.c attributes/attribute_manager.h \
-attributes/mem_pool.c attributes/mem_pool.h
+attributes/mem_pool.c attributes/mem_pool.h \
+kernel/kernel_interface.c kernel/kernel_interface.h \
+kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_net.h \
+kernel/kernel_listener.h
 
 # adding the plugin source files
 
 LOCAL_SRC_FILES += $(call add_plugin, attr)
 
-# build libcharon --------------------------------------------------------------
+LOCAL_SRC_FILES += $(call add_plugin, kernel-pfkey)
+
+LOCAL_SRC_FILES += $(call add_plugin, kernel-netlink)
+
+# build libhydra ---------------------------------------------------------------
 
 LOCAL_C_INCLUDES += \
 	$(libvstr_PATH) \

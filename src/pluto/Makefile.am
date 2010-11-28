@@ -18,6 +18,7 @@ db_ops.c db_ops.h \
 defs.c defs.h \
 demux.c demux.h \
 dnskey.c dnskey.h \
+event_queue.c event_queue.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
 ike_alg.c ike_alg.h \
@@ -25,8 +26,6 @@ ipsec_doi.c ipsec_doi.h \
 kameipsec.h \
 kernel.c kernel.h \
 kernel_alg.c kernel_alg.h \
-kernel_netlink.c kernel_netlink.h \
-kernel_noklips.c kernel_noklips.h \
 kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
@@ -74,10 +73,10 @@ AM_CFLAGS = -rdynamic \
 -DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
 -DSHARED_SECRETS_FILE=\"${sysconfdir}/ipsec.secrets\" \
--DPLUGINS=\""${pluto_plugins} ${libhydra_plugins}\"" \
+-DPLUGINS=\""${pluto_plugins}\"" \
 -DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
--DPLUTO -DKLIPS -DDEBUG
+-DPLUTO -DDEBUG
 
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \
@@ -89,9 +88,7 @@ _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)
 
-CLEANFILES = ipsec.secrets.5
-dist_man_MANS = pluto.8 ipsec.secrets.5
-EXTRA_DIST = ipsec.secrets.5.in
+dist_man_MANS = pluto.8
 
 # compile options
 #################
@@ -137,9 +134,4 @@ SUBDIRS = .
 if USE_XAUTH
   SUBDIRS += plugins/xauth
 endif
-
-ipsec.secrets.5 : ipsec.secrets.5.in
-	sed \
-	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
-	$(srcdir)/$@.in > $@
 

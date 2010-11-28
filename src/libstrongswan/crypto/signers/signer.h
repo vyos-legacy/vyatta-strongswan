@@ -66,6 +66,12 @@ enum integrity_algorithm_t {
 	AUTH_HMAC_SHA1_128 = 1025,
 	/** SHA256 96 bit truncation variant, supported by Linux kernels */
 	AUTH_HMAC_SHA2_256_96 = 1026,
+	/** SHA256 full length tuncation variant, as used in TLS */
+	AUTH_HMAC_SHA2_256_256 = 1027,
+	/** SHA384 full length tuncation variant, as used in TLS */
+	AUTH_HMAC_SHA2_384_384 = 1028,
+	/** draft-kanno-ipsecme-camellia-xcbc, not yet assigned by IANA */
+	AUTH_CAMELLIA_XCBC_96 = 1029,
 };
 
 /**
@@ -101,6 +107,10 @@ struct signer_t {
 
 	/**
 	 * Verify a signature.
+	 *
+	 * To verify a signature of multiple chunks of data, pass the
+	 * data to get_signature() with a NULL buffer. verify_signature() acts
+	 * as a final call and includes all data fed to get_signature().
 	 *
 	 * @param data		a chunk containing the data to verify
 	 * @param signature	a chunk containing the signature

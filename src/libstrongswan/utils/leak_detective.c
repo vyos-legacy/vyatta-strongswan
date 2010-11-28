@@ -181,8 +181,11 @@ char *whitelist[] = {
 	"register_printf_specifier",
 	"syslog",
 	"vsyslog",
+	"__syslog_chk",
+	"__vsyslog_chk",
 	"getaddrinfo",
 	"setlocale",
+	"getpass",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
@@ -213,6 +216,8 @@ char *whitelist[] = {
 	"gcry_check_version",
 	"gcry_randomize",
 	"gcry_create_nonce",
+	/* NSPR */
+	"PR_CallOnce",
 };
 
 /**
