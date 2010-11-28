@@ -283,7 +283,7 @@ static void start_watchdog(private_ha_segments_t *this)
 {
 	this->job = callback_job_create((callback_job_cb_t)watchdog,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 }
 
 METHOD(ha_segments_t, handle_status, void,
@@ -345,7 +345,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	message->destroy(message);
 
 	/* schedule next invocation */
-	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
+	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
 									callback_job_create((callback_job_cb_t)
 										send_status, this, NULL, NULL),
 									this->heartbeat_delay);
@@ -382,7 +382,9 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 
 	INIT(this,
 		.public = {
-			.listener.alert = _alert_hook,
+			.listener = {
+				.alert = _alert_hook,
+			},
 			.activate = _activate,
 			.deactivate = _deactivate,
 			.handle_status = _handle_status,

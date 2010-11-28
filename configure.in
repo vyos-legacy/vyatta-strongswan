@@ -16,7 +16,7 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.4.1)
+AC_INIT(strongSwan,4.5.0)
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
 PKG_PROG_PKG_CONFIG
@@ -100,18 +100,25 @@ ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
 ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
 ARG_ENABL_SET([unit-tests],     [enable unit tests on IKEv2 daemon startup.])
 ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
-ARG_ENABL_SET([eap-sim],        [enable SIM authenication module for EAP.])
+ARG_ENABL_SET([eap-sim],        [enable SIM authentication module for EAP.])
 ARG_ENABL_SET([eap-sim-file],   [enable EAP-SIM backend based on a triplet file.])
 ARG_ENABL_SET([eap-simaka-sql], [enable EAP-SIM/AKA backend based on a triplet/quintuplet SQL database.])
 ARG_ENABL_SET([eap-simaka-pseudonym], [enable EAP-SIM/AKA pseudonym storage plugin.])
 ARG_ENABL_SET([eap-simaka-reauth],    [enable EAP-SIM/AKA reauthentication data storage plugin.])
 ARG_ENABL_SET([eap-identity],   [enable EAP module providing EAP-Identity helper.])
-ARG_ENABL_SET([eap-md5],        [enable EAP MD5 (CHAP) authenication module.])
-ARG_ENABL_SET([eap-gtc],        [enable PAM based EAP GTC authenication module.])
+ARG_ENABL_SET([eap-md5],        [enable EAP MD5 (CHAP) authentication module.])
+ARG_ENABL_SET([eap-gtc],        [enable PAM based EAP GTC authentication module.])
 ARG_ENABL_SET([eap-aka],        [enable EAP AKA authentication module.])
 ARG_ENABL_SET([eap-aka-3gpp2],  [enable EAP AKA backend implementing 3GPP2 algorithms in software. Requires libgmp.])
-ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authenication module.])
-ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authenication module.])
+ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authentication module.])
+ARG_ENABL_SET([eap-tls],        [enable EAP TLS authentication module.])
+ARG_ENABL_SET([eap-ttls],       [enable EAP TTLS authentication module.])
+ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.])
+ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
+ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
+ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
+ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module.])
+ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
@@ -144,11 +151,17 @@ ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
 ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
 ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
+ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
+ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.])
+ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
+ARG_ENABL_SET([gcm],            [enables the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
 ARG_ENABL_SET([android],        [enable Android specific plugin.])
+ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
 ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
+ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
 ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 
@@ -222,6 +235,10 @@ fi
 if test x$eap_sim = xtrue; then
 	fips_prf=true;
 	simaka=true;
+fi
+
+if test x$eap_tls = xtrue -o x$eap_ttls = xtrue; then
+	tls=true;
 fi
 
 if test x$fips_prf = xtrue; then
@@ -590,6 +607,10 @@ if test x$gcrypt = xtrue; then
 	)
 fi
 
+if test x$tnccs_11 = xtrue -o x$tnc_imc = xtrue -o x$tnc_imv = xtrue; then
+	AC_CHECK_HEADER([libtnc.h],,[AC_MSG_ERROR([libtnc header libtnc.h not found!])])
+fi
+
 if test x$uci = xtrue; then
 	AC_HAVE_LIBRARY([uci],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
@@ -602,6 +623,14 @@ if test x$android = xtrue; then
 	dnl above does not work correctly when cross-compiling for android.
 	DLLIB="-ldl"
 	AC_SUBST(DLLIB)
+fi
+
+if test x$maemo = xtrue; then
+	PKG_CHECK_MODULES(maemo, [glib-2.0 gthread-2.0 libosso osso-af-settings])
+	AC_SUBST(maemo_CFLAGS)
+	AC_SUBST(maemo_LIBS)
+	dbusservicedir="/usr/share/dbus-1/system-services"
+	AC_SUBST(dbusservicedir)
 fi
 
 if test x$nm = xtrue; then
@@ -654,136 +683,124 @@ if test x$integrity_test = xtrue; then
 	)
 fi
 
-dnl ==========================================================
-dnl  collect all plugins for libstrongswan, libhydra and pluto
-dnl ==========================================================
+dnl ==============================================
+dnl  collect plugin list for strongSwan components
+dnl ==============================================
 
-libstrongswan_plugins=
-libhydra_plugins=
+m4_include(m4/macros/add-plugin.m4)
+
+# plugin lists for all components
+libcharon_plugins=
 pluto_plugins=
+pool_plugins=
+openac_plugins=
+scepclient_plugins=
+pki_plugins=
+scripts_plugins=
+manager_plugins=
+medsrv_plugins=
 
-if test x$test_vectors = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" test-vectors"
-	pluto_plugins=${pluto_plugins}" test-vectors"
-fi
-if test x$curl = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" curl"
-	pluto_plugins=${pluto_plugins}" curl"
-fi
-if test x$ldap = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" ldap"
-	pluto_plugins=${pluto_plugins}" ldap"
-fi
-if test x$aes = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" aes"
-	pluto_plugins=${pluto_plugins}" aes"
-fi
-if test x$des = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" des"
-	pluto_plugins=${pluto_plugins}" des"
-fi
-if test x$blowfish = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" blowfish"
-	pluto_plugins=${pluto_plugins}" blowfish"
-fi
-if test x$sha1 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" sha1"
-	pluto_plugins=${pluto_plugins}" sha1"
-fi
-if test x$sha2 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" sha2"
-	pluto_plugins=${pluto_plugins}" sha2"
-fi
-if test x$md4 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" md4"
-fi
-if test x$md5 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" md5"
-	pluto_plugins=${pluto_plugins}" md5"
-fi
-if test x$random = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" random"
-	pluto_plugins=${pluto_plugins}" random"
-fi
-if test x$x509 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" x509"
-	pluto_plugins=${pluto_plugins}" x509"
-fi
-if test x$revocation = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" revocation"
-fi
-if test x$pubkey = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
-	pluto_plugins=${pluto_plugins}" pubkey"
-fi
-if test x$pkcs1 = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pkcs1"
-	pluto_plugins=${pluto_plugins}" pkcs1"
-fi
-if test x$pgp = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pgp"
-	pluto_plugins=${pluto_plugins}" pgp"
-fi
-if test x$dnskey = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" dnskey"
-	pluto_plugins=${pluto_plugins}" dnskey"
-fi
-if test x$pem = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" pem"
-	pluto_plugins=${pluto_plugins}" pem"
-fi
-if test x$mysql = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
-	pluto_plugins=${pluto_plugins}" mysql"
-fi
-if test x$sqlite = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" sqlite"
-	pluto_plugins=${pluto_plugins}" sqlite"
-fi
-if test x$padlock = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" padlock"
-fi
-if test x$openssl = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" openssl"
-	pluto_plugins=${pluto_plugins}" openssl"
-fi
-if test x$gcrypt = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" gcrypt"
-	pluto_plugins=${pluto_plugins}" gcrypt"
-fi
-if test x$fips_prf = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
-fi
-if test x$xcbc = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
-fi
-if test x$hmac = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" hmac"
-	pluto_plugins=${pluto_plugins}" hmac"
-fi
-if test x$agent = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" agent"
-fi
-if test x$gmp = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
-	pluto_plugins=${pluto_plugins}" gmp"
-fi
-if test x$xauth = xtrue; then
-	pluto_plugins=${pluto_plugins}" xauth"
-fi
-if test x$attr = xtrue; then
-	libhydra_plugins=${libhydra_plugins}" attr"
-fi
-if test x$attr_sql = xtrue -o x$sql = xtrue; then
-	libhydra_plugins=${libhydra_plugins}" attr-sql"
-fi
-if test x$resolve = xtrue; then
-	libhydra_plugins=${libhydra_plugins}" resolve"
-fi
+# location specific lists for checksumming,
+# for src/libcharon, src/pluto, src/libhydra and src/libstrongswan
+c_plugins=
+p_plugins=
+h_plugins=
+s_plugins=
 
-AC_SUBST(libstrongswan_plugins)
-AC_SUBST(libhydra_plugins)
+ADD_PLUGIN([test-vectors],         [s libcharon pluto openac scepclient pki])
+ADD_PLUGIN([curl],                 [s libcharon pluto scepclient])
+ADD_PLUGIN([ldap],                 [s libcharon pluto scepclient])
+ADD_PLUGIN([mysql],                [s libcharon pluto pool manager medsrv])
+ADD_PLUGIN([sqlite],               [s libcharon pluto pool manager medsrv])
+ADD_PLUGIN([aes],                  [s libcharon pluto openac scepclient pki scripts])
+ADD_PLUGIN([des],                  [s libcharon pluto openac scepclient pki scripts])
+ADD_PLUGIN([blowfish],             [s libcharon pluto openac scepclient pki scripts])
+ADD_PLUGIN([sha1],                 [s libcharon pluto openac scepclient pki scripts medsrv])
+ADD_PLUGIN([sha2],                 [s libcharon pluto openac scepclient pki scripts medsrv])
+ADD_PLUGIN([md4],                  [s libcharon openac manager scepclient pki])
+ADD_PLUGIN([md5],                  [s libcharon pluto openac scepclient pki])
+ADD_PLUGIN([random],               [s libcharon pluto openac scepclient pki scripts medsrv])
+ADD_PLUGIN([x509],                 [s libcharon pluto openac scepclient pki scripts])
+ADD_PLUGIN([revocation],           [s libcharon])
+ADD_PLUGIN([pubkey],               [s libcharon])
+ADD_PLUGIN([pkcs1],                [s libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([pgp],                  [s libcharon pluto])
+ADD_PLUGIN([dnskey],               [s pluto])
+ADD_PLUGIN([pem],                  [s libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([padlock],              [s libcharon])
+ADD_PLUGIN([openssl],              [s libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([gcrypt],               [s libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([fips-prf],             [s libcharon])
+ADD_PLUGIN([gmp],                  [s libcharon pluto openac scepclient pki scripts manager medsrv])
+ADD_PLUGIN([agent],                [s libcharon])
+ADD_PLUGIN([pkcs11],               [s libcharon pki])
+ADD_PLUGIN([xcbc],                 [s libcharon])
+ADD_PLUGIN([hmac],                 [s libcharon pluto scripts])
+ADD_PLUGIN([ctr],                  [s libcharon scripts])
+ADD_PLUGIN([ccm],                  [s libcharon scripts])
+ADD_PLUGIN([gcm],                  [s libcharon scripts])
+ADD_PLUGIN([xauth],                [p pluto])
+ADD_PLUGIN([attr],                 [h libcharon pluto])
+ADD_PLUGIN([attr-sql],             [h libcharon pluto])
+ADD_PLUGIN([kernel-pfkey],         [h libcharon pluto])
+ADD_PLUGIN([kernel-pfroute],       [h libcharon pluto])
+ADD_PLUGIN([kernel-klips],         [h libcharon pluto])
+ADD_PLUGIN([kernel-netlink],       [h libcharon pluto])
+ADD_PLUGIN([resolve],              [h libcharon pluto])
+ADD_PLUGIN([load-tester],          [c libcharon])
+ADD_PLUGIN([socket-default],       [c libcharon])
+ADD_PLUGIN([socket-raw],           [c libcharon])
+ADD_PLUGIN([socket-dynamic],       [c libcharon])
+ADD_PLUGIN([farp],                 [c libcharon])
+ADD_PLUGIN([stroke],               [c libcharon])
+ADD_PLUGIN([smp],                  [c libcharon])
+ADD_PLUGIN([sql],                  [c libcharon])
+ADD_PLUGIN([updown],               [c libcharon])
+ADD_PLUGIN([eap-identity],         [c libcharon])
+ADD_PLUGIN([eap-sim],              [c libcharon])
+ADD_PLUGIN([eap-sim-file],         [c libcharon])
+ADD_PLUGIN([eap-simaka-sql],       [c libcharon])
+ADD_PLUGIN([eap-simaka-pseudonym], [c libcharon])
+ADD_PLUGIN([eap-simaka-reauth],    [c libcharon])
+ADD_PLUGIN([eap-aka],              [c libcharon])
+ADD_PLUGIN([eap-aka-3gpp2],        [c libcharon])
+ADD_PLUGIN([eap-md5],              [c libcharon])
+ADD_PLUGIN([eap-gtc],              [c libcharon])
+ADD_PLUGIN([eap-mschapv2],         [c libcharon])
+ADD_PLUGIN([eap-radius],           [c libcharon])
+ADD_PLUGIN([eap-tls],              [c libcharon])
+ADD_PLUGIN([eap-ttls],             [c libcharon])
+ADD_PLUGIN([eap-tnc],              [c libcharon])
+ADD_PLUGIN([tnc-imc],              [c libcharon])
+ADD_PLUGIN([tnc-imv],              [c libcharon])
+ADD_PLUGIN([tnccs-11],             [c libcharon])
+ADD_PLUGIN([tnccs-20],             [c libcharon])
+ADD_PLUGIN([medsrv],               [c libcharon])
+ADD_PLUGIN([medcli],               [c libcharon])
+ADD_PLUGIN([nm],                   [c libcharon])
+ADD_PLUGIN([dhcp],                 [c libcharon])
+ADD_PLUGIN([android],              [c libcharon])
+ADD_PLUGIN([ha],                   [c libcharon])
+ADD_PLUGIN([led],                  [c libcharon])
+ADD_PLUGIN([maemo],                [c libcharon])
+ADD_PLUGIN([uci],                  [c libcharon])
+ADD_PLUGIN([addrblock],            [c libcharon])
+ADD_PLUGIN([unit-tester],          [c libcharon])
+
+AC_SUBST(libcharon_plugins)
 AC_SUBST(pluto_plugins)
+AC_SUBST(pool_plugins)
+AC_SUBST(openac_plugins)
+AC_SUBST(scepclient_plugins)
+AC_SUBST(pki_plugins)
+AC_SUBST(scripts_plugins)
+AC_SUBST(manager_plugins)
+AC_SUBST(medsrv_plugins)
+
+AC_SUBST(c_plugins)
+AC_SUBST(p_plugins)
+AC_SUBST(h_plugins)
+AC_SUBST(s_plugins)
 
 dnl =========================
 dnl  set Makefile.am vars
@@ -819,6 +836,10 @@ AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
+AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
+AM_CONDITIONAL(USE_CTR, test x$ctr = xtrue)
+AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
+AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
 
 dnl charon plugins
 dnl ==============
@@ -828,6 +849,7 @@ AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
 AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
+AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
@@ -835,6 +857,7 @@ AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
 AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tests = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
+AM_CONDITIONAL(USE_LED, test x$led = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_SQL, test x$eap_simaka_sql = xtrue)
@@ -846,11 +869,14 @@ AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA_3GPP2, test x$eap_aka_3gpp2 = xtrue)
 AM_CONDITIONAL(USE_EAP_MSCHAPV2, test x$eap_mschapv2 = xtrue)
+AM_CONDITIONAL(USE_EAP_TLS, test x$eap_tls = xtrue)
+AM_CONDITIONAL(USE_EAP_TTLS, test x$eap_ttls = xtrue)
+AM_CONDITIONAL(USE_EAP_TNC, test x$eap_tnc = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
-AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
-AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
-AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
-AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
+AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
+AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
+AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
+AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
@@ -861,6 +887,10 @@ dnl hydra plugins
 dnl =============
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue -o x$sql = xtrue)
+AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
+AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
+AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
+AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 
 dnl pluto plugins
@@ -893,6 +923,7 @@ AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
+AM_CONDITIONAL(USE_TLS, test x$tls = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
 dnl ==============================
@@ -916,6 +947,7 @@ dnl ==============================
 
 AC_OUTPUT(
 	Makefile
+	man/Makefile
 	src/Makefile
 	src/include/Makefile
 	src/libstrongswan/Makefile
@@ -946,13 +978,22 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
+	src/libstrongswan/plugins/pkcs11/Makefile
+	src/libstrongswan/plugins/ctr/Makefile
+	src/libstrongswan/plugins/ccm/Makefile
+	src/libstrongswan/plugins/gcm/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libhydra/Makefile
 	src/libhydra/plugins/attr/Makefile
 	src/libhydra/plugins/attr_sql/Makefile
+	src/libhydra/plugins/kernel_klips/Makefile
+	src/libhydra/plugins/kernel_netlink/Makefile
+	src/libhydra/plugins/kernel_pfkey/Makefile
+	src/libhydra/plugins/kernel_pfroute/Makefile
 	src/libhydra/plugins/resolve/Makefile
 	src/libfreeswan/Makefile
 	src/libsimaka/Makefile
+	src/libtls/Makefile
 	src/pluto/Makefile
 	src/pluto/plugins/xauth/Makefile
 	src/whack/Makefile
@@ -969,11 +1010,14 @@ AC_OUTPUT(
 	src/libcharon/plugins/eap_simaka_pseudonym/Makefile
 	src/libcharon/plugins/eap_simaka_reauth/Makefile
 	src/libcharon/plugins/eap_mschapv2/Makefile
+	src/libcharon/plugins/eap_tls/Makefile
+	src/libcharon/plugins/eap_ttls/Makefile
+	src/libcharon/plugins/eap_tnc/Makefile
 	src/libcharon/plugins/eap_radius/Makefile
-	src/libcharon/plugins/kernel_netlink/Makefile
-	src/libcharon/plugins/kernel_pfkey/Makefile
-	src/libcharon/plugins/kernel_pfroute/Makefile
-	src/libcharon/plugins/kernel_klips/Makefile
+	src/libcharon/plugins/tnc_imc/Makefile
+	src/libcharon/plugins/tnc_imv/Makefile
+	src/libcharon/plugins/tnccs_11/Makefile
+	src/libcharon/plugins/tnccs_20/Makefile
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_raw/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
@@ -986,7 +1030,9 @@ AC_OUTPUT(
 	src/libcharon/plugins/addrblock/Makefile
 	src/libcharon/plugins/uci/Makefile
 	src/libcharon/plugins/ha/Makefile
+	src/libcharon/plugins/led/Makefile
 	src/libcharon/plugins/android/Makefile
+	src/libcharon/plugins/maemo/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/updown/Makefile
 	src/libcharon/plugins/dhcp/Makefile

@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -36,11 +37,12 @@
 #include <linux/filter.h>
 #include <net/if.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 
 /* Maximum size of a packet */
-#define MAX_PACKET 5000
+#define MAX_PACKET 10000
 
 /* constants for packet handling */
 #define IP_LEN sizeof(struct iphdr)
@@ -119,12 +121,17 @@ struct private_socket_raw_socket_t {
 	 * send socket on nat-t port for IPv6
 	 */
 	int send6_natt;
+
+	/**
+	 * Maximum packet size to receive
+	 */
+	int max_packet;
 };
 
 METHOD(socket_t, receiver, status_t,
 	private_socket_raw_socket_t *this, packet_t **packet)
 {
-	char buffer[MAX_PACKET];
+	char buffer[this->max_packet];
 	chunk_t data;
 	packet_t *pkt;
 	struct udphdr *udp;
@@ -161,10 +168,15 @@ METHOD(socket_t, receiver, status_t,
 		struct iphdr *ip;
 		struct sockaddr_in src, dst;
 
-		bytes_read = recv(this->recv4, buffer, MAX_PACKET, 0);
+		bytes_read = recv(this->recv4, buffer, this->max_packet, 0);
 		if (bytes_read < 0)
 		{
 			DBG1(DBG_NET, "error reading from IPv4 socket: %s", strerror(errno));
+			return FAILED;
+		}
+		if (bytes_read == this->max_packet)
+		{
+			DBG1(DBG_NET, "receive buffer too small, packet discarded");
 			return FAILED;
 		}
 		DBG3(DBG_NET, "received IPv4 packet %b", buffer, bytes_read);
@@ -216,7 +228,7 @@ METHOD(socket_t, receiver, status_t,
 		msg.msg_name = &src;
 		msg.msg_namelen = sizeof(src);
 		iov.iov_base = buffer;
-		iov.iov_len = sizeof(buffer);
+		iov.iov_len = this->max_packet;
 		msg.msg_iov = &iov;
 		msg.msg_iovlen = 1;
 		msg.msg_control = ancillary;
@@ -343,12 +355,6 @@ METHOD(socket_t, sender, status_t,
 		if (data.len != 1 || data.ptr[0] != 0xFF)
 		{
 			/* add non esp marker to packet */
-			if (data.len > MAX_PACKET - MARKER_LEN)
-			{
-				DBG1(DBG_NET, "unable to send packet: it's too big (%d bytes)",
-					 data.len);
-				return FAILED;
-			}
 			marked = chunk_alloc(data.len + MARKER_LEN);
 			memset(marked.ptr, 0, MARKER_LEN);
 			memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
@@ -492,8 +498,8 @@ static int open_send_socket(private_socket_raw_socket_t *this,
 		}
 	}
 
-	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
-												 skt, family))
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												skt, family))
 	{
 		DBG1(DBG_NET, "installing bypass policy on send socket failed");
 	}
@@ -598,8 +604,8 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 		return 0;
 	}
 
-	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
-												 skt, family))
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												skt, family))
 	{
 		DBG1(DBG_NET, "installing bypass policy on receive socket failed");
 	}
@@ -607,7 +613,7 @@ static int open_recv_socket(private_socket_raw_socket_t *this, int family)
 	return skt;
 }
 
-METHOD(socket_raw_socket_t, destroy, void,
+METHOD(socket_t, destroy, void,
 	private_socket_raw_socket_t *this)
 {
 	if (this->recv4)
@@ -649,9 +655,11 @@ socket_raw_socket_t *socket_raw_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.destroy = _destroy,
 			},
-			.destroy = _destroy,
 		},
+		.max_packet = lib->settings->get_int(lib->settings,
+										"charon.max_packet", MAX_PACKET),
 	);
 
 	this->recv4 = open_recv_socket(this, AF_INET);

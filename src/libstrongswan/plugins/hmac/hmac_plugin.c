@@ -32,10 +32,8 @@ struct private_hmac_plugin_t {
 	hmac_plugin_t public;
 };
 
-/**
- * Implementation of hmac_plugin_t.hmactroy
- */
-static void destroy(private_hmac_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_hmac_plugin_t *this)
 {
 	lib->crypto->remove_prf(lib->crypto,
 							(prf_constructor_t)hmac_prf_create);
@@ -49,9 +47,15 @@ static void destroy(private_hmac_plugin_t *this)
  */
 plugin_t *hmac_plugin_create()
 {
-	private_hmac_plugin_t *this = malloc_thing(private_hmac_plugin_t);
+	private_hmac_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	lib->crypto->add_prf(lib->crypto, PRF_HMAC_SHA2_256,
 						 (prf_constructor_t)hmac_prf_create);
@@ -72,11 +76,15 @@ plugin_t *hmac_plugin_create()
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_128,
 							(signer_constructor_t)hmac_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_256_256,
+							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_96,
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_MD5_128,
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_192,
+							(signer_constructor_t)hmac_signer_create);
+	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_384_384,
 							(signer_constructor_t)hmac_signer_create);
 	lib->crypto->add_signer(lib->crypto, AUTH_HMAC_SHA2_512_256,
 							(signer_constructor_t)hmac_signer_create);

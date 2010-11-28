@@ -209,7 +209,7 @@ static chunk_t rsasp1(private_gmp_rsa_private_key_t *this, chunk_t data)
 }
 
 /**
- * Implementation of gmp_rsa_private_key_t.build_emsa_pkcs1_signature.
+ * Build a signature using the PKCS#1 EMSA scheme
  */
 static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 									   hash_algorithm_t hash_algorithm,
@@ -250,7 +250,7 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 	{
 		free(digestInfo.ptr);
 		DBG1(DBG_LIB, "unable to sign %d bytes using a %dbit key", data.len,
-			 this->k * 8);
+			 mpz_sizeinbase(this->n, 2));
 		return FALSE;
 	}
 
@@ -280,19 +280,15 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 	return TRUE;
 }
 
-/**
- * Implementation of gmp_rsa_private_key.get_type.
- */
-static key_type_t get_type(private_gmp_rsa_private_key_t *this)
+METHOD(private_key_t, get_type, key_type_t,
+	private_gmp_rsa_private_key_t *this)
 {
 	return KEY_RSA;
 }
 
-/**
- * Implementation of gmp_rsa_private_key.sign.
- */
-static bool sign(private_gmp_rsa_private_key_t *this, signature_scheme_t scheme,
-				 chunk_t data, chunk_t *signature)
+METHOD(private_key_t, sign, bool,
+	private_gmp_rsa_private_key_t *this, signature_scheme_t scheme,
+	chunk_t data, chunk_t *signature)
 {
 	switch (scheme)
 	{
@@ -317,15 +313,19 @@ static bool sign(private_gmp_rsa_private_key_t *this, signature_scheme_t scheme,
 	}
 }
 
-/**
- * Implementation of gmp_rsa_private_key.decrypt.
- */
-static bool decrypt(private_gmp_rsa_private_key_t *this, chunk_t crypto,
-					chunk_t *plain)
+METHOD(private_key_t, decrypt, bool,
+	private_gmp_rsa_private_key_t *this, encryption_scheme_t scheme,
+	chunk_t crypto, chunk_t *plain)
 {
 	chunk_t em, stripped;
 	bool success = FALSE;
 
+	if (scheme != ENCRYPT_RSA_PKCS1)
+	{
+		DBG1(DBG_LIB, "encryption scheme %N not supported",
+			 encryption_scheme_names, scheme);
+		return FALSE;
+	}
 	/* rsa decryption using PKCS#1 RSADP */
 	stripped = em = rsadp(this, crypto);
 
@@ -356,18 +356,14 @@ end:
 	return success;
 }
 
-/**
- * Implementation of gmp_rsa_private_key.get_keysize.
- */
-static size_t get_keysize(private_gmp_rsa_private_key_t *this)
+METHOD(private_key_t, get_keysize, int,
+	private_gmp_rsa_private_key_t *this)
 {
-	return this->k;
+	return mpz_sizeinbase(this->n, 2);
 }
 
-/**
- * Implementation of gmp_rsa_private_key.get_public_key.
- */
-static public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
+METHOD(private_key_t, get_public_key, public_key_t*,
+	private_gmp_rsa_private_key_t *this)
 {
 	chunk_t n, e;
 	public_key_t *public;
@@ -383,27 +379,9 @@ static public_key_t* get_public_key(private_gmp_rsa_private_key_t *this)
 	return public;
 }
 
-/**
- * Implementation of gmp_rsa_private_key.equals.
- */
-static bool equals(private_gmp_rsa_private_key_t *this, private_key_t *other)
-{
-	return private_key_equals(&this->public.interface, other);
-}
-
-/**
- * Implementation of gmp_rsa_private_key.belongs_to.
- */
-static bool belongs_to(private_gmp_rsa_private_key_t *this, public_key_t *public)
-{
-	return private_key_belongs_to(&this->public.interface, public);
-}
-
-/**
- * Implementation of private_key_t.get_encoding
- */
-static bool get_encoding(private_gmp_rsa_private_key_t *this,
-						 cred_encoding_type_t type, chunk_t *encoding)
+METHOD(private_key_t, get_encoding, bool,
+	private_gmp_rsa_private_key_t *this, cred_encoding_type_t type,
+	chunk_t *encoding)
 {
 	chunk_t n, e, d, p, q, exp1, exp2, coeff;
 	bool success;
@@ -435,11 +413,8 @@ static bool get_encoding(private_gmp_rsa_private_key_t *this,
 	return success;
 }
 
-/**
- * Implementation of private_key_t.get_fingerprint
- */
-static bool get_fingerprint(private_gmp_rsa_private_key_t *this,
-							cred_encoding_type_t type, chunk_t *fp)
+METHOD(private_key_t, get_fingerprint, bool,
+	private_gmp_rsa_private_key_t *this, cred_encoding_type_t type, chunk_t *fp)
 {
 	chunk_t n, e;
 	bool success;
@@ -459,19 +434,15 @@ static bool get_fingerprint(private_gmp_rsa_private_key_t *this,
 	return success;
 }
 
-/**
- * Implementation of gmp_rsa_private_key.get_ref.
- */
-static private_gmp_rsa_private_key_t* get_ref(private_gmp_rsa_private_key_t *this)
+METHOD(private_key_t, get_ref, private_key_t*,
+	private_gmp_rsa_private_key_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.key;
 }
 
-/**
- * Implementation of gmp_rsa_private_key.destroy.
- */
-static void destroy(private_gmp_rsa_private_key_t *this)
+METHOD(private_key_t, destroy, void,
+	private_gmp_rsa_private_key_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -592,23 +563,27 @@ static status_t check(private_gmp_rsa_private_key_t *this)
  */
 static private_gmp_rsa_private_key_t *gmp_rsa_private_key_create_empty(void)
 {
-	private_gmp_rsa_private_key_t *this = malloc_thing(private_gmp_rsa_private_key_t);
+	private_gmp_rsa_private_key_t *this;
 
-	this->public.interface.get_type = (key_type_t (*) (private_key_t*))get_type;
-	this->public.interface.sign = (bool (*) (private_key_t*, signature_scheme_t, chunk_t, chunk_t*))sign;
-	this->public.interface.decrypt = (bool (*) (private_key_t*, chunk_t, chunk_t*))decrypt;
-	this->public.interface.get_keysize = (size_t (*) (private_key_t*))get_keysize;
-	this->public.interface.get_public_key = (public_key_t* (*) (private_key_t*))get_public_key;
-	this->public.interface.equals = (bool (*) (private_key_t*, private_key_t*))equals;
-	this->public.interface.belongs_to = (bool (*) (private_key_t*, public_key_t*))belongs_to;
-	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
-	this->public.interface.has_fingerprint = (bool(*)(private_key_t*, chunk_t fp))private_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
-	this->public.interface.get_ref = (private_key_t* (*) (private_key_t*))get_ref;
-	this->public.interface.destroy = (void (*) (private_key_t*))destroy;
-
-	this->ref = 1;
-
+	INIT(this,
+		.public = {
+			.key = {
+				.get_type = _get_type,
+				.sign = _sign,
+				.decrypt = _decrypt,
+				.get_keysize = _get_keysize,
+				.get_public_key = _get_public_key,
+				.equals = private_key_equals,
+				.belongs_to = private_key_belongs_to,
+				.get_fingerprint = _get_fingerprint,
+				.has_fingerprint = private_key_has_fingerprint,
+				.get_encoding = _get_encoding,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
+		},
+		.ref = 1,
+	);
 	return this;
 }
 

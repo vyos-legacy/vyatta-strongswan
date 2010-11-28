@@ -260,7 +260,7 @@ static const asn1Object_t otherNameObjects[] = {
 /**
  * Extracts an otherName
  */
-static bool parse_otherName(chunk_t blob, int level0)
+static bool parse_otherName(chunk_t *blob, int level0, id_type_t *type)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
@@ -268,7 +268,7 @@ static bool parse_otherName(chunk_t blob, int level0)
 	int oid = OID_UNKNOWN;
 	bool success = FALSE;
 
-	parser = asn1_parser_create(otherNameObjects, blob);
+	parser = asn1_parser_create(otherNameObjects, *blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
@@ -279,13 +279,27 @@ static bool parse_otherName(chunk_t blob, int level0)
 				oid = asn1_known_oid(object);
 				break;
 			case ON_OBJ_VALUE:
-				if (oid == OID_XMPP_ADDR)
+				switch (oid)
 				{
-					if (!asn1_parse_simple_object(&object, ASN1_UTF8STRING,
-								parser->get_level(parser)+1, "xmppAddr"))
-					{
-						goto end;
-					}
+					case OID_XMPP_ADDR:
+						if (!asn1_parse_simple_object(&object, ASN1_UTF8STRING,
+									parser->get_level(parser)+1, "xmppAddr"))
+						{
+							goto end;
+						}
+						break;
+					case OID_USER_PRINCIPAL_NAME:
+						if (asn1_parse_simple_object(&object, ASN1_UTF8STRING,
+									parser->get_level(parser)+1, "msUPN"))
+						{	/* we handle UPNs as RFC822 addr */
+							*blob = object;
+							*type = ID_RFC822_ADDR;
+						}
+						else
+						{
+							goto end;
+						}
+						break;
 				}
 				break;
 			default:
@@ -379,7 +393,8 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 				}
 				break;
 			case GN_OBJ_OTHER_NAME:
-				if (!parse_otherName(object, parser->get_level(parser)+1))
+				if (!parse_otherName(&object, parser->get_level(parser)+1,
+									 &id_type))
 				{
 					goto end;
 				}
@@ -1091,15 +1106,28 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 	identification_t *current;
 	enumerator_t *enumerator;
 	id_match_t match, best;
+	chunk_t encoding;
 
-	if (this->encoding_hash.ptr && subject->get_type(subject) == ID_KEY_ID)
+	if (subject->get_type(subject) == ID_KEY_ID)
 	{
-		if (chunk_equals(this->encoding_hash, subject->get_encoding(subject)))
+		encoding = subject->get_encoding(subject);
+
+		if (this->encoding_hash.len &&
+			chunk_equals(this->encoding_hash, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
+		if (this->subjectKeyIdentifier.len &&
+			chunk_equals(this->subjectKeyIdentifier, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
+		if (this->public_key &&
+			this->public_key->has_fingerprint(this->public_key, encoding))
 		{
 			return ID_MATCH_PERFECT;
 		}
 	}
-
 	best = this->subject->matches(this->subject, subject);
 	enumerator = this->subjectAltNames->create_enumerator(this->subjectAltNames);
 	while (enumerator->enumerate(enumerator, &current))

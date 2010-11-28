@@ -1,3 +1,74 @@
+
+strongswan-4.5.0
+----------------
+
+- IMPORTANT: the default keyexchange mode 'ike' is changing with release 4.5
+  from 'ikev1' to 'ikev2', thus commemorating the five year anniversary of the
+  IKEv2 RFC 4306 and its mature successor RFC 5996. The time has definitively
+  come for IKEv1 to go into retirement and to cede its place to the much more
+  robust, powerful and versatile IKEv2 protocol!
+
+- Added new ctr, ccm and gcm plugins providing Counter, Counter with CBC-MAC
+  and Galois/Counter Modes based on existing CBC implementations. These
+  new plugins bring support for AES and Camellia Counter and CCM algorithms
+  and the AES GCM algorithms for use in IKEv2.
+
+- The new pkcs11 plugin brings full Smartcard support to the IKEv2 daemon and
+  the pki utility using one or more PKCS#11 libraries. It currently supports
+  RSA private and public key operations and loads X.509 certificates from
+  tokens.
+
+- Implemented a general purpose TLS stack based on crypto and credential
+  primitives of libstrongswan. libtls supports TLS versions 1.0, 1.1 and 1.2,
+  ECDHE-ECDSA/RSA, DHE-RSA and RSA key exchange algorithms and RSA/ECDSA based
+  client authentication.
+
+- Based on libtls, the eap-tls plugin brings certificate based EAP
+  authentication for client and server. It is compatible to Windows 7 IKEv2
+  Smartcard authentication and the OpenSSL based FreeRADIUS EAP-TLS backend.
+
+- Implemented the TNCCS 1.1 Trusted Network Connect protocol using the
+  libtnc library on the strongSwan client and server side via the tnccs_11
+  plugin and optionally connecting to a TNC@FHH-enhanced FreeRADIUS AAA server.
+  Depending on the resulting TNC Recommendation, strongSwan clients are granted
+  access to a network behind a strongSwan gateway (allow), are put into a
+  remediation zone (isolate) or are blocked (none), respectively. Any number
+  of Integrity Measurement Collector/Verifier pairs can be attached
+  via the tnc-imc and tnc-imv charon plugins.
+
+- The IKEv1 daemon pluto now uses the same kernel interfaces as the IKEv2
+  daemon charon. As a result of this, pluto now supports xfrm marks which
+  were introduced in charon with 4.4.1.
+
+- Applets for Maemo 5 (Nokia) allow to easily configure and control IKEv2
+  based VPN connections with EAP authentication on supported devices.
+
+- The RADIUS plugin eap-radius now supports multiple RADIUS servers for
+  redundant setups. Servers are selected by a defined priority, server load and
+  availability.
+
+- The simple led plugin controls hardware LEDs through the Linux LED subsystem.
+  It currently shows activity of the IKE daemon and is a good example how to
+  implement a simple event listener.
+
+- Improved MOBIKE behavior in several corner cases, for instance, if the
+  initial responder moves to a different address.
+
+- Fixed left-/rightnexthop option, which was broken since 4.4.0.
+
+- Fixed a bug not releasing a virtual IP address to a pool if the XAUTH
+  identity was different from the IKE identity.
+
+- Fixed the alignment of ModeConfig messages on 4-byte boundaries in the
+  case where the attributes are not a multiple of 4 bytes (e.g. Cisco's
+  UNITY_BANNER).
+
+- Fixed the interoperability of the socket_raw and socket_default
+  charon plugins.
+
+- Added man page for strongswan.conf
+
+
 strongswan-4.4.1
 ----------------
 
@@ -761,7 +832,7 @@ strongswan-4.1.7
 
 - Preview of strongSwan Manager, a web based configuration and monitoring
   application. It uses a new XML control interface to query the IKEv2 daemon
-  (see http://trac.strongswan.org/wiki/Manager).
+  (see http://wiki.strongswan.org/wiki/Manager).
 
 - Experimental SQLite configuration backend which will provide the configuration
   interface for strongSwan Manager in future releases.

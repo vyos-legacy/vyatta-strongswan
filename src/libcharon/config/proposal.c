@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008-2009 Tobias Brunner
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -87,6 +87,11 @@ struct private_proposal_t {
 	 * senders SPI
 	 */
 	u_int64_t spi;
+
+	/**
+	 * Proposal number
+	 */
+	u_int number;
 };
 
 /**
@@ -117,11 +122,9 @@ static void add_algo(linked_list_t *list, u_int16_t algo, u_int16_t key_size)
 	list->insert_last(list, (void*)algo_key);
 }
 
-/**
- * Implements proposal_t.add_algorithm
- */
-static void add_algorithm(private_proposal_t *this, transform_type_t type,
-						  u_int16_t algo, u_int16_t key_size)
+METHOD(proposal_t, add_algorithm, void,
+	private_proposal_t *this, transform_type_t type,
+	u_int16_t algo, u_int16_t key_size)
 {
 	switch (type)
 	{
@@ -160,11 +163,8 @@ static bool alg_filter(void *null, algorithm_t **in, u_int16_t *alg,
 	return TRUE;
 }
 
-/**
- * Implements proposal_t.create_enumerator.
- */
-static enumerator_t *create_enumerator(private_proposal_t *this,
-									   transform_type_t type)
+METHOD(proposal_t, create_enumerator, enumerator_t*,
+	private_proposal_t *this, transform_type_t type)
 {
 	linked_list_t *list;
 
@@ -192,11 +192,9 @@ static enumerator_t *create_enumerator(private_proposal_t *this,
 									(void*)alg_filter, NULL, NULL);
 }
 
-/**
- * Implements proposal_t.get_algorithm.
- */
-static bool get_algorithm(private_proposal_t *this, transform_type_t type,
-						  u_int16_t *alg, u_int16_t *key_size)
+METHOD(proposal_t, get_algorithm, bool,
+	private_proposal_t *this, transform_type_t type,
+	u_int16_t *alg, u_int16_t *key_size)
 {
 	enumerator_t *enumerator;
 	bool found = FALSE;
@@ -210,10 +208,8 @@ static bool get_algorithm(private_proposal_t *this, transform_type_t type,
 	return found;
 }
 
-/**
- * Implements proposal_t.has_dh_group
- */
-static bool has_dh_group(private_proposal_t *this, diffie_hellman_group_t group)
+METHOD(proposal_t, has_dh_group, bool,
+	private_proposal_t *this, diffie_hellman_group_t group)
 {
 	bool result = FALSE;
 
@@ -240,10 +236,8 @@ static bool has_dh_group(private_proposal_t *this, diffie_hellman_group_t group)
 	return result;
 }
 
-/**
- * Implementation of proposal_t.strip_dh.
- */
-static void strip_dh(private_proposal_t *this)
+METHOD(proposal_t, strip_dh, void,
+	private_proposal_t *this)
 {
 	algorithm_t *alg;
 
@@ -251,28 +245,6 @@ static void strip_dh(private_proposal_t *this)
 	{
 		free(alg);
 	}
-}
-
-/**
- * Returns true if the given alg is an authenticated encryption algorithm
- */
-static bool is_authenticated_encryption(u_int16_t alg)
-{
-	switch(alg)
-	{
-		case ENCR_AES_CCM_ICV8:
-		case ENCR_AES_CCM_ICV12:
-		case ENCR_AES_CCM_ICV16:
-		case ENCR_AES_GCM_ICV8:
-		case ENCR_AES_GCM_ICV12:
-		case ENCR_AES_GCM_ICV16:
-		case ENCR_CAMELLIA_CCM_ICV8:
-		case ENCR_CAMELLIA_CCM_ICV12:
-		case ENCR_CAMELLIA_CCM_ICV16:
-		case ENCR_NULL_AUTH_AES_GMAC:
-			return TRUE;
-	}
-	return FALSE;
 }
 
 /**
@@ -326,12 +298,10 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool priv,
 	return FALSE;
 }
 
-/**
- * Implements proposal_t.select.
- */
-static proposal_t *select_proposal(private_proposal_t *this,
-								private_proposal_t *other, bool private)
+METHOD(proposal_t, select_proposal, proposal_t*,
+	private_proposal_t *this, proposal_t *other_pub, bool private)
 {
+	private_proposal_t *other = (private_proposal_t*)other_pub;
 	proposal_t *selected;
 	u_int16_t algo;
 	size_t key_size;
@@ -346,7 +316,7 @@ static proposal_t *select_proposal(private_proposal_t *this,
 		return NULL;
 	}
 
-	selected = proposal_create(this->protocol);
+	selected = proposal_create(this->protocol, other->number);
 
 	/* select encryption algorithm */
 	if (select_algo(this->encryption_algos, other->encryption_algos, private,
@@ -366,7 +336,7 @@ static proposal_t *select_proposal(private_proposal_t *this,
 		return NULL;
 	}
 	/* select integrity algorithm */
-	if (!is_authenticated_encryption(algo))
+	if (!encryption_algorithm_is_aead(algo))
 	{
 		if (select_algo(this->integrity_algos, other->integrity_algos, private,
 						&add, &algo, &key_size))
@@ -442,26 +412,20 @@ static proposal_t *select_proposal(private_proposal_t *this,
 	return selected;
 }
 
-/**
- * Implements proposal_t.get_protocols.
- */
-static protocol_id_t get_protocol(private_proposal_t *this)
+METHOD(proposal_t, get_protocol, protocol_id_t,
+	private_proposal_t *this)
 {
 	return this->protocol;
 }
 
-/**
- * Implements proposal_t.set_spi.
- */
-static void set_spi(private_proposal_t *this, u_int64_t spi)
+METHOD(proposal_t, set_spi, void,
+	private_proposal_t *this, u_int64_t spi)
 {
 	this->spi = spi;
 }
 
-/**
- * Implements proposal_t.get_spi.
- */
-static u_int64_t get_spi(private_proposal_t *this)
+METHOD(proposal_t, get_spi, u_int64_t,
+	private_proposal_t *this)
 {
 	return this->spi;
 }
@@ -514,18 +478,20 @@ static bool algo_list_equals(linked_list_t *l1, linked_list_t *l2)
 	return equals;
 }
 
-/**
- * Implementation of proposal_t.equals.
- */
-static bool equals(private_proposal_t *this, private_proposal_t *other)
+METHOD(proposal_t, get_number, u_int,
+	private_proposal_t *this)
 {
+	return this->number;
+}
+
+METHOD(proposal_t, equals, bool,
+	private_proposal_t *this, proposal_t *other_pub)
+{
+	private_proposal_t *other = (private_proposal_t*)other_pub;
+
 	if (this == other)
 	{
 		return TRUE;
-	}
-	if (this->public.equals != other->public.equals)
-	{
-		return FALSE;
 	}
 	return (
 		algo_list_equals(this->encryption_algos, other->encryption_algos) &&
@@ -535,13 +501,12 @@ static bool equals(private_proposal_t *this, private_proposal_t *other)
 		algo_list_equals(this->esns, other->esns));
 }
 
-/**
- * Implements proposal_t.clone
- */
-static proposal_t *clone_(private_proposal_t *this)
+METHOD(proposal_t, clone_, proposal_t*,
+	private_proposal_t *this)
 {
-	private_proposal_t *clone = (private_proposal_t*)proposal_create(this->protocol);
+	private_proposal_t *clone;
 
+	clone = (private_proposal_t*)proposal_create(this->protocol, 0);
 	clone_algo_list(this->encryption_algos, clone->encryption_algos);
 	clone_algo_list(this->integrity_algos, clone->integrity_algos);
 	clone_algo_list(this->prf_algos, clone->prf_algos);
@@ -549,6 +514,7 @@ static proposal_t *clone_(private_proposal_t *this)
 	clone_algo_list(this->esns, clone->esns);
 
 	clone->spi = this->spi;
+	clone->number = this->number;
 
 	return &clone->public;
 }
@@ -565,7 +531,7 @@ static void check_proposal(private_proposal_t *this)
 	e = this->encryption_algos->create_enumerator(this->encryption_algos);
 	while (e->enumerate(e, &alg))
 	{
-		if (!is_authenticated_encryption(alg->algorithm))
+		if (!encryption_algorithm_is_aead(alg->algorithm))
 		{
 			all_aead = FALSE;
 			break;
@@ -622,6 +588,9 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 				break;
 			case AUTH_AES_XCBC_96:
 				prf = PRF_AES128_XCBC;
+				break;
+			case AUTH_CAMELLIA_XCBC_96:
+				prf = PRF_CAMELLIA128_XCBC;
 				break;
 			default:
 				prf = PRF_UNDEFINED;
@@ -715,10 +684,8 @@ int proposal_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	return written;
 }
 
-/**
- * Implements proposal_t.destroy.
- */
-static void destroy(private_proposal_t *this)
+METHOD(proposal_t, destroy, void,
+	private_proposal_t *this)
 {
 	this->encryption_algos->destroy_function(this->encryption_algos, free);
 	this->integrity_algos->destroy_function(this->integrity_algos, free);
@@ -731,31 +698,34 @@ static void destroy(private_proposal_t *this)
 /*
  * Describtion in header-file
  */
-proposal_t *proposal_create(protocol_id_t protocol)
+proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 {
-	private_proposal_t *this = malloc_thing(private_proposal_t);
+	private_proposal_t *this;
 
-	this->public.add_algorithm = (void (*)(proposal_t*,transform_type_t,u_int16_t,u_int16_t))add_algorithm;
-	this->public.create_enumerator = (enumerator_t* (*)(proposal_t*,transform_type_t))create_enumerator;
-	this->public.get_algorithm = (bool (*)(proposal_t*,transform_type_t,u_int16_t*,u_int16_t*))get_algorithm;
-	this->public.has_dh_group = (bool (*)(proposal_t*,diffie_hellman_group_t))has_dh_group;
-	this->public.strip_dh = (void(*)(proposal_t*))strip_dh;
-	this->public.select = (proposal_t* (*)(proposal_t*,proposal_t*,bool))select_proposal;
-	this->public.get_protocol = (protocol_id_t(*)(proposal_t*))get_protocol;
-	this->public.set_spi = (void(*)(proposal_t*,u_int64_t))set_spi;
-	this->public.get_spi = (u_int64_t(*)(proposal_t*))get_spi;
-	this->public.equals = (bool(*)(proposal_t*, proposal_t *other))equals;
-	this->public.clone = (proposal_t*(*)(proposal_t*))clone_;
-	this->public.destroy = (void(*)(proposal_t*))destroy;
-
-	this->spi = 0;
-	this->protocol = protocol;
-
-	this->encryption_algos = linked_list_create();
-	this->integrity_algos = linked_list_create();
-	this->prf_algos = linked_list_create();
-	this->dh_groups = linked_list_create();
-	this->esns = linked_list_create();
+	INIT(this,
+		.public = {
+			.add_algorithm = _add_algorithm,
+			.create_enumerator = _create_enumerator,
+			.get_algorithm = _get_algorithm,
+			.has_dh_group = _has_dh_group,
+			.strip_dh = _strip_dh,
+			.select = _select_proposal,
+			.get_protocol = _get_protocol,
+			.set_spi = _set_spi,
+			.get_spi = _get_spi,
+			.get_number = _get_number,
+			.equals = _equals,
+			.clone = _clone_,
+			.destroy = _destroy,
+		},
+		.protocol = protocol,
+		.number = number,
+		.encryption_algos = linked_list_create(),
+		.integrity_algos = linked_list_create(),
+		.prf_algos = linked_list_create(),
+		.dh_groups = linked_list_create(),
+		.esns = linked_list_create(),
+	);
 
 	return &this->public;
 }
@@ -777,19 +747,24 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 		switch (encryption)
 		{
 			case ENCR_AES_CBC:
-				/* we assume that we support all AES sizes */
-				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 128);
-				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 192);
-				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
-				break;
-			case ENCR_3DES:
 			case ENCR_AES_CTR:
+			case ENCR_CAMELLIA_CBC:
+			case ENCR_CAMELLIA_CTR:
 			case ENCR_AES_CCM_ICV8:
 			case ENCR_AES_CCM_ICV12:
 			case ENCR_AES_CCM_ICV16:
 			case ENCR_AES_GCM_ICV8:
 			case ENCR_AES_GCM_ICV12:
 			case ENCR_AES_GCM_ICV16:
+			case ENCR_CAMELLIA_CCM_ICV8:
+			case ENCR_CAMELLIA_CCM_ICV12:
+			case ENCR_CAMELLIA_CCM_ICV16:
+				/* we assume that we support all AES/Camellia sizes */
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 128);
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 192);
+				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
+				break;
+			case ENCR_3DES:
 				add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 0);
 				break;
 			case ENCR_DES:
@@ -877,7 +852,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
  */
 proposal_t *proposal_create_default(protocol_id_t protocol)
 {
-	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol);
+	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol, 0);
 
 	switch (protocol)
 	{
@@ -912,7 +887,7 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
  */
 proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs)
 {
-	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol);
+	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol, 0);
 	chunk_t string = {(void*)algs, strlen(algs)};
 	chunk_t alg;
 	status_t status = SUCCESS;

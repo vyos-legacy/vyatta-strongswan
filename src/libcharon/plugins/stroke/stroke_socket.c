@@ -24,10 +24,10 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <processing/jobs/callback_job.h>
 #include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
+#include <processing/jobs/callback_job.h>
 
 #include "stroke_config.h"
 #include "stroke_control.h"
@@ -180,11 +180,13 @@ static void stroke_add_conn(private_stroke_socket_t *this, stroke_msg_t *msg)
 	pop_end(msg, "left", &msg->add_conn.me);
 	pop_end(msg, "right", &msg->add_conn.other);
 	pop_string(msg, &msg->add_conn.eap_identity);
+	pop_string(msg, &msg->add_conn.aaa_identity);
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	pop_string(msg, &msg->add_conn.ikeme.mediated_by);
 	pop_string(msg, &msg->add_conn.ikeme.peerid);
 	DBG2(DBG_CFG, "  eap_identity=%s", msg->add_conn.eap_identity);
+	DBG2(DBG_CFG, "  aaa_identity=%s", msg->add_conn.aaa_identity);
 	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
 	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	DBG2(DBG_CFG, "  mediation=%s", msg->add_conn.ikeme.mediation ? "yes" : "no");
@@ -353,6 +355,37 @@ static void stroke_purge(private_stroke_socket_t *this,
 }
 
 /**
+ * Export in-memory credentials
+ */
+static void stroke_export(private_stroke_socket_t *this,
+						  stroke_msg_t *msg, FILE *out)
+{
+	pop_string(msg, &msg->export.selector);
+
+	if (msg->purge.flags & EXPORT_X509)
+	{
+		enumerator_t *enumerator;
+		identification_t *id;
+		certificate_t *cert;
+		chunk_t encoded;
+
+		id = identification_create_from_string(msg->export.selector);
+		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+												CERT_X509, KEY_ANY, id, FALSE);
+		while (enumerator->enumerate(enumerator, &cert))
+		{
+			if (cert->get_encoding(cert, CERT_PEM, &encoded))
+			{
+				fprintf(out, "%.*s", encoded.len, encoded.ptr);
+				free(encoded.ptr);
+			}
+		}
+		enumerator->destroy(enumerator);
+		id->destroy(id);
+	}
+}
+
+/**
  * list pool leases
  */
 static void stroke_leases(private_stroke_socket_t *this,
@@ -362,21 +395,6 @@ static void stroke_leases(private_stroke_socket_t *this,
 	pop_string(msg, &msg->leases.address);
 
 	this->list->leases(this->list, msg, out);
-}
-
-debug_t get_group_from_name(char *type)
-{
-	if (strcaseeq(type, "any")) return DBG_ANY;
-	else if (strcaseeq(type, "mgr")) return DBG_MGR;
-	else if (strcaseeq(type, "ike")) return DBG_IKE;
-	else if (strcaseeq(type, "chd")) return DBG_CHD;
-	else if (strcaseeq(type, "job")) return DBG_JOB;
-	else if (strcaseeq(type, "cfg")) return DBG_CFG;
-	else if (strcaseeq(type, "knl")) return DBG_KNL;
-	else if (strcaseeq(type, "net")) return DBG_NET;
-	else if (strcaseeq(type, "enc")) return DBG_ENC;
-	else if (strcaseeq(type, "lib")) return DBG_LIB;
-	else return -1;
 }
 
 /**
@@ -394,7 +412,7 @@ static void stroke_loglevel(private_stroke_socket_t *this,
 	DBG1(DBG_CFG, "received stroke: loglevel %d for %s",
 		 msg->loglevel.level, msg->loglevel.type);
 
-	group = get_group_from_name(msg->loglevel.type);
+	group = enum_from_name(debug_names, msg->loglevel.type);
 	if (group < 0)
 	{
 		fprintf(out, "invalid type (%s)!\n", msg->loglevel.type);
@@ -525,6 +543,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 		case STR_PURGE:
 			stroke_purge(this, msg, out);
 			break;
+		case STR_EXPORT:
+			stroke_export(this, msg, out);
+			break;
 		case STR_LEASES:
 			stroke_leases(this, msg, out);
 			break;
@@ -565,7 +586,7 @@ static job_requeue_t receive(private_stroke_socket_t *this)
 	ctx->this = this;
 	job = callback_job_create((callback_job_cb_t)process,
 							  ctx, (void*)stroke_job_context_destroy, this->job);
-	charon->processor->queue_job(charon->processor, (job_t*)job);
+	lib->processor->queue_job(lib->processor, (job_t*)job);
 
 	return JOB_REQUEUE_FAIR;
 }
@@ -663,7 +684,7 @@ stroke_socket_t *stroke_socket_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

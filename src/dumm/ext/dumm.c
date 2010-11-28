@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -85,82 +85,108 @@ static void sigchld_handler(int signal, siginfo_t *info, void* ptr)
 	enumerator->destroy(enumerator);
 }
 
+
+/**
+ * Global Dumm bindings
+ */
+static VALUE dumm_add_overlay(VALUE class, VALUE dir)
+{
+	if (!dumm->add_overlay(dumm, StringValuePtr(dir)))
+	{
+		rb_raise(rb_eRuntimeError, "loading overlay failed");
+	}
+	return class;
+}
+
+static VALUE dumm_del_overlay(VALUE class, VALUE dir)
+{
+	return dumm->del_overlay(dumm, StringValuePtr(dir)) ? Qtrue : Qfalse;
+}
+
+static VALUE dumm_pop_overlay(VALUE class)
+{
+	return dumm->pop_overlay(dumm) ? Qtrue : Qfalse;
+}
+
+static void dumm_init()
+{
+	rbm_dumm = rb_define_module("Dumm");
+
+	rb_define_module_function(rbm_dumm, "add_overlay", dumm_add_overlay, 1);
+	rb_define_module_function(rbm_dumm, "del_overlay", dumm_del_overlay, 1);
+	rb_define_module_function(rbm_dumm, "pop_overlay", dumm_pop_overlay, 0);
+}
+
 /**
  * Guest bindings
  */
-static VALUE guest_find(VALUE class, VALUE key)
+static VALUE guest_hash_create(VALUE class)
 {
 	enumerator_t *enumerator;
-	guest_t *guest, *found = NULL;
-
-	if (TYPE(key) == T_SYMBOL)
-	{
-		key = rb_convert_type(key, T_STRING, "String", "to_s");
-	}
+	guest_t *guest;
+	VALUE hash = rb_hash_new();
 	enumerator = dumm->create_guest_enumerator(dumm);
 	while (enumerator->enumerate(enumerator, &guest))
 	{
-		if (streq(guest->get_name(guest), StringValuePtr(key)))
-		{
-			found = guest;
-			break;
-		}
+		rb_hash_aset(hash, rb_str_new2(guest->get_name(guest)),
+					 Data_Wrap_Struct(class, NULL, NULL, guest));
 	}
 	enumerator->destroy(enumerator);
-	if (!found)
+	return hash;
+}
+
+static VALUE guest_hash(VALUE class)
+{
+	ID id = rb_intern("@@guests");
+	if (!rb_cvar_defined(class, id))
 	{
-		return Qnil;
+		VALUE hash = guest_hash_create(class);
+		rb_cvar_set(class, id, hash, 0);
+		return hash;
 	}
-	return Data_Wrap_Struct(class, NULL, NULL, found);
+	return rb_cvar_get(class, id);
+}
+
+static VALUE guest_find(VALUE class, VALUE key)
+{
+	if (TYPE(key) != T_STRING)
+	{
+		key = rb_convert_type(key, T_STRING, "String", "to_s");
+	}
+	return rb_hash_aref(guest_hash(class), key);
 }
 
 static VALUE guest_get(VALUE class, VALUE key)
 {
-	VALUE guest = guest_find(class, key);
-	if (NIL_P(guest))
-	{
-		rb_raise(rb_eRuntimeError, "guest not found");
-	}
-	return guest;
+	return guest_find(class, key);
 }
 
 static VALUE guest_each(int argc, VALUE *argv, VALUE class)
 {
-	linked_list_t *list;
-	enumerator_t *enumerator;
-	guest_t *guest;
-
 	if (!rb_block_given_p())
 	{
 		rb_raise(rb_eArgError, "must be called with a block");
 	}
-	list = linked_list_create();
-	enumerator = dumm->create_guest_enumerator(dumm);
-	while (enumerator->enumerate(enumerator, &guest))
-	{
-		list->insert_last(list, guest);
-	}
-	enumerator->destroy(enumerator);
-	while (list->remove_first(list, (void**)&guest) == SUCCESS)
-	{
-		rb_yield(Data_Wrap_Struct(class, NULL, NULL, guest));
-	}
-	list->destroy(list);
+	rb_block_call(guest_hash(class), rb_intern("each_value"), 0, 0,
+				  rb_yield, 0);
 	return class;
 }
 
 static VALUE guest_new(VALUE class, VALUE name, VALUE kernel,
 					   VALUE master, VALUE args)
 {
+	VALUE self;
 	guest_t *guest;
-
-	guest = dumm->create_guest(dumm, StringValuePtr(name), StringValuePtr(kernel),
-							   StringValuePtr(master), StringValuePtr(args));
+	guest = dumm->create_guest(dumm, StringValuePtr(name),
+							   StringValuePtr(kernel), StringValuePtr(master),
+							   StringValuePtr(args));
 	if (!guest)
 	{
 		rb_raise(rb_eRuntimeError, "creating guest failed");
 	}
-	return Data_Wrap_Struct(class, NULL, NULL, guest);
+	self = Data_Wrap_Struct(class, NULL, NULL, guest);
+	rb_hash_aset(guest_hash(class), name, self);
+	return self;
 }
 
 static VALUE guest_to_s(VALUE self)
@@ -214,11 +240,9 @@ static VALUE guest_exec(VALUE self, VALUE cmd)
 
 	block = rb_block_given_p();
 	Data_Get_Struct(self, guest_t, guest);
-	if ((ret = guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
-					"exec %s", StringValuePtr(cmd))) != 0)
-	{
-		rb_raise(rb_eRuntimeError, "executing command failed (%d)", ret);
-	}
+	ret = guest->exec_str(guest, block ? (void*)exec_cb : NULL, TRUE, NULL,
+						  "exec %s", StringValuePtr(cmd));
+	rb_iv_set(self, "@execstatus", INT2NUM(ret));
 	return self;
 }
 
@@ -330,6 +354,34 @@ static VALUE guest_delete(VALUE self)
 	return Qnil;
 }
 
+static VALUE guest_add_overlay(VALUE self, VALUE dir)
+{
+	guest_t *guest;
+
+	Data_Get_Struct(self, guest_t, guest);
+	if (!guest->add_overlay(guest, StringValuePtr(dir)))
+	{
+		rb_raise(rb_eRuntimeError, "loading overlay failed");
+	}
+	return self;
+}
+
+static VALUE guest_del_overlay(VALUE self, VALUE dir)
+{
+	guest_t *guest;
+
+	Data_Get_Struct(self, guest_t, guest);
+	return guest->del_overlay(guest, StringValuePtr(dir)) ? Qtrue : Qfalse;
+}
+
+static VALUE guest_pop_overlay(VALUE self)
+{
+	guest_t *guest;
+
+	Data_Get_Struct(self, guest_t, guest);
+	return guest->pop_overlay(guest) ? Qtrue : Qfalse;
+}
+
 static void guest_init()
 {
 	rbc_guest = rb_define_class_under(rbm_dumm , "Guest", rb_cObject);
@@ -354,6 +406,11 @@ static void guest_init()
 	rb_define_method(rbc_guest, "include?", guest_find_iface, 1);
 	rb_define_method(rbc_guest, "iface?", guest_find_iface, 1);
 	rb_define_method(rbc_guest, "delete", guest_delete, 0);
+	rb_define_method(rbc_guest, "add_overlay", guest_add_overlay, 1);
+	rb_define_method(rbc_guest, "del_overlay", guest_del_overlay, 1);
+	rb_define_method(rbc_guest, "pop_overlay", guest_pop_overlay, 0);
+
+	rb_define_attr(rbc_guest, "execstatus", 1, 0);
 }
 
 /**
@@ -711,8 +768,7 @@ void Init_dumm()
 
 	dumm = dumm_create(NULL);
 
-	rbm_dumm = rb_define_module("Dumm");
-
+	dumm_init();
 	guest_init();
 	bridge_init();
 	iface_init();

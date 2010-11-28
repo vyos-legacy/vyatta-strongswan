@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Tobias Brunner
+ * Copyright (C) 2006-2010 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -42,11 +42,12 @@
 #include <sys/sysctl.h>
 #endif
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/thread.h>
 
 /* Maximum size of a packet */
-#define MAX_PACKET 5000
+#define MAX_PACKET 10000
 
 /* length of non-esp marker */
 #define MARKER_LEN sizeof(u_int32_t)
@@ -116,12 +117,17 @@ struct private_socket_default_socket_t {
 	 * IPv6 socket for NATT (4500)
 	 */
 	int ipv6_natt;
+
+	/**
+	 * Maximum packet size to receive
+	 */
+	int max_packet;
 };
 
 METHOD(socket_t, receiver, status_t,
 	private_socket_default_socket_t *this, packet_t **packet)
 {
-	char buffer[MAX_PACKET];
+	char buffer[this->max_packet];
 	chunk_t data;
 	packet_t *pkt;
 	host_t *source = NULL, *dest = NULL;
@@ -195,7 +201,7 @@ METHOD(socket_t, receiver, status_t,
 		msg.msg_name = &src;
 		msg.msg_namelen = sizeof(src);
 		iov.iov_base = buffer;
-		iov.iov_len = sizeof(buffer);
+		iov.iov_len = this->max_packet;
 		msg.msg_iov = &iov;
 		msg.msg_iovlen = 1;
 		msg.msg_control = ancillary;
@@ -205,6 +211,11 @@ METHOD(socket_t, receiver, status_t,
 		if (bytes_read < 0)
 		{
 			DBG1(DBG_NET, "error reading socket: %s", strerror(errno));
+			return FAILED;
+		}
+		if (msg.msg_flags & MSG_TRUNC)
+		{
+			DBG1(DBG_NET, "receive buffer too small, packet discarded");
 			return FAILED;
 		}
 		DBG3(DBG_NET, "received packet %b", buffer, bytes_read);
@@ -351,12 +362,6 @@ METHOD(socket_t, sender, status_t,
 		if (data.len != 1 || data.ptr[0] != 0xFF)
 		{
 			/* add non esp marker to packet */
-			if (data.len > MAX_PACKET - MARKER_LEN)
-			{
-				DBG1(DBG_NET, "unable to send packet: it's too big (%d bytes)",
-					 data.len);
-				return FAILED;
-			}
 			marked = chunk_alloc(data.len + MARKER_LEN);
 			memset(marked.ptr, 0, MARKER_LEN);
 			memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
@@ -521,8 +526,8 @@ static int open_socket(private_socket_default_socket_t *this,
 		}
 	}
 
-	if (!charon->kernel_interface->bypass_socket(charon->kernel_interface,
-												 skt, family))
+	if (!hydra->kernel_interface->bypass_socket(hydra->kernel_interface,
+												skt, family))
 	{
 		DBG1(DBG_NET, "installing IKE bypass policy failed");
 	}
@@ -541,7 +546,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	return skt;
 }
 
-METHOD(socket_default_socket_t, destroy, void,
+METHOD(socket_t, destroy, void,
 	private_socket_default_socket_t *this)
 {
 	if (this->ipv4)
@@ -575,9 +580,11 @@ socket_default_socket_t *socket_default_socket_create()
 			.socket = {
 				.send = _sender,
 				.receive = _receiver,
+				.destroy = _destroy,
 			},
-			.destroy = _destroy,
 		},
+		.max_packet = lib->settings->get_int(lib->settings,
+										"charon.max_packet", MAX_PACKET),
 	);
 
 #ifdef __APPLE__

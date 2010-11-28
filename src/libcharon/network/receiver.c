@@ -146,7 +146,7 @@ static void send_notify(message_t *request, notify_type_t type, chunk_t data)
 		ike_sa_id->switch_initiator(ike_sa_id);
 		response->set_ike_sa_id(response, ike_sa_id);
 		response->add_notify(response, FALSE, type, data);
-		if (response->generate(response, NULL, NULL, &packet) == SUCCESS)
+		if (response->generate(response, NULL, &packet) == SUCCESS)
 		{
 			charon->sender->send(charon->sender, packet);
 			response->destroy(response);
@@ -274,9 +274,17 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 {
 	packet_t *packet;
 	message_t *message;
+	status_t status;
 
 	/* read in a packet */
-	if (charon->socket->receive(charon->socket, &packet) != SUCCESS)
+	status = charon->socket->receive(charon->socket, &packet);
+	if (status == NOT_SUPPORTED)
+	{
+		/* the processor destroys this job  */
+		this->job = NULL;
+		return JOB_REQUEUE_NONE;
+	}
+	else if (status != SUCCESS)
 	{
 		DBG2(DBG_NET, "receiving from socket failed!");
 		return JOB_REQUEUE_FAIR;
@@ -353,22 +361,25 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			{
 				DBG1(DBG_NET, "using receive delay: %dms",
 					 this->receive_delay);
-				charon->scheduler->schedule_job_ms(charon->scheduler,
+				lib->scheduler->schedule_job_ms(lib->scheduler,
 								(job_t*)process_message_job_create(message),
 								this->receive_delay);
 				return JOB_REQUEUE_DIRECT;
 			}
 		}
 	}
-	charon->processor->queue_job(charon->processor,
-								 (job_t*)process_message_job_create(message));
+	lib->processor->queue_job(lib->processor,
+							  (job_t*)process_message_job_create(message));
 	return JOB_REQUEUE_DIRECT;
 }
 
 METHOD(receiver_t, destroy, void,
 	private_receiver_t *this)
 {
-	this->job->cancel(this->job);
+	if (this->job)
+	{
+		this->job->cancel(this->job);
+	}
 	this->rng->destroy(this->rng);
 	this->hasher->destroy(this->hasher);
 	free(this);
@@ -383,7 +394,9 @@ receiver_t *receiver_create()
 	u_int32_t now = time_monotonic(NULL);
 
 	INIT(this,
-		.public.destroy = _destroy,
+		.public = {
+			.destroy = _destroy,
+		},
 		.secret_switch = now,
 		.secret_offset = random() % now,
 	);
@@ -424,7 +437,7 @@ receiver_t *receiver_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_packets,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

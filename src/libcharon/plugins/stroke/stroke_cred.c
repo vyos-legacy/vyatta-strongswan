@@ -14,10 +14,15 @@
  * for more details.
  */
 
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
 #include <glob.h>
 #include <libgen.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
 
 #include "stroke_cred.h"
 #include "stroke_shared_key.h"
@@ -25,6 +30,8 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/ac.h>
+#include <credentials/sets/mem_cred.h>
+#include <credentials/sets/callback_cred.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
 #include <threading/rwlock.h>
@@ -88,7 +95,8 @@ struct private_stroke_cred_t {
 typedef struct {
 	private_stroke_cred_t *this;
 	identification_t *id;
-	certificate_type_t type;
+	certificate_type_t cert;
+	key_type_t key;
 } id_data_t;
 
 /**
@@ -109,15 +117,18 @@ static bool private_filter(id_data_t *data,
 	private_key_t *key;
 
 	key = *in;
-	if (data->id == NULL)
+	if (data->key == KEY_ANY || data->key == key->get_type(key))
 	{
-		*out = key;
-		return TRUE;
-	}
-	if (key->has_fingerprint(key, data->id->get_encoding(data->id)))
-	{
-		*out = key;
-		return TRUE;
+		if (data->id == NULL)
+		{
+			*out = key;
+			return TRUE;
+		}
+		if (key->has_fingerprint(key, data->id->get_encoding(data->id)))
+		{
+			*out = key;
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
@@ -133,6 +144,7 @@ static enumerator_t* create_private_enumerator(private_stroke_cred_t *this,
 	data = malloc_thing(id_data_t);
 	data->this = this;
 	data->id = id;
+	data->key = type;
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->private->create_enumerator(this->private),
@@ -148,7 +160,7 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	public_key_t *public;
 	certificate_t *cert = *in;
 
-	if (data->type != CERT_ANY && data->type != cert->get_type(cert))
+	if (data->cert != CERT_ANY && data->cert != cert->get_type(cert))
 	{
 		return FALSE;
 	}
@@ -161,11 +173,14 @@ static bool certs_filter(id_data_t *data, certificate_t **in, certificate_t **ou
 	public = cert->get_public_key(cert);
 	if (public)
 	{
-		if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
+		if (data->key == KEY_ANY || data->key != public->get_type(public))
 		{
-			public->destroy(public);
-			*out = *in;
-			return TRUE;
+			if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
+			{
+				public->destroy(public);
+				*out = *in;
+				return TRUE;
+			}
 		}
 		public->destroy(public);
 	}
@@ -188,7 +203,8 @@ static enumerator_t* create_cert_enumerator(private_stroke_cred_t *this,
 	data = malloc_thing(id_data_t);
 	data->this = this;
 	data->id = id;
-	data->type = cert;
+	data->cert = cert;
+	data->key = key;
 
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->certs->create_enumerator(this->certs),
@@ -667,47 +683,443 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 }
 
 /**
- * Data to pass to passphrase_cb
+ * Data for passphrase callback
  */
 typedef struct {
 	/** socket we use for prompting */
 	FILE *prompt;
 	/** private key file */
-	char *file;
-	/** buffer for passphrase */
-	char buf[256];
+	char *path;
+	/** number of tries */
+	int try;
 } passphrase_cb_data_t;
 
 /**
- * Passphrase callback to read from whack fd
+ * Callback function to receive Passphrases
  */
-chunk_t passphrase_cb(passphrase_cb_data_t *data, int try)
+static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
+								shared_key_type_t type,
+								identification_t *me, identification_t *other,
+								id_match_t *match_me, id_match_t *match_other)
 {
-	chunk_t secret = chunk_empty;;
+	chunk_t secret;
+	char buf[256];
 
-	if (try > 5)
+	if (type != SHARED_ANY && type != SHARED_PRIVATE_KEY_PASS)
 	{
-		fprintf(data->prompt, "invalid passphrase, too many trials\n");
-		return chunk_empty;
+		return NULL;
 	}
-	if (try == 1)
+
+	if (data->try > 1)
 	{
-		fprintf(data->prompt, "Private key '%s' is encrypted\n", data->file);
+		if (data->try > 5)
+		{
+			fprintf(data->prompt, "PIN invalid, giving up.\n");
+			return NULL;
+		}
+		fprintf(data->prompt, "PIN invalid!\n");
+	}
+	data->try++;
+	fprintf(data->prompt, "Private key '%s' is encrypted.\n", data->path);
+	fprintf(data->prompt, "Passphrase:\n");
+	if (fgets(buf, sizeof(buf), data->prompt))
+	{
+		secret = chunk_create(buf, strlen(buf));
+		if (secret.len > 1)
+		{	/* trim appended \n */
+			secret.len--;
+			if (match_me)
+			{
+				*match_me = ID_MATCH_PERFECT;
+			}
+			if (match_other)
+			{
+				*match_other = ID_MATCH_NONE;
+			}
+			return shared_key_create(SHARED_PRIVATE_KEY_PASS, chunk_clone(secret));
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Data for PIN callback
+ */
+typedef struct {
+	/** socket we use for prompting */
+	FILE *prompt;
+	/** card label */
+	char *card;
+	/** card keyid */
+	chunk_t keyid;
+	/** number of tries */
+	int try;
+} pin_cb_data_t;
+
+/**
+ * Callback function to receive PINs
+ */
+static shared_key_t* pin_cb(pin_cb_data_t *data, shared_key_type_t type,
+							identification_t *me, identification_t *other,
+							id_match_t *match_me, id_match_t *match_other)
+{
+	chunk_t secret;
+	char buf[256];
+
+	if (type != SHARED_ANY && type != SHARED_PIN)
+	{
+		return NULL;
+	}
+
+	if (!me || !chunk_equals(me->get_encoding(me), data->keyid))
+	{
+		return NULL;
+	}
+
+	if (data->try > 1)
+	{
+		fprintf(data->prompt, "PIN invalid, aborting.\n");
+		return NULL;
+	}
+	data->try++;
+	fprintf(data->prompt, "Login to '%s' required\n", data->card);
+	fprintf(data->prompt, "PIN:\n");
+	if (fgets(buf, sizeof(buf), data->prompt))
+	{
+		secret = chunk_create(buf, strlen(buf));
+		if (secret.len > 1)
+		{	/* trim appended \n */
+			secret.len--;
+			if (match_me)
+			{
+				*match_me = ID_MATCH_PERFECT;
+			}
+			if (match_other)
+			{
+				*match_other = ID_MATCH_NONE;
+			}
+			return shared_key_create(SHARED_PIN, chunk_clone(secret));
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Load a smartcard with a PIN
+ */
+static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
+					 FILE *prompt)
+{
+	chunk_t sc = chunk_empty, secret = chunk_empty;
+	char smartcard[64], keyid[64], module[64], *pos;
+	private_key_t *key = NULL;
+	u_int slot;
+	chunk_t chunk;
+	shared_key_t *shared;
+	identification_t *id;
+	mem_cred_t *mem = NULL;
+	callback_cred_t *cb = NULL;
+	pin_cb_data_t pin_data;
+	enum {
+		SC_FORMAT_SLOT_MODULE_KEYID,
+		SC_FORMAT_SLOT_KEYID,
+		SC_FORMAT_KEYID,
+	} format;
+
+	err_t ugh = extract_value(&sc, &line);
+
+	if (ugh != NULL)
+	{
+		DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+		return FALSE;
+	}
+	if (sc.len == 0)
+	{
+		DBG1(DBG_CFG, "line %d: expected %%smartcard specifier", line_nr);
+		return FALSE;
+	}
+	snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
+	smartcard[sizeof(smartcard) - 1] = '\0';
+
+	/* parse slot and key id. Three formats are supported:
+	 * - %smartcard<slot>@<module>:<keyid>
+	 * - %smartcard<slot>:<keyid>
+	 * - %smartcard:<keyid>
+	 */
+	if (sscanf(smartcard, "%%smartcard%u@%s", &slot, module) == 2)
+	{
+		pos = strchr(module, ':');
+		if (!pos)
+		{
+			DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is "
+				 "invalid", line_nr);
+			return FALSE;
+		}
+		*pos = '\0';
+		strcpy(keyid, pos + 1);
+		format = SC_FORMAT_SLOT_MODULE_KEYID;
+	}
+	else if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
+	{
+		format = SC_FORMAT_SLOT_KEYID;
+	}
+	else if (sscanf(smartcard, "%%smartcard:%s", keyid) == 1)
+	{
+		format = SC_FORMAT_KEYID;
 	}
 	else
 	{
-		fprintf(data->prompt, "invalid passphrase\n");
+		DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is not"
+				" supported or invalid", line_nr);
+		return FALSE;
 	}
-	fprintf(data->prompt, "Passphrase:\n");
-	if (fgets(data->buf, sizeof(data->buf), data->prompt))
+
+	if (!eat_whitespace(&line))
 	{
-		secret = chunk_create(data->buf, strlen(data->buf));
-		if (secret.len)
-		{	/* trim appended \n */
-			secret.len--;
+		DBG1(DBG_CFG, "line %d: expected PIN", line_nr);
+		return FALSE;
+	}
+	ugh = extract_secret(&secret, &line);
+	if (ugh != NULL)
+	{
+		DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
+		return FALSE;
+	}
+
+	chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
+	{
+		free(secret.ptr);
+		if (!prompt)
+		{	/* no IO channel to prompt, skip */
+			free(chunk.ptr);
+			return TRUE;
+		}
+		/* use callback credential set to prompt for the pin */
+		pin_data.prompt = prompt;
+		pin_data.card = smartcard;
+		pin_data.keyid = chunk;
+		pin_data.try = 1;
+		cb = callback_cred_create_shared((void*)pin_cb, &pin_data);
+		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
+	}
+	else
+	{
+		/* provide our pin in a temporary credential set */
+		shared = shared_key_create(SHARED_PIN, secret);
+		id = identification_create_from_encoding(ID_KEY_ID, chunk);
+		mem = mem_cred_create();
+		mem->add_shared(mem, shared, id, NULL);
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
+	}
+
+	/* unlock: smartcard needs the pin and potentially calls public set */
+	this->lock->unlock(this->lock);
+	switch (format)
+	{
+		case SC_FORMAT_SLOT_MODULE_KEYID:
+			key = lib->creds->create(lib->creds,
+							CRED_PRIVATE_KEY, KEY_ANY,
+							BUILD_PKCS11_SLOT, slot,
+							BUILD_PKCS11_MODULE, module,
+							BUILD_PKCS11_KEYID, chunk, BUILD_END);
+			break;
+		case SC_FORMAT_SLOT_KEYID:
+			key = lib->creds->create(lib->creds,
+							CRED_PRIVATE_KEY, KEY_ANY,
+							BUILD_PKCS11_SLOT, slot,
+							BUILD_PKCS11_KEYID, chunk, BUILD_END);
+			break;
+		case SC_FORMAT_KEYID:
+			key = lib->creds->create(lib->creds,
+							CRED_PRIVATE_KEY, KEY_ANY,
+							BUILD_PKCS11_KEYID, chunk, BUILD_END);
+			break;
+	}
+	this->lock->write_lock(this->lock);
+	if (mem)
+	{
+		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
+		mem->destroy(mem);
+	}
+	if (cb)
+	{
+		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
+		cb->destroy(cb);
+	}
+
+	if (key)
+	{
+		DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
+		this->private->insert_last(this->private, key);
+	}
+	return TRUE;
+}
+
+/**
+ * Load a private key
+ */
+static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
+						 FILE *prompt, key_type_t key_type)
+{
+	char path[PATH_MAX];
+	chunk_t filename;
+	chunk_t secret = chunk_empty;
+	private_key_t *key;
+
+	err_t ugh = extract_value(&filename, &line);
+
+	if (ugh != NULL)
+	{
+		DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+		return FALSE;
+	}
+	if (filename.len == 0)
+	{
+		DBG1(DBG_CFG, "line %d: empty filename", line_nr);
+		return FALSE;
+	}
+	if (*filename.ptr == '/')
+	{
+		/* absolute path name */
+		snprintf(path, sizeof(path), "%.*s", filename.len, filename.ptr);
+	}
+	else
+	{
+		/* relative path name */
+		snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR,
+				 filename.len, filename.ptr);
+	}
+
+	/* check for optional passphrase */
+	if (eat_whitespace(&line))
+	{
+		ugh = extract_secret(&secret, &line);
+		if (ugh != NULL)
+		{
+			DBG1(DBG_CFG, "line %d: malformed passphrase: %s", line_nr, ugh);
+			return FALSE;
 		}
 	}
-	return secret;
+	if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
+	{
+		callback_cred_t *cb = NULL;
+		passphrase_cb_data_t pp_data = {
+			.prompt = prompt,
+			.path = path,
+			.try = 1,
+		};
+
+		free(secret.ptr);
+		if (!prompt)
+		{
+			return TRUE;
+		}
+		/* use callback credential set to prompt for the passphrase */
+		pp_data.prompt = prompt;
+		pp_data.path = path;
+		pp_data.try = 1;
+		cb = callback_cred_create_shared((void*)passphrase_cb, &pp_data);
+		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
+
+		/* unlock, as the builder might ask for a secret */
+		this->lock->unlock(this->lock);
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+		this->lock->write_lock(this->lock);
+
+		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
+		cb->destroy(cb);
+	}
+	else
+	{
+		mem_cred_t *mem = NULL;
+		shared_key_t *shared;
+
+		/* provide our pin in a temporary credential set */
+		shared = shared_key_create(SHARED_PRIVATE_KEY_PASS, secret);
+		mem = mem_cred_create();
+		mem->add_shared(mem, shared, NULL);
+		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
+
+		/* unlock, as the builder might ask for a secret */
+		this->lock->unlock(this->lock);
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+		this->lock->write_lock(this->lock);
+
+		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
+		mem->destroy(mem);
+	}
+	if (key)
+	{
+		DBG1(DBG_CFG, "  loaded %N private key from '%s'",
+			 key_type_names, key->get_type(key), path);
+		this->private->insert_last(this->private, key);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "  loading private key from '%s' failed", path);
+	}
+	return TRUE;
+}
+
+/**
+ * Load a shared key
+ */
+static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
+						shared_key_type_t type, chunk_t ids)
+{
+	stroke_shared_key_t *shared_key;
+	chunk_t secret = chunk_empty;
+	bool any = TRUE;
+
+	err_t ugh = extract_secret(&secret, &line);
+	if (ugh != NULL)
+	{
+		DBG1(DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
+		return FALSE;
+	}
+	shared_key = stroke_shared_key_create(type, secret);
+	DBG1(DBG_CFG, "  loaded %N secret for %s", shared_key_type_names, type,
+		 ids.len > 0 ? (char*)ids.ptr : "%any");
+	DBG4(DBG_CFG, "  secret: %#B", &secret);
+
+	this->shared->insert_last(this->shared, shared_key);
+	while (ids.len > 0)
+	{
+		chunk_t id;
+		identification_t *peer_id;
+
+		ugh = extract_value(&id, &ids);
+		if (ugh != NULL)
+		{
+			DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+			return FALSE;
+		}
+		if (id.len == 0)
+		{
+			continue;
+		}
+
+		/* NULL terminate the ID string */
+		*(id.ptr + id.len) = '\0';
+		peer_id = identification_create_from_string(id.ptr);
+		if (peer_id->get_type(peer_id) == ID_ANY)
+		{
+			peer_id->destroy(peer_id);
+			continue;
+		}
+
+		shared_key->add_owner(shared_key, peer_id);
+		any = FALSE;
+	}
+	if (any)
+	{
+		shared_key->add_owner(shared_key,
+					identification_create_from_encoding(ID_ANY, chunk_empty));
+	}
+	return TRUE;
 }
 
 /**
@@ -716,30 +1128,36 @@ chunk_t passphrase_cb(passphrase_cb_data_t *data, int try)
 static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 						 FILE *prompt)
 {
-	size_t bytes;
-	int line_nr = 0;
-	chunk_t chunk, src, line;
-	FILE *fd;
+	int line_nr = 0, fd;
+	chunk_t src, line;
 	private_key_t *private;
 	shared_key_t *shared;
+	struct stat sb;
+	void *addr;
 
 	DBG1(DBG_CFG, "loading secrets from '%s'", file);
-
-	fd = fopen(file, "r");
-	if (fd == NULL)
+	fd = open(file, O_RDONLY);
+	if (fd == -1)
 	{
-		DBG1(DBG_CFG, "opening secrets file '%s' failed", file);
+		DBG1(DBG_CFG, "opening secrets file '%s' failed: %s", file,
+			 strerror(errno));
 		return;
 	}
-
-	/* TODO: do error checks */
-	fseek(fd, 0, SEEK_END);
-	chunk.len = ftell(fd);
-	rewind(fd);
-	chunk.ptr = malloc(chunk.len);
-	bytes = fread(chunk.ptr, 1, chunk.len, fd);
-	fclose(fd);
-	src = chunk;
+	if (fstat(fd, &sb) == -1)
+	{
+		DBG1(DBG_LIB, "getting file size of '%s' failed: %s", file,
+			 strerror(errno));
+		close(fd);
+		return;
+	}
+	addr = mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	if (addr == MAP_FAILED)
+	{
+		DBG1(DBG_LIB, "mapping '%s' failed: %s", file, strerror(errno));
+		close(fd);
+		return;
+	}
+	src = chunk_create(addr, sb.st_size);
 
 	if (level == 0)
 	{
@@ -844,223 +1262,52 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		else
 		{
 			DBG1(DBG_CFG, "line %d: missing ' : ' separator", line_nr);
-			goto error;
+			break;
 		}
 
 		if (!eat_whitespace(&line) || !extract_token(&token, ' ', &line))
 		{
 			DBG1(DBG_CFG, "line %d: missing token", line_nr);
-			goto error;
+			break;
 		}
 		if (match("RSA", &token) || match("ECDSA", &token))
 		{
-			char path[PATH_MAX];
-			chunk_t filename;
-			chunk_t secret = chunk_empty;
-			private_key_t *key = NULL;
-			key_type_t key_type = match("RSA", &token) ? KEY_RSA : KEY_ECDSA;
-
-			err_t ugh = extract_value(&filename, &line);
-
-			if (ugh != NULL)
+			if (!load_private(this, line, line_nr, prompt,
+							  match("RSA", &token) ? KEY_RSA : KEY_ECDSA))
 			{
-				DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
-				goto error;
+				break;
 			}
-			if (filename.len == 0)
-			{
-				DBG1(DBG_CFG, "line %d: empty filename", line_nr);
-				goto error;
-			}
-			if (*filename.ptr == '/')
-			{
-				/* absolute path name */
-				snprintf(path, sizeof(path), "%.*s", filename.len, filename.ptr);
-			}
-			else
-			{
-				/* relative path name */
-				snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR,
-						 filename.len, filename.ptr);
-			}
-
-			/* check for optional passphrase */
-			if (eat_whitespace(&line))
-			{
-				ugh = extract_secret(&secret, &line);
-				if (ugh != NULL)
-				{
-					DBG1(DBG_CFG, "line %d: malformed passphrase: %s", line_nr, ugh);
-					goto error;
-				}
-			}
-			if (secret.len == 7 && strneq(secret.ptr, "%prompt", 7))
-			{
-				if (prompt)
-				{
-					passphrase_cb_data_t data;
-
-					data.prompt = prompt;
-					data.file = path;
-					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-											 key_type, BUILD_FROM_FILE, path,
-											 BUILD_PASSPHRASE_CALLBACK,
-											 passphrase_cb, &data, BUILD_END);
-				}
-			}
-			else
-			{
-				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
-										 BUILD_FROM_FILE, path,
-										 BUILD_PASSPHRASE, secret, BUILD_END);
-			}
-			if (key)
-			{
-				DBG1(DBG_CFG, "  loaded %N private key from '%s'",
-					 key_type_names, key->get_type(key), path);
-				this->private->insert_last(this->private, key);
-			}
-			else
-			{
-				DBG1(DBG_CFG, "  loading private key from '%s' failed", path);
-			}
-			chunk_clear(&secret);
 		}
 		else if (match("PIN", &token))
 		{
-			chunk_t sc = chunk_empty, secret = chunk_empty;
-			char smartcard[32], keyid[22], pin[32];
-			private_key_t *key;
-			u_int slot;
-
-			err_t ugh = extract_value(&sc, &line);
-
-			if (ugh != NULL)
+			if (!load_pin(this, line, line_nr, prompt))
 			{
-				DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
-				goto error;
+				break;
 			}
-			if (sc.len == 0)
-			{
-				DBG1(DBG_CFG, "line %d: expected %%smartcard specifier", line_nr);
-				goto error;
-			}
-			snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
-			smartcard[sizeof(smartcard) - 1] = '\0';
-
-			/* parse slot and key id. only two formats are supported.
-			 * first try %smartcard<slot>:<keyid> */
-			if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
-			{
-				snprintf(smartcard, sizeof(smartcard), "%u:%s", slot, keyid);
-			}
-			/* then try %smartcard:<keyid> */
-			else if (sscanf(smartcard, "%%smartcard:%s", keyid) == 1)
-			{
-				snprintf(smartcard, sizeof(smartcard), "%s", keyid);
-			}
-			else
-			{
-				DBG1(DBG_CFG, "line %d: the given %%smartcard specifier is not"
-						" supported or invalid", line_nr);
-				goto error;
-			}
-
-			if (!eat_whitespace(&line))
-			{
-				DBG1(DBG_CFG, "line %d: expected PIN", line_nr);
-				goto error;
-			}
-			ugh = extract_secret(&secret, &line);
-			if (ugh != NULL)
-			{
-				DBG1(DBG_CFG, "line %d: malformed PIN: %s", line_nr, ugh);
-				goto error;
-			}
-			snprintf(pin, sizeof(pin), "%.*s", secret.len, secret.ptr);
-			pin[sizeof(pin) - 1] = '\0';
-
-			/* we assume an RSA key */
-			key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-									 BUILD_SMARTCARD_KEYID, smartcard,
-									 BUILD_SMARTCARD_PIN, pin, BUILD_END);
-
-			if (key)
-			{
-				DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
-				this->private->insert_last(this->private, key);
-			}
-			memset(pin, 0, sizeof(pin));
-			chunk_clear(&secret);
 		}
 		else if ((match("PSK", &token) && (type = SHARED_IKE)) ||
 				 (match("EAP", &token) && (type = SHARED_EAP)) ||
 				 (match("NTLM", &token) && (type = SHARED_NT_HASH)) ||
 				 (match("XAUTH", &token) && (type = SHARED_EAP)))
 		{
-			stroke_shared_key_t *shared_key;
-			chunk_t secret = chunk_empty;
-			bool any = TRUE;
-
-			err_t ugh = extract_secret(&secret, &line);
-			if (ugh != NULL)
+			if (!load_shared(this, line, line_nr, type, ids))
 			{
-				DBG1(DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
-				goto error;
-			}
-			shared_key = stroke_shared_key_create(type, secret);
-			DBG1(DBG_CFG, "  loaded %N secret for %s", shared_key_type_names, type,
-				 ids.len > 0 ? (char*)ids.ptr : "%any");
-			DBG4(DBG_CFG, "  secret: %#B", &secret);
-
-			this->shared->insert_last(this->shared, shared_key);
-			while (ids.len > 0)
-			{
-				chunk_t id;
-				identification_t *peer_id;
-
-				ugh = extract_value(&id, &ids);
-				if (ugh != NULL)
-				{
-					DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
-					goto error;
-				}
-				if (id.len == 0)
-				{
-					continue;
-				}
-
-				/* NULL terminate the ID string */
-				*(id.ptr + id.len) = '\0';
-				peer_id = identification_create_from_string(id.ptr);
-				if (peer_id->get_type(peer_id) == ID_ANY)
-				{
-					peer_id->destroy(peer_id);
-					continue;
-				}
-
-				shared_key->add_owner(shared_key, peer_id);
-				any = FALSE;
-			}
-			if (any)
-			{
-				shared_key->add_owner(shared_key,
-					identification_create_from_encoding(ID_ANY, chunk_empty));
+				break;
 			}
 		}
 		else
 		{
 			DBG1(DBG_CFG, "line %d: token must be either "
 				 "RSA, ECDSA, PSK, EAP, XAUTH or PIN", line_nr);
-			goto error;
+			break;
 		}
 	}
-error:
 	if (level == 0)
 	{
 		this->lock->unlock(this->lock);
 	}
-	chunk_clear(&chunk);
+	munmap(addr, sb.st_size);
+	close(fd);
 }
 
 /**

@@ -31,6 +31,7 @@
 #include <threading/condvar.h>
 #include <threading/thread.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -205,8 +206,8 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	else
 	{
 		/* act as relay agent */
-		src = charon->kernel_interface->get_source_addr(
-									charon->kernel_interface, this->dst, NULL);
+		src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+													   this->dst, NULL);
 		if (src)
 		{
 			memcpy(&dhcp->gateway_address, src->get_address(src).ptr,
@@ -462,8 +463,6 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 
 	offer = host_create_from_chunk(AF_INET,
 					chunk_from_thing(dhcp->your_address), 0);
-	server = host_create_from_chunk(AF_INET,
-					chunk_from_thing(dhcp->server_address), DHCP_SERVER_PORT);
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->discover->create_enumerator(this->discover);
@@ -471,11 +470,8 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 	{
 		if (transaction->get_id(transaction) == dhcp->transaction_id)
 		{
-			DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
 			this->discover->remove_at(this->discover, enumerator);
 			this->request->insert_last(this->request, transaction);
-			transaction->set_address(transaction, offer->clone(offer));
-			transaction->set_server(transaction, server->clone(server));
 			break;
 		}
 	}
@@ -504,9 +500,22 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 						chunk_create((char*)&option->data[pos], 4));
 				}
 			}
+			if (option->type == DHCP_SERVER_ID && option->len == 4)
+			{
+				server = host_create_from_chunk(AF_INET,
+							chunk_create(option->data, 4), DHCP_SERVER_PORT);
+			}
 			optlen -= optsize;
 			optpos += optsize;
 		}
+		if (!server)
+		{
+			server = host_create_from_chunk(AF_INET,
+				chunk_from_thing(dhcp->server_address), DHCP_SERVER_PORT);
+		}
+		DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
+		transaction->set_address(transaction, offer->clone(offer));
+		transaction->set_server(transaction, server->clone(server));
 	}
 	this->mutex->unlock(this->mutex);
 	this->condvar->broadcast(this->condvar);
@@ -751,7 +760,7 @@ dhcp_socket_t *dhcp_socket_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_dhcp,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

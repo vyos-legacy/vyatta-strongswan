@@ -109,6 +109,16 @@ enum purge_flag_t {
 	PURGE_IKE =			0x0002,
 };
 
+typedef enum export_flag_t export_flag_t;
+
+/**
+ * Definition of the export flags
+ */
+enum export_flag_t {
+	/** export an X509 certificate */
+	EXPORT_X509 =		0x0001,
+};
+
 /**
  * CRL certificate validation policy
  */
@@ -193,6 +203,8 @@ struct stroke_msg_t {
 		STR_PURGE,
 		/* show pool leases */
 		STR_LEASES,
+		/* export credentials */
+		STR_EXPORT,
 		/* more to come */
 	} type;
 
@@ -220,6 +232,7 @@ struct stroke_msg_t {
 			u_int32_t eap_type;
 			u_int32_t eap_vendor;
 			char *eap_identity;
+			char *aaa_identity;
 			int mode;
 			int mobike;
 			int force_encap;
@@ -300,6 +313,12 @@ struct stroke_msg_t {
 		struct {
 			purge_flag_t flags;
 		} purge;
+
+		/* data for STR_EXPORT */
+		struct {
+			export_flag_t flags;
+			char *selector;
+		} export;
 
 		/* data for STR_LEASES */
 		struct {

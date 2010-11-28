@@ -21,6 +21,7 @@
 #include <malloc.h>
 #endif /* HAVE_MALLINFO */
 
+#include <hydra.h>
 #include <daemon.h>
 #include <utils/linked_list.h>
 #include <credentials/certificates/x509.h>
@@ -422,12 +423,12 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 #endif /* HAVE_MALLINFO */
 		fprintf(out, "  worker threads: %d idle of %d,",
-				charon->processor->get_idle_threads(charon->processor),
-				charon->processor->get_total_threads(charon->processor));
+				lib->processor->get_idle_threads(lib->processor),
+				lib->processor->get_total_threads(lib->processor));
 		fprintf(out, " job queue load: %d,",
-				charon->processor->get_job_load(charon->processor));
+				lib->processor->get_job_load(lib->processor));
 		fprintf(out, " scheduled events: %d\n",
-				charon->scheduler->get_job_load(charon->scheduler));
+				lib->scheduler->get_job_load(lib->scheduler));
 		fprintf(out, "  loaded plugins: ");
 		enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 		while (enumerator->enumerate(enumerator, &plugin))
@@ -454,8 +455,8 @@ static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bo
 		}
 		enumerator->destroy(enumerator);
 
-		enumerator = charon->kernel_interface->create_address_enumerator(
-								charon->kernel_interface, FALSE, FALSE);
+		enumerator = hydra->kernel_interface->create_address_enumerator(
+									hydra->kernel_interface, FALSE, FALSE);
 		fprintf(out, "Listening IP addresses:\n");
 		while (enumerator->enumerate(enumerator, (void**)&host))
 		{
@@ -638,7 +639,7 @@ static void list_public_key(public_key_t *public, FILE *out)
 
 	fprintf(out, "  pubkey:    %N %d bits%s\n",
 			key_type_names, public->get_type(public),
-			public->get_keysize(public) * 8,
+			public->get_keysize(public),
 			private ? ", has private key" : "");
 	if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 	{
@@ -1026,9 +1027,10 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
  */
 static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 {
-	bool first = TRUE;
+	bool first = TRUE, ok;
 	enumerator_t *enumerator = list->create_enumerator(list);
 	certificate_t *cert;
+	time_t produced, usable, now = time(NULL);
 
 	while (enumerator->enumerate(enumerator, (void**)&cert))
 	{
@@ -1039,8 +1041,20 @@ static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 			fprintf(out, "\n");
 			first = FALSE;
 		}
-
 		fprintf(out, "  signer:   \"%Y\"\n", cert->get_issuer(cert));
+
+		/* check validity */
+		ok = cert->get_validity(cert, &now, &produced, &usable);
+		fprintf(out, "  validity:  produced at %T\n", &produced, utc);
+		fprintf(out, "             usable till %T, ", &usable, utc);
+		if (ok)
+		{
+			fprintf(out, "ok\n");
+		}
+		else
+		{
+			fprintf(out, "expired (%V ago)\n", &now, &usable);
+		}
 	}
 	enumerator->destroy(enumerator);
 }
@@ -1071,6 +1085,13 @@ static void list_algs(FILE *out)
 	while (enumerator->enumerate(enumerator, &integrity))
 	{
 		fprintf(out, "%N ", integrity_algorithm_names, integrity);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  aead:       ");
+	enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption))
+	{
+		fprintf(out, "%N ", encryption_algorithm_names, encryption);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n  hasher:     ");
@@ -1184,7 +1205,7 @@ static void pool_leases(private_stroke_list_t *this, FILE *out, char *pool,
 	bool on;
 	int found = 0;
 
-	fprintf(out, "Leases in pool '%s', usage: %lu/%lu, %lu online\n",
+	fprintf(out, "Leases in pool '%s', usage: %u/%u, %u online\n",
 			pool, online + offline, size, online);
 	enumerator = this->attribute->create_lease_enumerator(this->attribute, pool);
 	while (enumerator && enumerator->enumerate(enumerator, &id, &lease, &on))

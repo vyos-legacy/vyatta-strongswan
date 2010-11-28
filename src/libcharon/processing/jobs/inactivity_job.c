@@ -87,7 +87,7 @@ METHOD(job_t, execute, void,
 				}
 				else
 				{
-					charon->scheduler->schedule_job(charon->scheduler,
+					lib->scheduler->schedule_job(lib->scheduler,
 							&this->public.job_interface, this->timeout - diff);
 					rescheduled = TRUE;
 				}
@@ -136,9 +136,11 @@ inactivity_job_t *inactivity_job_create(u_int32_t reqid, u_int32_t timeout,
 	private_inactivity_job_t *this;
 
 	INIT(this,
-		.public.job_interface = {
-			.execute = _execute,
-			.destroy = _destroy,
+		.public = {
+				.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
 		},
 		.reqid = reqid,
 		.timeout = timeout,

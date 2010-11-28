@@ -79,6 +79,11 @@
 #include "whack_attribute.h"
 #include "pluto.h"
 
+/**
+ * Number of threads in the thread pool, if not specified in config.
+ */
+#define DEFAULT_THREADS 4
+
 static void usage(const char *mess)
 {
 	if (mess != NULL && *mess != '\0')
@@ -91,7 +96,6 @@ static void usage(const char *mess)
 			" \\\n\t"
 			"[--nofork]"
 			" [--stderrlog]"
-			" [--noklips]"
 			" [--nocrsend]"
 			" \\\n\t"
 			"[--strictcrlpolicy]"
@@ -125,7 +129,7 @@ static void usage(const char *mess)
 			" \\\n\t"
 			"[--debug-control]"
 			" [--debug-lifecycle]"
-			" [--debug-klips]"
+			" [--debug-kernel]"
 			" [--debug-dns]"
 			" \\\n\t"
 			"[--debug-oppo]"
@@ -295,7 +299,6 @@ int main(int argc, char **argv)
 			{ "optionsfrom", required_argument, NULL, '+' },
 			{ "nofork", no_argument, NULL, 'd' },
 			{ "stderrlog", no_argument, NULL, 'e' },
-			{ "noklips", no_argument, NULL, 'n' },
 			{ "nocrsend", no_argument, NULL, 'c' },
 			{ "strictcrlpolicy", no_argument, NULL, 'r' },
 			{ "crlcheckinterval", required_argument, NULL, 'x'},
@@ -333,7 +336,8 @@ int main(int argc, char **argv)
 			{ "debug-emitting", no_argument, NULL, DBG_EMITTING + DBG_OFFSET },
 			{ "debug-control", no_argument, NULL, DBG_CONTROL + DBG_OFFSET },
 			{ "debug-lifecycle", no_argument, NULL, DBG_LIFECYCLE + DBG_OFFSET },
-			{ "debug-klips", no_argument, NULL, DBG_KLIPS + DBG_OFFSET },
+			{ "debug-klips", no_argument, NULL, DBG_KERNEL + DBG_OFFSET },
+			{ "debug-kernel", no_argument, NULL, DBG_KERNEL + DBG_OFFSET },
 			{ "debug-dns", no_argument, NULL, DBG_DNS + DBG_OFFSET },
 			{ "debug-oppo", no_argument, NULL, DBG_OPPO + DBG_OFFSET },
 			{ "debug-controlmore", no_argument, NULL, DBG_CONTROLMORE + DBG_OFFSET },
@@ -394,10 +398,6 @@ int main(int argc, char **argv)
 
 		case 'e':       /* --stderrlog */
 			log_to_stderr_desired = TRUE;
-			continue;
-
-		case 'n':       /* --noklips */
-			no_klips = TRUE;
 			continue;
 
 		case 'c':       /* --nocrsend */
@@ -621,27 +621,19 @@ int main(int argc, char **argv)
 		fflush(stdout);
 	}
 
-	/* Close everything but ctl_fd and (if needed) stderr.
-	 * There is some danger that a library that we don't know
-	 * about is using some fd that we don't know about.
-	 * I guess we'll soon find out.
+	/* Redirect stdin, stdout and stderr to /dev/null
 	 */
 	{
-		int i;
-
-		for (i = getdtablesize() - 1; i >= 0; i--)  /* Bad hack */
-		{
-			if ((!log_to_stderr || i != 2) && i != ctl_fd)
-				close(i);
-		}
-
-		/* make sure that stdin, stdout, stderr are reserved */
-		if (open("/dev/null", O_RDONLY) != 0)
+		int fd;
+		if ((fd = open("/dev/null", O_RDWR)) == -1)
 			abort();
-		if (dup2(0, 1) != 1)
+		if (dup2(fd, 0) != 0)
 			abort();
-		if (!log_to_stderr && dup2(0, 2) != 2)
+		if (dup2(fd, 1) != 1)
 			abort();
+		if (!log_to_stderr && dup2(fd, 2) != 2)
+			abort();
+		close(fd);
 	}
 
 	init_constants();
@@ -764,6 +756,10 @@ int main(int argc, char **argv)
 	/* loading attribute certificates (experimental) */
 	ac_load_certs();
 
+	lib->processor->set_threads(lib->processor,
+			lib->settings->get_int(lib->settings, "pluto.threads",
+								   DEFAULT_THREADS));
+
 	daily_log_event();
 	call_server();
 	return -1;  /* Shouldn't ever reach this */
@@ -779,11 +775,13 @@ int main(int argc, char **argv)
  */
 void exit_pluto(int status)
 {
+	lib->processor->set_threads(lib->processor, 0);
 	reset_globals();    /* needed because we may be called in odd state */
 	free_preshared_secrets();
 	free_remembered_public_keys();
 	delete_every_connection();
 	whack_attribute_finalize(); /* free in-memory pools */
+	kernel_finalize();
 	fetch_finalize();           /* stop fetching thread */
 	free_crl_fetch();           /* free chain of crl fetch requests */
 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */

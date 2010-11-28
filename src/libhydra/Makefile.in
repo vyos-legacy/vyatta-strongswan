@@ -38,8 +38,16 @@ host_triplet = @host@
 @MONOLITHIC_TRUE@@USE_ATTR_TRUE@am__append_2 = plugins/attr/libstrongswan-attr.la
 @USE_ATTR_SQL_TRUE@am__append_3 = plugins/attr_sql
 @MONOLITHIC_TRUE@@USE_ATTR_SQL_TRUE@am__append_4 = plugins/attr_sql/libstrongswan-attr-sql.la
-@USE_RESOLVE_TRUE@am__append_5 = plugins/resolve
-@MONOLITHIC_TRUE@@USE_RESOLVE_TRUE@am__append_6 = plugins/resolve/libstrongswan-resolve.la
+@USE_KERNEL_PFKEY_TRUE@am__append_5 = plugins/kernel_pfkey
+@MONOLITHIC_TRUE@@USE_KERNEL_PFKEY_TRUE@am__append_6 = plugins/kernel_pfkey/libstrongswan-kernel-pfkey.la
+@USE_KERNEL_PFROUTE_TRUE@am__append_7 = plugins/kernel_pfroute
+@MONOLITHIC_TRUE@@USE_KERNEL_PFROUTE_TRUE@am__append_8 = plugins/kernel_pfroute/libstrongswan-kernel-pfroute.la
+@USE_KERNEL_KLIPS_TRUE@am__append_9 = plugins/kernel_klips
+@MONOLITHIC_TRUE@@USE_KERNEL_KLIPS_TRUE@am__append_10 = plugins/kernel_klips/libstrongswan-kernel-klips.la
+@USE_KERNEL_NETLINK_TRUE@am__append_11 = plugins/kernel_netlink
+@MONOLITHIC_TRUE@@USE_KERNEL_NETLINK_TRUE@am__append_12 = plugins/kernel_netlink/libstrongswan-kernel-netlink.la
+@USE_RESOLVE_TRUE@am__append_13 = plugins/resolve
+@MONOLITHIC_TRUE@@USE_RESOLVE_TRUE@am__append_14 = plugins/resolve/libstrongswan-resolve.la
 subdir = src/libhydra
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -50,6 +58,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
 	$(top_srcdir)/m4/config/lt~obsolete.m4 \
 	$(top_srcdir)/m4/macros/with.m4 \
 	$(top_srcdir)/m4/macros/enable-disable.m4 \
+	$(top_srcdir)/m4/macros/add-plugin.m4 \
 	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -80,9 +89,10 @@ am__base_list = \
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libhydra_la_DEPENDENCIES = $(am__append_2) $(am__append_4) \
-	$(am__append_6)
+	$(am__append_6) $(am__append_8) $(am__append_10) \
+	$(am__append_12) $(am__append_14)
 am_libhydra_la_OBJECTS = hydra.lo attributes.lo attribute_manager.lo \
-	mem_pool.lo
+	mem_pool.lo kernel_interface.lo kernel_ipsec.lo
 libhydra_la_OBJECTS = $(am_libhydra_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -113,7 +123,9 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = . plugins/attr plugins/attr_sql plugins/resolve
+DIST_SUBDIRS = . plugins/attr plugins/attr_sql plugins/kernel_pfkey \
+	plugins/kernel_pfroute plugins/kernel_klips \
+	plugins/kernel_netlink plugins/resolve
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -205,6 +217,8 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PTHREADLIB = @PTHREADLIB@
 RANLIB = @RANLIB@
 RTLIB = @RTLIB@
@@ -236,14 +250,17 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 builddir = @builddir@
+c_plugins = @c_plugins@
 datadir = @datadir@
 datarootdir = @datarootdir@
+dbusservicedir = @dbusservicedir@
 default_pkcs11 = @default_pkcs11@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 gtk_CFLAGS = @gtk_CFLAGS@
 gtk_LIBS = @gtk_LIBS@
+h_plugins = @h_plugins@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -258,24 +275,31 @@ ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
 ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
+libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
 libexecdir = @libexecdir@
-libhydra_plugins = @libhydra_plugins@
-libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
 localstatedir = @localstatedir@
 lt_ECHO = @lt_ECHO@
+maemo_CFLAGS = @maemo_CFLAGS@
+maemo_LIBS = @maemo_LIBS@
+manager_plugins = @manager_plugins@
 mandir = @mandir@
+medsrv_plugins = @medsrv_plugins@
 mkdir_p = @mkdir_p@
 nm_CFLAGS = @nm_CFLAGS@
 nm_LIBS = @nm_LIBS@
 nm_ca_dir = @nm_ca_dir@
 oldincludedir = @oldincludedir@
+openac_plugins = @openac_plugins@
+p_plugins = @p_plugins@
 pdfdir = @pdfdir@
 piddir = @piddir@
+pki_plugins = @pki_plugins@
 plugindir = @plugindir@
 pluto_plugins = @pluto_plugins@
+pool_plugins = @pool_plugins@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -283,7 +307,10 @@ random_device = @random_device@
 resolv_conf = @resolv_conf@
 routing_table = @routing_table@
 routing_table_prio = @routing_table_prio@
+s_plugins = @s_plugins@
 sbindir = @sbindir@
+scepclient_plugins = @scepclient_plugins@
+scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
@@ -301,9 +328,15 @@ hydra.c hydra.h \
 attributes/attributes.c attributes/attributes.h \
 attributes/attribute_provider.h attributes/attribute_handler.h \
 attributes/attribute_manager.c attributes/attribute_manager.h \
-attributes/mem_pool.c attributes/mem_pool.h
+attributes/mem_pool.c attributes/mem_pool.h \
+kernel/kernel_interface.c kernel/kernel_interface.h \
+kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_net.h \
+kernel/kernel_listener.h
 
-libhydra_la_LIBADD = $(am__append_2) $(am__append_4) $(am__append_6)
+libhydra_la_LIBADD = $(am__append_2) $(am__append_4) $(am__append_6) \
+	$(am__append_8) $(am__append_10) $(am__append_12) \
+	$(am__append_14)
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
@@ -312,12 +345,16 @@ AM_CFLAGS = \
 
 EXTRA_DIST = Android.mk
 @MONOLITHIC_FALSE@SUBDIRS = . $(am__append_1) $(am__append_3) \
-@MONOLITHIC_FALSE@	$(am__append_5)
+@MONOLITHIC_FALSE@	$(am__append_5) $(am__append_7) \
+@MONOLITHIC_FALSE@	$(am__append_9) $(am__append_11) \
+@MONOLITHIC_FALSE@	$(am__append_13)
 
 # build optional plugins
 ########################
 @MONOLITHIC_TRUE@SUBDIRS = $(am__append_1) $(am__append_3) \
-@MONOLITHIC_TRUE@	$(am__append_5)
+@MONOLITHIC_TRUE@	$(am__append_5) $(am__append_7) \
+@MONOLITHIC_TRUE@	$(am__append_9) $(am__append_11) \
+@MONOLITHIC_TRUE@	$(am__append_13)
 all: all-recursive
 
 .SUFFIXES:
@@ -395,6 +432,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attribute_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attributes.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hydra.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_interface.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_ipsec.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mem_pool.Plo@am__quote@
 
 .c.o:
@@ -438,6 +477,20 @@ mem_pool.lo: attributes/mem_pool.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='attributes/mem_pool.c' object='mem_pool.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mem_pool.lo `test -f 'attributes/mem_pool.c' || echo '$(srcdir)/'`attributes/mem_pool.c
+
+kernel_interface.lo: kernel/kernel_interface.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT kernel_interface.lo -MD -MP -MF $(DEPDIR)/kernel_interface.Tpo -c -o kernel_interface.lo `test -f 'kernel/kernel_interface.c' || echo '$(srcdir)/'`kernel/kernel_interface.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/kernel_interface.Tpo $(DEPDIR)/kernel_interface.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='kernel/kernel_interface.c' object='kernel_interface.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o kernel_interface.lo `test -f 'kernel/kernel_interface.c' || echo '$(srcdir)/'`kernel/kernel_interface.c
+
+kernel_ipsec.lo: kernel/kernel_ipsec.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT kernel_ipsec.lo -MD -MP -MF $(DEPDIR)/kernel_ipsec.Tpo -c -o kernel_ipsec.lo `test -f 'kernel/kernel_ipsec.c' || echo '$(srcdir)/'`kernel/kernel_ipsec.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/kernel_ipsec.Tpo $(DEPDIR)/kernel_ipsec.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='kernel/kernel_ipsec.c' object='kernel_ipsec.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o kernel_ipsec.lo `test -f 'kernel/kernel_ipsec.c' || echo '$(srcdir)/'`kernel/kernel_ipsec.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

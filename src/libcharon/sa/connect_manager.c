@@ -932,7 +932,7 @@ static void update_checklist_state(private_connect_manager_t *this,
 
 		callback_data_t *data = callback_data_create(this, checklist->connect_id);
 		job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiator_finish, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-		charon->scheduler->schedule_job_ms(charon->scheduler, job, ME_WAIT_TO_FINISH);
+		lib->scheduler->schedule_job_ms(lib->scheduler, job, ME_WAIT_TO_FINISH);
 		checklist->is_finishing = TRUE;
 	}
 
@@ -1031,7 +1031,7 @@ static void queue_retransmission(private_connect_manager_t *this, check_list_t *
 	DBG2(DBG_IKE, "scheduling retransmission %d of pair '%d' in %dms",
 		 retransmission, pair->id, rto);
 
-	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)job, rto);
+	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)job, rto);
 }
 
 /**
@@ -1064,7 +1064,7 @@ static void send_check(private_connect_manager_t *this, check_list_t *checklist,
 	DBG2(DBG_IKE, "send ME_CONNECTAUTH %#B", &check->auth);
 
 	packet_t *packet;
-	if (message->generate(message, NULL, NULL, &packet) == SUCCESS)
+	if (message->generate(message, NULL, &packet) == SUCCESS)
 	{
 		charon->sender->send(charon->sender, packet->clone(packet));
 
@@ -1170,7 +1170,7 @@ static void schedule_checks(private_connect_manager_t *this, check_list_t *check
 {
 	callback_data_t *data = callback_data_create(this, checklist->connect_id);
 	checklist->sender = (job_t*)callback_job_create((callback_job_cb_t)sender, data, (callback_job_cleanup_t)callback_data_destroy, NULL);
-	charon->scheduler->schedule_job_ms(charon->scheduler, checklist->sender, time);
+	lib->scheduler->schedule_job_ms(lib->scheduler, checklist->sender, time);
 }
 
 /**
@@ -1222,7 +1222,7 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 
 			initiate_data_t *data = initiate_data_create(checklist, initiated);
 			job_t *job = (job_t*)callback_job_create((callback_job_cb_t)initiate_mediated, data, (callback_job_cleanup_t)initiate_data_destroy, NULL);
-			charon->processor->queue_job(charon->processor, job);
+			lib->processor->queue_job(lib->processor, job);
 			return;
 		}
 		else
@@ -1357,7 +1357,7 @@ static void process_request(private_connect_manager_t *this, check_t *check,
  */
 static void process_check(private_connect_manager_t *this, message_t *message)
 {
-	if (message->parse_body(message, NULL, NULL) != SUCCESS)
+	if (message->parse_body(message, NULL) != SUCCESS)
 	{
 		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
 			 exchange_type_names, message->get_exchange_type(message),
@@ -1477,7 +1477,7 @@ static void check_and_initiate(private_connect_manager_t *this,
 	{
 		job_t *job = (job_t*)reinitiate_mediation_job_create(mediation_sa,
 															 waiting_sa);
-		charon->processor->queue_job(charon->processor, job);
+		lib->processor->queue_job(lib->processor, job);
 	}
 	iterator->destroy(iterator);
 

@@ -807,7 +807,7 @@ int main(int argc, char **argv)
 	public_key = private_key->get_public_key(private_key);
 
 	/* check for minimum key length */
-	if (private_key->get_keysize(private_key) < RSA_MIN_OCTETS)
+	if (private_key->get_keysize(private_key) < RSA_MIN_OCTETS / BITS_PER_BYTE)
 	{
 		exit_scepclient("length of RSA key has to be at least %d bits"
 			,RSA_MIN_OCTETS * BITS_PER_BYTE);
@@ -859,7 +859,7 @@ int main(int argc, char **argv)
 						BUILD_SIGNING_KEY, private_key,
 						BUILD_SUBJECT, subject,
 						BUILD_SUBJECT_ALTNAMES, subjectAltNames,
-						BUILD_PASSPHRASE, challengePassword,
+						BUILD_CHALLENGE_PWD, challengePassword,
 						BUILD_DIGEST_ALG, pkcs10_signature_alg,
 						BUILD_END);
 		if (!pkcs10_req)

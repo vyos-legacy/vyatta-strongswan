@@ -234,7 +234,7 @@ out_attr(int type
 				, val, enum_show(d, val)));
 	return TRUE;
 }
-#define return_on(var, val) do { var=val;goto return_out; } while(0);
+#define return_on(var, val) do { var=val;goto return_out; } while(0)
 /* Output an SA, as described by a db_sa.
  * This has the side-effect of allocating SPIs for us.
  */
@@ -448,7 +448,7 @@ out_sa(pb_stream *outs
 							, &st->st_connection->spd
 							, tunnel_mode);
 						if (*spi_ptr == 0)
-							return FALSE;
+							return_on(ret, FALSE);
 						*spi_generated = TRUE;
 					}
 					if (!out_raw((u_char *)spi_ptr, IPSEC_DOI_SPI_SIZE
@@ -2176,7 +2176,7 @@ parse_ipsec_sa_body(
 #endif
 			if (!can_do_IPcomp)
 			{
-				plog("compression proposed by %s, but KLIPS is not configured with IPCOMP"
+				plog("compression proposed by %s, but kernel does not support IPCOMP"
 					, ip_str(&c->spd.that.host_addr));
 				continue;
 			}

@@ -19,6 +19,9 @@
  * @defgroup attributes attributes
  * @ingroup libhydra
  *
+ * @defgroup hkernel kernel
+ * @ingroup libhydra
+ *
  * @defgroup hplugins plugins
  * @ingroup libhydra
  *
@@ -32,6 +35,7 @@
 typedef struct hydra_t hydra_t;
 
 #include <attributes/attribute_manager.h>
+#include <kernel/kernel_interface.h>
 
 #include <library.h>
 
@@ -44,6 +48,11 @@ struct hydra_t {
 	 * manager for payload attributes
 	 */
 	attribute_manager_t *attributes;
+
+	/**
+	 * kernel interface to communicate with kernel
+	 */
+	kernel_interface_t *kernel_interface;
 
 	/**
 	 * name of the daemon that initialized the library

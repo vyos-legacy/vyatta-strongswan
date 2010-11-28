@@ -187,6 +187,15 @@ static identification_t *general_name2id(GENERAL_NAME *name)
 		}
 		case GEN_DIRNAME :
 			return openssl_x509_name2id(name->d.directoryName);
+		case GEN_OTHERNAME:
+			if (OBJ_obj2nid(name->d.otherName->type_id) == NID_ms_upn &&
+				name->d.otherName->value->type == V_ASN1_UTF8STRING)
+			{
+				return identification_create_from_encoding(ID_RFC822_ADDR,
+							openssl_asn1_str2chunk(
+								name->d.otherName->value->value.utf8string));
+			}
+			return NULL;
 		default:
 			return NULL;
 	}
@@ -286,10 +295,23 @@ METHOD(certificate_t, has_subject, id_match_t,
 	identification_t *current;
 	enumerator_t *enumerator;
 	id_match_t match, best;
+	chunk_t encoding;
 
 	if (subject->get_type(subject) == ID_KEY_ID)
 	{
-		if (chunk_equals(this->hash, subject->get_encoding(subject)))
+		encoding = subject->get_encoding(subject);
+
+		if (chunk_equals(this->hash, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
+		if (this->subjectKeyIdentifier.len &&
+			chunk_equals(this->subjectKeyIdentifier, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
+		if (this->pubkey &&
+			this->pubkey->has_fingerprint(this->pubkey, encoding))
 		{
 			return ID_MATCH_PERFECT;
 		}
@@ -756,6 +778,38 @@ static bool parse_extensions(private_openssl_x509_t *this)
 }
 
 /**
+ * Parse ExtendedKeyUsage
+ */
+static void parse_extKeyUsage(private_openssl_x509_t *this)
+{
+	EXTENDED_KEY_USAGE *usage;
+	int i;
+
+	usage = X509_get_ext_d2i(this->x509, NID_ext_key_usage, NULL, NULL);
+	if (usage)
+	{
+		for (i = 0; i < sk_ASN1_OBJECT_num(usage); i++)
+		{
+			switch (OBJ_obj2nid(sk_ASN1_OBJECT_value(usage, i)))
+			{
+				case NID_server_auth:
+					this->flags |= X509_SERVER_AUTH;
+					break;
+				case NID_client_auth:
+					this->flags |= X509_CLIENT_AUTH;
+					break;
+				case NID_OCSP_sign:
+					this->flags |= X509_OCSP_SIGNER;
+					break;
+				default:
+					break;
+			}
+		}
+		sk_ASN1_OBJECT_pop_free(usage, ASN1_OBJECT_free);
+	}
+}
+
+/**
  * Parse a DER encoded x509 certificate
  */
 static bool parse_certificate(private_openssl_x509_t *this)
@@ -814,6 +868,7 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	{
 		return TRUE;
 	}
+	parse_extKeyUsage(this);
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)

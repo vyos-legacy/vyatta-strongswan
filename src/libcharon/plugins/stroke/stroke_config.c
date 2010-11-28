@@ -15,6 +15,7 @@
 
 #include "stroke_config.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <utils/lexparser.h>
@@ -199,8 +200,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	host = host_create_from_dns(msg->add_conn.other.address, 0, 0);
 	if (host)
 	{
-		interface = charon->kernel_interface->get_interface(
-												charon->kernel_interface, host);
+		interface = hydra->kernel_interface->get_interface(
+												hydra->kernel_interface, host);
 		host->destroy(host);
 		if (interface)
 		{
@@ -215,8 +216,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 			host = host_create_from_dns(msg->add_conn.me.address, 0, 0);
 			if (host)
 			{
-				interface = charon->kernel_interface->get_interface(
-												charon->kernel_interface, host);
+				interface = hydra->kernel_interface->get_interface(
+												hydra->kernel_interface, host);
 				host->destroy(host);
 				if (!interface)
 				{
@@ -362,7 +363,16 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			}
 		}
 		else
-		{	/* no second authentication round, fine */
+		{	/* no second authentication round, fine. But load certificates
+			 * for other purposes (EAP-TLS) */
+			if (cert)
+			{
+				certificate = this->cred->load_peer(this->cred, cert);
+				if (certificate)
+				{
+					certificate->destroy(certificate);
+				}
+			}
 			return NULL;
 		}
 	}
@@ -501,6 +511,11 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 													msg->add_conn.eap_identity);
 			}
 			cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, identity);
+		}
+		if (msg->add_conn.aaa_identity)
+		{
+			cfg->add(cfg, AUTH_RULE_AAA_IDENTITY,
+				identification_create_from_string(msg->add_conn.aaa_identity));
 		}
 	}
 	else

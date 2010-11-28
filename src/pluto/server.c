@@ -56,6 +56,7 @@
 #include "adns.h"       /* needs <resolv.h> */
 #include "dnskey.h"     /* needs keys.h and adns.h */
 #include "whack.h"      /* for RC_LOG_SERIOUS */
+#include "pluto.h"
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
@@ -467,7 +468,6 @@ create_socket(struct raw_iface *ifp, const char *v_name, int port)
 #endif
 
 #if defined(linux) && defined(KERNEL26_SUPPORT)
-	if (!no_klips && kernel_ops->type == KERNEL_TYPE_LINUX)
 	{
 		struct sadb_x_policy policy;
 		int level, opt;
@@ -536,7 +536,6 @@ process_raw_ifaces(struct raw_iface *rifaces)
 	for (ifp = rifaces; ifp != NULL; ifp = ifp->next)
 	{
 		struct raw_iface *v = NULL;     /* matching ipsecX interface */
-		struct raw_iface fake_v;
 		bool after = FALSE; /* has vfp passed ifp on the list? */
 		bool bad = FALSE;
 		struct raw_iface *vfp;
@@ -578,7 +577,6 @@ process_raw_ifaces(struct raw_iface *rifaces)
 					 * "after" allows us to avoid double reporting.
 					 */
 #if defined(linux) && defined(KERNEL26_SUPPORT)
-					if (!no_klips && kernel_ops->type == KERNEL_TYPE_LINUX)
 					{
 						if (after)
 						{
@@ -603,7 +601,6 @@ process_raw_ifaces(struct raw_iface *rifaces)
 			continue;
 
 #if defined(linux) && defined(KERNEL26_SUPPORT)
-		if (!no_klips && kernel_ops->type == KERNEL_TYPE_LINUX)
 		{
 			v = ifp;
 			goto add_entry;
@@ -613,24 +610,10 @@ process_raw_ifaces(struct raw_iface *rifaces)
 		/* what if we didn't find a virtual interface? */
 		if (v == NULL)
 		{
-			if (no_klips)
-			{
-				/* kludge for testing: invent a virtual device */
-				static const char fvp[] = "virtual";
-				fake_v = *ifp;
-				passert(sizeof(fake_v.name) > sizeof(fvp));
-				strcpy(fake_v.name, fvp);
-				addrtot(&ifp->addr, 0, fake_v.name + sizeof(fvp) - 1
-					, sizeof(fake_v.name) - (sizeof(fvp) - 1));
-				v = &fake_v;
-			}
-			else
-			{
-				DBG(DBG_CONTROL,
-						DBG_log("IP interface %s %s has no matching ipsec* interface -- ignored"
-							, ifp->name, ip_str(&ifp->addr)));
-				continue;
-			}
+			DBG(DBG_CONTROL,
+				DBG_log("IP interface %s %s has no matching ipsec* interface -- ignored"
+					, ifp->name, ip_str(&ifp->addr)));
+			continue;
 		}
 
 		/* We've got all we need; see if this is a new thing:
@@ -811,7 +794,7 @@ call_server(void)
 	{
 		fd_set readfds;
 		fd_set writefds;
-		int ndes;
+		int ndes, events_fd;
 
 		/* wait for next interesting thing */
 
@@ -853,19 +836,10 @@ call_server(void)
 				FD_SET(adns_afd, &readfds);
 			}
 
-#ifdef KLIPS
-			if (!no_klips)
-			{
-				int fd = *kernel_ops->async_fdp;
-
-				if (kernel_ops->process_queue)
-					kernel_ops->process_queue();
-				if (maxfd < fd)
-					maxfd = fd;
-				passert(!FD_ISSET(fd, &readfds));
-				FD_SET(fd, &readfds);
-			}
-#endif
+			events_fd = pluto->events->get_event_fd(pluto->events);
+			if (maxfd < events_fd)
+				maxfd = events_fd;
+			FD_SET(events_fd, &readfds);
 
 			if (listening)
 			{
@@ -947,18 +921,16 @@ call_server(void)
 				ndes--;
 			}
 
-#ifdef KLIPS
-			if (!no_klips && FD_ISSET(*kernel_ops->async_fdp, &readfds))
+			if (FD_ISSET(events_fd, &readfds))
 			{
 				passert(ndes > 0);
 				DBG(DBG_CONTROL,
 					DBG_log(BLANK_FORMAT);
-					DBG_log("*received kernel message"));
-				kernel_ops->process_msg();
+					DBG_log("*handling asynchronous events"));
+				pluto->events->handle(pluto->events);
 				passert(GLOBALS_ARE_RESET());
 				ndes--;
 			}
-#endif
 
 			for (ifp = interfaces; ifp != NULL; ifp = ifp->next)
 			{

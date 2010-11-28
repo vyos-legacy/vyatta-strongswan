@@ -22,6 +22,7 @@
 
 #include <unistd.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/condvar.h>
@@ -155,7 +156,7 @@ static void destroy(private_load_tester_plugin_t *this)
 		this->condvar->wait(this->condvar, this->mutex);
 	}
 	this->mutex->unlock(this->mutex);
-	charon->kernel_interface->remove_ipsec_interface(charon->kernel_interface,
+	hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
@@ -215,13 +216,13 @@ plugin_t *load_tester_plugin_create()
 	if (lib->settings->get_bool(lib->settings,
 					"charon.plugins.load-tester.fake_kernel", FALSE))
 	{
-		charon->kernel_interface->add_ipsec_interface(charon->kernel_interface,
+		hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	}
 	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{
-		charon->processor->queue_job(charon->processor,
+		lib->processor->queue_job(lib->processor,
 					(job_t*)callback_job_create((callback_job_cb_t)do_load_test,
 												this, NULL, NULL));
 	}
