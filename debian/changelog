@@ -1,6 +1,12 @@
 strongswan (4.5.0-1) unstable; urgency=low
 
   * New upstream version 4.5.0
+  * Enabled new configure options for additional libstrongswan plugins:
+    --enable-ctr --enable-ccm --enable-gcm --enable-addrblock --enable-led
+    --enable-pkcs11 --enable-eap-tls --enable-eap-ttls --enable-eap-tnc
+  * Enable NAT-Traversal with transport mode support so that strongswan
+    can be used for an L2TP/IPsec gateway (e.g. for Windows or mobile phone
+    clients).
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 28 Nov 2010 13:09:42 +0100
 

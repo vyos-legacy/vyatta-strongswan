@@ -1,0 +1,17 @@
+strongswan (4.5.0-1) unstable; urgency=low
+
+  Starting with strongswan 4.5.0 upstream, the IKEv2 protocol is now the
+  default. This can easily be changed using the keyexchange=ikev1 config
+  option (either in the respective "conn" section or by putting it in the
+  "default" section and therefore applying it to all existing connections).
+
+  The IKEv2 protocol has less overhead, more features (e.g. NAT-Traversal by
+  default, MOBIKE, Mobile IPv6), and provides better error messages in case
+  the connection can not be established. It is therefore highly recommended
+  to use it when the other side also supports it.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun,  28 Nov 2010 13:16:00 +0200
+
+Local variables:
+mode: debian-changelog
+End:

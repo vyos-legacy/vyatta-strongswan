@@ -14,21 +14,25 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
 		--enable-ldap --enable-curl \
 		--with-capabilities=libcap \
-		--enable-smartcard \
+		--enable-smartcard --enable-pkcs11 \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-mediation --enable-medsrv --enable-medcli \
 		--enable-openssl --enable-agent \
+		--enable-ctr --enable-ccm --enable-gcm --enable-addrblock \
 		--enable-eap-radius --enable-eap-identity --enable-eap-md5 \
 		--enable-eap-gtc --enable-eap-aka --enable-eap-mschapv2 \
+		--enable-eap-tls --enable-eap-ttls --enable-eap-tnc \
 		--enable-sql --enable-integrity-test \
 		--enable-nm --enable-ha --enable-dhcp --enable-farp \
-		--enable-test-vectors
+		--enable-led \
+		--enable-test-vectors --enable-nat-transport
 	#	--with-user=strongswan --with-group=nogroup \
 	#	--enable-kernel-pfkey --enable-kernel-klips \
-	# Could enable --enable-nat-transport, but this is actually insecure,
-	# so don't!
 	# And for --enable-eap-sim we would need the library, which we don't
 	# have right now.
+	# Don't --enable-cisco-quirks, because some other IPsec implementations
+	# (most notably the Phion one) have problems connecting when pluto 
+	# sends these Cisco options.
 
 DEB_BUILD_ARCH_CPU ?=$(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
 
