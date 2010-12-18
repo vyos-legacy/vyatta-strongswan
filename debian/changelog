@@ -13,6 +13,9 @@ strongswan (4.5.0-1) unstable; urgency=low
     Closes: #598925: Intent to NMU or help for an l10n upload of strongswan 
                      to fix pending po-debconf l10n bugs
     Closes: #598925 #599888 #600354 #600409 #602449 #603723 #603779
+  * Add Brazilian Portugese debconf translation.
+    Closes: #607404: strongswan: [INTL:pt_BR] Brazilian Portuguese debconf 
+		     templates translation
 
  -- Rene Mayrhofer <rmayr@debian.org>  Sun, 28 Nov 2010 13:09:42 +0100
 
