@@ -1,3 +1,9 @@
+strongswan (4.3.2-1.1-vyatta13+mendocino1) unstable; urgency=low
+
+  * new branch
+
+ -- An-Cheng Huang <ancheng@vyatta.com>  Tue, 28 Dec 2010 20:40:29 +0000
+
 strongswan (4.3.2-1.1-vyatta13) unstable; urgency=low
 
   * UNRELEASED
