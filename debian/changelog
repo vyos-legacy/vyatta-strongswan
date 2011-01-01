@@ -7,6 +7,11 @@ strongswan (4.5.0-1) unstable; urgency=low
   * Enable NAT-Traversal with transport mode support so that strongswan
     can be used for an L2TP/IPsec gateway (e.g. for Windows or mobile phone
     clients).
+  * Special handling for strongswan-nm package during build time: only build
+    and install if headers are really available. This supports easier 
+    backporting by simply ignoring build-deps and therefore to build all
+    packages except the strongswan-nm without any changes to the source 
+    package.
   * Install test-vectors and revocation plugins for libstrongswan.
     Closes: #600996: strongswan-starter: plugin 'revocation' failed to load
   * Acknowledge translations NMU.
