@@ -17,6 +17,9 @@
 
 #include <freeswan.h>
 
+#include <defs.h>
+#include <constants.h>
+
 /* copy of smartcard operations, defined in smartcard.h */
 #ifndef SC_OP_T
 #define SC_OP_T
@@ -45,7 +48,7 @@ typedef enum {
  */
 
 #define WHACK_BASIC_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 24)
-#define WHACK_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 26)
+#define WHACK_MAGIC (((((('w' << 8) + 'h') << 8) + 'k') << 8) + 30)
 
 typedef struct whack_end whack_end_t;
 
@@ -58,12 +61,12 @@ struct whack_end {
 	char *cert;         /* path string (if any) -- loaded by pluto  */
 	char *ca;           /* distinguished name string (if any) -- parsed by pluto */
 	char *groups;       /* access control groups (if any) -- parsed by pluto */
-	ip_address
-		host_addr,
-		host_nexthop,
-		host_srcip;
+	char *sourceip;		/* source IP address or pool identifier -- parsed by pluto */
+	int   sourceip_mask;
+	ip_address host_addr;
+	ip_address host_nexthop;
+	ip_address host_srcip;
 	ip_subnet client;
-
 	bool key_from_DNS_on_demand;
 	bool has_client;
 	bool has_client_wildcard;
@@ -126,6 +129,14 @@ struct whack_message {
 	time_t dpd_timeout;
 	dpd_action_t dpd_action;
 
+
+	/* Assign optional fixed reqid and xfrm marks to IPsec SA */
+	u_int32_t reqid;
+	struct {
+		u_int32_t value;
+		u_int32_t mask;
+	} mark_in, mark_out;
+
 	/*  note that each end contains string 2/5.id, string 3/6 cert,
 	 *  and string 4/7 updown
 	 */
@@ -174,6 +185,10 @@ struct whack_message {
 	bool whack_deletestate;
 	so_serial_t whack_deletestateno;
 
+	/* for WHACK_LEASES: */
+	bool whack_leases;
+	char *whack_lease_ip, *whack_lease_id;
+
 	/* for WHACK_LISTEN: */
 	bool whack_listen, whack_unlisten;
 
@@ -207,30 +222,40 @@ struct whack_message {
 	int inbase, outbase;
 	char *sc_data;
 
+	/* XAUTH user identity */
+	char *xauth_identity;
+
 	/* space for strings (hope there is enough room):
 	 * Note that pointers don't travel on wire.
-	 *  1 connection name [name_len]
-	 *  2 left's name [left.host.name.len]
+	 *  1 connection name
+	 *  2 left's id
 	 *  3 left's cert
 	 *  4 left's ca
 	 *  5 left's groups
 	 *  6 left's updown
-	 *  7 right's name [left.host.name.len]
-	 *  8 right's cert
-	 *  9 right's ca
-	 * 10 right's groups
-	 * 11 right's updown
-	 * 12 keyid
-	 * 13 myid
-	 * 14 cacert
-	 * 15 ldaphost
-	 * 16 ldapbase
-	 * 17 crluri
-	 * 18 crluri2
-	 * 19 ocspuri
-	 * 20 ike
-	 " 21 esp
-	 * 22 rsa_data
+	 *  7 left's source ip
+	 *  8 left's virtual ip ranges
+	 *  9 right's id
+	 * 10 right's cert
+	 * 11 right's ca
+	 * 12 right's groups
+	 * 13 right's updown
+	 * 14 right's source ip
+	 * 15 right's virtual ip ranges
+	 * 16 keyid
+	 * 17 myid
+	 * 18 cacert
+	 * 19 ldaphost
+	 * 20 ldapbase
+	 * 21 crluri
+	 * 22 crluri2
+	 * 23 ocspuri
+	 * 24 ike
+	 * 25 esp
+	 * 26 smartcard data
+	 * 27 whack leases ip argument
+	 * 28 whack leases id argument
+	 * 29 xauth identity
 	 * plus keyval (limit: 8K bits + overhead), a chunk.
 	 */
 	size_t str_size;
@@ -280,7 +305,7 @@ enum rc_type {
 
 	/* entry of secrets */
 	RC_ENTERSECRET = 40,
-	
+
 	/* progress: start of range for successful state transition.
 	 * Actual value is RC_NEW_STATE plus the new state code.
 	 */

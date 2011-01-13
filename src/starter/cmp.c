@@ -43,6 +43,7 @@ starter_cmp_end(starter_end_t *c1, starter_end_t *c2)
 	{
 		ADDCMP(addr);
 	}
+	VARCMP(ikeport);
 	ADDCMP(nexthop);
 	VARCMP(has_client);
 	VARCMP(has_client_wildcard);
@@ -65,6 +66,10 @@ starter_cmp_conn(starter_conn_t *c1, starter_conn_t *c2)
 	VARCMP(policy);
 	VARCMP(addr_family);
 	VARCMP(tunnel_addr_family);
+	VARCMP(mark_in.value);
+	VARCMP(mark_in.mask);
+	VARCMP(mark_out.value);
+	VARCMP(mark_in.mask);
 
 	if (!starter_cmp_end(&c1->left, &c2->left))
 		return FALSE;

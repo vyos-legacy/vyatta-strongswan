@@ -1,6 +1,7 @@
 /* timer event handling
  * Copyright (C) 1997 Angelos D. Keromytis.
  * Copyright (C) 1998-2001  D. Hugh Redelmeier.
+ * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -47,7 +48,7 @@ time_t now(void)
 {
 	static time_t delta = 0
 		, last_time = 0;
-	time_t n = time((time_t)NULL);
+	time_t n = time(NULL);
 
 	passert(n != (time_t)-1);
 	if (last_time > n)
@@ -139,14 +140,21 @@ void event_schedule(enum event_type type, time_t tm, struct state *st)
  * Generate the secret value for responder cookies, and
  * schedule an event for refresh.
  */
-void init_secret(void)
+bool init_secret(void)
 {
 	rng_t *rng;
-	 
+
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+
+	if (rng == NULL)
+	{
+		plog("secret initialization failed, no RNG supported");
+		return FALSE;
+	}
 	rng->get_bytes(rng, sizeof(secret_of_the_day), secret_of_the_day);
 	rng->destroy(rng);
     event_schedule(EVENT_REINIT_SECRET, EVENT_REINIT_SECRET_DELAY, NULL);
+	return true;
 }
 
 /**
@@ -158,7 +166,7 @@ void handle_timer_event(void)
 	struct event *ev = evlist;
 	int type;
 	struct state *st;
-	struct connection *c = NULL;
+	connection_t *c = NULL;
 	ip_address peer;
 
 	if (ev == (struct event *) NULL)    /* Just paranoid */
@@ -208,7 +216,7 @@ void handle_timer_event(void)
 			passert(st->st_dpd_event == ev);
 			st->st_dpd_event = NULL;
 		}
-		else 
+		else
 		{
 			passert(st->st_event == ev);
 			st->st_event = NULL;

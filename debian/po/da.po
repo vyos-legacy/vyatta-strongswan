@@ -1,0 +1,476 @@
+# Danish translation strongswan.
+# Copyright (C) 2010 strongswan & nedenstående oversættere.
+# This file is distributed under the same license as the strongswan package.
+# Joe Hansen (joedalton2@yahoo.dk), 2010.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: strongswan\n"
+"Report-Msgid-Bugs-To: strongswan@packages.debian.org\n"
+"POT-Creation-Date: 2010-08-16 14:23+0200\n"
+"PO-Revision-Date: 2010-11-04 12:42+0000\n"
+"Last-Translator: Joe Hansen <joedalton2@yahoo.dk>\n"
+"Language-Team: Danish <dansk@dansk-gruppen.dk>\n"
+"Language: da\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: note
+#. Description
+#: ../strongswan-starter.templates:2001
+msgid "Old runlevel management superseded"
+msgstr "Erstattede tidligere kørselsniveauhåndtering"
+
+#. Type: note
+#. Description
+#: ../strongswan-starter.templates:2001
+msgid ""
+"Previous versions of the strongSwan package gave a choice between three "
+"different Start/Stop-Levels. Due to changes in the standard system startup "
+"procedure, this is no longer necessary or useful. For all new installations "
+"as well as old ones running in any of the predefined modes, sane default "
+"levels will now be set. If you are upgrading from a previous version and "
+"changed your strongSwan startup parameters, then please take a look at NEWS."
+"Debian for instructions on how to modify your setup accordingly."
+msgstr ""
+"Tidligere versioner af pakken strongSwan havde et valg mellem tre "
+"forskellige start-/stopniveauer. På grund af ændringer i den normale "
+"procedure for systemopstart, er dette ikke længere nødvendigt eller "
+"brugbart. For alle nye installationer samt ældre installationer der kører i "
+"en af de prædefinerede tilstande, vil standardniveauer for sane ikke blive "
+"angivet. Hvis du opgraderer fra en tidligere version og ændrede dine "
+"opstartsparametre i strongSwan, så kig venligst i NEWS.Debian for "
+"instruktioner om hvordan du ændrer din opsætning, så den passer."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid "Restart strongSwan now?"
+msgstr "Genstart strongSwan nu?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:3001
+msgid ""
+"Restarting strongSwan is recommended, since if there is a security fix, it "
+"will not be applied until the daemon restarts. Most people expect the daemon "
+"to restart, so this is generally a good idea. However, this might take down "
+"existing connections and then bring them back up, so if you are using such a "
+"strongSwan tunnel to connect for this update, restarting is not recommended."
+msgstr ""
+"Genstart af strongSwan anbefales, da det er en sikkerhedsrettelse, rettelsen "
+"vil ikke træde i kraft før dæmonen genstartes. De fleste forventer at "
+"dæmonen genstartes, så dette er generelt en god ide. Det kan dog lægge "
+"eksisterende forbindelser ned og så få dem op igen, så hvis du bruger sådan "
+"en strongSwan-tunneltil at forbinde for denne opdatering, anbefales en "
+"genstart ikke."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:4001
+msgid "Start strongSwan's IKEv1 daemon?"
+msgstr "Start strongSwans IKEv1-dæmon?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:4001
+msgid ""
+"The pluto daemon must be running to support version 1 of the Internet Key "
+"Exchange protocol."
+msgstr ""
+"Dæmonen pluto skal køre for at understøtte version 1 af Internet Key "
+"Exchange-protokollen."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:5001
+msgid "Start strongSwan's IKEv2 daemon?"
+msgstr "Start streongSwans IKEv2-dæmon?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:5001
+msgid ""
+"The charon daemon must be running to support version 2 of the Internet Key "
+"Exchange protocol."
+msgstr ""
+"Dæmonen charon skal køre for at understøtte version 2 af Internet Key "
+"Exchange-protokollen."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid "Use an X.509 certificate for this host?"
+msgstr "Brug et X.509-certifikat for denne vært?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid ""
+"An X.509 certificate for this host can be automatically created or imported. "
+"It can be used to authenticate IPsec connections to other hosts and is the "
+"preferred way of building up secure IPsec connections. The other possibility "
+"would be to use shared secrets (passwords that are the same on both sides of "
+"the tunnel) for authenticating a connection, but for a larger number of "
+"connections, key based authentication is easier to administer and more "
+"secure."
+msgstr ""
+"Et X.509-certifikat for denne vært kan oprettes automatisk eller importeres. "
+"Det kan bruges til at godkende IPsec-forbindelser til andre værter og er den "
+"foretrukne måde at opbygge sikre IPsec-forbindelser. Den anden mulighed "
+"ville være at bruge delte hemmeligheder (adgangskoder der er de samme på "
+"begge sider af tunnelen) til godkendelse af en forbindelse, men for et "
+"større antal forbindelser, er nøglebaseret godkendelse nemmere at "
+"administrere og mere sikkert."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:6001
+msgid ""
+"Alternatively you can reject this option and later use the command \"dpkg-"
+"reconfigure strongswan\" to come back."
+msgstr ""
+"Alternativt kan du afvise denne indstilling og senere bruge kommandoen »dpkg-"
+"reconfigure strongswan«."
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:7001
+msgid "create"
+msgstr "opret"
+
+#. Type: select
+#. Choices
+#: ../strongswan-starter.templates:7001
+msgid "import"
+msgstr "importer"
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:7002
+msgid "Methods for using a X.509 certificate to authenticate this host:"
+msgstr ""
+"Metoder hvormed et X.509-certifikat kan bruges til at godkende denne vært:"
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:7002
+msgid ""
+"It is possible to create a new X.509 certificate with user-defined settings "
+"or to import an existing public and private key stored in PEM file(s) for "
+"authenticating IPsec connections."
+msgstr ""
+"Det er muligt at oprette et nyt X.509-certifikat med brugerdefineret "
+"opsætning eller at importere en eksisterende offentlig og privat nøgle gemt "
+"i PEM-filer for godkendelse af IPsec-forbindelser."
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:7002
+msgid ""
+"If you choose to create a new X.509 certificate you will first be asked a "
+"number of questions which must be answered before the creation can start. "
+"Please keep in mind that if you want the public key to get signed by an "
+"existing Certificate Authority you should not select to create a self-signed "
+"certificate and all the answers given must match exactly the requirements of "
+"the CA, otherwise the certificate request may be rejected."
+msgstr ""
+"Hvis du vælger at oprette et nyt X.509-certifikat, vil du først blive spurgt "
+"om et antal spørgsmål, som skal besvares før oprettelsen kan begynde. Husk "
+"venligst at hvis du ønsker at den offentlige nøgle skal underskrives af et "
+"eksisterende Certificate Authority, så bør du ikke vælge at oprette et "
+"certifikat underskrevet af dig selv og alle svarene skal svare præcis til "
+"krævene i CA'en, ellers vil certifikatanmodningen blive afvist."
+
+#. Type: select
+#. Description
+#: ../strongswan-starter.templates:7002
+msgid ""
+"If you want to import an existing public and private key you will be "
+"prompted for their filenames (which may be identical if both parts are "
+"stored together in one file). Optionally you may also specify a filename "
+"where the public key(s) of the Certificate Authority are kept, but this file "
+"cannot be the same as the former ones. Please also be aware that the format "
+"for the X.509 certificates has to be PEM and that the private key must not "
+"be encrypted or the import procedure will fail."
+msgstr ""
+"Hvis du ønsker at importere en eksisterende offentlig og privat nøgle, vil "
+"du blive spurgt om deres filnavne (som kan være identiske, hvis begge er "
+"gemt sammen i en fil). Du kan valgfrit angive et filnavn hvor de offentlige "
+"nøgler fra Certificate Authority opbevares, men denne fil kan ikke være den "
+"samme som den tidligere. Vær venligst også opmærksom på at formatet for "
+"X.509-certifikatet skal være PEM, og at den private nøgle ikke må være "
+"krypteret, ellers vil importproceduren fejle."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:8001
+msgid "File name of your PEM format X.509 certificate:"
+msgstr "Filnavn på dit PEM-formateret X.509-certifikat:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:8001
+msgid ""
+"Please enter the location of the file containing your X.509 certificate in "
+"PEM format."
+msgstr ""
+"Indtast venligst placeringen på filen der indeholder dit X.509-certifikat i "
+"PEM-format."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:9001
+msgid "File name of your PEM format X.509 private key:"
+msgstr "Filnavn på din private PEM-formateret X.509-nøgle:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:9001
+msgid ""
+"Please enter the location of the file containing the private RSA key "
+"matching your X.509 certificate in PEM format. This can be the same file "
+"that contains the X.509 certificate."
+msgstr ""
+"Indtast venligst placeringen på filen, der indeholder den private RSA-nøgle "
+"der svarer til dit X.509-certifikat i PEM-format. Dette kan være den samme "
+"fil som indeholder X.509-certifikatet."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:10001
+msgid "File name of your PEM format X.509 RootCA:"
+msgstr "Filnavn på dit PEM-formaterede X.509-RootCA:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:10001
+msgid ""
+"Optionally you can now enter the location of the file containing the X.509 "
+"Certificate Authority root used to sign your certificate in PEM format. If "
+"you do not have one or do not want to use it please leave the field empty. "
+"Please note that it's not possible to store the RootCA in the same file as "
+"your X.509 certificate or private key."
+msgstr ""
+"Du kan nu valgfrit indtaste placeringen på filen, der indeholder X.509 "
+"Certificate Authority-root brugt til at underskrive dit certifikat i PEM-"
+"format. Hvis du ikke har et eller ikke ønsker at bruge det så efterlad dette "
+"felt tomt. Bemærk venligst at det ikke er muligt at gemme RootCA'en i den "
+"samme fil som dit X.509-certifikat eller din private nøgle."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid "Please enter which length the created RSA key should have:"
+msgstr "Indtast venligst hvilken længde den oprettede RSA-nøgle skal have:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:11001
+msgid ""
+"Please enter the length of the created RSA key. It should not be less than "
+"1024 bits because this should be considered unsecure and you will probably "
+"not need anything more than 4096 bits because it only slows the "
+"authentication process down and is not needed at the moment."
+msgstr ""
+"Indtast venligst længden på den oprettede RSA-nøgle. Den bør ike være mindre "
+"end 1024 bit, da dette er usikkert, og du vil sikkert ikke have brug for "
+"mere end 4096 bit, da det kun sløver godkendelsesprocessen ned og behovet "
+"ikke er der i øjeblikket."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid "Create a self-signed X.509 certificate?"
+msgstr "Opret et X.509-certifikat du selv har underskrevet?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid ""
+"Only self-signed X.509 certificates can be created automatically, because "
+"otherwise a Certificate Authority is needed to sign the certificate request. "
+"If you choose to create a self-signed certificate, you can use it "
+"immediately to connect to other IPsec hosts that support X.509 certificate "
+"for authentication of IPsec connections. However, using strongSwan's PKI "
+"features requires all certificates to be signed by a single Certificate "
+"Authority to create a trust path."
+msgstr ""
+"Kun X.509-certifikater du selv har underskrevet kan oprettes automatisk, da "
+"en Certifikat Authority ellers er nødvendig for at certifikatforespørgslen "
+"biver underskrevet. Hvis du vælger at oprette et certifikat, du selv "
+"underskriver, kan du umiddelbart bruge det efterfølgende til at forbinde til "
+"andre IPsec-værter som understøtter X.509-certifikater til godkendelse af "
+"IPsec-forbindelser. Brug af strongSwans PKI-funktioner kræver dog at alle "
+"certifikater skal være underskrevet af en Certificate Authority for at "
+"oprette en troværdighed."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:12001
+msgid ""
+"If you do not choose to create a self-signed certificate, only the RSA "
+"private key and the certificate request will be created, and you will have "
+"to sign the certificate request with your Certificate Authority."
+msgstr ""
+"Hvis du vælger ikke at oprette et certifikat, du selv har underskrevet, vil "
+"kun den private RSA-nøgle og certifikatforespørgslen blive oprettet, og du "
+"vil skulle underskrive certifikatforespørgslen med dit Certificate Authority."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+msgid "Country code for the X.509 certificate request:"
+msgstr "Landekode for X.509-certifikatforespørgslen:"
+
+# hvad er det for en tobogstavskode de henviser til her? DA eller DK.
+# ISO 3166 som de nævner efterfølgende er trecifret (DNK), men underdelen af 
+# 3166 er tocifret og DK for Danmark, men det dækker områderne i Danmark 
+# som Midtjylland DK-82 med flere.
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+msgid ""
+"Please enter the two-letter code for the country the server resides in (such "
+"as \"AT\" for Austria)."
+msgstr ""
+"Indtast venligst koden, der består af to bogstaver, for landet hvor serveren "
+"befinder sig (såsom »DK« for Danmark)."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:13001
+msgid ""
+"OpenSSL will refuse to generate a certificate unless this is a valid "
+"ISO-3166 country code; an empty field is allowed elsewhere in the X.509 "
+"certificate, but not here."
+msgstr ""
+"OpenSSL vil nægte at oprette et certifikat med mindre dette er en gyldig "
+"ISO-3166 landekode. Et tomt felt er tilladt andre steder i X.509-"
+"certifikatet men ikke her."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+msgid "State or province name for the X.509 certificate request:"
+msgstr "Stat eller provinsnavn for X.509-certifikatforespørgslen:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:14001
+msgid ""
+"Please enter the full name of the state or province the server resides in "
+"(such as \"Upper Austria\")."
+msgstr ""
+"Indtast venligst det fulde navn på staten eller provinsen som serveren "
+"befinder sig i (såsom »Nordjylland«)."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+msgid "Locality name for the X.509 certificate request:"
+msgstr "Lokalitetsnavn for X.509-certifikatforespørgslen:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:15001
+msgid ""
+"Please enter the locality the server resides in (often a city, such as "
+"\"Vienna\")."
+msgstr ""
+"Indtast venligst lokaliteten hvor serveren befinder sig (ofte en by, såsom "
+"»Århus«)."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+msgid "Organization name for the X.509 certificate request:"
+msgstr "Organisationsnavn for X.509-certifikatforespørglsen:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:16001
+msgid ""
+"Please enter the organization the server belongs to (such as \"Debian\")."
+msgstr ""
+"Indtast venligst organisationen som serveren tilhører (såsom »Debian«)."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+msgid "Organizational unit for the X.509 certificate request:"
+msgstr "Organisationsgruppe for X.509-certifikatforespørgslen:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:17001
+msgid ""
+"Please enter the organizational unit the server belongs to (such as "
+"\"security group\")."
+msgstr ""
+"Indtast venligst organisationsgruppen som serveren tilhører (såsom "
+"»sikkerhedsafdelingen«)."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+msgid "Common Name for the X.509 certificate request:"
+msgstr "Betegnelsen for X.509-certifikatforespørgslen:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:18001
+msgid ""
+"Please enter the Common Name for this host (such as \"gateway.example.org\")."
+msgstr ""
+"Indtast venligst betegnelsen (navnet) for denne vært (såsom »gateway."
+"eksempel.org«)."
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid "Email address for the X.509 certificate request:"
+msgstr "E-post-adresse for X.509-certifikatforespørgslen:"
+
+#. Type: string
+#. Description
+#: ../strongswan-starter.templates:19001
+msgid ""
+"Please enter the email address of the person or organization responsible for "
+"the X.509 certificate."
+msgstr ""
+"Indtast venligst e-post-adressen på personen eller organisationen der er "
+"ansvarlig for X.509-certifikatet."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:20001
+msgid "Enable opportunistic encryption?"
+msgstr "Aktiver opportunistisk kryptering?"
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:20001
+msgid ""
+"This version of strongSwan supports opportunistic encryption (OE), which "
+"stores IPSec authentication information in DNS records. Until this is widely "
+"deployed, activating it will cause a significant delay for every new "
+"outgoing connection."
+msgstr ""
+"Denne version af strongSwan understøtter opportunistisk kryptering (OE), som "
+"gemmer IPSec-godkendelsesinformation i DNS-punkter. Indtil dette er udbredt, "
+"vil aktivering medføre en væsentlig forsinkelse for hver ny udgående "
+"forbindelse."
+
+#. Type: boolean
+#. Description
+#: ../strongswan-starter.templates:20001
+msgid ""
+"You should only enable opportunistic encryption if you are sure you want it. "
+"It may break the Internet connection (default route) as the pluto daemon "
+"starts."
+msgstr ""
+"Du skal kun aktivere opportunistisk kryptering, hvis du er sikker på, at du "
+"ønsker det. Det kan få internetforbindelsen til at gå ned (standardrute), "
+"når plutodæmonen starter op."

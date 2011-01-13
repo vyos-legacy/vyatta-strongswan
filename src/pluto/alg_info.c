@@ -51,19 +51,13 @@ int alg_info_esp_aa2sadb(int auth)
 {
 	int sadb_aalg = 0;
 
-	switch(auth) {
+	switch(auth)
+	{
 		case AUTH_ALGORITHM_HMAC_MD5:
 		case AUTH_ALGORITHM_HMAC_SHA1:
 			sadb_aalg = auth + 1;
 			break;
-		case AUTH_ALGORITHM_HMAC_SHA2_256:
-		case AUTH_ALGORITHM_HMAC_SHA2_384:
-		case AUTH_ALGORITHM_HMAC_SHA2_512:
-		case AUTH_ALGORITHM_HMAC_RIPEMD:
-			sadb_aalg = auth;
-			break;
 		default:
-			/* loose ... */
 			sadb_aalg = auth;
 	}
 	return sadb_aalg;
@@ -73,20 +67,13 @@ int alg_info_esp_sadb2aa(int sadb_aalg)
 {
 	int auth = 0;
 
-	switch(sadb_aalg) {
+	switch(sadb_aalg)
+	{
 		case SADB_AALG_MD5HMAC:
 		case SADB_AALG_SHA1HMAC:
 			auth = sadb_aalg - 1;
 			break;
-		/* since they are the same ...  :)  */
-		case AUTH_ALGORITHM_HMAC_SHA2_256:
-		case AUTH_ALGORITHM_HMAC_SHA2_384:
-		case AUTH_ALGORITHM_HMAC_SHA2_512:
-		case AUTH_ALGORITHM_HMAC_RIPEMD:
-			auth = sadb_aalg;
-			break;
 		default:
-			/* loose ... */
 			auth = sadb_aalg;
 	}
 	return auth;
@@ -133,10 +120,29 @@ static void __alg_info_esp_add(struct alg_info_esp *alg_info, int ealg_id,
 
 	DBG(DBG_CRYPT,
 		DBG_log("esp alg added: %s_%d/%s, cnt=%d",
-				enum_show(&esp_transformid_names, ealg_id), ek_bits,
+				enum_show(&esp_transform_names, ealg_id), ek_bits,
 				enum_show(&auth_alg_names, aalg_id),
 				alg_info->alg_info_cnt)
 	)
+}
+
+/**
+ * Returns true if the given alg is an authenticated encryption algorithm
+ */
+static bool is_authenticated_encryption(int ealg_id)
+{
+	switch (ealg_id)
+	{
+		case ESP_AES_CCM_8:
+		case ESP_AES_CCM_12:
+		case ESP_AES_CCM_16:
+		case ESP_AES_GCM_8:
+		case ESP_AES_GCM_12:
+		case ESP_AES_GCM_16:
+		case ESP_AES_GMAC:
+			return TRUE;
+	}
+	return FALSE;
 }
 
 /*
@@ -152,7 +158,13 @@ static void alg_info_esp_add(struct alg_info *alg_info, int ealg_id,
 	}
 	if (ealg_id > 0)
 	{
-		if (aalg_id > 0)
+		if (is_authenticated_encryption(ealg_id))
+		{
+			__alg_info_esp_add((struct alg_info_esp *)alg_info,
+								ealg_id, ek_bits,
+								AUTH_ALGORITHM_NONE, 0);
+		}
+		else if (aalg_id > 0)
 		{
 			__alg_info_esp_add((struct alg_info_esp *)alg_info,
 								ealg_id, ek_bits,
@@ -160,13 +172,13 @@ static void alg_info_esp_add(struct alg_info *alg_info, int ealg_id,
 		}
 		else
 		{
-			/* Policy: default to MD5 and SHA1 */
-			__alg_info_esp_add((struct alg_info_esp *)alg_info,
-								ealg_id, ek_bits,
-								AUTH_ALGORITHM_HMAC_MD5, ak_bits);
+			/* Policy: default to SHA-1 and MD5 */
 			__alg_info_esp_add((struct alg_info_esp *)alg_info,
 								ealg_id, ek_bits,
 								AUTH_ALGORITHM_HMAC_SHA1, ak_bits);
+			__alg_info_esp_add((struct alg_info_esp *)alg_info,
+								ealg_id, ek_bits,
+								AUTH_ALGORITHM_HMAC_MD5, ak_bits);
 		}
 	}
 }
@@ -214,12 +226,12 @@ static void __alg_info_ike_add (struct alg_info_ike *alg_info, int ealg_id,
  * merging alg_info (ike_info) contents
  */
 
-static int default_ike_groups[] = { 
+static int default_ike_groups[] = {
 	MODP_1536_BIT,
 	MODP_1024_BIT
 };
 
-/*      
+/*
  *      Add IKE alg info _with_ logic (policy):
  */
 static void alg_info_ike_add (struct alg_info *alg_info, int ealg_id,
@@ -234,7 +246,7 @@ static void alg_info_ike_add (struct alg_info *alg_info, int ealg_id,
 		n_groups=0;
 		goto in_loop;
 	}
-		
+
 	for (; n_groups--; i++)
 	{
 		modp_id = default_ike_groups[i];
@@ -348,7 +360,7 @@ static status_t alg_info_parse_str(struct alg_info *alg_info, char *alg_str)
 
 		eat_whitespace(&string);
 
-		if (string.len > 0) 
+		if (string.len > 0)
 		{
 			chunk_t alg;
 
@@ -373,7 +385,7 @@ static status_t alg_info_parse_str(struct alg_info *alg_info, char *alg_str)
 			{
 				case PROTO_IPSEC_ESP:
 					alg_info_esp_add(alg_info, ealg, ealg_keysize,
-								 			   aalg, aalg_keysize);
+											   aalg, aalg_keysize);
 					break;
 				case PROTO_ISAKMP:
 					alg_info_ike_add(alg_info, ealg, ealg_keysize,
@@ -437,12 +449,16 @@ struct alg_info_esp *alg_info_esp_create_from_str(char *alg_str)
 	status = alg_info_parse_str((struct alg_info *)alg_info_esp, alg_str);
 
 out:
-	if (status != SUCCESS)
+	if (status == SUCCESS)
+	{
+		alg_info_esp->ref_cnt = 1;
+		return alg_info_esp;
+	}
+	else
 	{
 		free(alg_info_esp);
-		alg_info_esp = NULL;
+		return NULL;
 	}
-	return alg_info_esp;
 }
 
 struct alg_info_ike *alg_info_ike_create_from_str(char *alg_str)
@@ -457,12 +473,16 @@ struct alg_info_ike *alg_info_ike_create_from_str(char *alg_str)
 	zero(alg_info_ike);
 	alg_info_ike->alg_info_protoid = PROTO_ISAKMP;
 
-	if (alg_info_parse_str((struct alg_info *)alg_info_ike, alg_str) != SUCCESS)
+	if (alg_info_parse_str((struct alg_info *)alg_info_ike, alg_str) == SUCCESS)
+	{
+		alg_info_ike->ref_cnt = 1;
+		return alg_info_ike;
+	}
+	else
 	{
 		free(alg_info_ike);
 		return NULL;
 	}
-	return alg_info_ike;
 }
 
 /*
@@ -470,7 +490,7 @@ struct alg_info_ike *alg_info_ike_create_from_str(char *alg_str)
  *      several connections instances,
  *      handle free() with ref_cnts
  */
-void 
+void
 alg_info_addref(struct alg_info *alg_info)
 {
 	if (alg_info != NULL)
@@ -505,7 +525,7 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 	struct esp_info *esp_info;
 	struct ike_info *ike_info;
 	int cnt;
-		
+
 	switch (alg_info->alg_info_protoid) {
 	case PROTO_IPSEC_ESP:
 		{
@@ -514,7 +534,7 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 			ALG_INFO_ESP_FOREACH(alg_info_esp, esp_info, cnt)
 			{
 				np = snprintf(ptr, buflen, "%s",
-						enum_show(&esp_transformid_names, esp_info->esp_ealg_id));
+						enum_show(&esp_transform_names, esp_info->esp_ealg_id));
 				ptr += np;
 				buflen -= np;
 				if (esp_info->esp_ealg_keylen)
@@ -584,7 +604,7 @@ out:
 			, "buffer space exhausted in alg_info_snprint_ike(), buflen=%d"
 			, buflen);
 	}
-		
+
 	return ptr - buf;
 }
 

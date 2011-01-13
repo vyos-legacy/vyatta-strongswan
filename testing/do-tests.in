@@ -46,7 +46,7 @@ TESTRESULTSHTML=$TODAYDIR/all.html
 INDEX=$TODAYDIR/index.html
 DEFAULTTESTSDIR=$UMLTESTDIR/testing/tests
 
-SOURCEIP_ROUTING_TABLE=@IPSEC_ROUTING_TABLE@
+SOURCEIP_ROUTING_TABLE=@routing_table@
 
 testnumber="0"
 failed_cnt="0"
@@ -245,9 +245,17 @@ do
 
 	if [ $SUBDIR = "ipv6" -o $name = "rw-psk-ipv6" ]
 	then
-	    IPTABLES="ip6tables"
+	    IPTABLES_CMD="ip6tables -v -n -L"
+	    IPTABLES_DSP="ip6tables -L"
 	else
-	    IPTABLES="iptables"
+	    IPTABLES_CMD="iptables -v -n -L"
+	    IPTABLES_DSP="iptables -L"
+	fi
+
+	if [ $name = "net2net-ip4-in-ip6-ikev2" -o $name = "net2net-ip6-in-ip4-ikev2" ]
+	then
+	    IPTABLES_CMD="iptables -v -n -L ; echo ; ip6tables -v -n -L"
+	    IPTABLES_DSP="iptables -L ; ip6tables -L"
 	fi
 
 	[ -f $DEFAULTTESTSDIR/${testname}/description.txt ] || die "!! File 'description.txt' is missing"
@@ -340,7 +348,7 @@ do
 	    do
 		host=`echo $host_iface | awk -F ":" '{print $1}'`
 		iface=`echo $host_iface | awk -F ":" '{if ($2 != "") { print $2 } else { printf("eth0") }}'`
-		tcpdump_cmd="tcpdump -i $iface not port ssh and not port domain and not arp > /tmp/tcpdump.log 2>&1 &"
+		tcpdump_cmd="tcpdump -i $iface not port ssh and not port domain > /tmp/tcpdump.log 2>&1 &"
 		echo "${host}# $tcpdump_cmd" >> $CONSOLE_LOG
 		ssh root@`eval echo \\\$ipv4_$host '$tcpdump_cmd'`
 		eval TDUP_${host}="true"
@@ -476,7 +484,7 @@ do
 		    > $TESTRESULTDIR/${host}.ip.state 2>/dev/null
 	    ssh $HOSTLOGIN ip route list table $SOURCEIP_ROUTING_TABLE \
 		    > $TESTRESULTDIR/${host}.ip.route 2>/dev/null
-	    ssh $HOSTLOGIN $IPTABLES -v -n -L \
+	    ssh $HOSTLOGIN $IPTABLES_CMD \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
 	    chmod a+r $TESTRESULTDIR/*
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
@@ -504,7 +512,7 @@ do
 	    <li><a href="$host.ip.policy">ip -s xfrm policy</a></li>
 	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
 	    <li><a href="$host.ip.route">ip route list table $SOURCEIP_ROUTING_TABLE</a></li>
-	    <li><a href="$host.iptables">$IPTABLES -L</a></li>
+	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
 	  </ul>
       </td>
     </tr>
@@ -622,6 +630,17 @@ do
     <td>&nbsp;</td>
   </tr>
 @EOF
+
+
+	##########################################################################
+	# remove any charon.pid files that still may exist
+	#
+
+	for host in $IPSECHOSTS
+	do
+	    eval HOSTLOGIN=root@\$ipv4_${host}
+	    ssh $HOSTLOGIN 'if [ -f /var/run/charon.pid ]; then rm /var/run/charon.pid; echo "    removed charon.pid on `hostname`"; fi'
+	done
 
     done
 

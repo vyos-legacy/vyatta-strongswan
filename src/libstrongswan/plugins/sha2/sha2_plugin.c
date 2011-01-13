@@ -44,19 +44,21 @@ static void destroy(private_sha2_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *sha2_plugin_create()
 {
 	private_sha2_plugin_t *this = malloc_thing(private_sha2_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
+							(hasher_constructor_t)sha2_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
 							(hasher_constructor_t)sha2_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
 							(hasher_constructor_t)sha2_hasher_create);
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
 							(hasher_constructor_t)sha2_hasher_create);
-	
+
 	return &this->public.plugin;
 }
 

@@ -104,13 +104,13 @@ static void destroy(private_test_vectors_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *test_vectors_plugin_create()
 {
 	private_test_vectors_plugin_t *this = malloc_thing(private_test_vectors_plugin_t);
 	int i;
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	for (i = 0; i < countof(crypter); i++)
 	{
 		lib->crypto->add_test_vector(lib->crypto,
@@ -136,7 +136,7 @@ plugin_t *plugin_create()
 		lib->crypto->add_test_vector(lib->crypto,
 									 RANDOM_NUMBER_GENERATOR, rng[i]);
 	}
-	
+
 	return &this->public.plugin;
 }
 

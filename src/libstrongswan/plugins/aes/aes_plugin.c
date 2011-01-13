@@ -44,15 +44,15 @@ static void destroy(private_aes_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *aes_plugin_create()
 {
 	private_aes_plugin_t *this = malloc_thing(private_aes_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
 							 (crypter_constructor_t)aes_crypter_create);
-	
+
 	return &this->public.plugin;
 }
 

@@ -1,12 +1,12 @@
 /*
  * special addresses
  * Copyright (C) 2000  Henry Spencer.
- * 
+ *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
- * 
+ *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
@@ -17,12 +17,13 @@
 #include "internal.h"
 #include "freeswan.h"
 
-/* these are mostly fallbacks for the no-IPv6-support-in-library case */
-#ifndef IN6ADDR_ANY_INIT
-#define	IN6ADDR_ANY_INIT	{{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }}
-#endif
-#ifndef IN6ADDR_LOOPBACK_INIT
-#define	IN6ADDR_LOOPBACK_INIT	{{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }}
+/* OpenSolaris defines strange versions of these macros */
+#ifdef __sun
+#undef	IN6ADDR_ANY_INIT
+#define	IN6ADDR_ANY_INIT		{{{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }}}
+
+#undef	IN6ADDR_LOOPBACK_INIT
+#define	IN6ADDR_LOOPBACK_INIT	{{{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }}}
 #endif
 
 static struct in6_addr v6any = IN6ADDR_ANY_INIT;

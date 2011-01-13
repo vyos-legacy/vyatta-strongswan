@@ -1,7 +1,7 @@
 /**
  * @file scep.c
  * @brief SCEP specific functions
- * 
+ *
  * Contains functions to build SCEP request's and to parse SCEP reply's.
  */
 
@@ -39,24 +39,15 @@
 
 #include "scep.h"
 
-static char ASN1_messageType_oid_str[] = {
+static const chunk_t ASN1_messageType_oid = chunk_from_chars(
 	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x02
-};
-
-static char ASN1_senderNonce_oid_str[] = {
+);
+static const chunk_t ASN1_senderNonce_oid = chunk_from_chars(
 	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x05
-};
-
-static char ASN1_transId_oid_str[] = {
+);
+static const chunk_t ASN1_transId_oid = chunk_from_chars(
 	0x06, 0x0A, 0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x45, 0x01, 0x09, 0x07
-};
-
-static const chunk_t ASN1_messageType_oid =
-						chunk_from_buf(ASN1_messageType_oid_str);
-static const chunk_t ASN1_senderNonce_oid =
-						chunk_from_buf(ASN1_senderNonce_oid_str);
-static const chunk_t ASN1_transId_oid =
-						chunk_from_buf(ASN1_transId_oid_str);
+);
 
 static const char *pkiStatus_values[] = { "0", "2", "3" };
 
@@ -239,7 +230,7 @@ bool parse_attributes(chunk_t blob, scep_attributes_t *attrs)
 	DBG(DBG_CONTROL | DBG_PARSING,
 		DBG_log("parsing attributes")
 	)
-	
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		switch (objectID)
@@ -255,24 +246,23 @@ bool parse_attributes(chunk_t blob, scep_attributes_t *attrs)
 		}
 	}
 	success = parser->success(parser);
-	
+
 end:
 	parser->destroy(parser);
 	return success;
 }
 
 /**
- * Generates a unique fingerprint of the pkcs10 request 
+ * Generates a unique fingerprint of the pkcs10 request
  * by computing an MD5 hash over it
  */
 chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10)
 {
-	char digest_buf[HASH_SIZE_MD5];
-	chunk_t digest = chunk_from_buf(digest_buf);
+	chunk_t digest = chunk_alloca(HASH_SIZE_MD5);
 	hasher_t *hasher;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	hasher->get_hash(hasher, pkcs10, digest_buf);
+	hasher->get_hash(hasher, pkcs10, digest.ptr);
 	hasher->destroy(hasher);
 
 	return chunk_to_hex(digest, NULL, FALSE);
@@ -285,21 +275,20 @@ chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10)
 void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
 								  chunk_t *serialNumber)
 {
-	char digest_buf[HASH_SIZE_MD5];
-	chunk_t digest = chunk_from_buf(digest_buf);
-	chunk_t keyEncoding, keyInfo;
+	chunk_t digest = chunk_alloca(HASH_SIZE_MD5);
+	chunk_t keyEncoding = chunk_empty, keyInfo;
 	hasher_t *hasher;
 	bool msb_set;
 	u_char *pos;
-	
-	keyEncoding = key->get_encoding(key);
 
-	keyInfo = asn1_wrap(ASN1_SEQUENCE, "cm",
-						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION), 
-						asn1_bitstring("m", keyEncoding));	
+	key->get_encoding(key, PUBKEY_ASN1_DER, &keyEncoding);
+
+	keyInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+						asn1_bitstring("m", keyEncoding));
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	hasher->get_hash(hasher, keyInfo, digest_buf);
+	hasher->get_hash(hasher, keyInfo, digest.ptr);
 	hasher->destroy(hasher);
 	free(keyInfo.ptr);
 
@@ -381,8 +370,8 @@ chunk_t scep_senderNonce_attribute(void)
  * Builds a pkcs7 enveloped and signed scep request
  */
 chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
-						   const x509cert_t *enc_cert, int enc_alg,
-						   const x509cert_t *signer_cert, int digest_alg,
+						   certificate_t *enc_cert, int enc_alg,
+						   certificate_t *signer_cert, int digest_alg,
 						   private_key_t *private_key)
 {
 	chunk_t envelopedData, attributes, request;
@@ -497,7 +486,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 			free(escaped_req);
 
 			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
-										 FETCH_HTTP_VERSION_1_0, 
+										 FETCH_HTTP_VERSION_1_0,
 										 FETCH_REQUEST_HEADER, "Pragma:",
 										 FETCH_REQUEST_HEADER, "Host:",
 										 FETCH_REQUEST_HEADER, "Accept:",
@@ -510,7 +499,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 			complete_url = malloc(len);
 			snprintf(complete_url, len, "%s?operation=%s", url, operation);
 
-			status = lib->fetcher->fetch(lib->fetcher, complete_url, response, 
+			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_REQUEST_DATA, pkcs7,
 										 FETCH_REQUEST_TYPE, "",
 										 FETCH_REQUEST_HEADER, "Expect:",
@@ -527,7 +516,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 		snprintf(complete_url, len, "%s?operation=%s&message=CAIdentifier"
 				, url, operation);
 
-		status = lib->fetcher->fetch(lib->fetcher, complete_url, response, 
+		status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 									 FETCH_END);
 	}
 
@@ -536,7 +525,7 @@ bool scep_http_request(const char *url, chunk_t pkcs7, scep_op_t op,
 }
 
 err_t scep_parse_response(chunk_t response, chunk_t transID, contentInfo_t *data,
-						  scep_attributes_t *attrs, x509cert_t *signer_cert)
+						  scep_attributes_t *attrs, certificate_t *signer_cert)
 {
 	chunk_t attributes;
 

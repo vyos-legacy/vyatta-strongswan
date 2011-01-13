@@ -32,14 +32,14 @@ typedef enum crl_reason_t crl_reason_t;
  * RFC 2459 CRL reason codes
  */
 enum crl_reason_t {
-    CRL_UNSPECIFIED 			= 0,
-    CRL_KEY_COMPROMISE			= 1,
-    CRL_CA_COMPROMISE			= 2,
-    CRL_AFFILIATION_CHANGED		= 3,
-    CRL_SUPERSEDED				= 4,
-    CRL_CESSATION_OF_OPERATON	= 5,
-    CRL_CERTIFICATE_HOLD		= 6,
-    CRL_REMOVE_FROM_CRL			= 8,
+	CRL_REASON_UNSPECIFIED			= 0,
+	CRL_REASON_KEY_COMPROMISE		 = 1,
+	CRL_REASON_CA_COMPROMISE		  = 2,
+	CRL_REASON_AFFILIATION_CHANGED	= 3,
+	CRL_REASON_SUPERSEDED			 = 4,
+	CRL_REASON_CESSATION_OF_OPERATON  = 5,
+	CRL_REASON_CERTIFICATE_HOLD	   = 6,
+	CRL_REASON_REMOVE_FROM_CRL		= 8,
 };
 
 /**
@@ -56,21 +56,21 @@ struct crl_t {
 	 * Implements (parts of) the certificate_t interface
 	 */
 	certificate_t certificate;
-	
+
 	/**
 	 * Get the CRL serial number.
 	 *
 	 * @return			chunk pointing to internal crlNumber
 	 */
 	chunk_t (*get_serial)(crl_t *this);
-	
+
 	/**
 	 * Get the the authorityKeyIdentifier.
 	 *
-	 * @return			authKeyIdentifier as identification_t*
+	 * @return			authKeyIdentifier chunk, point to internal data
 	 */
-	identification_t* (*get_authKeyIdentifier)(crl_t *this);
-	
+	chunk_t (*get_authKeyIdentifier)(crl_t *this);
+
 	/**
 	 * Create an enumerator over all revoked certificates.
 	 *
@@ -80,7 +80,15 @@ struct crl_t {
 	 * @return			enumerator over revoked certificates.
 	 */
 	enumerator_t* (*create_enumerator)(crl_t *this);
-	
 };
+
+/**
+ * Generic check if a given CRL is newer than another.
+ *
+ * @param this			first CRL to check
+ * @param other			second CRL
+ * @return				TRUE if this newer than other
+ */
+bool crl_is_newer(crl_t *this, crl_t *other);
 
 #endif /** CRL_H_ @}*/

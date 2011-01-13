@@ -26,6 +26,7 @@ ENUM(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA512,
 	"HASH_MD4",
 	"HASH_MD5",
 	"HASH_SHA1",
+	"HASH_SHA224",
 	"HASH_SHA256",
 	"HASH_SHA384",
 	"HASH_SHA512"
@@ -47,6 +48,9 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 		case OID_SHA1:
 		case OID_SHA1_WITH_RSA:
 			return HASH_SHA1;
+		case OID_SHA224:
+		case OID_SHA224_WITH_RSA:
+			return HASH_SHA224;
 		case OID_SHA256:
 		case OID_SHA256_WITH_RSA:
 			return HASH_SHA256;
@@ -79,6 +83,9 @@ int hasher_algorithm_to_oid(hash_algorithm_t alg)
 		case HASH_SHA1:
 			oid = OID_SHA1;
 			break;
+		case HASH_SHA224:
+			oid = OID_SHA224;
+			break;
 		case HASH_SHA256:
 			oid = OID_SHA256;
 			break;
@@ -97,33 +104,46 @@ int hasher_algorithm_to_oid(hash_algorithm_t alg)
 /*
  * Described in header.
  */
-int hasher_signature_algorithm_to_oid(hash_algorithm_t alg)
+int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 {
-	int oid;
-
-	switch (alg)
+	switch (key)
 	{
-		case HASH_MD2:
-			oid = OID_MD2_WITH_RSA;
-			break;
-		case HASH_MD5:
-			oid = OID_MD5_WITH_RSA;
-			break;
-		case HASH_SHA1:
-			oid = OID_SHA1_WITH_RSA;
-			break;
-		case HASH_SHA256:
-			oid = OID_SHA256_WITH_RSA;
-			break;
-		case HASH_SHA384:
-			oid = OID_SHA384_WITH_RSA;
-			break;
-		case HASH_SHA512:
-			oid = OID_SHA512_WITH_RSA;
-			break;
+		case KEY_RSA:
+			switch (alg)
+			{
+				case HASH_MD2:
+					return OID_MD2_WITH_RSA;
+				case HASH_MD5:
+					return OID_MD5_WITH_RSA;
+				case HASH_SHA1:
+					return OID_SHA1_WITH_RSA;
+				case HASH_SHA224:
+					return OID_SHA224_WITH_RSA;
+				case HASH_SHA256:
+					return OID_SHA256_WITH_RSA;
+				case HASH_SHA384:
+					return OID_SHA384_WITH_RSA;
+				case HASH_SHA512:
+					return OID_SHA512_WITH_RSA;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_ECDSA:
+			switch (alg)
+			{
+				case HASH_SHA1:
+					return OID_ECDSA_WITH_SHA1;
+				case HASH_SHA256:
+					return OID_ECDSA_WITH_SHA256;
+				case HASH_SHA384:
+					return OID_ECDSA_WITH_SHA384;
+				case HASH_SHA512:
+					return OID_ECDSA_WITH_SHA512;
+				default:
+					return OID_UNKNOWN;
+			}
 		default:
-			oid = OID_UNKNOWN;
+			return OID_UNKNOWN;
 	}
-	return oid;
 }
 

@@ -12,9 +12,12 @@
  * for more details.
  */
 
-#include "packet.h"
+#ifndef _DEMUX_H
+#define _DEMUX_H
 
-struct state;   /* forward declaration of tag */
+#include "packet.h"
+#include "state.h"
+
 extern void init_demux(void);
 extern bool send_packet(struct state *st, const char *where);
 extern void comm_handle(const struct iface *ifp);
@@ -61,6 +64,7 @@ struct msg_digest {
 	notification_t note;        /* reason for failure */
 	bool dpd;                   /* peer supports RFC 3706 DPD */
 	bool openpgp;               /* peer supports OpenPGP certificates */
+	bool ms_nt5;                /* peer is a windows 2000+ host */
 
 #   define PAYLIMIT 40
 	struct payload_digest
@@ -89,3 +93,5 @@ typedef stf_status state_transition_fn(struct msg_digest *md);
 extern void complete_state_transition(struct msg_digest **mdp, stf_status result);
 
 extern void free_md_pool(void);
+
+#endif /* _DEMUX_H */

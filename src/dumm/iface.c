@@ -55,10 +55,10 @@ bool iface_control(char *name, bool up)
 	int s;
 	bool good = FALSE;
 	struct ifreq ifr;
-	
+
 	memset(&ifr, 0, sizeof(struct ifreq));
 	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
-	
+
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (!s)
 	{
@@ -104,7 +104,7 @@ static char* get_hostif(private_iface_t *this)
  */
 static bool add_address(private_iface_t *this, host_t *addr)
 {
-	return (this->guest->exec(this->guest, NULL, NULL, 
+	return (this->guest->exec(this->guest, NULL, NULL,
 				  "exec ip addr add %H dev %s", addr, this->guestif) == 0);
 }
 
@@ -185,7 +185,7 @@ static guest_t* get_guest(private_iface_t *this)
 {
 	return this->guest;
 }
-	
+
 /**
  * destroy the tap device
  */
@@ -193,25 +193,25 @@ static bool destroy_tap(private_iface_t *this)
 {
 	struct ifreq ifr;
 	int tap;
-	
+
 	if (!iface_control(this->hostif, FALSE))
 	{
-		DBG1("bringing iface down failed: %m");
+		DBG1(DBG_LIB, "bringing iface down failed: %m");
 	}
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
 	strncpy(ifr.ifr_name, this->hostif, sizeof(ifr.ifr_name) - 1);
-	
+
 	tap = open(TAP_DEVICE, O_RDWR);
 	if (tap < 0)
 	{
-		DBG1("unable to open tap device %s: %m", TAP_DEVICE);
+		DBG1(DBG_LIB, "unable to open tap device %s: %m", TAP_DEVICE);
 		return FALSE;
 	}
 	if (ioctl(tap, TUNSETIFF, &ifr) < 0 ||
 		ioctl(tap, TUNSETPERSIST, 0) < 0)
 	{
-		DBG1("removing %s failed: %m", this->hostif);
+		DBG1(DBG_LIB, "removing %s failed: %m", this->hostif);
 		close(tap);
 		return FALSE;
 	}
@@ -235,17 +235,17 @@ static char* create_tap(private_iface_t *this)
 	tap = open(TAP_DEVICE, O_RDWR);
 	if (tap < 0)
 	{
-		DBG1("unable to open tap device %s: %m", TAP_DEVICE);
+		DBG1(DBG_LIB, "unable to open tap device %s: %m", TAP_DEVICE);
 		return NULL;
 	}
 	if (ioctl(tap, TUNSETIFF, &ifr) < 0 ||
 		ioctl(tap, TUNSETPERSIST, 1) < 0 ||
 		ioctl(tap, TUNSETOWNER, 0))
-    {
-		DBG1("creating new tap device failed: %m");
+	{
+		DBG1(DBG_LIB, "creating new tap device failed: %m");
 		close(tap);
 		return NULL;
-    } 
+	}
 	close(tap);
 	return strdup(ifr.ifr_name);
 }
@@ -274,7 +274,7 @@ static void destroy(private_iface_t *this)
 iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 {
 	private_iface_t *this = malloc_thing(private_iface_t);
-	
+
 	this->public.get_hostif = (char*(*)(iface_t*))get_hostif;
 	this->public.get_guestif = (char*(*)(iface_t*))get_guestif;
 	this->public.add_address = (bool(*)(iface_t*, host_t *addr))add_address;
@@ -299,7 +299,7 @@ iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 	}
 	if (!this->mconsole->add_iface(this->mconsole, this->guestif, this->hostif))
 	{
-		DBG1("creating interface '%s' in guest failed", this->guestif);
+		DBG1(DBG_LIB, "creating interface '%s' in guest failed", this->guestif);
 		destroy_tap(this);
 		free(this->guestif);
 		free(this->hostif);
@@ -308,7 +308,7 @@ iface_t *iface_create(char *name, guest_t *guest, mconsole_t *mconsole)
 	}
 	if (!iface_control(this->hostif, TRUE))
 	{
-		DBG1("bringing iface '%s' up failed: %m", this->hostif);
+		DBG1(DBG_LIB, "bringing iface '%s' up failed: %m", this->hostif);
 	}
 	return &this->public;
 }

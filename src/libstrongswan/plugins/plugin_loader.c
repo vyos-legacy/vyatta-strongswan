@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,6 +23,7 @@
 #include <stdio.h>
 
 #include <debug.h>
+#include <integrity_checker.h>
 #include <utils/linked_list.h>
 #include <plugins/plugin.h>
 
@@ -36,81 +38,173 @@ struct private_plugin_loader_t {
 	 * public functions
 	 */
 	plugin_loader_t public;
-	
+
 	/**
 	 * list of loaded plugins
 	 */
 	linked_list_t *plugins;
-	
+
 	/**
 	 * names of loaded plugins
 	 */
 	linked_list_t *names;
 };
 
+#ifdef MONOLITHIC
+/**
+ * load a single plugin in monolithic mode
+ */
+static plugin_t* load_plugin(private_plugin_loader_t *this,
+							 char *path, char *name)
+{
+	char create[128];
+	plugin_t *plugin;
+	plugin_constructor_t constructor;
+
+	if (snprintf(create, sizeof(create), "%s_plugin_create",
+				 name) >= sizeof(create))
+	{
+		return NULL;
+	}
+	translate(create, "-", "_");
+	constructor = dlsym(RTLD_DEFAULT, create);
+	if (constructor == NULL)
+	{
+		DBG1(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
+			 create);
+		return NULL;
+	}
+	plugin = constructor();
+	if (plugin == NULL)
+	{
+		DBG1(DBG_LIB, "plugin '%s': failed to load - %s returned NULL", name,
+			 create);
+		return NULL;
+	}
+	DBG2(DBG_LIB, "plugin '%s': loaded successfully", name);
+
+	return plugin;
+}
+#else
 /**
  * load a single plugin
  */
 static plugin_t* load_plugin(private_plugin_loader_t *this,
 							 char *path, char *name)
 {
+	char create[128];
 	char file[PATH_MAX];
 	void *handle;
 	plugin_t *plugin;
 	plugin_constructor_t constructor;
-	
-	snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path, name);
-	
+
+	if (snprintf(file, sizeof(file), "%s/libstrongswan-%s.so", path,
+				 name) >= sizeof(file) ||
+		snprintf(create, sizeof(create), "%s_plugin_create",
+				 name) >= sizeof(create))
+	{
+		return NULL;
+	}
+	translate(create, "-", "_");
+	if (lib->integrity)
+	{
+		if (!lib->integrity->check_file(lib->integrity, name, file))
+		{
+			DBG1(DBG_LIB, "plugin '%s': failed file integrity test of '%s'",
+				 name, file);
+			return NULL;
+		}
+	}
 	handle = dlopen(file, RTLD_LAZY);
 	if (handle == NULL)
 	{
-		DBG1("loading plugin '%s' failed: %s", name, dlerror());
+		DBG1(DBG_LIB, "plugin '%s' failed to load: %s", name, dlerror());
 		return NULL;
 	}
-	constructor = dlsym(handle, "plugin_create");
+	constructor = dlsym(handle, create);
 	if (constructor == NULL)
 	{
-		DBG1("loading plugin '%s' failed: no plugin_create() function", name);
+		DBG1(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
+			 create);
 		dlclose(handle);
 		return NULL;
+	}
+	if (lib->integrity)
+	{
+		if (!lib->integrity->check_segment(lib->integrity, name, constructor))
+		{
+			DBG1(DBG_LIB, "plugin '%s': failed segment integrity test", name);
+			dlclose(handle);
+			return NULL;
+		}
+		DBG1(DBG_LIB, "plugin '%s': passed file and segment integrity tests",
+			 name);
 	}
 	plugin = constructor();
 	if (plugin == NULL)
 	{
-		DBG1("loading plugin '%s' failed: plugin_create() returned NULL", name);
+		DBG1(DBG_LIB, "plugin '%s': failed to load - %s returned NULL", name,
+			 create);
 		dlclose(handle);
 		return NULL;
 	}
-	DBG2("plugin '%s' loaded successfully", name);
-	
+	DBG2(DBG_LIB, "plugin '%s': loaded successfully", name);
+
 	/* we do not store or free dlopen() handles, leak_detective requires
 	 * the modules to keep loaded until leak report */
 	return plugin;
 }
+#endif
 
 /**
  * Implementation of plugin_loader_t.load_plugins.
  */
-static int load(private_plugin_loader_t *this, char *path, char *list)
+static bool load(private_plugin_loader_t *this, char *path, char *list)
 {
-	plugin_t *plugin;
 	enumerator_t *enumerator;
 	char *token;
-	int count = 0;
-	
-	enumerator = enumerator_create_token(list, " ", " ");
-	while (enumerator->enumerate(enumerator, &token))
+	bool critical_failed = FALSE;
+
+#ifndef MONOLITHIC
+	if (path == NULL)
 	{
+		path = PLUGINDIR;
+	}
+#endif
+
+	enumerator = enumerator_create_token(list, " ", " ");
+	while (!critical_failed && enumerator->enumerate(enumerator, &token))
+	{
+		plugin_t *plugin;
+		bool critical = FALSE;
+		int len;
+
+		token = strdup(token);
+		len = strlen(token);
+		if (token[len-1] == '!')
+		{
+			critical = TRUE;
+			token[len-1] = '\0';
+		}
 		plugin = load_plugin(this, path, token);
 		if (plugin)
-		{	/* insert in front to destroy them in reverse order */
+		{
+			/* insert in front to destroy them in reverse order */
 			this->plugins->insert_last(this->plugins, plugin);
-			this->names->insert_last(this->names, strdup(token));
-			count++;
+			this->names->insert_last(this->names, token);
+		}
+		else
+		{
+			if (critical)
+			{
+				critical_failed = TRUE;
+				DBG1(DBG_LIB, "loading critical plugin '%s' failed", token);
+			}
+			free(token);
 		}
 	}
 	enumerator->destroy(enumerator);
-	return count;
+	return !critical_failed;
 }
 
 /**
@@ -120,7 +214,7 @@ static void unload(private_plugin_loader_t *this)
 {
 	plugin_t *plugin;
 	char *name;
-	
+
 	while (this->plugins->remove_first(this->plugins,
 									   (void**)&plugin) == SUCCESS)
 	{
@@ -138,7 +232,7 @@ static void unload(private_plugin_loader_t *this)
 static enumerator_t* create_plugin_enumerator(private_plugin_loader_t *this)
 {
 	return this->names->create_enumerator(this->names);
-}	 
+}
 
 /**
  * Implementation of plugin_loader_t.destroy
@@ -156,15 +250,15 @@ static void destroy(private_plugin_loader_t *this)
 plugin_loader_t *plugin_loader_create()
 {
 	private_plugin_loader_t *this = malloc_thing(private_plugin_loader_t);
-	
-	this->public.load = (int(*)(plugin_loader_t*, char *path, char *prefix))load;
+
+	this->public.load = (bool(*)(plugin_loader_t*, char *path, char *prefix))load;
 	this->public.unload = (void(*)(plugin_loader_t*))unload;
 	this->public.create_plugin_enumerator = (enumerator_t*(*)(plugin_loader_t*))create_plugin_enumerator;
 	this->public.destroy = (void(*)(plugin_loader_t*))destroy;
-	
+
 	this->plugins = linked_list_create();
 	this->names = linked_list_create();
-	
+
 	return &this->public;
 }
 

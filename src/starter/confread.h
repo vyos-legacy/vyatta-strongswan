@@ -66,6 +66,7 @@ struct starter_end {
 		char            *groups;
 		char            *iface;
 		ip_address      addr;
+		u_int           ikeport;
 		ip_address      nexthop;
 		char            *subnet;
 		bool            has_client;
@@ -82,7 +83,8 @@ struct starter_end {
 		char            *updown;
 		u_int16_t       port;
 		u_int8_t        protocol;
-		char            *srcip;
+		char            *sourceip;
+		int				sourceip_mask;
 };
 
 typedef struct also also_t;
@@ -91,6 +93,13 @@ struct also {
 		char            *name;
 		bool            included;
 		also_t          *next;
+};
+
+typedef struct mark_t mark_t;
+
+struct mark_t{
+		u_int32_t value;
+		u_int32_t mask;
 };
 
 typedef struct starter_conn starter_conn_t;
@@ -108,12 +117,20 @@ struct starter_conn {
 		u_int32_t       eap_type;
 		u_int32_t       eap_vendor;
 		char            *eap_identity;
+		char            *xauth_identity;
 		lset_t          policy;
 		time_t          sa_ike_life_seconds;
 		time_t          sa_ipsec_life_seconds;
 		time_t          sa_rekey_margin;
+		u_int64_t	sa_ipsec_life_bytes;
+		u_int64_t	sa_ipsec_margin_bytes;
+		u_int64_t	sa_ipsec_life_packets;
+		u_int64_t	sa_ipsec_margin_packets;
 		unsigned long   sa_keying_tries;
 		unsigned long   sa_rekey_fuzz;
+		u_int32_t       reqid;
+		mark_t			mark_in;
+		mark_t			mark_out;
 		sa_family_t     addr_family;
 		sa_family_t     tunnel_addr_family;
 		bool            install_policy;
@@ -124,12 +141,14 @@ struct starter_conn {
 		char            *esp;
 		char            *ike;
 		char            *pfsgroup;
-		
+
 		time_t          dpd_delay;
 		time_t          dpd_timeout;
 		dpd_action_t    dpd_action;
 		int             dpd_count;
-		
+
+		time_t          inactivity;
+
 		bool            me_mediation;
 		char            *me_mediated_by;
 		char            *me_peerid;

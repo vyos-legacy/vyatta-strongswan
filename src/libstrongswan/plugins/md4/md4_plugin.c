@@ -44,15 +44,15 @@ static void destroy(private_md4_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *md4_plugin_create()
 {
 	private_md4_plugin_t *this = malloc_thing(private_md4_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
 							(hasher_constructor_t)md4_hasher_create);
-	
+
 	return &this->public.plugin;
 }
 

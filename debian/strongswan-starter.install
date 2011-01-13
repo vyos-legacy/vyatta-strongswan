@@ -6,6 +6,7 @@ etc/ipsec.d                                                             etc/
 etc/ipsec.conf                                                  etc/
 usr/share/man/man8/ipsec.8                              usr/share/man/man8/
 usr/share/man/man8/_copyright.8                 usr/share/man/man8/
+usr/share/man/man8/starter.8                     usr/share/man/man8/
 usr/share/man/man5/ipsec.conf.5                 usr/share/man/man5/
 usr/share/man/man5/ipsec.secrets.5              usr/share/man/man5/
 # updown
@@ -17,6 +18,8 @@ usr/share/man/man8/_updown_espmark.8                            usr/share/man/ma
 # tools
 usr/lib/ipsec/scepclient           usr/lib/ipsec/
 usr/lib/ipsec/openac                       usr/lib/ipsec/
+usr/lib/ipsec/pki                       usr/lib/ipsec/
+usr/lib/ipsec/pool                       usr/lib/ipsec/
 usr/share/man/man8/scepclient.8         usr/share/man/man8/
 usr/share/man/man8/openac.8                     usr/share/man/man8/
 # stroke

@@ -1,8 +1,8 @@
 /**
  * @file openac.c
- * 
+ *
  * @brief Generation of X.509 attribute certificates.
- * 
+ *
  */
 
 /*
@@ -29,21 +29,14 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <time.h>
-#include <gmp.h>
 
 #include <library.h>
 #include <debug.h>
 #include <asn1/asn1.h>
-#include <asn1/pem.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/keys/private_key.h>
 #include <utils/optionsfrom.h>
-
-#ifdef INTEGRITY_TEST
-#include <fips/fips.h>
-#include <fips_signature.h>
-#endif /* INTEGRITY_TEST */
 
 #define OPENAC_PATH   		IPSEC_CONFDIR "/openac"
 #define OPENAC_SERIAL 		IPSEC_CONFDIR "/openac/serial"
@@ -84,75 +77,46 @@ static void usage(const char *message)
 	);
 }
 
-
-/**
- * convert a chunk into a multi-precision integer
- */
-static void chunk_to_mpz(chunk_t chunk, mpz_t number)
-{
-	mpz_import(number, chunk.len, 1, 1, 1, 0, chunk.ptr);
-}
-
-/**
- * convert a multi-precision integer into a chunk
- */
-static chunk_t mpz_to_chunk(mpz_t number)
-{
-	chunk_t chunk;
-
-	chunk.len = 1 + mpz_sizeinbase(number, 2)/BITS_PER_BYTE;
-	chunk.ptr = mpz_export(NULL, NULL, 1, chunk.len, 1, 0, number);
-	if (chunk.ptr == NULL)
-	{
-		chunk.len = 0;
-	}
-	return chunk;
-}
-
 /**
  * read the last serial number from file
  */
 static chunk_t read_serial(void)
 {
-	mpz_t number;
+	chunk_t hex, serial = chunk_empty;
+	char one[] = {0x01};
+	FILE *fd;
 
-	char buf[BUF_LEN], buf1[BUF_LEN];
-	chunk_t hex_serial  = { buf, BUF_LEN };
-	chunk_t last_serial = { buf1, BUF_LEN };
-	chunk_t serial;
-
-	FILE *fd = fopen(OPENAC_SERIAL, "r");
-
-	/* last serial number defaults to 0 */
-	*last_serial.ptr = 0x00;
-	last_serial.len = 1;
-
+	fd = fopen(OPENAC_SERIAL, "r");
 	if (fd)
 	{
-		if (fscanf(fd, "%s", hex_serial.ptr))
+		hex = chunk_alloca(64);
+		hex.len = fread(hex.ptr, 1, hex.len, fd);
+		if (hex.len)
 		{
-			hex_serial.len = strlen(hex_serial.ptr);
-			last_serial = chunk_from_hex(hex_serial, last_serial.ptr);
+			/* remove any terminating newline character */
+			if (hex.ptr[hex.len-1] == '\n')
+			{
+				hex.len--;
+			}
+			serial = chunk_alloca((hex.len / 2) + (hex.len % 2));
+			serial = chunk_from_hex(hex, serial.ptr);
 		}
 		fclose(fd);
 	}
 	else
 	{
-		DBG1("  file '%s' does not exist yet - serial number set to 01", OPENAC_SERIAL);
+		DBG1(DBG_LIB, "  file '%s' does not exist yet - serial number "
+			 "set to 01", OPENAC_SERIAL);
 	}
-
-	/**
-	 * conversion of read serial number to a multiprecision integer
-	 * and incrementing it by one
-	 * and representing it as a two's complement octet string
-	 */
-	mpz_init(number);
-	chunk_to_mpz(last_serial, number);
-	mpz_add_ui(number, number, 0x01);
-	serial = mpz_to_chunk(number);
-	mpz_clear(number);
-
-	return serial;
+	if (!serial.len)
+	{
+		return chunk_clone(chunk_create(one, 1));
+	}
+	if (chunk_increment(serial))
+	{	/* overflow, prepend 0x01 */
+		return chunk_cat("cc", chunk_create(one, 1), serial);
+	}
+	return chunk_clone(serial);
 }
 
 /**
@@ -166,7 +130,7 @@ static void write_serial(chunk_t serial)
 	{
 		chunk_t hex_serial;
 
-		DBG1("  serial number is %#B", &serial);
+		DBG1(DBG_LIB, "  serial number is %#B", &serial);
 		hex_serial = chunk_to_hex(serial, NULL, FALSE);
 		fprintf(fd, "%.*s\n", hex_serial.len, hex_serial.ptr);
 		fclose(fd);
@@ -174,34 +138,8 @@ static void write_serial(chunk_t serial)
 	}
 	else
 	{
-		DBG1("  could not open file '%s' for writing", OPENAC_SERIAL);
+		DBG1(DBG_LIB, "  could not open file '%s' for writing", OPENAC_SERIAL);
 	}
-}
-
-/**
- * Load and parse a private key file
- */
-static private_key_t* private_key_create_from_file(char *path, chunk_t *secret)
-{
-	bool pgp = FALSE;
-	chunk_t chunk = chunk_empty;
-	private_key_t *key = NULL;
-
-	if (!pem_asn1_load_file(path, secret, &chunk, &pgp))
-	{
-		DBG1("  could not load private key file '%s'", path);
-		return NULL;
-	}
-	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-							 BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
-	free(chunk.ptr);
-	if (key == NULL)
-	{
-		DBG1("  could not parse loaded private key file '%s'", path);
-		return NULL;
-	}
-	DBG1("  loaded private key file '%s'", path);
-	return key;
 }
 
 /**
@@ -214,24 +152,25 @@ static bool stderr_quiet = FALSE;
 /**
  * openac dbg function
  */
-static void openac_dbg(int level, char *fmt, ...)
+static void openac_dbg(debug_t group, level_t level, char *fmt, ...)
 {
 	int priority = LOG_INFO;
 	char buffer[8192];
 	char *current = buffer, *next;
 	va_list args;
-	
+
 	if (level <= debug_level)
 	{
-		va_start(args, fmt);
-
 		if (!stderr_quiet)
 		{
+			va_start(args, fmt);
 			vfprintf(stderr, fmt, args);
 			fprintf(stderr, "\n");
+			va_end(args);
 		}
 
 		/* write in memory buffer first */
+		va_start(args, fmt);
 		vsnprintf(buffer, sizeof(buffer), fmt, args);
 		va_end(args);
 
@@ -278,7 +217,7 @@ int main(int argc, char **argv)
 	chunk_t attr_chunk = chunk_empty;
 
 	int status = 1;
-	
+
 	/* enable openac debugging hook */
 	dbg = openac_dbg;
 
@@ -287,9 +226,22 @@ int main(int argc, char **argv)
 	openlog("openac", 0, LOG_AUTHPRIV);
 
 	/* initialize library */
-	library_init(STRONGSWAN_CONF);
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "openac.load", PLUGINS));
+	atexit(library_deinit);
+	if (!library_init(NULL))
+	{
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
+	if (lib->integrity &&
+		!lib->integrity->check_file(lib->integrity, "openac", argv[0]))
+	{
+		fprintf(stderr, "integrity check of openac failed\n");
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
+	if (!lib->plugins->load(lib->plugins, NULL,
+			lib->settings->get_str(lib->settings, "openac.load", PLUGINS)))
+	{
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
 
 	/* initialize optionsfrom */
 	options_t *options = options_create();
@@ -316,7 +268,7 @@ int main(int argc, char **argv)
 			{ "debug", required_argument, NULL, 'd' },
 			{ 0,0,0,0 }
 		};
-	
+
 		int c = getopt_long(argc, argv, "hv+:qc:k:p;u:g:D:H:S:E:o:d:", long_opts, NULL);
 
 		/* Note: "breaking" from case terminates loop */
@@ -326,7 +278,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 0: /* long option already handled */
-		 		continue;
+				continue;
 
 			case ':':	/* diagnostic already printed by getopt_long */
 			case '?':	/* diagnostic already printed by getopt_long */
@@ -346,18 +298,18 @@ int main(int argc, char **argv)
 
 					if (*optarg == '/')	/* absolute pathname */
 					{
-		    			strncpy(path, optarg, BUF_LEN);
+						strncpy(path, optarg, BUF_LEN);
 					}
 					else			/* relative pathname */
 					{
-		    			snprintf(path, BUF_LEN, "%s/%s", OPENAC_PATH, optarg);
+						snprintf(path, BUF_LEN, "%s/%s", OPENAC_PATH, optarg);
 					}
 					if (!options->from(options, path, &argc, &argv, optind))
 					{
 						status = 1;
 						goto end;
 					}
-		 		}
+				}
 				continue;
 
 			case 'q':	/* --quiet */
@@ -480,31 +432,20 @@ int main(int argc, char **argv)
 		goto end;
 	}
 
-	DBG1("starting openac (strongSwan Version %s)", VERSION);
-
-#ifdef INTEGRITY_TEST
-	DBG1("integrity test of libstrongswan code");
-	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
-	{
-		DBG1("  integrity test passed");
-	}
-	else
-	{
-		DBG1("  integrity test failed");
-		status = 3;
-		goto end;
-	}
-#endif /* INTEGRITY_TEST */
+	DBG1(DBG_LIB, "starting openac (strongSwan Version %s)", VERSION);
 
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)
 	{
-		signerKey = private_key_create_from_file(keyfile, &passphrase);
-
+		signerKey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+									   BUILD_FROM_FILE, keyfile,
+									   BUILD_PASSPHRASE, passphrase,
+									   BUILD_END);
 		if (signerKey == NULL)
 		{
 			goto end;
 		}
+		DBG1(DBG_LIB, "  loaded private key file '%s'", keyfile);
 	}
 
 	/* load the signer's X.509 certificate */
@@ -513,7 +454,6 @@ int main(int argc, char **argv)
 		signerCert = lib->creds->create(lib->creds,
 										CRED_CERTIFICATE, CERT_X509,
 										BUILD_FROM_FILE, certfile,
-										BUILD_X509_FLAG, 0,
 										BUILD_END);
 		if (signerCert == NULL)
 		{
@@ -527,7 +467,6 @@ int main(int argc, char **argv)
 		userCert = lib->creds->create(lib->creds,
 									  CRED_CERTIFICATE, CERT_X509,
 									  BUILD_FROM_FILE, usercertfile,
-									  BUILD_X509_FLAG, 0,
 									  BUILD_END);
 		if (userCert == NULL)
 		{
@@ -560,13 +499,15 @@ int main(int argc, char **argv)
 		{
 			goto end;
 		}
-	
+
 		/* write the attribute certificate to file */
-		attr_chunk = attr_cert->get_encoding(attr_cert);
-		if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
+		if (attr_cert->get_encoding(attr_cert, CERT_ASN1_DER, &attr_chunk))
 		{
-			write_serial(serial);
-			status = 0;
+			if (chunk_write(attr_chunk, outfile, "attribute cert", 0022, TRUE))
+			{
+				write_serial(serial);
+				status = 0;
+			}
 		}
 	}
 	else
@@ -586,6 +527,5 @@ end:
 	closelog();
 	dbg = dbg_default;
 	options->destroy(options);
-	library_deinit();
 	exit(status);
 }

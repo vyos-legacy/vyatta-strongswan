@@ -36,18 +36,28 @@
 static int _charon_pid = 0;
 static int _stop_requested;
 
-pid_t
-starter_charon_pid(void)
+pid_t starter_charon_pid(void)
 {
 	return _charon_pid;
 }
 
-void
-starter_charon_sigchild(pid_t pid)
+void starter_charon_sigchild(pid_t pid, int status)
 {
-		if (pid == _charon_pid)
+	if (pid == _charon_pid)
 	{
-				_charon_pid = 0;
+		_charon_pid = 0;
+		if (status == SS_RC_LIBSTRONGSWAN_INTEGRITY ||
+			status == SS_RC_DAEMON_INTEGRITY)
+		{
+			plog("charon has quit: integrity test of %s failed",
+				  (status == 64) ? "libstrongswan" : "charon");
+			_stop_requested = 1;
+		}
+		else if (status == SS_RC_INITIALIZATION_FAILED)
+		{
+			plog("charon has quit: initialization failed");
+			_stop_requested = 1;
+		}
 		if (!_stop_requested)
 		{
 			plog("charon has died -- restart scheduled (%dsec)"
@@ -58,8 +68,7 @@ starter_charon_sigchild(pid_t pid)
 	}
 }
 
-int
-starter_stop_charon (void)
+int starter_stop_charon (void)
 {
 	int i;
 	pid_t pid = _charon_pid;
@@ -106,8 +115,7 @@ starter_stop_charon (void)
 }
 
 
-int
-starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
+int starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 {
 	struct stat stb;
 	int pid, i;
@@ -119,7 +127,7 @@ starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 	};
-	
+
 	if (attach_gdb)
 	{
 		argc = 0;
@@ -155,7 +163,7 @@ starter_start_charon (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 			{
 				break;
 			}
-		
+
 			/* get next */
 			pos = strchr(pos, ',');
 			if (pos)

@@ -17,7 +17,7 @@ CREATE TABLE child_configs (
   jitter INTEGER NOT NULL DEFAULT '180',
   updown TEXT DEFAULT NULL,
   hostaccess INTEGER NOT NULL DEFAULT '0',
-  mode INTEGER NOT NULL DEFAULT '1',
+  mode INTEGER NOT NULL DEFAULT '2',
   dpd_action INTEGER NOT NULL DEFAULT '0',
   close_action INTEGER NOT NULL DEFAULT '0',
   ipcomp INTEGER NOT NULL DEFAULT '0'
@@ -183,6 +183,29 @@ CREATE TABLE leases (
   released INTEGER NOT NULL
 );
 
+DROP TABLE IF EXISTS attribute_pools;
+CREATE TABLE attribute_pools (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL
+);
+
+DROP TABLE IF EXISTS attributes;
+CREATE TABLE attributes (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  identity INTEGER NOT NULL DEFAULT 0,
+  pool INTEGER NOT NULL DEFAULT 0,
+  type INTEGER NOT NULL,
+  value BLOB NOT NULL
+);
+DROP INDEX IF EXISTS attributes_identity;
+CREATE INDEX attributes_identity ON attributes (
+  identity
+);
+DROP INDEX IF EXISTS attributes_pool;
+CREATE INDEX attributes_pool ON attributes (
+  pool
+);
+
 DROP TABLE IF EXISTS ike_sas;
 CREATE TABLE ike_sas (
   local_spi BLOB NOT NULL PRIMARY KEY,
@@ -190,9 +213,9 @@ CREATE TABLE ike_sas (
   id INTEGER NOT NULL,
   initiator INTEGER NOT NULL,
   local_id_type INTEGER NOT NULL,
-  local_id_data BLOB NOT NULL,
+  local_id_data BLOB DEFAULT NULL,
   remote_id_type INTEGER NOT NULL,
-  remote_id_data BLOB NOT NULL,
+  remote_id_data BLOB DEFAULT NULL,
   host_family INTEGER NOT NULL,
   local_host_data BLOB NOT NULL,
   remote_host_data BLOB NOT NULL,

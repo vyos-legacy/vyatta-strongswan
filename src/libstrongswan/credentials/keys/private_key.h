@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup private_key private_key
  * @{ @ingroup keys
@@ -23,7 +23,7 @@
 
 typedef struct private_key_t private_key_t;
 
-#include <utils/identification.h>
+#include <credentials/cred_encoding.h>
 #include <credentials/keys/public_key.h>
 
 /**
@@ -46,7 +46,7 @@ struct private_key_t {
 	 * @param signature	where to allocate created signature
 	 * @return			TRUE if signature created
 	 */
-	bool (*sign)(private_key_t *this, signature_scheme_t scheme, 
+	bool (*sign)(private_key_t *this, signature_scheme_t scheme,
 				 chunk_t data, chunk_t *signature);
 	/**
 	 * Decrypt a chunk of data.
@@ -56,32 +56,24 @@ struct private_key_t {
 	 * @return			TRUE if data decrypted and plaintext allocated
 	 */
 	bool (*decrypt)(private_key_t *this, chunk_t crypto, chunk_t *plain);
-	
+
 	/**
 	 * Get the strength of the key in bytes.
-	 * 
+	 *
 	 * @return			strength of the key in bytes
 	 */
 	size_t (*get_keysize) (private_key_t *this);
 
-	/**
-	 * Get a unique key identifier, such as a hash over the public key.
-	 * 
-	 * @param type		type of the key ID to get
-	 * @return			unique ID of the key as identification_t, or NULL
-	 */
-	identification_t* (*get_id) (private_key_t *this, id_type_t type);
-	
 	/**
 	 * Get the public part from the private key.
 	 *
 	 * @return			public key
 	 */
 	public_key_t* (*get_public_key)(private_key_t *this);
-	
+
 	/**
 	 * Check if two private keys are equal.
-	 * 
+	 *
 	 * @param other		other private key
 	 * @return			TRUE, if equality
 	 */
@@ -89,32 +81,78 @@ struct private_key_t {
 
 	/**
 	 * Check if a private key belongs to a public key.
-	 * 
+	 *
 	 * @param public	public key
 	 * @return			TRUE, if keys belong together
 	 */
 	bool (*belongs_to) (private_key_t *this, public_key_t *public);
-	
+
 	/**
-	 * Get an encoded form of the private key.
+	 * Get the fingerprint of the key.
 	 *
-	 * @todo Do we need a encoding type specification?
-	 *
-	 * @return			allocated chunk containing encoded private key
+	 * @param type		type of fingerprint, one of KEYID_*
+	 * @param fp		fingerprint, points to internal data
+	 * @return			TRUE if fingerprint type supported
 	 */
-	chunk_t (*get_encoding)(private_key_t *this);	
-	
+	bool (*get_fingerprint)(private_key_t *this, cred_encoding_type_t type,
+							chunk_t *fp);
+
+	/**
+	 * Check if a key has a given fingerprint of any kind.
+	 *
+	 * @param fp		fingerprint to check
+	 * @return			TRUE if key has given fingerprint
+	 */
+	bool (*has_fingerprint)(private_key_t *this, chunk_t fp);
+
+	/**
+	 * Get the key in an encoded form as a chunk.
+	 *
+	 * @param type		type of the encoding, one of PRIVKEY_*
+	 * @param encoding	encoding of the key, allocated
+	 * @return			TRUE if encoding supported
+	 */
+	bool (*get_encoding)(private_key_t *this, cred_encoding_type_t type,
+						 chunk_t *encoding);
+
 	/**
 	 * Increase the refcount to this private key.
 	 *
 	 * @return			this, with an increased refcount
 	 */
 	private_key_t* (*get_ref)(private_key_t *this);
-		
+
 	/**
-     * Decrease refcount, destroy private_key if no more references.
-     */
-    void (*destroy)(private_key_t *this);
+	 * Decrease refcount, destroy private_key if no more references.
+	 */
+	void (*destroy)(private_key_t *this);
 };
+
+/**
+ * Generic private key equals() implementation, usable by implementors.
+ *
+ * @param this			first key to compare
+ * @param other			second key to compare
+ * @return				TRUE if this is equal to other
+ */
+bool private_key_equals(private_key_t *this, private_key_t *other);
+
+/**
+ * Generic private key belongs_to() implementation, usable by implementors.
+ *
+ * @param private		private key to check
+ * @param public		public key to compare
+ * @return				TRUE if this is equal to other
+ */
+bool private_key_belongs_to(private_key_t *private, public_key_t *public);
+
+/**
+ * Generic private key has_fingerprint() implementation, usable by implementors.
+ *
+ * @param this			key to check fingerprint
+ * @param fingerprint	fingerprint to check
+ * @return				TRUE if key has given fingerprint
+ */
+bool private_key_has_fingerprint(private_key_t *this, chunk_t fingerprint);
 
 #endif /** PRIVATE_KEY_H_ @}*/

@@ -1,14 +1,6 @@
 lib_LTLIBRARIES = libstrongswan.la
 
-if USE_INTEGRITY_TEST
-  libstrongswan_la_SOURCES = \
-  fips/fips_canister_start.c \
-  fips/fips.c fips/fips.h
-else
-  libstrongswan_la_SOURCES =
-endif
-
-libstrongswan_la_SOURCES += \
+libstrongswan_la_SOURCES = \
 library.c library.h \
 chunk.c chunk.h \
 debug.c debug.h \
@@ -18,7 +10,6 @@ printf_hook.c printf_hook.h \
 asn1/asn1.c asn1/asn1.h \
 asn1/asn1_parser.c asn1/asn1_parser.h \
 asn1/oid.c asn1/oid.h \
-asn1/pem.c asn1/pem.h \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/pkcs9.c crypto/pkcs9.h \
@@ -33,6 +24,7 @@ crypto/diffie_hellman.c crypto/diffie_hellman.h \
 crypto/transform.c crypto/transform.h \
 credentials/credential_factory.c credentials/credential_factory.h \
 credentials/builder.c credentials/builder.h \
+credentials/cred_encoding.c credentials/cred_encoding.h \
 credentials/keys/private_key.c credentials/keys/private_key.h \
 credentials/keys/public_key.c credentials/keys/public_key.h \
 credentials/keys/shared_key.c credentials/keys/shared_key.h \
@@ -40,11 +32,25 @@ credentials/certificates/certificate.c credentials/certificates/certificate.h \
 credentials/certificates/x509.h credentials/certificates/x509.c \
 credentials/certificates/ac.h \
 credentials/certificates/crl.h credentials/certificates/crl.c \
+credentials/certificates/pkcs10.h \
 credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_response.h credentials/certificates/ocsp_response.c \
+credentials/certificates/pgp_certificate.h \
+credentials/ietf_attributes/ietf_attributes.c credentials/ietf_attributes/ietf_attributes.h \
+credentials/credential_manager.c credentials/credential_manager.h \
+credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
+credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
+credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
+credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
+credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
 fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
-pgp/pgp.c pgp/pgp.h \
+selectors/traffic_selector.c selectors/traffic_selector.h \
+threading/thread.h threading/thread.c \
+threading/thread_value.h threading/thread_value.c \
+threading/mutex.h threading/mutex.c threading/condvar.h  \
+threading/rwlock.h threading/rwlock.c \
+threading/lock_profiler.h \
 utils.h utils.c \
 utils/host.c utils/host.h \
 utils/identification.c utils/identification.h \
@@ -54,16 +60,16 @@ utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
-utils/mutex.c utils/mutex.h \
 utils/backtrace.c utils/backtrace.h \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
 
-libstrongswan_la_LIBADD = -lpthread $(DLLIB)
+libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB)
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
 -DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_PLUGINDIR=\"${plugindir}\"
+-DPLUGINDIR=\"${plugindir}\" \
+-DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 
 if USE_LEAK_DETECTIVE
   AM_CFLAGS += -DLEAK_DETECTIVE
@@ -76,8 +82,9 @@ if USE_LOCK_PROFILER
 endif
 
 if USE_INTEGRITY_TEST
+  AM_CFLAGS += -DINTEGRITY_TEST
   libstrongswan_la_SOURCES += \
-  fips/fips_canister_end.c
+    integrity_checker.c integrity_checker.h
 endif
 
 if USE_VSTR
@@ -86,7 +93,8 @@ endif
 
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
-crypto/proposal/proposal_keywords.txt
+crypto/proposal/proposal_keywords.txt \
+Android.mk AndroidConfigLocal.h
 
 BUILT_SOURCES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
@@ -111,100 +119,204 @@ $(srcdir)/crypto/proposal/proposal_keywords.c:	$(srcdir)/crypto/proposal/proposa
 # build plugins with their own Makefile
 #######################################
 
+if MONOLITHIC
+SUBDIRS =
+else
 SUBDIRS = .
+endif
 
 if USE_AES
   SUBDIRS += plugins/aes
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/aes/libstrongswan-aes.la
+endif
 endif
 
 if USE_DES
   SUBDIRS += plugins/des
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/des/libstrongswan-des.la
+endif
 endif
 
 if USE_BLOWFISH
   SUBDIRS += plugins/blowfish
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/blowfish/libstrongswan-blowfish.la
+endif
 endif
 
 if USE_MD4
   SUBDIRS += plugins/md4
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/md4/libstrongswan-md4.la
+endif
 endif
 
 if USE_MD5
   SUBDIRS += plugins/md5
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/md5/libstrongswan-md5.la
+endif
 endif
 
 if USE_SHA1
   SUBDIRS += plugins/sha1
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/sha1/libstrongswan-sha1.la
+endif
 endif
 
 if USE_SHA2
   SUBDIRS += plugins/sha2
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/sha2/libstrongswan-sha2.la
 endif
-
-if USE_FIPS_PRF
-  SUBDIRS += plugins/fips_prf
 endif
 
 if USE_GMP
   SUBDIRS += plugins/gmp
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/gmp/libstrongswan-gmp.la
+endif
 endif
 
 if USE_RANDOM
   SUBDIRS += plugins/random
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/random/libstrongswan-random.la
+endif
 endif
 
 if USE_HMAC
   SUBDIRS += plugins/hmac
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/hmac/libstrongswan-hmac.la
+endif
 endif
 
 if USE_XCBC
   SUBDIRS += plugins/xcbc
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/xcbc/libstrongswan-xcbc.la
+endif
 endif
 
 if USE_X509
   SUBDIRS += plugins/x509
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/x509/libstrongswan-x509.la
+endif
+endif
+
+if USE_REVOCATION
+  SUBDIRS += plugins/revocation
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/revocation/libstrongswan-revocation.la
+endif
 endif
 
 if USE_PUBKEY
   SUBDIRS += plugins/pubkey
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pubkey/libstrongswan-pubkey.la
+endif
+endif
+
+if USE_PKCS1
+  SUBDIRS += plugins/pkcs1
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pkcs1/libstrongswan-pkcs1.la
+endif
+endif
+
+if USE_PGP
+  SUBDIRS += plugins/pgp
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pgp/libstrongswan-pgp.la
+endif
+endif
+
+if USE_DNSKEY
+  SUBDIRS += plugins/dnskey
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/dnskey/libstrongswan-dnskey.la
+endif
+endif
+
+if USE_PEM
+  SUBDIRS += plugins/pem
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/pem/libstrongswan-pem.la
+endif
 endif
 
 if USE_CURL
   SUBDIRS += plugins/curl
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/curl/libstrongswan-curl.la
+endif
 endif
 
 if USE_LDAP
   SUBDIRS += plugins/ldap
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ldap/libstrongswan-ldap.la
+endif
 endif
 
 if USE_MYSQL
   SUBDIRS += plugins/mysql
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/mysql/libstrongswan-mysql.la
+endif
 endif
 
 if USE_SQLITE
   SUBDIRS += plugins/sqlite
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/sqlite/libstrongswan-sqlite.la
+endif
 endif
 
 if USE_PADLOCK
   SUBDIRS += plugins/padlock
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/padlock/libstrongswan-padlock.la
+endif
 endif
 
 if USE_OPENSSL
   SUBDIRS += plugins/openssl
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/openssl/libstrongswan-openssl.la
+endif
 endif
 
 if USE_GCRYPT
   SUBDIRS += plugins/gcrypt
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/gcrypt/libstrongswan-gcrypt.la
+endif
+endif
+
+if USE_FIPS_PRF
+  SUBDIRS += plugins/fips_prf
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/fips_prf/libstrongswan-fips-prf.la
+endif
 endif
 
 if USE_AGENT
   SUBDIRS += plugins/agent
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/agent/libstrongswan-agent.la
+endif
 endif
 
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/test_vectors/libstrongswan-test-vectors.la
 endif
-
-if USE_INTEGRITY_TEST
-  SUBDIRS += fips
 endif

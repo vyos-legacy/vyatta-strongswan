@@ -17,11 +17,6 @@
 
 #include <debug.h>
 
-/**
- * defined in pubkey_public_key.c
- */
-extern public_key_t *pubkey_public_key_load(chunk_t blob);
-
 typedef struct private_pubkey_cert_t private_pubkey_cert_t;
 
 /**
@@ -33,17 +28,22 @@ struct private_pubkey_cert_t {
 	 * public functions
 	 */
 	pubkey_cert_t public;
-	
+
 	/**
 	 * wrapped public key
 	 */
 	public_key_t *key;
-	
+
 	/**
 	 * dummy issuer id, ID_ANY
 	 */
 	identification_t *issuer;
-	
+
+	/**
+	 * subject, ID_KEY_ID of the public key
+	 */
+	identification_t *subject;
+
 	/**
 	 * reference count
 	 */
@@ -63,7 +63,7 @@ static certificate_type_t get_type(private_pubkey_cert_t *this)
  */
 static identification_t* get_subject(private_pubkey_cert_t *this)
 {
-	return this->key->get_id(this->key, ID_PUBKEY_INFO_SHA1);
+	return this->subject;
 }
 
 /**
@@ -80,14 +80,21 @@ static identification_t* get_issuer(private_pubkey_cert_t *this)
 static id_match_t has_subject(private_pubkey_cert_t *this,
 							  identification_t *subject)
 {
-	identification_t *id;
-	
-	id = this->key->get_id(this->key, subject->get_type(subject));
-	if (id)
+	if (subject->get_type(subject) == ID_KEY_ID)
 	{
-		return id->matches(id, subject);
+		cred_encoding_type_t type;
+		chunk_t fingerprint;
+
+		for (type = 0; type < CRED_ENCODING_MAX; type++)
+		{
+			if (this->key->get_fingerprint(this->key, type, &fingerprint) &&
+				chunk_equals(fingerprint, subject->get_encoding(subject)))
+			{
+				return ID_MATCH_PERFECT;
+			}
+		}
 	}
-	return ID_MATCH_NONE;	
+	return ID_MATCH_NONE;
 }
 
 /**
@@ -104,15 +111,19 @@ static id_match_t has_issuer(private_pubkey_cert_t *this,
  */
 static bool equals(private_pubkey_cert_t *this, certificate_t *other)
 {
-	if (this == (private_pubkey_cert_t*)other)
+	public_key_t *other_key;
+
+	other_key = other->get_public_key(other);
+	if (other_key)
 	{
-		return TRUE;
+		if (public_key_equals(this->key, other_key))
+		{
+			other_key->destroy(other_key);
+			return TRUE;
+		}
+		other_key->destroy(other_key);
 	}
-	if (other->get_type(other) != CERT_TRUSTED_PUBKEY)
-	{
-		return FALSE;
-	}
-	return other->has_subject(other, this->key->get_id(this->key, ID_PUBKEY_INFO_SHA1));
+	return FALSE;
 }
 
 /**
@@ -131,6 +142,7 @@ static public_key_t* get_public_key(private_pubkey_cert_t *this)
 	this->key->get_ref(this->key);
 	return this->key;
 }
+
 /**
  * Implementation of certificate_t.get_validity.
  */
@@ -149,19 +161,12 @@ static bool get_validity(private_pubkey_cert_t *this, time_t *when,
 }
 
 /**
- * Implementation of certificate_t.is_newer.
- */
-static bool is_newer(certificate_t *this, certificate_t *that)
-{
-	return FALSE;
-}
-	
-/**
  * Implementation of certificate_t.get_encoding.
  */
-static chunk_t get_encoding(private_pubkey_cert_t *this)
+static bool get_encoding(private_pubkey_cert_t *this, cred_encoding_type_t type,
+						 chunk_t *encoding)
 {
-	return this->key->get_encoding(this->key);
+	return this->key->get_encoding(this->key, PUBKEY_ASN1_DER, encoding);
 }
 
 /**
@@ -180,6 +185,7 @@ static void destroy(private_pubkey_cert_t *this)
 {
 	if (ref_put(&this->ref))
 	{
+		this->subject->destroy(this->subject);
 		this->issuer->destroy(this->issuer);
 		this->key->destroy(this->key);
 		free(this);
@@ -192,7 +198,8 @@ static void destroy(private_pubkey_cert_t *this)
 static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 {
 	private_pubkey_cert_t *this = malloc_thing(private_pubkey_cert_t);
-	
+	chunk_t fingerprint;
+
 	this->public.interface.get_type = (certificate_type_t (*)(certificate_t *this))get_type;
 	this->public.interface.get_subject = (identification_t* (*)(certificate_t *this))get_subject;
 	this->public.interface.get_issuer = (identification_t* (*)(certificate_t *this))get_issuer;
@@ -201,102 +208,64 @@ static pubkey_cert_t *pubkey_cert_create(public_key_t *key)
 	this->public.interface.issued_by = (bool (*)(certificate_t *this, certificate_t *issuer))issued_by;
 	this->public.interface.get_public_key = (public_key_t* (*)(certificate_t *this))get_public_key;
 	this->public.interface.get_validity = (bool (*)(certificate_t*, time_t *when, time_t *, time_t*))get_validity;
-	this->public.interface.is_newer = (bool (*)(certificate_t*,certificate_t*))is_newer;
-	this->public.interface.get_encoding = (chunk_t (*)(certificate_t*))get_encoding;
+	this->public.interface.get_encoding = (bool (*)(certificate_t*,cred_encoding_type_t,chunk_t*))get_encoding;
 	this->public.interface.equals = (bool (*)(certificate_t*, certificate_t *other))equals;
 	this->public.interface.get_ref = (certificate_t* (*)(certificate_t *this))get_ref;
 	this->public.interface.destroy = (void (*)(certificate_t *this))destroy;
-	
+
 	this->ref = 1;
 	this->key = key;
 	this->issuer = identification_create_from_encoding(ID_ANY, chunk_empty);
-	
+	if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &fingerprint))
+	{
+		this->subject = identification_create_from_encoding(ID_KEY_ID, fingerprint);
+	}
+	else
+	{
+		this->subject = identification_create_from_encoding(ID_ANY, chunk_empty);
+	}
+
 	return &this->public;
 }
 
-static pubkey_cert_t *pubkey_cert_create_from_chunk(chunk_t blob)
-{
-	public_key_t *key = pubkey_public_key_load(chunk_clone(blob));
-
-	return (key)? pubkey_cert_create(key) : NULL;
-}
-
-typedef struct private_builder_t private_builder_t;
 /**
- * Builder implementation for key loading
+ * See header.
  */
-struct private_builder_t {
-	/** implements the builder interface */
-	builder_t public;
-	/** loaded public key */
-	pubkey_cert_t *key;
-};
-
-/**
- * Implementation of builder_t.build
- */
-static pubkey_cert_t *build(private_builder_t *this)
+pubkey_cert_t *pubkey_cert_wrap(certificate_type_t type, va_list args)
 {
-	pubkey_cert_t *key = this->key;
-	
-	free(this);
-	return key;
-}
+	public_key_t *key = NULL;
+	chunk_t blob = chunk_empty;
 
-/**
- * Implementation of builder_t.add
- */
-static void add(private_builder_t *this, builder_part_t part, ...)
-{
-	if (!this->key)
+	while (TRUE)
 	{
-		va_list args;
-	
-		switch (part)
+		switch (va_arg(args, builder_part_t))
 		{
 			case BUILD_BLOB_ASN1_DER:
-			{
-				va_start(args, part);
-				this->key = pubkey_cert_create_from_chunk(va_arg(args, chunk_t));
-				va_end(args);
-				return;
-			}
+				blob = va_arg(args, chunk_t);
+				continue;
 			case BUILD_PUBLIC_KEY:
-			{
-				va_start(args, part);
-				this->key = pubkey_cert_create(va_arg(args, public_key_t*));
-				va_end(args);
-				return;
-			}
-			default:
+				key = va_arg(args, public_key_t*);
+				continue;
+			case BUILD_END:
 				break;
+			default:
+				return NULL;
 		}
+		break;
 	}
-	if (this->key)
+	if (key)
 	{
-		destroy((private_pubkey_cert_t*)this->key);
+		key->get_ref(key);
 	}
-	builder_cancel(&this->public);
-}
-
-/**
- * Builder construction function
- */
-builder_t *pubkey_cert_builder(certificate_type_t type)
-{
-	private_builder_t *this;
-	
-	if (type != CERT_TRUSTED_PUBKEY)
+	else if (blob.ptr)
 	{
-		return NULL;
+		key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+								 BUILD_BLOB_ASN1_DER, blob, BUILD_END);
 	}
-	
-	this = malloc_thing(private_builder_t);
-	
-	this->key = NULL;
-	this->public.add = (void(*)(builder_t *this, builder_part_t part, ...))add;
-	this->public.build = (void*(*)(builder_t *this))build;
-	
-	return &this->public;
+	if (key)
+	{
+		return pubkey_cert_create(key);
+	}
+	return NULL;
 }
 

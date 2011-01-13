@@ -90,7 +90,7 @@ static struct sadb_alg* sadb_alg_ptr (int satype, int exttype, int alg_id,
 	default:
 		return NULL;
 	}
-	
+
 	return alg_p;
 }
 
@@ -154,7 +154,7 @@ bool kernel_alg_esp_enc_ok(u_int alg_id, u_int key_len,
 	if (!ret) goto out;
 
 	alg_p = &esp_ealg[alg_id];
-	
+
 	/*
 	 * test #2: if key_len specified, it must be in range
 	 */
@@ -195,8 +195,8 @@ out:
 	return ret;
 }
 
-/* 
- * ML: make F_STRICT logic consider enc,auth algorithms 
+/*
+ * ML: make F_STRICT logic consider enc,auth algorithms
  */
 bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 							 struct alg_info_esp *alg_info)
@@ -237,14 +237,14 @@ bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 					{
 						loglog(RC_LOG_SERIOUS
 							, "You should NOT use insecure ESP algorithms [%s (%d)]!"
-							, enum_name(&esp_transformid_names, ealg), key_len);
+							, enum_name(&esp_transform_names, ealg), key_len);
 					}
 					return TRUE;
 				}
 			}
 		}
 		plog("IPSec Transform [%s (%d), %s] refused due to %s",
-				enum_name(&esp_transformid_names, ealg), key_len,
+				enum_name(&esp_transform_names, ealg), key_len,
 				enum_name(&auth_alg_names, aalg),
 				ealg_insecure ? "insecure key_len and enc. alg. not listed in \"esp\" string" : "strict flag");
 		return FALSE;
@@ -252,7 +252,7 @@ bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 	return TRUE;
 }
 
-/**      
+/**
  * Load kernel_alg arrays from /proc used in manual mode from klips/utils/spi.c
  */
 int kernel_alg_proc_read(void)
@@ -312,7 +312,7 @@ int kernel_alg_proc_read(void)
 	return 0;
 }
 
-/**     
+/**
  * Load kernel_alg arrays pluto's SADB_REGISTER user by pluto/kernel.c
  */
 void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
@@ -341,7 +341,7 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 
 	sadb.msg++;
 
-	while(msglen)
+	while (msglen)
 	{
 		int supp_exttype = sadb.supported->sadb_supported_exttype;
 		int supp_len = sadb.supported->sadb_supported_len*IPSEC_PFKEYv2_ALIGN;
@@ -361,14 +361,14 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 			 supp_len;
 			 supp_len -= sizeof(struct sadb_alg), sadb.alg++,i++)
 		{
-			int ret = kernel_alg_add(satype, supp_exttype, sadb.alg);
+			kernel_alg_add(satype, supp_exttype, sadb.alg);
 
 			DBG(DBG_KLIPS,
 				DBG_log("kernel_alg_register_pfkey(): SADB_SATYPE_%s: "
 						"alg[%d], exttype=%d, satype=%d, alg_id=%d, "
 						"alg_ivlen=%d, alg_minbits=%d, alg_maxbits=%d, "
-						"res=%d, ret=%d"
-						, satype==SADB_SATYPE_ESP? "ESP" : "AH"
+						"res=%d"
+						, satype == SADB_SATYPE_ESP? "ESP" : "AH"
 						, i
 						, supp_exttype
 						, satype
@@ -376,9 +376,40 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 						, sadb.alg->sadb_alg_ivlen
 						, sadb.alg->sadb_alg_minbits
 						, sadb.alg->sadb_alg_maxbits
-						, sadb.alg->sadb_alg_reserved
-						, ret)
+						, sadb.alg->sadb_alg_reserved)
 			)
+			/* if AES_CBC is registered then also register AES_CCM and AES_GCM */
+			if (satype == SADB_SATYPE_ESP &&
+				supp_exttype == SADB_EXT_SUPPORTED_ENCRYPT &&
+				sadb.alg->sadb_alg_id == SADB_X_EALG_AESCBC)
+			{
+				struct sadb_alg alg = *sadb.alg;
+				int alg_id;
+
+				for (alg_id = SADB_X_EALG_AES_CCM_ICV8;
+					 alg_id <= SADB_X_EALG_AES_GCM_ICV16; alg_id++)
+				{
+					if (alg_id != ESP_UNASSIGNED_17)
+					{
+						alg.sadb_alg_id = alg_id;
+						kernel_alg_add(satype, supp_exttype, &alg);
+					}
+				}
+
+				/* also register AES_GMAC */
+				alg.sadb_alg_id = SADB_X_EALG_NULL_AES_GMAC;
+				kernel_alg_add(satype, supp_exttype, &alg);
+			}
+			/* if SHA2_256 is registered then also register SHA2_256_96 */
+			if (satype == SADB_SATYPE_ESP &&
+				supp_exttype == SADB_EXT_SUPPORTED_AUTH &&
+				sadb.alg->sadb_alg_id == SADB_X_AALG_SHA2_256HMAC)
+			{
+				struct sadb_alg alg = *sadb.alg;
+
+				alg.sadb_alg_id = SADB_X_AALG_SHA2_256_96HMAC;
+				kernel_alg_add(satype, supp_exttype, &alg);
+			}
 		}
 	}
 }
@@ -388,8 +419,9 @@ u_int kernel_alg_esp_enc_keylen(u_int alg_id)
 	u_int keylen = 0;
 
 	if (!ESP_EALG_PRESENT(alg_id))
+	{
 		goto none;
-
+	}
 	keylen = esp_ealg[alg_id].sadb_alg_maxbits/BITS_PER_BYTE;
 
 	switch (alg_id)
@@ -405,10 +437,9 @@ u_int kernel_alg_esp_enc_keylen(u_int alg_id)
 			break;
 	}
 
-none:   
+none:
 	DBG(DBG_KLIPS,
-		DBG_log("kernel_alg_esp_enc_keylen():"
-				"alg_id=%d, keylen=%d",
+		DBG_log("kernel_alg_esp_enc_keylen(): alg_id=%d, keylen=%d",
 				alg_id, keylen)
 	)
 	return keylen;
@@ -445,7 +476,7 @@ void kernel_alg_list(void)
 		if (ESP_EALG_PRESENT(sadb_id))
 		{
 			n = snprintf(pos, len, " %s",
-						 enum_name(&esp_transformid_names, sadb_id));
+						 enum_name(&esp_transform_names, sadb_id));
 			pos += n;
 			len -= n;
 			if (len <= 0)
@@ -455,7 +486,7 @@ void kernel_alg_list(void)
 		}
 	}
 	whack_log(RC_COMMENT, "  encryption:%s", buf);
-	
+
 	pos = buf;
 	*pos = '\0';
 	len = BUF_LEN;
@@ -477,7 +508,7 @@ void kernel_alg_list(void)
 	whack_log(RC_COMMENT, "  integrity: %s", buf);
 }
 
-void kernel_alg_show_connection(struct connection *c, const char *instance)
+void kernel_alg_show_connection(connection_t *c, const char *instance)
 {
 	struct state *st = state_with_serialno(c->newest_ipsec_sa);
 
@@ -486,12 +517,12 @@ void kernel_alg_show_connection(struct connection *c, const char *instance)
 		const char *aalg_name, *pfsgroup_name;
 
 		aalg_name = (c->policy & POLICY_AUTHENTICATE) ?
-					enum_show(&ah_transformid_names, st->st_ah.attrs.transid):
+					enum_show(&ah_transform_names, st->st_ah.attrs.transid):
 					enum_show(&auth_alg_names, st->st_esp.attrs.auth);
 
 		pfsgroup_name = (c->policy & POLICY_PFS) ?
-						(c->alg_info_esp->esp_pfsgroup) ?
-							enum_show(&oakley_group_names, 
+						(c->alg_info_esp && c->alg_info_esp->esp_pfsgroup) ?
+							enum_show(&oakley_group_names,
 										  c->alg_info_esp->esp_pfsgroup) :
 							"<Phase1>" : "<N/A>";
 
@@ -500,7 +531,7 @@ void kernel_alg_show_connection(struct connection *c, const char *instance)
 			whack_log(RC_COMMENT, "\"%s\"%s:   ESP%s proposal: %s_%u/%s/%s",
 				c->name, instance,
 				(st->st_ah.present) ? "/AH" : "",
-				enum_show(&esp_transformid_names, st->st_esp.attrs.transid),
+				enum_show(&esp_transform_names, st->st_esp.attrs.transid),
 				st->st_esp.attrs.key_len, aalg_name, pfsgroup_name);
 		}
 		else
@@ -508,14 +539,14 @@ void kernel_alg_show_connection(struct connection *c, const char *instance)
 			whack_log(RC_COMMENT, "\"%s\"%s:   ESP%s proposal: %s/%s/%s",
 				c->name, instance,
 				(st->st_ah.present) ? "/AH" : "",
-				enum_show(&esp_transformid_names, st->st_esp.attrs.transid),
+				enum_show(&esp_transform_names, st->st_esp.attrs.transid),
 				aalg_name, pfsgroup_name);
 		}
 	}
 }
 
 bool kernel_alg_esp_auth_ok(u_int auth,
-					struct alg_info_esp *alg_info __attribute__((unused)))
+							struct alg_info_esp *alg_info __attribute__((unused)))
 {
 	return ESP_AALG_PRESENT(alg_info_esp_aa2sadb(auth));
 }
@@ -618,15 +649,16 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
 		DBG_log("kernel_alg_db_add() kernel enc ealg_id=%d not present", ealg_id);
 		return FALSE;
 	}
-	
-	if (!(policy & POLICY_AUTHENTICATE))    /* skip ESP auth attrs for AH */
+
+	if (!(policy & POLICY_AUTHENTICATE) &&    /* skip ESP auth attrs for AH */
+		esp_info->esp_aalg_id != AUTH_ALGORITHM_NONE)
 	{
 		aalg_id = alg_info_esp_aa2sadb(esp_info->esp_aalg_id);
 
 		if (!ESP_AALG_PRESENT(aalg_id))
 		{
-			DBG_log("kernel_alg_db_add() kernel auth "
-					"aalg_id=%d not present", aalg_id);
+			DBG_log("kernel_alg_db_add() kernel auth aalg_id=%d not present",
+					aalg_id);
 			return FALSE;
 		}
 	}
@@ -637,18 +669,23 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
 	/*  open new transformation */
 	db_trans_add(db_ctx, ealg_id);
 
-	/* add ESP auth attr */
-	if (!(policy & POLICY_AUTHENTICATE))
+	/* add ESP auth attr if not AH or AEAD */
+	if (!(policy & POLICY_AUTHENTICATE) &&
+		esp_info->esp_aalg_id != AUTH_ALGORITHM_NONE)
+	{
 		db_attr_add_values(db_ctx, AUTH_ALGORITHM, esp_info->esp_aalg_id);
+	}
 
-	/* add keylegth if specified in esp= string */
+	/* add keylength if specified in esp= string */
 	if (esp_info->esp_ealg_keylen)
+	{
 		db_attr_add_values(db_ctx, KEY_LENGTH, esp_info->esp_ealg_keylen);
-		
+	}
+
 	return TRUE;
 }
 
-/*      
+/*
  *      Create proposal with runtime kernel algos, merging
  *      with passed proposal if not NULL
  *
@@ -672,12 +709,6 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 	/* pass aprox. number of transforms and attributes */
 	ctx_new = db_prop_new(PROTO_IPSEC_ESP, trans_cnt, trans_cnt * 2);
 
-	/*
-	 * Loop: for each element (struct esp_info) of alg_info,
-	 *       if kernel support is present then build the transform (and attrs)
-	 *       if NULL alg_info, propose everything ...
-	 */
-
 	if (alg_info)
 	{
 		int i;
@@ -686,28 +717,6 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 		{
 			tmp_esp_info = *esp_info;
 			kernel_alg_db_add(ctx_new, &tmp_esp_info, policy);
-		}
-	}
-	else
-	{
-		u_int ealg_id;
-		
-		ESP_EALG_FOR_EACH_UPDOWN(ealg_id)
-		{
-			u_int aalg_id;
-
-			tmp_esp_info.esp_ealg_id = ealg_id;
-			tmp_esp_info.esp_ealg_keylen = 0;
-
-			for (aalg_id = 1; aalg_id <= SADB_AALG_MAX; aalg_id++)
-			{
-				if (ESP_AALG_PRESENT(aalg_id))
-				{
-					tmp_esp_info.esp_aalg_id = alg_info_esp_sadb2aa(aalg_id);
-					tmp_esp_info.esp_aalg_keylen = 0;
-					kernel_alg_db_add(ctx_new, &tmp_esp_info, policy);
-				}
-			}
 		}
 	}
 	prop = db_prop_get(ctx_new);

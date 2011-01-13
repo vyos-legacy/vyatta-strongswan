@@ -27,20 +27,20 @@ typedef struct plugin_t plugin_t;
  * Interface definition of a plugin.
  */
 struct plugin_t {
-	
+
 	/**
-     * Destroy a plugin instance.
-     */
-    void (*destroy)(plugin_t *this);
+	 * Destroy a plugin instance.
+	 */
+	void (*destroy)(plugin_t *this);
 };
 
 
 /**
  * Plugin constructor function definiton.
  *
- * Each plugin has a constructor functions. This function is called on daemon
+ * Each plugin has a constructor function. This function is called on daemon
  * startup to initialize each plugin.
- * The plugin function is named plugin_create().
+ * The plugin function is named plugin_name_plugin_create().
  *
  * @return				plugin_t instance
  */

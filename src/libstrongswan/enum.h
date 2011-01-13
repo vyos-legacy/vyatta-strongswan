@@ -22,7 +22,7 @@
 #ifndef ENUM_H_
 #define ENUM_H_
 
-#include <printf_hook.h>
+#include "printf_hook.h"
 
 typedef struct enum_name_t enum_name_t;
 
@@ -98,7 +98,7 @@ struct enum_name_t {
  *
  * This is a convenience macro to use when a enum_name list contains only
  * one range, and is equal as defining ENUM_BEGIN followed by ENUM_END.
- * 
+ *
  * @param name	name of the enum_name list
  * @param first	enum value of the first enum string
  * @param last	enum value of the last enum string
@@ -109,8 +109,8 @@ struct enum_name_t {
 /**
  * printf hook function for enum_names_t.
  *
- * Arguments are: 
- *    enum_names_t *names, int value
+ * Arguments are:
+ *	enum_names_t *names, int value
  */
 int enum_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 					 const void *const *args);

@@ -16,7 +16,7 @@
 /**
  * @defgroup agent_p agent
  * @ingroup plugins
- * 
+ *
  * @defgroup agent_plugin agent_plugin
  * @{ @ingroup agent_p
  */
@@ -38,10 +38,5 @@ struct agent_plugin_t {
 	 */
 	plugin_t plugin;
 };
-
-/**
- * Create a agent_plugin instance.
- */
-plugin_t *plugin_create();
 
 #endif /** AGENT_PLUGIN_H_ @}*/
