@@ -23,6 +23,8 @@
 
 typedef struct leak_detective_t leak_detective_t;
 
+#include <library.h>
+
 /**
  * Leak detective finds leaks and bad frees using malloc hooks.
  *
@@ -32,11 +34,18 @@ typedef struct leak_detective_t leak_detective_t;
  * and dynamic whitelisting.
  */
 struct leak_detective_t {
-		
+
 	/**
-     * Destroy a leak_detective instance.
-     */
-    void (*destroy)(leak_detective_t *this);
+	 * Report leaks to stderr.
+	 *
+	 * @param detailed 		TRUE to resolve line/filename of leak (slow)
+	 */
+	void (*report)(leak_detective_t *this, bool detailed);
+
+	/**
+	 * Destroy a leak_detective instance.
+	 */
+	void (*destroy)(leak_detective_t *this);
 };
 
 /**

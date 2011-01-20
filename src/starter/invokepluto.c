@@ -42,11 +42,23 @@ starter_pluto_pid(void)
 }
 
 void
-starter_pluto_sigchild(pid_t pid)
+starter_pluto_sigchild(pid_t pid, int status)
 {
 	if (pid == _pluto_pid)
 	{
 		_pluto_pid = 0;
+		if (status == SS_RC_LIBSTRONGSWAN_INTEGRITY ||
+			status == SS_RC_DAEMON_INTEGRITY)
+		{
+			plog("pluto has quit: integrity test of %s failed",
+				  (status == 64) ? "libstrongswan" : "pluto");
+			_stop_requested = 1;
+		}
+		else if (status == SS_RC_INITIALIZATION_FAILED)
+		{
+			plog("pluto has quit: initialization failed");
+			_stop_requested = 1;
+		}
 		if (!_stop_requested)
 		{
 			plog("pluto has died -- restart scheduled (%dsec)"
@@ -82,7 +94,7 @@ starter_stop_pluto (void)
 		/* be more and more aggressive */
 		for (i = 0; i < 20 && (pid = _pluto_pid) != 0; i++)
 		{
-			
+
 			if (i < 10)
 			{
 				kill(pid, SIGTERM);
@@ -91,7 +103,7 @@ starter_stop_pluto (void)
 			{
 				kill(pid, SIGKILL);
 				plog("starter_stop_pluto(): pluto does not respond, sending KILL");
-			}           
+			}
 			else
 			{
 				kill(pid, SIGKILL);
@@ -135,7 +147,7 @@ starter_start_pluto (starter_config_t *cfg, bool no_fork, bool attach_gdb)
 		};
 
 	printf ("starter_start_pluto entered\n");
-	
+
 	if (attach_gdb)
 	{
 		argc = 0;

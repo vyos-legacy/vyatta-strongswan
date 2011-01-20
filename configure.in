@@ -1,12 +1,12 @@
 dnl  configure.in for linux strongSwan
 dnl  Copyright (C) 2006 Martin Willi
 dnl  Hochschule fuer Technik Rapperswil
-dnl 
+dnl
 dnl  This program is free software; you can redistribute it and/or modify it
 dnl  under the terms of the GNU General Public License as published by the
 dnl  Free Software Foundation; either version 2 of the License, or (at your
 dnl  option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
-dnl 
+dnl
 dnl  This program is distributed in the hope that it will be useful, but
 dnl  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 dnl  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
@@ -16,21 +16,32 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
-AC_INIT(strongSwan,4.3.2)
+AC_INIT(strongSwan,4.4.1)
 AM_INIT_AUTOMAKE(tar-ustar)
-AC_SUBST(confdir, '${sysconfdir}')
+AC_CONFIG_MACRO_DIR([m4/config])
 PKG_PROG_PKG_CONFIG
 
 dnl =================================
 dnl  check --enable-xxx & --with-xxx
 dnl =================================
 
-AC_ARG_WITH(
-	[default-pkcs11],
-	AS_HELP_STRING([--with-default-pkcs11=lib],[set the default PKCS11 library other than "/usr/lib/opensc-pkcs11.so"]),
-	[AC_DEFINE_UNQUOTED(PKCS11_DEFAULT_LIB, "$withval")],
-	[AC_DEFINE_UNQUOTED(PKCS11_DEFAULT_LIB, "/usr/lib/opensc-pkcs11.so")]
-)
+m4_include(m4/macros/with.m4)
+
+ARG_WITH_SUBST([default-pkcs11],     [/usr/lib/opensc-pkcs11.so], [set the default PKCS11 library])
+ARG_WITH_SUBST([random-device],      [/dev/random], [set the device to read real random data from])
+ARG_WITH_SUBST([urandom-device],     [/dev/urandom], [set the device to read pseudo random data from])
+ARG_WITH_SUBST([strongswan-conf],    [${sysconfdir}/strongswan.conf], [set the strongswan.conf file location])
+ARG_WITH_SUBST([resolv-conf],        [${sysconfdir}/resolv.conf], [set the file to use in DNS handler plugin])
+ARG_WITH_SUBST([piddir],             [/var/run], [set path for PID and UNIX socket files])
+ARG_WITH_SUBST([ipsecdir],           [${libexecdir%/}/ipsec], [set installation path for ipsec tools])
+ARG_WITH_SUBST([plugindir],          [${ipsecdir%/}/plugins], [set the installation path of plugins])
+ARG_WITH_SUBST([nm-ca-dir],          [/usr/share/ca-certificates], [directory the NM plugin uses to look up trusted root certificates])
+ARG_WITH_SUBST([linux-headers],      [\${top_srcdir}/src/include], [set directory of linux header files to use])
+ARG_WITH_SUBST([routing-table],      [254], [set routing table to use for IPsec routes])
+ARG_WITH_SUBST([routing-table-prio], [32766], [set priority for IPsec routing table])
+
+ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
+ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 
 AC_ARG_WITH(
 	[xauth-module],
@@ -125,624 +136,116 @@ AC_ARG_WITH(
 
 AC_ARG_WITH(
 	[user],
-	AS_HELP_STRING([--with-user=user],[change user of the daemons to "user" after startup (default is 0).]),
+	AS_HELP_STRING([--with-user=user],[change user of the daemons to "user" after startup (default is "root").]),
 	[AC_DEFINE_UNQUOTED(IPSEC_USER, "$withval") AC_SUBST(ipsecuser, "$withval")],
 	[AC_SUBST(ipsecuser, "root")]
 )
 
 AC_ARG_WITH(
 	[group],
-	AS_HELP_STRING([--with-group=group],[change group of the daemons to "group" after startup (default is 0).]),
+	AS_HELP_STRING([--with-group=group],[change group of the daemons to "group" after startup (default is "root").]),
 	[AC_DEFINE_UNQUOTED(IPSEC_GROUP, "$withval") AC_SUBST(ipsecgroup, "$withval")],
 	[AC_SUBST(ipsecgroup, "root")]
 )
 
-dnl Will be extended to --with-capabilities=libcap|libcap2
-AC_ARG_WITH(
-	[capabilities],
-	AS_HELP_STRING([--with-capabilities=libcap],[capability dropping using libcap. Currenlty only the value "libcap" is supported (default is NO).]),
-	[capabilities="$withval"],
-	[capabilities=no]
-)
-
-AC_ARG_ENABLE(
-	[curl],
-	AS_HELP_STRING([--enable-curl],[enable CURL fetcher plugin to fetch files via libcurl (default is NO). Requires libcurl.]),
-	[if test x$enableval = xyes; then
-		curl=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[ldap],
-	AS_HELP_STRING([--enable-ldap],[enable LDAP fetching plugin to fetch files via libldap (default is NO). Requires openLDAP.]),
-	[if test x$enableval = xyes; then
-		ldap=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[aes],
-	AS_HELP_STRING([--disable-aes],[disable own AES software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		aes=true
-	 else
-		aes=false
-	fi],
-	aes=true
-)
-
-AC_ARG_ENABLE(
-	[des],
-	AS_HELP_STRING([--disable-des],[disable own DES/3DES software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		des=true
-	 else
-		des=false
-	fi],
-	des=true
-)
-
-AC_ARG_ENABLE(
-	[blowfish],
-	AS_HELP_STRING([--enable-blowfish],[enable Blowfish software implementation plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		blowfish=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[md4],
-	AS_HELP_STRING([--enable-md4],[enable MD4 software implementation plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		md4=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[md5],
-	AS_HELP_STRING([--disable-md5],[disable own MD5 software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		md5=true
-	 else
-		md5=false
-	fi],
-	md5=true
-)
-
-AC_ARG_ENABLE(
-	[sha1],
-	AS_HELP_STRING([--disable-sha1],[disable own SHA1 software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		sha1=true
-	 else
-		sha1=false
-	fi],
-	sha1=true
-)
-
-AC_ARG_ENABLE(
-	[sha2],
-	AS_HELP_STRING([--disable-sha2],[disable own SHA256/SHA384/SHA512 software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		sha2=true
-	 else
-		sha2=false
-	fi],
-	sha2=true
-)
-
-AC_ARG_ENABLE(
-	[fips-prf],
-	AS_HELP_STRING([--disable-fips-prf],[disable FIPS PRF software implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		fips_prf=true
-	 else
-		fips_prf=false
-	fi],
-	fips_prf=true
-)
-
-AC_ARG_ENABLE(
-	[gmp],
-	AS_HELP_STRING([--disable-gmp],[disable own GNU MP (libgmp) based crypto implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		gmp=true
-	 else
-		gmp=false
-	fi],
-	gmp=true
-)
-
-AC_ARG_ENABLE(
-	[random],
-	AS_HELP_STRING([--disable-random],[disable RNG implementation on top of /dev/(u)random. (default is NO).]),
-	[if test x$enableval = xyes; then
-		random=true
-	 else
-		random=false
-	fi],
-	random=true
-)
-
-AC_ARG_ENABLE(
-	[x509],
-	AS_HELP_STRING([--disable-x509],[disable own X509 certificate implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		x509=true
-	 else
-		x509=false
-	fi],
-	x509=true
-)
-
-AC_ARG_ENABLE(
-	[pubkey],
-	AS_HELP_STRING([--disable-pubkey],[disable RAW public key support plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		pubkey=true
-	 else
-		pubkey=false
-	fi],
-	pubkey=true
-)
-
-AC_ARG_ENABLE(
-	[hmac],
-	AS_HELP_STRING([--disable-hmac],[disable HMAC crypto implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		hmac=true
-	 else
-		hmac=false
-	fi],
-	hmac=true
-)
-
-AC_ARG_ENABLE(
-	[xcbc],
-	AS_HELP_STRING([--disable-xcbc],[disable xcbc crypto implementation plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		xcbc=true
-	 else
-		xcbc=false
-	fi],
-	xcbc=true
-)
-
-AC_ARG_ENABLE(
-	[test-vectors],
-	AS_HELP_STRING([--enable-test-vectors],[enable plugin providing crypto test vectors (default is NO).]),
-	[if test x$enableval = xyes; then
-		test_vectors=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[mysql],
-	AS_HELP_STRING([--enable-mysql],[enable MySQL database support (default is NO). Requires libmysqlclient_r.]),
-	[if test x$enableval = xyes; then
-		mysql=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[sqlite],
-	AS_HELP_STRING([--enable-sqlite],[enable SQLite database support (default is NO). Requires libsqlite3.]),
-	[if test x$enableval = xyes; then
-		sqlite=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[stroke],
-	AS_HELP_STRING([--disable-stroke],[disable charons stroke (pluto compatibility) configuration backend. (default is NO).]),
-	[if test x$enableval = xyes; then
-		stroke=true
-	 else
-		stroke=false
-	fi],
-	stroke=true
-)
-
-AC_ARG_ENABLE(
-	[medsrv],
-	AS_HELP_STRING([--enable-medsrv],[enable mediation server web frontend and daemon plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		medsrv=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[medcli],
-	AS_HELP_STRING([--enable-medcli],[enable mediation client configuration database plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		medcli=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[smp],
-	AS_HELP_STRING([--enable-smp],[enable SMP configuration and control interface (default is NO). Requires libxml.]),
-	[if test x$enableval = xyes; then
-		smp=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[sql],
-	AS_HELP_STRING([--enable-sql],[enable SQL database configuration backend (default is NO).]),
-	[if test x$enableval = xyes; then
-		sql=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[smartcard],
-	AS_HELP_STRING([--enable-smartcard],[enable smartcard support (default is NO).]),
-	[if test x$enableval = xyes; then
-		smartcard=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[cisco-quirks],
-	AS_HELP_STRING([--enable-cisco-quirks],[enable support of Cisco VPN client (default is NO).]),
-	[if test x$enableval = xyes; then
-		cisco_quirks=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[leak-detective],
-	AS_HELP_STRING([--enable-leak-detective],[enable malloc hooks to find memory leaks (default is NO).]),
-	[if test x$enableval = xyes; then
-		leak_detective=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[lock-profiler],
-	AS_HELP_STRING([--enable-lock-profiler],[enable lock/mutex profiling code (default is NO).]),
-	[if test x$enableval = xyes; then
-		lock_profiler=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[unit-tests],
-	AS_HELP_STRING([--enable-unit-tests],[enable unit tests on IKEv2 daemon startup (default is NO).]),
-	[if test x$enableval = xyes; then
-		unittest=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[load-tests],
-	AS_HELP_STRING([--enable-load-tests],[enable load testing plugin for IKEv2 daemon (default is NO).]),
-	[if test x$enableval = xyes; then
-		loadtest=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-sim],
-	AS_HELP_STRING([--enable-eap-sim],[build SIM authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_sim=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-sim-file],
-	AS_HELP_STRING([--enable-eap-sim-file],[build EAP-SIM backend based on a triplet file (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_sim_file=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-identity],
-	AS_HELP_STRING([--enable-eap-identity],[build EAP module providing EAP-Identity helper (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_identity=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-md5],
-	AS_HELP_STRING([--enable-eap-md5],[build MD5 (CHAP) authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_md5=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-gtc],
-	AS_HELP_STRING([--enable-eap-gtc],[build PAM based GTC authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_gtc=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-aka],
-	AS_HELP_STRING([--enable-eap-aka],[build AKA authentication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_aka=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-mschapv2],
-	AS_HELP_STRING([--enable-eap-mschapv2],[build MS-CHAPv2 authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_mschapv2=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[eap-radius],
-	AS_HELP_STRING([--enable-eap-radius],[build RADIUS proxy authenication module for EAP (default is NO).]),
-	[if test x$enableval = xyes; then
-		eap_radius=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[kernel-netlink],
-	AS_HELP_STRING([--disable-kernel-netlink],[disable the netlink kernel interface. (default is NO).]),
-	[if test x$enableval = xyes; then
-		kernel_netlink=true
-	 else
-		kernel_netlink=false
-	fi],
-	kernel_netlink=true
-)
-
-AC_ARG_ENABLE(
-	[kernel-pfkey],
-	AS_HELP_STRING([--enable-kernel-pfkey],[enable the PF_KEY kernel interface. (default is NO).]),
-	[if test x$enableval = xyes; then
-		kernel_pfkey=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[kernel-pfroute],
-	AS_HELP_STRING([--enable-kernel-pfroute],[enable the PF_ROUTE kernel interface. (default is NO).]),
-	[if test x$enableval = xyes; then
-		kernel_pfroute=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[kernel-klips],
-	AS_HELP_STRING([--enable-kernel-klips],[enable the KLIPS kernel interface. (default is NO).]),
-	[if test x$enableval = xyes; then
-		kernel_klips=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[nat-transport],
-	AS_HELP_STRING([--enable-nat-transport],[enable NAT traversal with IPsec transport mode (default is NO).]),
-	[if test x$enableval = xyes; then
-		nat_transport=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[vendor-id],
-	AS_HELP_STRING([--disable-vendor-id],[disable the sending of the strongSwan vendor ID (default is NO).]),
-	[if test x$enableval = xyes; then
-		vendor_id=true
-	 else
-		vendor_id=false
-	fi],
-	vendor_id=true
-)
-
-AC_ARG_ENABLE(
-	[xauth-vid],
-	AS_HELP_STRING([--disable-xauth-vid],[disable the sending of the XAUTH vendor ID (default is NO).]),
-	[if test x$enableval = xyes; then
-		xauth_vid=true
-	 else
-		xauth_vid=false
-	fi],
-	xauth_vid=true
-)
-
-AC_ARG_ENABLE(
-	[dumm],
-	AS_HELP_STRING([--enable-dumm],[build the DUMM UML test framework (default is NO).]),
-	[if test x$enableval = xyes; then
-		dumm=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[fast],
-	AS_HELP_STRING([--enable-fast],[build libfast (FastCGI Application Server w/ templates (default is NO).]),
-	[if test x$enableval = xyes; then
-		fast=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[manager],
-	AS_HELP_STRING([--enable-manager],[build web management console (default is NO).]),
-	[if test x$enableval = xyes; then
-		manager=true
-		xml=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[mediation],
-	AS_HELP_STRING([--enable-mediation],[enable IKEv2 Mediation Extension (default is NO).]),
-	[if test x$enableval = xyes; then
-		me=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[integrity-test],
-	AS_HELP_STRING([--enable-integrity-test],[enable the integrity test of the crypto library (default is NO).]),
-	[if test x$enableval = xyes; then
-		integrity_test=true 
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[pluto],
-	AS_HELP_STRING([--disable-pluto],[disable the IKEv1 keying daemon pluto. (default is NO).]),
-	[if test x$enableval = xyes; then
-		pluto=true
-	 else
-		pluto=false
-	fi],
-	pluto=true
-)
-
-AC_ARG_ENABLE(
-	[threads],
-	AS_HELP_STRING([--disable-threads],[disable the use of threads in pluto. Charon always uses threads. (default is NO).]),
-	[if test x$enableval = xyes; then
-		threads=true
-	 else
-		threads=false
-	fi],
-	threads=true
-)
-
-AC_ARG_ENABLE(
-	[charon],
-	AS_HELP_STRING([--disable-charon],[disable the IKEv2 keying daemon charon. (default is NO).]),
-	[if test x$enableval = xyes; then
-		charon=true
-	 else
-		charon=false
-	fi],
-	charon=true
-)
-
-AC_ARG_ENABLE(
-	[tools],
-	AS_HELP_STRING([--disable-tools],[disable additional utilities (openac and scepclient). (default is NO).]),
-	[if test x$enableval = xyes; then
-		tools=true
-	 else
-		tools=false
-	fi],
-	tools=true
-)
-
-AC_ARG_ENABLE(
-	[updown],
-	AS_HELP_STRING([--disable-updown],[disable updown firewall script plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		updown=true
-	 else
-		updown=false
-	fi],
-	updown=true
-)
-
-AC_ARG_ENABLE(
-	[attr],
-	AS_HELP_STRING([--disable-attr],[disable strongswan.conf based configuration attribute plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		attr=true
-	 else
-		attr=false
-	fi],
-	attr=true
-)
-
-AC_ARG_ENABLE(
-	[resolv-conf],
-	AS_HELP_STRING([--disable-resolv-conf],[disable resolv.conf DNS handler plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		resolvconf=true
-	 else
-		resolvconf=false
-	fi],
-	resolvconf=true
-)
-
-AC_ARG_ENABLE(
-	[padlock],
-	AS_HELP_STRING([--enable-padlock],[enables VIA Padlock crypto plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		padlock=true
-	 else
-		padlock=false
-	fi],
-)
-
-AC_ARG_ENABLE(
-	[openssl],
-	AS_HELP_STRING([--enable-openssl],[enables the OpenSSL crypto plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		openssl=true
-	 else
-		openssl=false
-	fi],
-)
-
-AC_ARG_ENABLE(
-	[gcrypt],
-	AS_HELP_STRING([--enable-gcrypt],[enables the libgcrypt plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		gcrypt=true
-	 else
-		gcrypt=false
-	fi],
-)
-
-AC_ARG_ENABLE(
-	[agent],
-	AS_HELP_STRING([--enable-agent],[enables the ssh-agent signing plugin. (default is NO).]),
-	[if test x$enableval = xyes; then
-		agent=true
-	 else
-		agent=false
-	fi],
-)
-
-AC_ARG_ENABLE(
-	[uci],
-	AS_HELP_STRING([--enable-uci],[enable OpenWRT UCI configuration plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		uci=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[nm],
-	AS_HELP_STRING([--enable-nm],[enable NetworkManager plugin (default is NO).]),
-	[if test x$enableval = xyes; then
-		nm=true
-	fi]
-)
-
-AC_ARG_ENABLE(
-	[vstr],
-	AS_HELP_STRING([--enable-vstr],[enforce using the Vstr string library to replace glibc-like printf hooks (default is NO).]),
-	[if test x$enableval = xyes; then
-	 	vstr=true
-	fi]
-)
+m4_include(m4/macros/enable-disable.m4)
+
+ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
+ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
+ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
+ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
+ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
+ARG_ENABL_SET([md4],            [enable MD4 software implementation plugin.])
+ARG_DISBL_SET([md5],            [disable MD5 software implementation plugin.])
+ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
+ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implementation plugin.])
+ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin.])
+ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementation plugin.])
+ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
+ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
+ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
+ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
+ARG_DISBL_SET([pkcs1],          [disable PKCS1 key decoding plugin.])
+ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
+ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
+ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
+ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
+ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
+ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
+ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
+ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
+ARG_DISBL_SET([stroke],         [disable charons stroke (pluto compatibility) configuration backend.])
+ARG_ENABL_SET([medsrv],         [enable mediation server web frontend and daemon plugin.])
+ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
+ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
+ARG_ENABL_SET([sql],            [enable SQL database configuration backend.])
+ARG_ENABL_SET([smartcard],      [enable smartcard support.])
+ARG_ENABL_SET([cisco-quirks],   [enable support of Cisco VPN client.])
+ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
+ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
+ARG_ENABL_SET([unit-tests],     [enable unit tests on IKEv2 daemon startup.])
+ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
+ARG_ENABL_SET([eap-sim],        [enable SIM authenication module for EAP.])
+ARG_ENABL_SET([eap-sim-file],   [enable EAP-SIM backend based on a triplet file.])
+ARG_ENABL_SET([eap-simaka-sql], [enable EAP-SIM/AKA backend based on a triplet/quintuplet SQL database.])
+ARG_ENABL_SET([eap-simaka-pseudonym], [enable EAP-SIM/AKA pseudonym storage plugin.])
+ARG_ENABL_SET([eap-simaka-reauth],    [enable EAP-SIM/AKA reauthentication data storage plugin.])
+ARG_ENABL_SET([eap-identity],   [enable EAP module providing EAP-Identity helper.])
+ARG_ENABL_SET([eap-md5],        [enable EAP MD5 (CHAP) authenication module.])
+ARG_ENABL_SET([eap-gtc],        [enable PAM based EAP GTC authenication module.])
+ARG_ENABL_SET([eap-aka],        [enable EAP AKA authentication module.])
+ARG_ENABL_SET([eap-aka-3gpp2],  [enable EAP AKA backend implementing 3GPP2 algorithms in software. Requires libgmp.])
+ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authenication module.])
+ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authenication module.])
+ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
+ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
+ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
+ARG_ENABL_SET([kernel-klips],   [enable the KLIPS kernel interface.])
+ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
+ARG_ENABL_SET([socket-raw],     [enable raw socket implementation of charon, enforced if pluto is enabled])
+ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
+ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
+ARG_ENABL_SET([nat-transport],  [enable NAT traversal with IPsec transport mode in pluto.])
+ARG_DISBL_SET([vendor-id],      [disable the sending of the strongSwan vendor ID in pluto.])
+ARG_DISBL_SET([xauth-vid],      [disable the sending of the XAUTH vendor ID.])
+ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
+ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
+ARG_ENABL_SET([manager],        [enable web management console (proof of concept).])
+ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
+ARG_ENABL_SET([integrity-test], [enable integrity testing of libstrongswan and plugins.])
+ARG_DISBL_SET([load-warning],   [disable the charon/pluto plugin load option warning in starter.])
+ARG_DISBL_SET([pluto],          [disable the IKEv1 keying daemon pluto.])
+ARG_DISBL_SET([xauth],          [disable xauth plugin.])
+ARG_DISBL_SET([threads],        [disable the use of threads in pluto. Charon always uses threads.])
+ARG_DISBL_SET([charon],         [disable the IKEv2 keying daemon charon.])
+ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
+ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
+ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
+ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
+ARG_ENABL_SET([dhcp],           [enable DHCP based attribute provider plugin.])
+ARG_DISBL_SET([resolve],        [disable resolve DNS handler plugin.])
+ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
+ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
+ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
+ARG_ENABL_SET([agent],          [enables the ssh-agent signing plugin.])
+ARG_ENABL_SET([addrblock],      [enables RFC 3779 address block constraint support.])
+ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
+ARG_ENABL_SET([android],        [enable Android specific plugin.])
+ARG_ENABL_SET([nm],             [enable NetworkManager plugin.])
+ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
+ARG_ENABL_SET([vstr],           [enforce using the Vstr string library to replace glibc-like printf hooks.])
+ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
 
 dnl =========================
 dnl  set up compiler and flags
 dnl =========================
 
 if test -z "$CFLAGS"; then
-	AC_SUBST(CFLAGS, "-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing")
+	CFLAGS="-g -O2 -Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing"
 fi
 AC_PROG_CC
+AC_LIB_PREFIX
 AC_C_BIGENDIAN
 
 dnl =========================
@@ -751,31 +254,65 @@ dnl =========================
 
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
+AC_PROG_EGREP
+AC_PROG_AWK
 AC_PROG_LEX
 AC_PROG_YACC
-AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+
+dnl because gperf is not needed by end-users we just report it but do not abort on failure
+AC_MSG_CHECKING([gperf version >= 3.0.0])
+if test -x "$GPERF"; then
+	if test "`$GPERF --version | $AWK -F' ' '/^GNU gperf/ { print $3 }' | $AWK -F. '{ print $1 }'`" -ge "3"; then
+		AC_MSG_RESULT([yes])
+	else
+		AC_MSG_RESULT([no])
+	fi
+else
+	AC_MSG_RESULT([not found])
+fi
+
+dnl translate user/group to numercial ids
+AC_MSG_CHECKING([for uid of user "$ipsecuser"])
+ipsecuid=`id -u $ipsecuser 2>/dev/null`
+if test -n "$ipsecuid"; then
+	AC_MSG_RESULT([$ipsecuid])
+	AC_SUBST(ipsecuid)
+else
+	AC_MSG_ERROR([not found])
+fi
+AC_MSG_CHECKING([for gid of group "$ipsecgroup"])
+ipsecgid=`$EGREP "^$ipsecgroup:" /etc/group | $AWK -F: '{ print $3 }'`
+if test -n "$ipsecgid"; then
+	AC_MSG_RESULT([$ipsecgid])
+	AC_SUBST(ipsecgid)
+else
+	AC_MSG_ERROR([not found])
+fi
 
 dnl =========================
 dnl  dependency calculation
 dnl =========================
 
-if test x$eap_aka = xtrue; then
+if test x$eap_aka_3gpp2 = xtrue; then
 	gmp=true;
+fi
+
+if test x$eap_aka = xtrue; then
 	fips_prf=true;
-	sha1=true;
+	simaka=true;
 fi
 
 if test x$eap_sim = xtrue; then
 	fips_prf=true;
+	simaka=true;
 fi
 
 if test x$fips_prf = xtrue; then
-	sha1=true;
-fi
-
-if test x$tools = xtrue; then
-	gmp=true;
+	if test x$openssl = xfalse; then
+		sha1=true;
+	fi
 fi
 
 if test x$smp = xtrue; then
@@ -787,12 +324,22 @@ if test x$manager = xtrue; then
 fi
 
 if test x$medsrv = xtrue; then
-	me=true
+	mediation=true
 	fast=true
 fi
 
 if test x$medcli = xtrue; then
-	me=true
+	mediation=true
+fi
+
+if test x$pluto = xtrue; then
+	if test x$socket_raw = xfalse; then
+		AC_MSG_NOTICE([Enforcing --enable-socket-raw, as pluto is enabled])
+		socket_raw=true
+		if test x$socket_default_given = xfalse; then
+			socket_default=false
+		fi
+	fi
 fi
 
 dnl ===========================================
@@ -800,12 +347,43 @@ dnl  check required libraries and header files
 dnl ===========================================
 
 AC_HEADER_STDBOOL
+AC_FUNC_ALLOCA
 
+dnl libraries needed on some platforms but not on others
+dnl ====================================================
 saved_LIBS=$LIBS
+
+dnl FreeBSD and Mac OS X have dlopen integrated in libc, Linux needs libdl
 LIBS=""
 AC_SEARCH_LIBS(dlopen, dl, [DLLIB=$LIBS])
-LIBS=$saved_LIBS
 AC_SUBST(DLLIB)
+
+dnl glibc's backtrace() can be replicated on FreeBSD with libexecinfo
+LIBS=""
+AC_SEARCH_LIBS(backtrace, execinfo, [BTLIB=$LIBS])
+AC_CHECK_FUNCS(backtrace)
+AC_SUBST(BTLIB)
+
+dnl OpenSolaris needs libsocket and libnsl for socket()
+LIBS=""
+AC_SEARCH_LIBS(socket, socket, [SOCKLIB=$LIBS],
+	[AC_CHECK_LIB(nsl, socket, [SOCKLIB="-lsocket -lnsl"], [], [-lsocket])]
+)
+AC_SUBST(SOCKLIB)
+
+dnl FreeBSD has clock_gettime in libc, Linux needs librt
+LIBS=""
+AC_SEARCH_LIBS(clock_gettime, rt, [RTLIB=$LIBS])
+AC_CHECK_FUNCS(clock_gettime)
+AC_SUBST(RTLIB)
+
+dnl Android has pthread_* functions in bionic (libc), others need libpthread
+LIBS=""
+AC_SEARCH_LIBS(pthread_create, pthread, [PTHREADLIB=$LIBS])
+AC_SUBST(PTHREADLIB)
+
+LIBS=$saved_LIBS
+dnl ======================
 
 AC_MSG_CHECKING(for dladdr)
 AC_TRY_COMPILE(
@@ -817,11 +395,39 @@ AC_TRY_COMPILE(
 	[AC_MSG_RESULT([no])]
 )
 
-AC_CHECK_FUNCS(backtrace)
-AC_CHECK_FUNCS(prctl)
-AC_CHECK_FUNCS(gethostbyname_r)
+dnl check if pthread_condattr_setclock(CLOCK_MONOTONE) is supported
+saved_LIBS=$LIBS
+LIBS=$PTHREADLIB
+AC_MSG_CHECKING([for pthread_condattr_setclock(CLOCK_MONOTONE)])
+AC_TRY_RUN(
+	[#include <pthread.h>
+	 int main() { pthread_condattr_t attr;
+		pthread_condattr_init(&attr);
+		return pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);}],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])],
+	[AC_MSG_RESULT([no])],
+	dnl Check existence of pthread_condattr_setclock if cross-compiling
+	[AC_MSG_RESULT([unknown]);
+	 AC_CHECK_FUNCS(pthread_condattr_setclock,
+		[AC_DEFINE([HAVE_CONDATTR_CLOCK_MONOTONIC])]
+	)]
+)
+dnl check if we actually are able to configure attributes on cond vars
+AC_CHECK_FUNCS(pthread_condattr_init)
+dnl instead of pthread_condattr_setclock Android has this function
+AC_CHECK_FUNCS(pthread_cond_timedwait_monotonic)
+dnl check if we can cancel threads
+AC_CHECK_FUNCS(pthread_cancel)
+dnl check if native rwlocks are available
+AC_CHECK_FUNCS(pthread_rwlock_init)
+LIBS=$saved_LIBS
 
-AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h)
+AC_CHECK_FUNCS(prctl)
+
+AC_CHECK_FUNCS(mallinfo)
+
+AC_CHECK_HEADERS(sys/sockio.h)
+AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
 
 AC_CHECK_MEMBERS([struct sockaddr.sa_len], [], [],
 [
@@ -839,6 +445,32 @@ AC_CHECK_MEMBERS([struct sadb_x_policy.sadb_x_policy_priority], [], [],
 	#include <linux/pfkeyv2.h>
 	#endif
 ])
+
+AC_MSG_CHECKING([for in6addr_any])
+AC_TRY_COMPILE(
+	[#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>],
+	[struct in6_addr in6;
+	in6 = in6addr_any;],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IN6ADDR_ANY])],
+	[AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([for in6_pktinfo])
+AC_TRY_COMPILE(
+	[#define _GNU_SOURCE
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>],
+	[struct in6_pktinfo pi;
+	if (pi.ipi6_ifindex)
+	{
+		return 0;
+	}],
+	[AC_MSG_RESULT([yes]); AC_DEFINE([HAVE_IN6_PKTINFO])],
+	[AC_MSG_RESULT([no])]
+)
 
 AC_MSG_CHECKING([for IPSEC_MODE_BEET])
 AC_TRY_COMPILE(
@@ -890,13 +522,19 @@ AC_TRY_RUN(
 [AC_MSG_RESULT([no])],
 [AC_MSG_RESULT([no])])
 
+dnl check for the new register_printf_specifier function with len argument,
+dnl or the deprecated register_printf_function without
 AC_CHECK_FUNC(
-	[register_printf_function],
-	[AC_DEFINE(HAVE_PRINTF_HOOKS)],
-	[
-		AC_MSG_NOTICE([printf does not support custom format specifiers!])
-		vstr=true
-	]
+	[register_printf_specifier],
+	[AC_DEFINE(HAVE_PRINTF_SPECIFIER)],
+	[AC_CHECK_FUNC(
+		[register_printf_function],
+		[AC_DEFINE(HAVE_PRINTF_FUNCTION)],
+		[
+			AC_MSG_NOTICE([printf does not support custom format specifiers!])
+			vstr=true
+		]
+	)]
 )
 
 if test x$vstr = xtrue; then
@@ -905,7 +543,21 @@ if test x$vstr = xtrue; then
 fi
 
 if test x$gmp = xtrue; then
-	AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
+	saved_LIBS=$LIBS
+	AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])
+	AC_MSG_CHECKING([mpz_powm_sec])
+	if test x$mpz_powm_sec = xyes; then
+		AC_TRY_COMPILE(
+			[#include "gmp.h"],
+			[
+				void *x = mpz_powm_sec;
+			],
+			[AC_MSG_RESULT([yes]); AC_DEFINE(HAVE_MPZ_POWM_SEC)], [AC_MSG_RESULT([no])]
+		)
+	else
+		AC_MSG_RESULT([disabled])
+	fi
+	LIBS=$saved_LIBS
 	AC_MSG_CHECKING([gmp.h version >= 4.1.4])
 	AC_TRY_COMPILE(
 		[#include "gmp.h"],
@@ -913,7 +565,7 @@ if test x$gmp = xtrue; then
 			#if (__GNU_MP_VERSION*100 +  __GNU_MP_VERSION_MINOR*10 + __GNU_MP_VERSION_PATCHLEVEL) < 414
 				#error bad gmp
 			#endif
-		], 
+		],
 		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([No usable gmp.h found!])]
 	)
 fi
@@ -971,14 +623,18 @@ if test x$fast = xtrue; then
 	AC_HAVE_LIBRARY([z],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver dependency zlib not found!])])
 dnl autoconf does not like CamelCase!? How to fix this?
 dnl	AC_CHECK_HEADER([ClearSilver/ClearSilver.h],,[AC_MSG_ERROR([ClearSilver header file ClearSilver/ClearSilver.h not found!])])
-	
+
 	AC_HAVE_LIBRARY([fcgi],[LIBS="$LIBS"],[AC_MSG_ERROR([FastCGI library fcgi not found!])])
 	AC_CHECK_HEADER([fcgiapp.h],,[AC_MSG_ERROR([FastCGI header file fcgiapp.h not found!])])
 fi
 
 if test x$mysql = xtrue; then
-	AC_HAVE_LIBRARY([mysqlclient_r],[LIBS="$LIBS"],[AC_MSG_ERROR([MySQL library mysqlclient_r not found])])
-	AC_CHECK_HEADER([mysql/mysql.h],,[AC_MSG_ERROR([MySQL header mysql/mysql.h not found!])])
+	AC_PATH_PROG([MYSQLCONFIG], [mysql_config], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+	if test x$MYSQLCONFIG = x; then
+		AC_MSG_ERROR([mysql_config not found!])
+	fi
+	AC_SUBST(MYSQLLIB, `$MYSQLCONFIG --libs_r`)
+	AC_SUBST(MYSQLCFLAG, `$MYSQLCONFIG --cflags`)
 fi
 
 if test x$sqlite = xtrue; then
@@ -989,7 +645,7 @@ if test x$sqlite = xtrue; then
 		[#include <sqlite3.h>],
 		[
 			void *test = sqlite3_prepare_v2;
-		], 
+		],
 		[AC_MSG_RESULT([yes])]; AC_DEFINE_UNQUOTED(HAVE_SQLITE3_PREPARE_V2, 1), [AC_MSG_RESULT([no])])
 	AC_MSG_CHECKING([sqlite3.h version >= 3.3.1])
 	AC_TRY_COMPILE(
@@ -998,7 +654,7 @@ if test x$sqlite = xtrue; then
 			#if SQLITE_VERSION_NUMBER < 3003001
 				#error bad sqlite
 			#endif
-		], 
+		],
 		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([SQLite version >= 3.3.1 required!])])
 fi
 
@@ -1008,7 +664,8 @@ if test x$openssl = xtrue; then
 fi
 
 if test x$gcrypt = xtrue; then
-	AM_PATH_LIBGCRYPT(,,[AC_MSG_ERROR([libgcrypt not found!])])
+	AC_HAVE_LIBRARY([gcrypt],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
+	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([gcrypt header gcrypt.h not found!])])
 	AC_MSG_CHECKING([gcrypt CAMELLIA cipher])
 	AC_TRY_COMPILE(
 		[#include <gcrypt.h>],
@@ -1023,8 +680,20 @@ if test x$uci = xtrue; then
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
 fi
 
+if test x$android = xtrue; then
+	AC_HAVE_LIBRARY([cutils],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])])
+	AC_CHECK_HEADER([cutils/properties.h],,[AC_MSG_ERROR([Android header cutils/properties.h not found!])])
+	dnl we have to force the use of libdl here because the autodetection
+	dnl above does not work correctly when cross-compiling for android.
+	DLLIB="-ldl"
+	AC_SUBST(DLLIB)
+fi
+
 if test x$nm = xtrue; then
-	PKG_CHECK_MODULES(nm, [NetworkManager libnm_glib_vpn gthread-2.0])
+	PKG_CHECK_EXISTS([libnm-glib],
+		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm-glib libnm-glib-vpn])],
+		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm_glib libnm_glib_vpn])]
+	)
 	AC_SUBST(nm_CFLAGS)
 	AC_SUBST(nm_LIBS)
 fi
@@ -1034,16 +703,48 @@ if test x$eap_gtc = xtrue; then
 	AC_CHECK_HEADER([security/pam_appl.h],,[AC_MSG_ERROR([PAM header security/pam_appl.h not found!])])
 fi
 
-if test x$capabilities = xlibcap; then
-	AC_HAVE_LIBRARY([cap],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])])
-	AC_CHECK_HEADER([sys/capability.h],,[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
+if test x$capabilities = xnative; then
+	AC_MSG_NOTICE([Usage of the native Linux capabilities interface is deprecated, use libcap instead])
+	dnl Linux requires the following for capset(), Android does not have it,
+	dnl but defines capset() in unistd.h instead.
+	AC_CHECK_HEADERS([sys/capability.h])
+	AC_CHECK_FUNC(capset,,[AC_MSG_ERROR([capset() not found!])])
+	AC_DEFINE(CAPABILITIES_NATIVE)
 fi
 
-dnl ======================================
-dnl  collect all plugins for libstrongswan
-dnl ======================================
+if test x$capabilities = xlibcap; then
+	AC_HAVE_LIBRARY([cap],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])])
+	AC_CHECK_HEADER([sys/capability.h],
+		[AC_DEFINE(HAVE_SYS_CAPABILITY_H)],
+		[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
+	AC_DEFINE(CAPABILITIES_LIBCAP)
+fi
+
+if test x$integrity_test = xtrue; then
+	AC_MSG_CHECKING([for dladdr()])
+	AC_TRY_COMPILE(
+		[#define _GNU_SOURCE
+		 #include <dlfcn.h>],
+		[Dl_info info; dladdr(main, &info);],
+		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
+		 AC_MSG_ERROR([dladdr() not supported, required by integrity-test!])]
+	)
+	AC_MSG_CHECKING([for dl_iterate_phdr()])
+	AC_TRY_COMPILE(
+		[#define _GNU_SOURCE
+		 #include <link.h>],
+		[dl_iterate_phdr((void*)0, (void*)0);],
+		[AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]);
+		 AC_MSG_ERROR([dl_iterate_phdr() not supported, required by integrity-test!])]
+	)
+fi
+
+dnl ==========================================================
+dnl  collect all plugins for libstrongswan, libhydra and pluto
+dnl ==========================================================
 
 libstrongswan_plugins=
+libhydra_plugins=
 pluto_plugins=
 
 if test x$test_vectors = xtrue; then
@@ -1085,25 +786,44 @@ if test x$md5 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" md5"
 	pluto_plugins=${pluto_plugins}" md5"
 fi
-if test x$fips_prf = xtrue; then
-	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
-fi
 if test x$random = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" random"
 	pluto_plugins=${pluto_plugins}" random"
 fi
 if test x$x509 = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" x509"
+	pluto_plugins=${pluto_plugins}" x509"
+fi
+if test x$revocation = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" revocation"
 fi
 if test x$pubkey = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" pubkey"
 	pluto_plugins=${pluto_plugins}" pubkey"
 fi
+if test x$pkcs1 = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" pkcs1"
+	pluto_plugins=${pluto_plugins}" pkcs1"
+fi
+if test x$pgp = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" pgp"
+	pluto_plugins=${pluto_plugins}" pgp"
+fi
+if test x$dnskey = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" dnskey"
+	pluto_plugins=${pluto_plugins}" dnskey"
+fi
+if test x$pem = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" pem"
+	pluto_plugins=${pluto_plugins}" pem"
+fi
 if test x$mysql = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" mysql"
+	pluto_plugins=${pluto_plugins}" mysql"
 fi
 if test x$sqlite = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" sqlite"
+	pluto_plugins=${pluto_plugins}" sqlite"
 fi
 if test x$padlock = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" padlock"
@@ -1115,6 +835,9 @@ fi
 if test x$gcrypt = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gcrypt"
 	pluto_plugins=${pluto_plugins}" gcrypt"
+fi
+if test x$fips_prf = xtrue; then
+	libstrongswan_plugins=${libstrongswan_plugins}" fips-prf"
 fi
 if test x$xcbc = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" xcbc"
@@ -1130,8 +853,21 @@ if test x$gmp = xtrue; then
 	libstrongswan_plugins=${libstrongswan_plugins}" gmp"
 	pluto_plugins=${pluto_plugins}" gmp"
 fi
+if test x$xauth = xtrue; then
+	pluto_plugins=${pluto_plugins}" xauth"
+fi
+if test x$attr = xtrue; then
+	libhydra_plugins=${libhydra_plugins}" attr"
+fi
+if test x$attr_sql = xtrue -o x$sql = xtrue; then
+	libhydra_plugins=${libhydra_plugins}" attr-sql"
+fi
+if test x$resolve = xtrue; then
+	libhydra_plugins=${libhydra_plugins}" resolve"
+fi
 
 AC_SUBST(libstrongswan_plugins)
+AC_SUBST(libhydra_plugins)
 AC_SUBST(pluto_plugins)
 
 dnl =========================
@@ -1154,7 +890,12 @@ AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
 AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
+AM_CONDITIONAL(USE_REVOCATION, test x$revocation = xtrue)
 AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
+AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
+AM_CONDITIONAL(USE_PGP, test x$pgp = xtrue)
+AM_CONDITIONAL(USE_DNSKEY, test x$dnskey = xtrue)
+AM_CONDITIONAL(USE_PEM, test x$pem = xtrue)
 AM_CONDITIONAL(USE_HMAC, test x$hmac = xtrue)
 AM_CONDITIONAL(USE_XCBC, test x$xcbc = xtrue)
 AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
@@ -1171,25 +912,45 @@ AM_CONDITIONAL(USE_MEDSRV, test x$medsrv = xtrue)
 AM_CONDITIONAL(USE_MEDCLI, test x$medcli = xtrue)
 AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_UCI, test x$uci = xtrue)
+AM_CONDITIONAL(USE_ANDROID, test x$android = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
-AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
-AM_CONDITIONAL(USE_RESOLV_CONF, test x$resolvconf = xtrue)
-AM_CONDITIONAL(USE_UNIT_TESTS, test x$unittest = xtrue)
-AM_CONDITIONAL(USE_LOAD_TESTS, test x$loadtest = xtrue)
+AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
+AM_CONDITIONAL(USE_UNIT_TESTS, test x$unit_tests = xtrue)
+AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
+AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM, test x$eap_sim = xtrue)
 AM_CONDITIONAL(USE_EAP_SIM_FILE, test x$eap_sim_file = xtrue)
+AM_CONDITIONAL(USE_EAP_SIMAKA_SQL, test x$eap_simaka_sql = xtrue)
+AM_CONDITIONAL(USE_EAP_SIMAKA_PSEUDONYM, test x$eap_simaka_pseudonym = xtrue)
+AM_CONDITIONAL(USE_EAP_SIMAKA_REAUTH, test x$eap_simaka_reauth = xtrue)
 AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
 AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
+AM_CONDITIONAL(USE_EAP_AKA_3GPP2, test x$eap_aka_3gpp2 = xtrue)
 AM_CONDITIONAL(USE_EAP_MSCHAPV2, test x$eap_mschapv2 = xtrue)
 AM_CONDITIONAL(USE_EAP_RADIUS, test x$eap_radius = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_KERNEL_KLIPS, test x$kernel_klips = xtrue)
+AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
+AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
+AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
+AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
+AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
+
+dnl hydra plugins
+dnl =============
+AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
+AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue -o x$sql = xtrue)
+AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
+
+dnl pluto plugins
+dnl =============
+AM_CONDITIONAL(USE_XAUTH, test x$xauth = xtrue)
 
 dnl other options
 dnl =============
@@ -1203,27 +964,36 @@ AM_CONDITIONAL(USE_XAUTH_VID, test x$xauth_vid = xtrue)
 AM_CONDITIONAL(USE_DUMM, test x$dumm = xtrue)
 AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
-AM_CONDITIONAL(USE_ME, test x$me = xtrue)
+AM_CONDITIONAL(USE_ME, test x$mediation = xtrue)
 AM_CONDITIONAL(USE_INTEGRITY_TEST, test x$integrity_test = xtrue)
-AM_CONDITIONAL(USE_CAPABILITIES, test x$capabilities = xlibcap)
+AM_CONDITIONAL(USE_LOAD_WARNING, test x$load_warning = xtrue)
 AM_CONDITIONAL(USE_PLUTO, test x$pluto = xtrue)
 AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
+AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
+AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
+AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
+AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 
 dnl ==============================
 dnl  set global definitions
 dnl ==============================
 
-if test x$me = xtrue; then
+if test x$mediation = xtrue; then
 	AC_DEFINE(ME)
 fi
-if test x$capabilities = xlibcap; then
+if test x$capabilities = xlibcap -o x$capabilities = xnative; then
 	AC_DEFINE(CAPABILITIES)
 fi
+if test x$monolithic = xtrue; then
+	AC_DEFINE(MONOLITHIC)
+fi
+
 
 dnl ==============================
 dnl  build Makefiles
@@ -1247,7 +1017,12 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/hmac/Makefile
 	src/libstrongswan/plugins/xcbc/Makefile
 	src/libstrongswan/plugins/x509/Makefile
+	src/libstrongswan/plugins/revocation/Makefile
 	src/libstrongswan/plugins/pubkey/Makefile
+	src/libstrongswan/plugins/pkcs1/Makefile
+	src/libstrongswan/plugins/pgp/Makefile
+	src/libstrongswan/plugins/dnskey/Makefile
+	src/libstrongswan/plugins/pem/Makefile
 	src/libstrongswan/plugins/curl/Makefile
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
@@ -1257,35 +1032,51 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
-	src/libstrongswan/fips/Makefile
+	src/libhydra/Makefile
+	src/libhydra/plugins/attr/Makefile
+	src/libhydra/plugins/attr_sql/Makefile
+	src/libhydra/plugins/resolve/Makefile
 	src/libfreeswan/Makefile
+	src/libsimaka/Makefile
 	src/pluto/Makefile
+	src/pluto/plugins/xauth/Makefile
 	src/whack/Makefile
 	src/charon/Makefile
-	src/charon/plugins/eap_aka/Makefile
-	src/charon/plugins/eap_identity/Makefile
-	src/charon/plugins/eap_md5/Makefile
-	src/charon/plugins/eap_gtc/Makefile
-	src/charon/plugins/eap_sim/Makefile
-	src/charon/plugins/eap_sim_file/Makefile
-	src/charon/plugins/eap_mschapv2/Makefile
-	src/charon/plugins/eap_radius/Makefile
-	src/charon/plugins/kernel_netlink/Makefile
-	src/charon/plugins/kernel_pfkey/Makefile
-	src/charon/plugins/kernel_pfroute/Makefile
-	src/charon/plugins/kernel_klips/Makefile
-	src/charon/plugins/smp/Makefile
-	src/charon/plugins/sql/Makefile
-	src/charon/plugins/medsrv/Makefile
-	src/charon/plugins/medcli/Makefile
-	src/charon/plugins/nm/Makefile
-	src/charon/plugins/uci/Makefile
-	src/charon/plugins/stroke/Makefile
-	src/charon/plugins/updown/Makefile
-	src/charon/plugins/attr/Makefile
-	src/charon/plugins/resolv_conf/Makefile
-	src/charon/plugins/unit_tester/Makefile
-	src/charon/plugins/load_tester/Makefile
+	src/libcharon/Makefile
+	src/libcharon/plugins/eap_aka/Makefile
+	src/libcharon/plugins/eap_aka_3gpp2/Makefile
+	src/libcharon/plugins/eap_identity/Makefile
+	src/libcharon/plugins/eap_md5/Makefile
+	src/libcharon/plugins/eap_gtc/Makefile
+	src/libcharon/plugins/eap_sim/Makefile
+	src/libcharon/plugins/eap_sim_file/Makefile
+	src/libcharon/plugins/eap_simaka_sql/Makefile
+	src/libcharon/plugins/eap_simaka_pseudonym/Makefile
+	src/libcharon/plugins/eap_simaka_reauth/Makefile
+	src/libcharon/plugins/eap_mschapv2/Makefile
+	src/libcharon/plugins/eap_radius/Makefile
+	src/libcharon/plugins/kernel_netlink/Makefile
+	src/libcharon/plugins/kernel_pfkey/Makefile
+	src/libcharon/plugins/kernel_pfroute/Makefile
+	src/libcharon/plugins/kernel_klips/Makefile
+	src/libcharon/plugins/socket_default/Makefile
+	src/libcharon/plugins/socket_raw/Makefile
+	src/libcharon/plugins/socket_dynamic/Makefile
+	src/libcharon/plugins/farp/Makefile
+	src/libcharon/plugins/smp/Makefile
+	src/libcharon/plugins/sql/Makefile
+	src/libcharon/plugins/medsrv/Makefile
+	src/libcharon/plugins/medcli/Makefile
+	src/libcharon/plugins/nm/Makefile
+	src/libcharon/plugins/addrblock/Makefile
+	src/libcharon/plugins/uci/Makefile
+	src/libcharon/plugins/ha/Makefile
+	src/libcharon/plugins/android/Makefile
+	src/libcharon/plugins/stroke/Makefile
+	src/libcharon/plugins/updown/Makefile
+	src/libcharon/plugins/dhcp/Makefile
+	src/libcharon/plugins/unit_tester/Makefile
+	src/libcharon/plugins/load_tester/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile
@@ -1300,11 +1091,13 @@ AC_OUTPUT(
 	src/_copyright/Makefile
 	src/openac/Makefile
 	src/scepclient/Makefile
+	src/pki/Makefile
 	src/dumm/Makefile
 	src/dumm/ext/extconf.rb
 	src/libfast/Makefile
 	src/manager/Makefile
 	src/medsrv/Makefile
+	src/checksum/Makefile
 	scripts/Makefile
 	testing/Makefile
 )

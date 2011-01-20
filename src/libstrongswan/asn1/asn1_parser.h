@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup asn1_parser asn1_parser
  * @{ @ingroup asn1
@@ -25,9 +25,9 @@
 
 #include <stdarg.h>
 
-#include <utils.h>
-#include <chunk.h>
-#include <asn1/asn1.h>
+#include <library.h>
+
+#include "asn1.h"
 
 /**
  * Definition of ASN.1 flags
@@ -57,7 +57,7 @@ struct asn1Object_t{
 typedef struct asn1_parser_t asn1_parser_t;
 
 /**
- * Public interface of an ASN.1 parser 
+ * Public interface of an ASN.1 parser
  */
 struct asn1_parser_t {
 
@@ -69,25 +69,25 @@ struct asn1_parser_t {
 	 * @return 			- FALSE if end of object syntax definition was reached
 	 *							or a parsing error occurred
 	 *					- TRUE	otherwise
-     */
+	 */
 	bool (*iterate)(asn1_parser_t *this, int *objectID, chunk_t *object);
 
 	/**
-     * Get the current parsing level
+	 * Get the current parsing level
 	 *
 	 * @return 			current level
 	 */
 	u_int (*get_level)(asn1_parser_t *this);
 
 	/**
-     * Set the top-most level
+	 * Set the top-most level
 	 *
 	 * @param level		top-most level
 	 */
 	void (*set_top_level)(asn1_parser_t *this, u_int level0);
 
 	/**
-     * Set implicit and private flags
+	 * Set implicit and private flags
 	 *
 	 * @param implicit	top-most type of object is implicit
 	 * @param private	object data is private (use debug level 4)
@@ -95,7 +95,7 @@ struct asn1_parser_t {
 	void (*set_flags)(asn1_parser_t *this, bool implicit, bool private);
 
 	/**
-     * Show final parsing status
+	 * Show final parsing status
 	 *
 	 * @return			TRUE if parsing was successful, FALSE otherwise
 	 */
@@ -106,7 +106,7 @@ struct asn1_parser_t {
 	 */
 	void (*destroy)(asn1_parser_t *this);
 };
- 
+
 /**
  * Create an ASN.1 parser
  *

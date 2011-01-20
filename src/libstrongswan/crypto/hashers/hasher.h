@@ -14,7 +14,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 /**
  * @defgroup hasher hasher
  * @{ @ingroup crypto
@@ -27,6 +27,7 @@ typedef enum hash_algorithm_t hash_algorithm_t;
 typedef struct hasher_t hasher_t;
 
 #include <library.h>
+#include <credentials/keys/public_key.h>
 
 /**
  * Algorithms to use for hashing.
@@ -35,20 +36,22 @@ enum hash_algorithm_t {
 	/** not specified hash function */
 	HASH_UNKNOWN 		= 0,
 	/** preferred hash function, general purpose */
-	HASH_PREFERRED	 	= 1,
+	HASH_PREFERRED		= 1,
 	HASH_MD2 			= 2,
 	HASH_MD4			= 3,
 	HASH_MD5 			= 4,
 	HASH_SHA1 			= 5,
-	HASH_SHA256 		= 6,
-	HASH_SHA384 		= 7,
-	HASH_SHA512 		= 8
+	HASH_SHA224			= 6,
+	HASH_SHA256 		= 7,
+	HASH_SHA384 		= 8,
+	HASH_SHA512 		= 9
 };
 
 #define HASH_SIZE_MD2		16
 #define HASH_SIZE_MD4		16
 #define HASH_SIZE_MD5		16
 #define HASH_SIZE_SHA1		20
+#define HASH_SIZE_SHA224	28
 #define HASH_SIZE_SHA256	32
 #define HASH_SIZE_SHA384	48
 #define HASH_SIZE_SHA512	64
@@ -64,43 +67,43 @@ extern enum_name_t *hash_algorithm_names;
 struct hasher_t {
 	/**
 	 * Hash data and write it in the buffer.
-	 * 
+	 *
 	 * If the parameter hash is NULL, no result is written back
 	 * and more data can be appended to already hashed data.
 	 * If not, the result is written back and the hasher is reset.
-	 * 
+	 *
 	 * The hash output parameter must hold at least
 	 * hash_t.get_block_size() bytes.
-	 * 
+	 *
 	 * @param data		data to hash
 	 * @param hash		pointer where the hash will be written
 	 */
 	void (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *hash);
-	
+
 	/**
 	 * Hash data and allocate space for the hash.
-	 * 
+	 *
 	 * If the parameter hash is NULL, no result is written back
 	 * and more data can be appended to already hashed data.
 	 * If not, the result is written back and the hasher is reset.
-	 * 
+	 *
 	 * @param data		chunk with data to hash
 	 * @param hash		chunk which will hold allocated hash
 	 */
 	void (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
-	
+
 	/**
 	 * Get the size of the resulting hash.
-	 * 
+	 *
 	 * @return			hash size in bytes
 	 */
 	size_t (*get_hash_size) (hasher_t *this);
-	
+
 	/**
 	 * Resets the hashers state.
 	 */
 	void (*reset) (hasher_t *this);
-	
+
 	/**
 	 * Destroys a hasher object.
 	 */
@@ -109,7 +112,7 @@ struct hasher_t {
 
 /**
  * Conversion of ASN.1 OID to hash algorithm.
- * 
+ *
  * @param oid			ASN.1 OID
  * @return				hash algorithm, HASH_UNKNOWN if OID unsuported
  */
@@ -117,7 +120,7 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid);
 
 /**
  * Conversion of hash algorithm into ASN.1 OID.
- * 
+ *
  * @param alg			hash algorithm
  * @return				ASN.1 OID, or OID_UNKNOW
  */
@@ -125,10 +128,11 @@ int hasher_algorithm_to_oid(hash_algorithm_t alg);
 
 /**
  * Conversion of hash signature algorithm into ASN.1 OID.
- * 
+ *
  * @param alg			hash algorithm
+ * @param key			public key type
  * @return				ASN.1 OID if, or OID_UNKNOW
  */
-int hasher_signature_algorithm_to_oid(hash_algorithm_t alg);
+int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key);
 
 #endif /** HASHER_H_ @}*/

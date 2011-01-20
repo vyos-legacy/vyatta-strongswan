@@ -29,7 +29,7 @@ typedef struct padlock_rng_t padlock_rng_t;
  * Hardware-RNG based on via Padlock.
  */
 struct padlock_rng_t {
-	
+
 	/**
 	 * Implements rng_t interface.
 	 */
@@ -44,4 +44,4 @@ struct padlock_rng_t {
  */
 padlock_rng_t *padlock_rng_create(rng_quality_t quality);
 
-#endif /** PADLOCK_RNG_ @}*/
+#endif /** PADLOCK_RNG_H_ @}*/

@@ -1,0 +1,2 @@
+libstrongswan: package-name-doesnt-match-sonames libchecksum libfast0 libhydra0 libstrongswan0
+libstrongswan: possible-gpl-code-linked-with-openssl

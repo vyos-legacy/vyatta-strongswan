@@ -28,6 +28,7 @@
 #include <grp.h>
 
 #include <freeswan.h>
+#include <library.h>
 
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
@@ -66,46 +67,66 @@
 
 static unsigned int _action_ = 0;
 
-static void
-fsig(int signal)
+static void fsig(int signal)
 {
 	switch (signal)
 	{
 		case SIGCHLD:
 		{
-			int status;
+			int status, exit_status = 0;
 			pid_t pid;
 			char *name = NULL;
 
 			while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
 			{
 				if (pid == starter_pluto_pid())
+				{
 					name = " (Pluto)";
+				}
 				if (pid == starter_charon_pid())
+				{
 					name = " (Charon)";
+				}
 				if (WIFSIGNALED(status))
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has been killed by sig %d\n",
 								pid, name?name:"", WTERMSIG(status))
 					   )
+				}
 				else if (WIFSTOPPED(status))
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has been stopped by sig %d\n",
 								pid, name?name:"", WSTOPSIG(status))
 					   )
+				}
 				else if (WIFEXITED(status))
+				{
+					exit_status =  WEXITSTATUS(status);
+					if (exit_status >= SS_RC_FIRST && exit_status <= SS_RC_LAST)
+					{
+						_action_ =  FLAG_ACTION_QUIT;
+					}
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has quit (exit code %d)\n",
-								pid, name?name:"", WEXITSTATUS(status))
+								pid, name?name:"", exit_status)
 					   )
+				}
 				else
+				{
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has quit", pid, name?name:"")
 					   )
+				}
 				if (pid == starter_pluto_pid())
-					starter_pluto_sigchild(pid);
+				{
+					starter_pluto_sigchild(pid, exit_status);
+				}
 				if (pid == starter_charon_pid())
-					starter_charon_sigchild(pid);
+				{
+					starter_charon_sigchild(pid, exit_status);
+				}
 			}
 		}
 		break;
@@ -143,7 +164,7 @@ fsig(int signal)
 static void generate_selfcert()
 {
 	struct stat stb;
-	
+
 		/* if ipsec.secrets file is missing then generate RSA default key pair */
 		if (stat(SECRETS_FILE, &stb) != 0)
 		{
@@ -156,7 +177,7 @@ static void generate_selfcert()
 			{
 				char buf[1024];
 				struct group group, *grp;
-				
+
 				if (getgrnam_r(IPSEC_GROUP, &group, buf, sizeof(buf), &grp) == 0 &&	grp)
 				{
 					gid = grp->gr_gid;
@@ -167,7 +188,7 @@ static void generate_selfcert()
 			{
 				char buf[1024];
 				struct passwd passwd, *pwp;
-				
+
 				if (getpwnam_r(IPSEC_USER, &passwd, buf, sizeof(buf), &pwp) == 0 &&	pwp)
 				{
 					uid = pwp->pw_uid;
@@ -196,8 +217,7 @@ static void generate_selfcert()
 		}
 }
 
-static void
-usage(char *name)
+static void usage(char *name)
 {
 	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>] "
 			"[--debug|--debug-more|--debug-all]\n");
@@ -221,10 +241,14 @@ int main (int argc, char **argv)
 	time_t last_reload;
 	bool no_fork = FALSE;
 	bool attach_gdb = FALSE;
+	bool load_warning = FALSE;
 
 	/* global variables defined in log.h */
 	log_to_stderr = TRUE;
 	base_debugging = DBG_NONE;
+
+	library_init(NULL);
+	atexit(library_deinit);
 
 	/* parse command line */
 	for (i = 1; i < argc; i++)
@@ -276,6 +300,21 @@ int main (int argc, char **argv)
 	signal(SIGUSR1, fsig);
 
 	plog("Starting strongSwan "VERSION" IPsec [starter]...");
+
+#ifdef LOAD_WARNING
+	load_warning = TRUE;
+#endif
+
+	if (lib->settings->get_bool(lib->settings, "starter.load_warning", load_warning))
+	{
+		if (lib->settings->get_str(lib->settings, "charon.load", NULL) ||
+			lib->settings->get_str(lib->settings, "pluto.load", NULL))
+		{
+			plog("!! Your strongswan.conf contains manual plugin load options for");
+			plog("!! pluto and/or charon. This is recommended for experts only, see");
+			plog("!! http://wiki.strongswan.org/projects/strongswan/wiki/PluginLoad");
+		}
+	}
 
 	/* verify that we can start */
 	if (getuid() != 0)
@@ -334,14 +373,15 @@ int main (int argc, char **argv)
 		}
 	}
 
-	last_reload = time(NULL);
+	last_reload = time_monotonic(NULL);
 
 	if (stat(STARTER_PID_FILE, &stb) == 0)
 	{
 		plog("starter is already running (%s exists) -- no fork done", STARTER_PID_FILE);
+		confread_free(cfg);
 		exit(LSB_RC_SUCCESS);
 	}
-	
+
 	generate_selfcert();
 
 	/* fork if we're not debugging stuff */
@@ -362,13 +402,14 @@ int main (int argc, char **argv)
 					dup2(fnull, STDERR_FILENO);
 					close(fnull);
 				}
-				setsid(); 
+				setsid();
 			}
 			break;
 			case -1:
 				plog("can't fork: %s", strerror(errno));
 				break;
 			default:
+				confread_free(cfg);
 				exit(LSB_RC_SUCCESS);
 		}
 	}
@@ -392,18 +433,19 @@ int main (int argc, char **argv)
 		if (_action_ & FLAG_ACTION_QUIT)
 		{
 			if (starter_pluto_pid())
+			{
 				starter_stop_pluto();
+			}
 			if (starter_charon_pid())
+			{
 				starter_stop_charon();
+			}
 			starter_netkey_cleanup();
 			confread_free(cfg);
 			unlink(STARTER_PID_FILE);
 			unlink(INFO_FILE);
-#ifdef LEAK_DETECTIVE
-			report_leaks();
-#endif /* LEAK_DETECTIVE */
-			close_log();
 			plog("ipsec starter stopped");
+			close_log();
 			exit(LSB_RC_SUCCESS);
 		}
 
@@ -468,7 +510,7 @@ int main (int argc, char **argv)
 					_action_ |= FLAG_ACTION_LISTEN;
 				}
 
-				if (!starter_cmp_pluto(cfg, new_cfg)) 
+				if (!starter_cmp_pluto(cfg, new_cfg))
 				{
 					plog("Pluto has changed");
 					if (starter_pluto_pid())
@@ -559,7 +601,7 @@ int main (int argc, char **argv)
 				}
 			}
 			_action_ &= ~FLAG_ACTION_UPDATE;
-			last_reload = time(NULL);
+			last_reload = time_monotonic(NULL);
 		}
 
 		/*
@@ -597,7 +639,7 @@ int main (int argc, char **argv)
 					conn->state = STATE_TO_ADD;
 			}
 		}
-		
+
 		/*
 		 * Start charon
 		 */
@@ -713,7 +755,7 @@ int main (int argc, char **argv)
 		 */
 		if (auto_update)
 		{
-			time_t now = time(NULL);
+			time_t now = time_monotonic(NULL);
 
 			tv.tv_sec = (now < last_reload + auto_update)
 					? (last_reload + auto_update-now) : 0;

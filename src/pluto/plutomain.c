@@ -33,27 +33,25 @@
 #include <grp.h>
 
 #ifdef CAPABILITIES
+#ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
+#endif /* HAVE_SYS_CAPABILITY_H */
 #endif /* CAPABILITIES */
 
 #include <freeswan.h>
 
+#include <hydra.h>
 #include <library.h>
 #include <debug.h>
 #include <utils/enumerator.h>
 #include <utils/optionsfrom.h>
-
-#ifdef INTEGRITY_TEST
-#include <fips/fips.h>
-#include <fips/fips_signature.h>
-#endif /* INTEGRITY_TEST */
 
 #include <pfkeyv2.h>
 #include <pfkey.h>
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
+#include "myid.h"
 #include "ca.h"
 #include "certs.h"
 #include "ac.h"
@@ -72,12 +70,14 @@
 #include "ocsp.h"
 #include "crl.h"
 #include "fetch.h"
-#include "xauth.h"
 #include "crypto.h"
 #include "nat_traversal.h"
 #include "virtual.h"
 #include "timer.h"
 #include "vendor.h"
+#include "builder.h"
+#include "whack_attribute.h"
+#include "pluto.h"
 
 static void usage(const char *mess)
 {
@@ -134,7 +134,7 @@ static void usage(const char *mess)
 			" [--debug-private]"
 			" [--debug-natt]"
 #endif
- 		    " \\\n\t"
+		    " \\\n\t"
 			"[--nat_traversal] [--keep_alive <delay_sec>]"
 			" \\\n\t"
 			"[--force_keepalive] [--disable_port_floating]"
@@ -239,15 +239,15 @@ static void print_plugins()
 	char buf[BUF_LEN], *plugin;
 	int len = 0;
 	enumerator_t *enumerator;
-	
-	buf[0] = '\0';	
+
+	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < BUF_LEN && enumerator->enumerate(enumerator, &plugin))
 	{
 		len += snprintf(&buf[len], BUF_LEN-len, "%s ", plugin);
 	}
 	enumerator->destroy(enumerator);
-	DBG1("loaded plugins: %s", buf);
+	DBG1(DBG_DMN, "loaded plugins: %s", buf);
 }
 
 int main(int argc, char **argv)
@@ -261,12 +261,28 @@ int main(int argc, char **argv)
 	char *virtual_private = NULL;
 	int lockfd;
 #ifdef CAPABILITIES
-	cap_t caps;
 	int keep[] = { CAP_NET_ADMIN, CAP_NET_BIND_SERVICE };
 #endif /* CAPABILITIES */
 
 	/* initialize library and optionsfrom */
-	library_init(STRONGSWAN_CONF);
+	if (!library_init(NULL))
+	{
+		library_deinit();
+		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
+	}
+	if (!libhydra_init("pluto"))
+	{
+		libhydra_deinit();
+		library_deinit();
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+	if (!pluto_init(argv[0]))
+	{
+		pluto_deinit();
+		libhydra_deinit();
+		library_deinit();
+		exit(SS_RC_DAEMON_INTEGRITY);
+	}
 	options = options_create();
 
 	/* handle arguments */
@@ -643,40 +659,43 @@ int main(int argc, char **argv)
 	plog("Starting IKEv1 pluto daemon (strongSwan "VERSION")%s",
 		 compile_time_interop_options);
 
+	if (lib->integrity)
+	{
+		plog("integrity tests enabled:");
+		plog("lib    'libstrongswan': passed file and segment integrity tests");
+		plog("lib    'libhydra': passed file and segment integrity tests");
+		plog("daemon 'pluto': passed file integrity test");
+	}
+
 	/* load plugins, further infrastructure may need it */
-	lib->plugins->load(lib->plugins, IPSEC_PLUGINDIR, 
-		lib->settings->get_str(lib->settings, "pluto.load", PLUGINS));
+	if (!lib->plugins->load(lib->plugins, NULL,
+			lib->settings->get_str(lib->settings, "pluto.load", PLUGINS)))
+	{
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
 	print_plugins();
 
-#ifdef INTEGRITY_TEST
-	DBG1("integrity test of libstrongswan code");
-	if (fips_verify_hmac_signature(hmac_key, hmac_signature))
+	init_builder();
+	if (!init_secret() || !init_crypto())
 	{
-		DBG1("  integrity test passed");
+		plog("initialization failed - aborting pluto");
+		exit_pluto(SS_RC_INITIALIZATION_FAILED);
 	}
-	else
-	{
-		DBG1("  integrity test failed");
-		abort();
-	}
-#endif /* INTEGRITY_TEST */
-
 	init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
 	init_virtual_ip(virtual_private);
 	scx_init(pkcs11_module_path, pkcs11_init_args);
-	xauth_init();
-	init_secret();
 	init_states();
-	init_crypto();
 	init_demux();
 	init_kernel();
 	init_adns();
-	init_id();
-	init_fetch();
+	init_myid();
+	fetch_initialize();
+	ac_initialize();
+	whack_attribute_initialize();
 
 	/* drop unneeded capabilities and change UID/GID */
 	prctl(PR_SET_KEEPCAPS, 1);
-		
+
 #ifdef IPSEC_GROUP
 	{
 		struct group group, *grp;
@@ -704,29 +723,52 @@ int main(int argc, char **argv)
 		}
 #endif
 
-#ifdef CAPABILITIES
-	caps = cap_init();
-	cap_set_flag(caps, CAP_EFFECTIVE, 2, keep, CAP_SET);
-	cap_set_flag(caps, CAP_INHERITABLE, 2, keep, CAP_SET);
-	cap_set_flag(caps, CAP_PERMITTED, 2, keep, CAP_SET);
-	if (cap_set_proc(caps) != 0)
+#ifdef CAPABILITIES_LIBCAP
 	{
-		plog("unable to drop daemon capabilities");
-		abort();
+		cap_t caps;
+		caps = cap_init();
+		cap_set_flag(caps, CAP_EFFECTIVE, countof(keep), keep, CAP_SET);
+		cap_set_flag(caps, CAP_INHERITABLE, countof(keep), keep, CAP_SET);
+		cap_set_flag(caps, CAP_PERMITTED, countof(keep), keep, CAP_SET);
+		if (cap_set_proc(caps) != 0)
+		{
+			plog("unable to drop daemon capabilities");
+			abort();
+		}
+		cap_free(caps);
 	}
-	cap_free(caps);
-#endif /* CAPABILITIES */
+#endif /* CAPABILITIES_LIBCAP */
+#ifdef CAPABILITIES_NATIVE
+	{
+		struct __user_cap_data_struct caps = { .effective = 0 };
+		struct __user_cap_header_struct header = {
+			.version = _LINUX_CAPABILITY_VERSION,
+		};
+		int i;
+		for (i = 0; i < countof(keep); i++)
+		{
+			caps.effective |= 1 << keep[i];
+			caps.permitted |= 1 << keep[i];
+			caps.inheritable |= 1 << keep[i];
+		}
+		if (capset(&header, &caps) != 0)
+		{
+			plog("unable to drop daemon capabilities");
+			abort();
+		}
+	}
+#endif /* CAPABILITIES_NATIVE */
 
 	/* loading X.509 CA certificates */
-	load_authcerts("CA cert", CA_CERT_PATH, AUTH_CA);
+	load_authcerts("ca", CA_CERT_PATH, X509_CA);
 	/* loading X.509 AA certificates */
-	load_authcerts("AA cert", AA_CERT_PATH, AUTH_AA);
+	load_authcerts("aa", AA_CERT_PATH, X509_AA);
 	/* loading X.509 OCSP certificates */
-	load_authcerts("OCSP cert", OCSP_CERT_PATH, AUTH_OCSP);
+	load_authcerts("ocsp", OCSP_CERT_PATH, X509_OCSP_SIGNER);
 	/* loading X.509 CRLs */
 	load_crls();
 	/* loading attribute certificates (experimental) */
-	load_acerts();
+	ac_load_certs();
 
 	daily_log_event();
 	call_server();
@@ -747,24 +789,29 @@ void exit_pluto(int status)
 	free_preshared_secrets();
 	free_remembered_public_keys();
 	delete_every_connection();
+	whack_attribute_finalize(); /* free in-memory pools */
+	fetch_finalize();           /* stop fetching thread */
 	free_crl_fetch();           /* free chain of crl fetch requests */
 	free_ocsp_fetch();          /* free chain of ocsp fetch requests */
 	free_authcerts();           /* free chain of X.509 authority certificates */
 	free_crls();                /* free chain of X.509 CRLs */
-	free_acerts();              /* free chain of X.509 attribute certificates */
 	free_ca_infos();            /* free chain of X.509 CA information records */
 	free_ocsp();                /* free ocsp cache */
 	free_ifaces();
+	ac_finalize();              /* free X.509 attribute certificates */
 	scx_finalize();             /* finalize and unload PKCS #11 module */
-	xauth_finalize();           /* finalize and unload XAUTH module */
 	stop_adns();
 	free_md_pool();
 	free_crypto();
-	free_id();                  /* free myids */
+	free_myid();                /* free myids */
 	free_events();              /* free remaining events */
-	free_vendorid();			/* free all vendor id records */
+	free_vendorid();            /* free all vendor id records */
+	free_builder();
 	delete_lock();
 	options->destroy(options);
+	pluto_deinit();
+	lib->plugins->unload(lib->plugins);
+	libhydra_deinit();
 	library_deinit();
 	close_log();
 	exit(status);

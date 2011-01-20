@@ -1,3 +1,172 @@
+strongswan (4.4.1-5.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+    - Fix pending l10n issues. Debconf translations:
+    - Vietnamese (Clytie Siddall).  Closes: #598925
+    - Japanese (Hideki Yamane).  Closes: #599888
+    - Czech (Miroslav Kure).  Closes: #600354
+    - Spanish (Francisco Javier Cuadrado).  Closes: #600409
+    - Danish (Joe Hansen).  Closes: #602449
+    - Basque (Iñaki Larrañaga Murgoitio).  Closes: #603723
+    - Italian (Vincenzo Campanella).  Closes: #603779
+
+ -- Christian Perrier <bubulle@debian.org>  Wed, 17 Nov 2010 20:21:21 +0100
+
+strongswan (4.4.1-5) unstable; urgency=medium
+
+  * Fixed init script for restart to work when either pluto or charon
+    are not installed.
+    Closes: #598074: init script doesn't re-start the service on restart
+  * Enable built-in crypto test vectors.
+    Closes: #598136: strongswan: Please enable --enable-test-vectors 
+                     configure option
+  * Install libchecksum.so into correct directory (/usr/lib/ipsec instead of
+    /usr/lib). It still doesn't fix #598138 because of the size mismatch.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 26 Sep 2010 13:48:00 +0200
+
+strongswan (4.4.1-4) unstable; urgency=medium
+
+  * dh_clean should not be called by the install target. This caused the
+    arch: all package strongswan to be built but not included in the changes
+    file.
+    Closes: #593768: strongswan: 4.4.1 unavailable in testing notwhistanding 
+                     a freeze-exception request
+  * Rewrote parts of the init.d script to make stop/restart more robust
+    when pluto or charon fail.
+  * Closes: #595885: strongswan: FTBFS in squeeze: No package 'libnm_glib_vpn' 
+                     found
+    This bug was actually closed in 4.4.0 with changed dependencies.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 19 Sep 2010 13:08:36 +0200
+
+strongswan (4.4.1-3) unstable; urgency=low
+
+  * Change make clean to make distclean to make package building
+    idempotent.
+    Really closes: Bug#593313: strongswan: FTBFS because clean rule fails
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 22 Aug 2010 21:39:03 +0200
+
+strongswan (4.4.1-2) unstable; urgency=low
+
+  * Recompiled with dpkg-buildpackage instead of svn-buildpackage to
+    make the clean target work. I am still looking for the root cause of 
+    this quilt 3.0 format and svn-buildpackage incompatibility.
+    Closes: Bug#593313: strongswan: FTBFS because clean rule fails
+  * Removed the --enable-socket-* configure options again. Having multiple
+    socket variants for charon would force to explicitly enable one (in case
+    of pluto co-existance the socket-raw) in strongswan.conf. Disabling the
+    other variants for now at build-time relieves us from changing the 
+    default config file and might be more future-proof concerning future
+    upstream changes to configure options.
+    Really closes: #587583
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sat, 21 Aug 2010 23:28:47 +0200
+
+strongswan (4.4.1-1) unstable; urgency=low
+
+  * New upstream release.
+    Closes: #587583: strongswan 4.4.0-2 does not work here: charon seems not 
+                     to ignore all incoming requests/answers
+    Closes: #506320: strongswan: include directives error and ikev2
+  * Fix typo in debconf templates.
+    Closes: #587564: strongswan: Minor typos in Debconf template
+  * Updated debconf translations.
+    Closes: #587562: strongswan: [INTL:de] updated German debconf translation
+    Closes: #580954: [INTL:es] Spanish debconf template translation for 
+                     strongswan
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Mon, 09 Aug 2010 11:37:25 +0200
+
+strongswan (4.4.0-3) unstable; urgency=low
+
+  * Updated debconf translations.
+    Closes: #587562: strongswan: [INTL:de] updated German debconf translation
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Wed, 30 Jun 2010 09:50:31 +0200
+
+strongswan (4.4.0-2) unstable; urgency=low
+
+  * Force enable-socket-raw configure option and enable list-missing option 
+    for dh_install to make sure that all required plugins get built and 
+    installed.
+    Closes: #587282: plugins missing
+  * Updated debconf translations.
+    Closes: #587052: strongswan: [INTL:fr] French debconf templates 
+            translation update
+    Closes: #587159: strongswan: [INTL:ru] Russian debconf templates 
+            translation update
+    Closes: #587255: strongswan: [INTL:pt] Updated Portuguese 
+            translation for debconf messages
+    Closes: #587241: [INTL:sv] po-debconf file for strongswan
+  * Disabled cisco-quirks configure option, as it causes pluto to emit a 
+    bogus Cicso vendor ID attribute. Some Cicso VPN clients might not work
+    without this, but it is less confusing for standards-compliant remote
+    gateways.
+  * Removed leftover attribute plugin source caused by incomplete svn-upgrade
+    call.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 24 Jun 2010 22:32:18 +0200
+
+strongswan (4.4.0-1) unstable; urgency=HIGH
+
+  * New upstream release, now with a high-availability plugin.
+  * Added patch to fix snprintf bug.
+  * Enable building of ha, dhcp, and farp plugins.
+  * Enable capability dropping (now depends on libcap). Switching
+    user to new system user strongswan (with nogroup) after startup
+    is still disabled until the iptables updown script can be made
+    to work.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Tue, 25 May 2010 21:03:52 +0200
+
+strongswan (4.3.6-1) unstable; urgency=low
+
+  * UNRELEASED
+
+  * New upstream release, now build-depends on gperf.
+    Closes: #577855: New upstream release 4.3.6
+    Closes: #569553: strongswan: Certificates CNs containing email address 
+                     OIDs are not correctly parsed
+    Closes: #557635: strongswan charon does not rekey forever
+    Closes: #569299: Please update configure check to use new nm-glib 
+                     pkgconfig file name
+  * Switch to dpkg-source 3.0 (quilt) format
+  * Synchronize debconf handling with current openswan 2.6.25 package to keep
+    X509 certificate handling etc. similar. Thanks to Harald Jenny for 
+    implementing these changes in openswan, which I just converted to 
+    strongswan.
+  * Now also build a strongswan-dbg package to ship debugging symbols.
+  * Include attr plugin in strongswan-ikev2 package. Thanks to Christoph Lukas
+    for pointing out that this was missing.
+    Closes: #569550: strongswan: Please include attr plugin
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Tue, 23 Feb 2010 10:39:21 +0000
+
+strongswan (4.3.4-1) unstable; urgency=low
+
+  * New upstream release.
+  * This release supports integrity checking of libraries, which is
+    now enabled at build-time and can be enabled at run-time using 
+        libstrongswan {
+          integrity_test = yes
+        }
+    in /etc/strongswan.conf.
+  * Don't disable internal crypto libraries for pluto. They might be
+    required when working with older ipsec.conf files.
+  * charon now supports "include" directives in ipsec.secrets for
+    compatibility with how the maintainer script includes RSA private keys.
+  * Patched starter to also look at routing table "default" when table
+    "main" doesn't have a default entry. This makes dealing with
+    "%defaulroute" in ipsec.conf more flexible.
+    Update: It seems Astaro was quicker then me sending a patch with
+    exactly that aim to upstream. Now applied this one, which will be
+    part of future upstream releases and uses netlink to read routing
+    tables.
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Wed, 21 Oct 2009 11:14:56 +0000
+
 strongswan (4.3.2-1.1-vyatta14) unstable; urgency=low
 
   * new branch

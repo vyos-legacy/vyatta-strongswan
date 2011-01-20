@@ -13,18 +13,15 @@ export DEB_BUILD_HARDENING=1
 CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--libexecdir=/usr/lib \
 		--enable-ldap --enable-curl \
-		--enable-nonblocking --enable-thread \
+		--with-capabilities=libcap \
 		--enable-smartcard --enable-cisco-quirks \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-openssl --enable-agent \
 		--enable-eap-radius --enable-eap-identity --enable-eap-md5 \
 		--enable-eap-gtc --enable-eap-aka --enable-eap-mschapv2 \
-		--enable-sql \
-		--disable-aes --disable-des --disable-fips-prf --disable-gmp \
-		--disable-md5 --disable-sha1 --disable-sha2 \
-    --enable-nat-transport
-	# And for --enable-eap-sim we would need the library, which we don't
-	# have right now.
+		--enable-sql --enable-integrity-test \
+		--enable-ha --enable-dhcp --enable-farp \
+		--enable-test-vectors --enable-nat-transport
 
 DEB_BUILD_ARCH_CPU ?=$(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
 
@@ -54,11 +51,10 @@ clean:
 	dh_testroot
 	rm -f build-stamp
 
-	[ ! -f Makefile ] || $(MAKE) clean
+	[ ! -f Makefile ] || $(MAKE) distclean
 	#-$(MAKE) -C programs/fswcert/ clean
 	# after a make clean, no binaries _should_ be left, but ....
 	-find $(CURDIR) -name "*.o" | xargs --no-run-if-empty rm
-	-find $(CURDIR)/lib/libcrypto -name "*.a" | xargs --no-run-if-empty rm
 
 	# Really clean (#356716)
 	# This is a hack: should be better implemented
@@ -73,12 +69,11 @@ clean:
 install: build-stamp
 	dh_testdir
 	dh_testroot
-	dh_prep
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 
 	# install files from debian/tmp into proper package dirs
-	dh_install
+	dh_install --list-missing
 	# special handling for padlock, as it is only built on i386
 ifeq ($(DEB_BUILD_ARCH_CPU),i386)
 	  install $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-padlock.so* $(CURDIR)/debian/libstrongswan/usr/lib/ipsec/plugins/
@@ -102,6 +97,10 @@ endif
 
 	# this is handled by update-rc.d
 	rm -rf $(CURDIR)/debian/strongswan-starter/etc/rc?.d
+
+	# delete var/lock/subsys and var/run to satisfy lintian
+	rm -rf $(CURDIR)/debian/openswan/var/lock
+	rm -rf $(CURDIR)/debian/openswan/var/run
 
 	dh_installdocs -pstrongswan -n
 	# change the paths in the installed doc files (but only in regular 
@@ -127,9 +126,6 @@ endif
 	find $(CURDIR)/debian/*strongswan*/ -name ".cvsignore" | xargs --no-run-if-empty rm -f
 	find $(CURDIR)/debian/*strongswan*/ -name "/.svn/" | xargs --no-run-if-empty rm -rf
 
-	# and lintian overrides
-	install --mode=0644 $(CURDIR)/debian/strongswan.lintian-overrides $(CURDIR)/debian/libstrongswan/usr/share/lintian/overrides/strongswan
-
 binary-common:
 	dh_testdir
 	dh_testroot
@@ -139,9 +135,10 @@ binary-common:
 	dh_installchangelogs NEWS
 	dh_installdocs README
 	dh_link
-	dh_strip
+	dh_strip --dbg-package=strongswan-dbg
 	dh_compress
 	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
+	dh_lintian
 	dh_makeshlibs
 	dh_installdeb
 	dh_shlibdeps

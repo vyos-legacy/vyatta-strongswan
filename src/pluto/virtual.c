@@ -180,7 +180,7 @@ init_virtual_ip(const char *private_list)
  * ex: vhost:%no,%dhcp,%priv,%v4:192.168.1.0/24
  */
 struct virtual_t
-*create_virtual(const struct connection *c, const char *string)
+*create_virtual(const connection_t *c, const char *string)
 {
 	unsigned short flags=0, n_net=0, i;
 	const char *str = string, *next, *first_net=NULL;
@@ -227,7 +227,7 @@ struct virtual_t
 		}
 		else
 			goto fail;
-		
+
 		str = *next ? next+1 : NULL;
 	}
 
@@ -267,14 +267,13 @@ is_virtual_end(const struct end *that)
 }
 
 bool
-is_virtual_connection(const struct connection *c)
+is_virtual_connection(const connection_t *c)
 {
 	return ((c->spd.that.virt)?TRUE:FALSE);
 }
 
-static bool
-net_in_list(const ip_subnet *peer_net, const ip_subnet *list,
-	unsigned short len)
+static bool net_in_list(const ip_subnet *peer_net, const ip_subnet *list,
+						unsigned short len)
 {
 	unsigned short i;
 
@@ -289,9 +288,8 @@ net_in_list(const ip_subnet *peer_net, const ip_subnet *list,
 	return FALSE;
 }
 
-bool
-is_virtual_net_allowed(const struct connection *c, const ip_subnet *peer_net,
-		const ip_address *his_addr)
+bool is_virtual_net_allowed(const connection_t *c, const ip_subnet *peer_net,
+							const ip_address *his_addr)
 {
 	if (c->spd.that.virt == NULL)
 		return FALSE;
@@ -312,7 +310,7 @@ is_virtual_net_allowed(const struct connection *c, const ip_subnet *peer_net,
 	if (c->spd.that.virt->n_net
 	&&  net_in_list(peer_net, c->spd.that.virt->net, c->spd.that.virt->n_net))
 		return TRUE;
-	
+
 	if (c->spd.that.virt->flags & F_VIRTUAL_ALL)
 	{
 		/** %all must only be used for testing - log it **/

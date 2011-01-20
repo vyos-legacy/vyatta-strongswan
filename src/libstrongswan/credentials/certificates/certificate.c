@@ -15,18 +15,22 @@
 
 #include "certificate.h"
 
+#include <debug.h>
 #include <credentials/certificates/x509.h>
 
-ENUM(certificate_type_names, CERT_ANY, CERT_PGP,
+ENUM(certificate_type_names, CERT_ANY, CERT_PLUTO_CRL,
 	"ANY",
 	"X509",
 	"X509_CRL",
 	"X509_OCSP_REQUEST",
 	"X509_OCSP_RESPONSE",
 	"X509_AC",
-	"X509_CHAIN",
 	"TRUSTED_PUBKEY",
+	"PKCS10_REQUEST",
 	"PGP",
+	"PLUTO_CERT",
+	"PLUTO_AC",
+	"PLUTO_CRL",
 );
 
 ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_REVOKED,
@@ -37,3 +41,24 @@ ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_REVOKED,
 	"REVOKED",
 );
 
+/**
+ * See header
+ */
+bool certificate_is_newer(certificate_t *this, certificate_t *other)
+{
+	time_t this_update, that_update;
+	char *type = "certificate";
+	bool newer;
+
+	if (this->get_type(this) == CERT_X509_CRL)
+	{
+		type = "crl";
+	}
+	this->get_validity(this, NULL, &this_update, NULL);
+	other->get_validity(other, NULL, &that_update, NULL);
+	newer = this_update > that_update;
+	DBG1(DBG_LIB, "  %s from %T is %s - existing %s from %T %s",
+		 type, &this_update, FALSE, newer ? "newer" : "not newer",
+		 type, &that_update, FALSE, newer ? "replaced" : "retained");
+	return newer;
+}

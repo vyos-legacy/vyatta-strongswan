@@ -17,7 +17,6 @@
 
 #include <library.h>
 #include "pubkey_cert.h"
-#include "pubkey_public_key.h"
 
 typedef struct private_pubkey_plugin_t private_pubkey_plugin_t;
 
@@ -38,25 +37,21 @@ struct private_pubkey_plugin_t {
 static void destroy(private_pubkey_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
-							(builder_constructor_t)pubkey_cert_builder);
-	lib->creds->remove_builder(lib->creds,
-							(builder_constructor_t)pubkey_public_key_builder);
+							(builder_function_t)pubkey_cert_wrap);
 	free(this);
 }
 
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *pubkey_plugin_create()
 {
 	private_pubkey_plugin_t *this = malloc_thing(private_pubkey_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
-							(builder_constructor_t)pubkey_cert_builder);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-							(builder_constructor_t)pubkey_public_key_builder);
+							(builder_function_t)pubkey_cert_wrap);
 
 	return &this->public.plugin;
 }

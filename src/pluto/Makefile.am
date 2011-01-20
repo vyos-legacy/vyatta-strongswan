@@ -20,7 +20,6 @@ demux.c demux.h \
 dnskey.c dnskey.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
-id.c id.h \
 ike_alg.c ike_alg.h \
 ipsec_doi.c ipsec_doi.h \
 kameipsec.h \
@@ -32,13 +31,13 @@ kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
 log.c log.h \
+myid.c myid.h \
 modecfg.c modecfg.h \
 nat_traversal.c nat_traversal.h \
 ocsp.c ocsp.h \
 packet.c packet.h \
-pem.c pem.h \
-pgpcert.c pgpcert.h \
 pkcs7.c pkcs7.h \
+pluto.c pluto.h \
 plutomain.c \
 rcv_whack.c rcv_whack.h \
 server.c server.h \
@@ -48,42 +47,54 @@ state.c state.h \
 timer.c timer.h \
 vendor.c vendor.h \
 virtual.c virtual.h \
-xauth.c xauth.h \
+whack_attribute.c whack_attribute.h \
+xauth/xauth_manager.c xauth/xauth_manager.h \
+xauth/xauth_provider.h xauth/xauth_verifier.h \
 x509.c x509.h \
+builder.c builder.h \
 rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h
 
+plutomain.o :	$(top_builddir)/config.status
+
 LIBSTRONGSWANDIR=$(top_builddir)/src/libstrongswan
 LIBFREESWANDIR=$(top_builddir)/src/libfreeswan
+LIBHYDRADIR=$(top_builddir)/src/libhydra
 
 INCLUDES = \
--I${linuxdir} \
+-I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
+-I$(top_srcdir)/src/libhydra \
 -I$(top_srcdir)/src/whack
 
-AM_CFLAGS = \
+AM_CFLAGS = -rdynamic \
 -DIPSEC_DIR=\"${ipsecdir}\" \
--DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_CONFDIR=\"${sysconfdir}\" \
 -DIPSEC_PIDDIR=\"${piddir}\" \
--DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
--DIPSEC_PLUGINDIR=\"${plugindir}\" \
--DPLUGINS=\""${pluto_plugins}\"" \
--DSTRONGSWAN_CONF=\"${strongswan_conf}\" \
+-DSHARED_SECRETS_FILE=\"${sysconfdir}/ipsec.secrets\" \
+-DPLUGINS=\""${pluto_plugins} ${libhydra_plugins}\"" \
+-DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" \
 -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
 -DPLUTO -DKLIPS -DDEBUG
 
 pluto_LDADD = \
 $(LIBSTRONGSWANDIR)/libstrongswan.la \
 $(LIBFREESWANDIR)/libfreeswan.a \
--lresolv -lpthread $(DLLIB)
+$(LIBHYDRADIR)/libhydra.la \
+-lresolv $(PTHREADLIB) $(DLLIB)
 
 _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)
 
+CLEANFILES = ipsec.secrets.5
 dist_man_MANS = pluto.8 ipsec.secrets.5
+EXTRA_DIST = ipsec.secrets.5.in
+
+# compile options
+#################
 
 # This compile option activates the sending of a strongSwan VID
 if USE_VENDORID
@@ -110,15 +121,25 @@ if USE_SMARTCARD
   AM_CFLAGS += -DSMARTCARD
 endif
 
-# This compile option activates the integrity test of libstrongswan
-if USE_INTEGRITY_TEST
-  AM_CFLAGS += -DINTEGRITY_TEST
-endif
-
-if USE_CAPABILITIES
+if USE_LIBCAP
   pluto_LDADD += -lcap
 endif
 
 if USE_THREADS
   AM_CFLAGS += -DTHREADS
 endif
+
+# build optional plugins
+########################
+
+SUBDIRS = .
+
+if USE_XAUTH
+  SUBDIRS += plugins/xauth
+endif
+
+ipsec.secrets.5 : ipsec.secrets.5.in
+	sed \
+	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
+	$(srcdir)/$@.in > $@
+

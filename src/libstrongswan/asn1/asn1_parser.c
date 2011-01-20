@@ -19,7 +19,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <utils.h>
 #include <debug.h>
 
 #include "asn1.h"
@@ -54,7 +53,7 @@ struct private_asn1_parser_t {
 	bool success;
 
 	/**
-	 * Declare object data as private - use debug level 4 to log it 
+	 * Declare object data as private - use debug level 4 to log it
 	 */
 	bool private;
 
@@ -88,7 +87,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 	u_char *start_ptr;
 	u_int level;
 	asn1Object_t obj;
-	
+
 	*object = chunk_empty;
 
 	/* Advance to the next object syntax definition line */
@@ -99,7 +98,7 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 	{
 		return FALSE;
 	}
-		
+
 	if (obj.flags & ASN1_END)  /* end of loop or option found */
 	{
 		if (this->loopAddr[obj.level] && this->blobs[obj.level+1].len > 0)
@@ -109,30 +108,30 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 		}
 		else
 		{
-			this->loopAddr[obj.level] = 0;         /* exit loop or option*/
+			this->loopAddr[obj.level] = 0;		 /* exit loop or option*/
 			goto end;
 		}
 	}
-	
+
 	level = this->level0 + obj.level;
 	blob = this->blobs + obj.level;
 	blob1 = blob + 1;
 	start_ptr = blob->ptr;
-	
+
 	/* handle ASN.1 defaults values */
 	if ((obj.flags & ASN1_DEF) && (blob->len == 0 || *start_ptr != obj.type) )
 	{
 		/* field is missing */
-		DBG2("L%d - %s:", level, obj.name);
+		DBG2(DBG_LIB, "L%d - %s:", level, obj.name);
 		if (obj.type & ASN1_CONSTRUCTED)
 		{
 			this->line++ ;  /* skip context-specific tag */
 		}
 		goto end;
 	}
-	
+
 	/* handle ASN.1 options */
-	
+
 	if ((obj.flags & ASN1_OPT)
 			&& (blob->len == 0 || *start_ptr != obj.type))
 	{
@@ -145,35 +144,35 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 				 (this->objects[this->line].level == obj.level)));
 		goto end;
 	}
-		
+
 	/* an ASN.1 object must possess at least a tag and length field */
-	
+
 	if (blob->len < 2)
 	{
-		DBG1("L%d - %s:  ASN.1 object smaller than 2 octets",
+		DBG1(DBG_LIB, "L%d - %s:  ASN.1 object smaller than 2 octets",
 					level, obj.name);
 		this->success = FALSE;
 		goto end;
 	}
-	
+
 	blob1->len = asn1_length(blob);
-	
+
 	if (blob1->len == ASN1_INVALID_LENGTH)
 	{
-		DBG1("L%d - %s:  length of ASN.1 object invalid or too large", 
+		DBG1(DBG_LIB, "L%d - %s:  length of ASN.1 object invalid or too large",
 					level, obj.name);
 		this->success = FALSE;
 	}
-	
+
 	blob1->ptr = blob->ptr;
 	blob->ptr += blob1->len;
 	blob->len -= blob1->len;
-	
+
 	/* return raw ASN.1 object without prior type checking */
-	
+
 	if (obj.flags & ASN1_RAW)
 	{
-		DBG2("L%d - %s:", level, obj.name);
+		DBG2(DBG_LIB, "L%d - %s:", level, obj.name);
 		object->ptr = start_ptr;
 		object->len = (size_t)(blob->ptr - start_ptr);
 		goto end;
@@ -181,16 +180,16 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 
 	if (*start_ptr != obj.type && !(this->implicit && this->line == 0))
 	{
-		DBG1("L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
+		DBG1(DBG_LIB, "L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
 					level, obj.name, obj.type, *start_ptr);
-		DBG3("%b", start_ptr, (u_int)(blob->ptr - start_ptr));
+		DBG3(DBG_LIB, "%b", start_ptr, (u_int)(blob->ptr - start_ptr));
 		this->success = FALSE;
 		goto end;
 	}
-	
-	DBG2("L%d - %s:", level, obj.name);
-	
-	/* In case of "SEQUENCE OF" or "SET OF" start a loop */	
+
+	DBG2(DBG_LIB, "L%d - %s:", level, obj.name);
+
+	/* In case of "SEQUENCE OF" or "SET OF" start a loop */
 	if (obj.flags & ASN1_LOOP)
 	{
 		if (blob1->len > 0)
@@ -217,11 +216,11 @@ static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
 		object->len = (size_t)(blob->ptr - start_ptr);
 		if (this->private)
 		{
-			DBG4("%B", object);
+			DBG4(DBG_LIB, "%B", object);
 		}
 		else
 		{
-			DBG3("%B", object);
+			DBG3(DBG_LIB, "%B", object);
 		}
 	}
 	else if (obj.flags & ASN1_BODY)

@@ -1,5 +1,6 @@
 /* mechanisms for preshared keys (public, private, and preshared secrets)
  * Copyright (C) 1998-2001  D. Hugh Redelmeier.
+ * Copyright (C) 2009 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,12 +36,11 @@
 
 #include <library.h>
 #include <asn1/asn1.h>
+#include <credentials/certificates/pgp_certificate.h>
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
 #include "x509.h"
-#include "pgpcert.h"
 #include "certs.h"
 #include "smartcard.h"
 #include "connections.h"
@@ -53,25 +53,26 @@
 #include "whack.h"      /* for RC_LOG_SERIOUS */
 #include "timer.h"
 #include "fetch.h"
-#include "xauth.h"
 
 const char *shared_secrets_file = SHARED_SECRETS_FILE;
 
-typedef struct id_list id_list_t;
 
-struct id_list {
-	struct id id;
-	id_list_t *next;
+typedef enum secret_kind_t secret_kind_t;
+
+enum secret_kind_t {
+	SECRET_PSK,
+	SECRET_PUBKEY,
+	SECRET_XAUTH,
+	SECRET_PIN
 };
 
-typedef struct secret secret_t;
+typedef struct secret_t secret_t;
 
-struct secret {
-	id_list_t *ids;
-	enum PrivateKeyKind kind;
+struct secret_t {
+	linked_list_t *ids;
+	secret_kind_t kind;
 	union {
 		chunk_t        preshared_secret;
-		xauth_t        xauth_secret;
 		private_key_t *private_key;
 		smartcard_t   *smartcard;
 	} u;
@@ -83,21 +84,20 @@ struct secret {
  */
 static void free_public_key(pubkey_t *pk)
 {
+	DESTROY_IF(pk->id);
 	DESTROY_IF(pk->public_key);
-	free_id_content(&pk->id);
-	free(pk->issuer.ptr);
+	DESTROY_IF(pk->issuer);
 	free(pk->serial.ptr);
 	free(pk);
 }
 
 secret_t *secrets = NULL;
 
-/* find the struct secret associated with the combination of
- * me and the peer.  We match the Id (if none, the IP address).
- * Failure is indicated by a NULL.
+/**
+ * Find the secret associated with the combination of me and the peer.
  */
-static const secret_t* get_secret(const struct connection *c,
-								  enum PrivateKeyKind kind, bool asym)
+const secret_t* match_secret(identification_t *my_id, identification_t *his_id,
+							 secret_kind_t kind)
 {
 	enum {      /* bits */
 		match_default = 0x01,
@@ -106,126 +106,92 @@ static const secret_t* get_secret(const struct connection *c,
 	};
 
 	unsigned int best_match = 0;
-	secret_t *best = NULL;
-	secret_t *s;
-	const struct id *my_id  = &c->spd.this.id
-				  , *his_id = &c->spd.that.id;
-	struct id rw_id;
-
-	/* is there a certificate assigned to this connection? */
-	if (kind == PPK_PUBKEY && c->spd.this.cert.type != CERT_NONE)
-	{
-		public_key_t *pub_key = cert_get_public_key(c->spd.this.cert);
-
-		for (s = secrets; s != NULL; s = s->next)
-		{
-			if (s->kind == kind &&
-				s->u.private_key->belongs_to(s->u.private_key, pub_key))
-			{
-				best = s;
-				break; /* we have found the private key - no sense in searching further */
-			}
-		}
-		return best;
-	}
-
-	if (his_id_was_instantiated(c))
-	{
-		/* roadwarrior: replace him with 0.0.0.0 */
-		rw_id.kind = c->spd.that.id.kind;
-		rw_id.name = chunk_empty;
-		happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
-		his_id = &rw_id;
-	}
-	else if (kind == PPK_PSK
-	&& (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK))
-	&& ((c->kind == CK_TEMPLATE && c->spd.that.id.kind == ID_ANY) ||
-		(c->kind == CK_INSTANCE && id_is_ipaddr(&c->spd.that.id))))
-	{
-		/* roadwarrior: replace him with 0.0.0.0 */
-		rw_id.kind = ID_IPV4_ADDR;
-		happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
-		his_id = &rw_id;
-	}
+	secret_t *s, *best = NULL;
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
-		if (s->kind == kind)
+		unsigned int match = 0;
+
+		if (s->kind != kind)
 		{
-			unsigned int match = 0;
+			continue;
+		}
 
-			if (s->ids == NULL)
-			{
-				/* a default (signified by lack of ids):
-				 * accept if no more specific match found
-				 */
-				match = match_default;
-			}
-			else
-			{
-				/* check if both ends match ids */
-				id_list_t *i;
+		if (s->ids->get_count(s->ids) == 0)
+		{
+			/* a default (signified by lack of ids):
+			 * accept if no more specific match found
+			 */
+			match = match_default;
+		}
+		else
+		{
+			/* check if both ends match ids */
+			enumerator_t *enumerator;
+			identification_t *id;
 
-				for (i = s->ids; i != NULL; i = i->next)
+			enumerator = s->ids->create_enumerator(s->ids);
+			while (enumerator->enumerate(enumerator, &id))
+			{
+				if (my_id->equals(my_id, id))
 				{
-					if (same_id(my_id, &i->id))
-					{
-						match |= match_me;
-					}
-					if (same_id(his_id, &i->id))
-					{
-						match |= match_him;
-					}
+					match |= match_me;
 				}
-
-				/* If our end matched the only id in the list,
-				 * default to matching any peer.
-				 * A more specific match will trump this.
-				 */
-				if (match == match_me && s->ids->next == NULL)
+				if (his_id->equals(his_id, id))
 				{
-					match |= match_default;
+					match |= match_him;
 				}
 			}
+			enumerator->destroy(enumerator);
 
-			switch (match)
+			/* If our end matched the only id in the list,
+			 * default to matching any peer.
+			 * A more specific match will trump this.
+			 */
+			if (match == match_me && s->ids->get_count(s->ids) == 1)
 			{
+				match |= match_default;
+			}
+		}
+
+		switch (match)
+		{
 			case match_me:
 				/* if this is an asymmetric (eg. public key) system,
 				 * allow this-side-only match to count, even if
 				 * there are other ids in the list.
 				 */
-				if (!asym)
+				if (kind != SECRET_PUBKEY)
 				{
 					break;
 				}
 				/* FALLTHROUGH */
-			case match_default: /* default all */
-			case match_me | match_default:      /* default peer */
-			case match_me | match_him:  /* explicit */
+			case match_default:              /* default all */
+			case match_me | match_default:   /* default peer */
+			case match_me | match_him:       /* explicit */
 				if (match == best_match)
 				{
-					/* two good matches are equally good:
-					 * do they agree?
-					 */
+					/* two good matches are equally good: do they agree? */
 					bool same = FALSE;
 
 					switch (kind)
 					{
-					case PPK_PSK:
-						same = s->u.preshared_secret.len == best->u.preshared_secret.len
-								&& memeq(s->u.preshared_secret.ptr, best->u.preshared_secret.ptr, s->u.preshared_secret.len);
+					case SECRET_PSK:
+					case SECRET_XAUTH:
+						same = chunk_equals(s->u.preshared_secret,
+											best->u.preshared_secret);
 						break;
-					case PPK_PUBKEY:
-						same = s->u.private_key->equals(s->u.private_key, best->u.private_key);
+					case SECRET_PUBKEY:
+						same = s->u.private_key->equals(s->u.private_key,
+														best->u.private_key);
 						break;
 					default:
 						bad_case(kind);
 					}
 					if (!same)
 					{
-						loglog(RC_LOG_SERIOUS, "multiple ipsec.secrets entries with distinct secrets match endpoints:"
-							" first secret used");
+						loglog(RC_LOG_SERIOUS, "multiple ipsec.secrets entries with "
+							"distinct secrets match endpoints: first secret used");
 						best = s;       /* list is backwards: take latest in list */
 					}
 				}
@@ -235,9 +201,64 @@ static const secret_t* get_secret(const struct connection *c,
 					best_match = match;
 					best = s;
 				}
-			}
 		}
 	}
+	return best;
+}
+
+/**
+ * Retrieves an XAUTH secret primarily based on the user ID and
+ * secondarily based on the server ID
+ */
+bool get_xauth_secret(identification_t *user, identification_t *server,
+					  chunk_t *secret)
+{
+	const secret_t *s;
+
+	s = match_secret(user, server, SECRET_XAUTH);
+	if (s)
+	{
+		*secret = chunk_clone(s->u.preshared_secret);
+		return TRUE;
+	}
+	else
+	{
+		*secret = chunk_empty;
+		return FALSE;
+	}
+}
+
+/**
+ * We match the ID (if none, the IP address). Failure is indicated by a NULL.
+ */
+static const secret_t* get_secret(const connection_t *c, secret_kind_t kind)
+{
+	identification_t *my_id, *his_id;
+	const secret_t *best;
+
+	my_id  = c->spd.this.id;
+
+	if (his_id_was_instantiated(c))
+	{
+		/* roadwarrior: replace him with 0.0.0.0 */
+		his_id = identification_create_from_string("%any");
+	}
+	else if (kind == SECRET_PSK && (c->policy & (POLICY_PSK | POLICY_XAUTH_PSK)) &&
+		((c->kind == CK_TEMPLATE &&
+		 c->spd.that.id->get_type(c->spd.that.id) == ID_ANY) ||
+		(c->kind == CK_INSTANCE && id_is_ipaddr(c->spd.that.id))))
+	{
+		/* roadwarrior: replace him with 0.0.0.0 */
+		his_id = identification_create_from_string("%any");
+	}
+	else
+	{
+		his_id = c->spd.that.id->clone(c->spd.that.id);
+	}
+
+	best = match_secret(my_id, his_id, kind);
+
+	his_id->destroy(his_id);
 	return best;
 }
 
@@ -245,9 +266,9 @@ static const secret_t* get_secret(const struct connection *c,
  * Failure is indicated by a NULL pointer.
  * Note: the result is not to be freed by the caller.
  */
-const chunk_t* get_preshared_secret(const struct connection *c)
+const chunk_t* get_preshared_secret(const connection_t *c)
 {
-	const secret_t *s = get_secret(c, PPK_PSK, FALSE);
+	const secret_t *s = get_secret(c, SECRET_PSK);
 
 	DBG(DBG_PRIVATE,
 		if (s == NULL)
@@ -261,50 +282,80 @@ const chunk_t* get_preshared_secret(const struct connection *c)
 /* check the existence of a private key matching a public key contained
  * in an X.509 or OpenPGP certificate
  */
-bool has_private_key(cert_t cert)
+bool has_private_key(cert_t *cert)
 {
 	secret_t *s;
 	bool has_key = FALSE;
-	public_key_t *pub_key = cert_get_public_key(cert);
+	public_key_t *pub_key = cert->cert->get_public_key(cert->cert);
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
-		if (s->kind == PPK_PUBKEY &&
+		if (s->kind == SECRET_PUBKEY &&
 			s->u.private_key->belongs_to(s->u.private_key, pub_key))
 		{
 			has_key = TRUE;
 			break;
 		}
 	}
+	pub_key->destroy(pub_key);
 	return has_key;
 }
 
 /*
  * get the matching private key belonging to a given X.509 certificate
  */
-private_key_t* get_x509_private_key(const x509cert_t *cert)
+private_key_t* get_x509_private_key(const cert_t *cert)
 {
+	public_key_t *public_key = cert->cert->get_public_key(cert->cert);
+	private_key_t *private_key = NULL;
 	secret_t *s;
 
 	for (s = secrets; s != NULL; s = s->next)
 	{
-		if (s->kind == PPK_PUBKEY &&
-			s->u.private_key->belongs_to(s->u.private_key, cert->public_key))
+
+		if (s->kind == SECRET_PUBKEY &&
+			s->u.private_key->belongs_to(s->u.private_key, public_key))
 		{
-			return s->u.private_key;
+			private_key = s->u.private_key;
+			break;
 		}
 	}
-	return NULL;
+	public_key->destroy(public_key);
+	return private_key;
 }
 
 /* find the appropriate private key (see get_secret).
  * Failure is indicated by a NULL pointer.
  */
-private_key_t* get_private_key(const struct connection *c)
+private_key_t* get_private_key(const connection_t *c)
 {
-	const secret_t *s = get_secret(c, PPK_PUBKEY, TRUE);
+	const secret_t *s, *best = NULL;
 
-	return s == NULL? NULL : s->u.private_key;
+	/* is a certificate assigned to this connection? */
+	if (c->spd.this.cert)
+	{
+		certificate_t *certificate;
+		public_key_t *pub_key;
+
+		certificate = c->spd.this.cert->cert;
+		pub_key = certificate->get_public_key(certificate);
+
+		for (s = secrets; s != NULL; s = s->next)
+		{
+			if (s->kind == SECRET_PUBKEY &&
+				s->u.private_key->belongs_to(s->u.private_key, pub_key))
+			{
+				best = s;
+				break; /* found the private key - no sense in searching further */
+			}
+		}
+		pub_key->destroy(pub_key);
+	}
+	else
+	{
+		best = get_secret(c, SECRET_PUBKEY);
+	}
+	return best ? best->u.private_key : NULL;
 }
 
 /* digest a secrets file
@@ -391,7 +442,7 @@ enum rsa_private_key_part_t {
 	RSA_PART_EXPONENT1        = 5,
 	RSA_PART_EXPONENT2        = 6,
 	RSA_PART_COEFFICIENT      = 7
-}; 
+};
 
 const char *rsa_private_key_part_names[] = {
 	"Modulus",
@@ -407,20 +458,17 @@ const char *rsa_private_key_part_names[] = {
 /**
  * Parse fields of an RSA private key in BIND 8.2's representation
  * consistiong of a braced list of keyword and value pairs in required order.
- * Conversion into ASN.1 DER encoded PKCS#1 representation.
  */
 static err_t process_rsa_secret(private_key_t **key)
 {
-	chunk_t asn1_chunk[countof(rsa_private_key_part_names)];
-	chunk_t pkcs1_chunk;
+	chunk_t rsa_chunk[countof(rsa_private_key_part_names)];
 	u_char buf[RSA_MAX_ENCODING_BYTES];   /* limit on size of binary representation of key */
 	rsa_private_key_part_t part, p;
-	size_t sz, len = 0;
+	size_t sz;
 	err_t ugh;
 
 	for (part = RSA_PART_MODULUS; part <= RSA_PART_COEFFICIENT; part++)
 	{
-		chunk_t rsa_private_key_part;
 		const char *keyword = rsa_private_key_part_names[part];
 
 		if (!shift())
@@ -447,9 +495,8 @@ static err_t process_rsa_secret(private_key_t **key)
 			part++;
 			goto end;
 		}
-		rsa_private_key_part = chunk_create(buf, sz);
-		asn1_chunk[part] = asn1_integer("c", rsa_private_key_part);
-		len += asn1_chunk[part].len;
+		rsa_chunk[part] = chunk_create(buf, sz);
+		rsa_chunk[part] = chunk_clone(rsa_chunk[part]);
 	}
 
 	/* We require an (indented) '}' and the end of the record.
@@ -467,21 +514,17 @@ static err_t process_rsa_secret(private_key_t **key)
 		goto end;
 	}
 
-	pkcs1_chunk = asn1_wrap(ASN1_SEQUENCE, "ccccccccc",
-					 		ASN1_INTEGER_0,
-							asn1_chunk[RSA_PART_MODULUS],
-							asn1_chunk[RSA_PART_PUBLIC_EXPONENT],
-							asn1_chunk[RSA_PART_PRIVATE_EXPONENT],
-							asn1_chunk[RSA_PART_PRIME1],
-							asn1_chunk[RSA_PART_PRIME2],
-							asn1_chunk[RSA_PART_EXPONENT1],
-							asn1_chunk[RSA_PART_EXPONENT2],
-							asn1_chunk[RSA_PART_COEFFICIENT]);
-
 	*key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-										  BUILD_BLOB_ASN1_DER, pkcs1_chunk,
-										  BUILD_END);
-	free(pkcs1_chunk.ptr);
+					BUILD_RSA_MODULUS,  rsa_chunk[RSA_PART_MODULUS],
+					BUILD_RSA_PUB_EXP,  rsa_chunk[RSA_PART_PUBLIC_EXPONENT],
+					BUILD_RSA_PRIV_EXP, rsa_chunk[RSA_PART_PRIVATE_EXPONENT],
+					BUILD_RSA_PRIME1,   rsa_chunk[RSA_PART_PRIME1],
+					BUILD_RSA_PRIME2,   rsa_chunk[RSA_PART_PRIME2],
+					BUILD_RSA_EXP1,     rsa_chunk[RSA_PART_EXPONENT1],
+					BUILD_RSA_EXP2,     rsa_chunk[RSA_PART_EXPONENT2],
+					BUILD_RSA_COEFF,    rsa_chunk[RSA_PART_COEFFICIENT],
+					BUILD_END);
+
 	if (*key == NULL)
 	{
 		ugh = "parsing of RSA private key failed";
@@ -491,9 +534,9 @@ end:
 	/* clean up and return */
 	for (p = RSA_PART_MODULUS ; p < part; p++)
 	{
-		free(asn1_chunk[p].ptr);
+		chunk_clear(&rsa_chunk[p]);
 	}
-	return ugh;	
+	return ugh;
 }
 
 /**
@@ -551,122 +594,8 @@ static err_t process_keyfile(private_key_t **key, key_type_t type, int whackfd)
 	}
 	*key = load_private_key(filename, &pass, type);
 
-	return key ? NULL : "Private key file -- could not be loaded";
+	return *key ? NULL : "Private key file -- could not be loaded";
 }
-
-/**
- * Process xauth secret read from ipsec.secrets
- */
-static err_t process_xauth(secret_t *s)
-{
-	chunk_t user_name;
-
-	s->kind = PPK_XAUTH;
-
-	if (!shift())
-		return "missing xauth user name";
-	if (*tok == '"' || *tok == '\'')  /* quoted user name */
-	{
-		user_name.ptr = tok + 1;
-		user_name.len = flp->cur - tok - 2;
-	}
-	else
-	{
-		user_name.ptr = tok;
-		user_name.len = flp->cur - tok;
-	}
-	plog("  loaded xauth credentials of user '%.*s'"
-				, user_name.len
-				, user_name.ptr);
-	s->u.xauth_secret.user_name = chunk_clone(user_name);
-
-	if (!shift())
-		return "missing xauth user password";
-	return process_psk_secret(&s->u.xauth_secret.user_password);
-}
-
-/**
- * Get XAUTH secret from chained secrets lists
- * only one entry is currently supported
- */
-static bool xauth_get_secret(xauth_t *xauth_secret)
-{
-	secret_t *s;
-	bool found = FALSE;
-
-	for (s = secrets; s != NULL; s = s->next)
-	{
-		if (s->kind == PPK_XAUTH)
-		{
-			if (found)
-			{
-				plog("found multiple xauth secrets - first selected");
-			}
-			else
-			{
-				found = TRUE;
-				*xauth_secret = s->u.xauth_secret;
-			}
-		}
-	}
-	return found;
-}
-
-/**
- * find a matching secret
- */
-static bool xauth_verify_secret(const xauth_peer_t *peer,
-								const xauth_t *xauth_secret)
-{
-	bool found = FALSE;
-	secret_t *s;
-
-	for (s = secrets; s != NULL; s = s->next)
-	{
-		if (s->kind == PPK_XAUTH)
-		{
-			if (!chunk_equals(xauth_secret->user_name, s->u.xauth_secret.user_name))
-			{
-				continue;
-			}
-			found = TRUE;
-			if (chunk_equals(xauth_secret->user_password, s->u.xauth_secret.user_password))
-			{
-				return TRUE;
-			}
-		}
-	}
-	plog("xauth user '%.*s' %s"
-	   , xauth_secret->user_name.len, xauth_secret->user_name.ptr
-	   , found? "sent wrong password":"not found");
-	return FALSE;
-}
-
-/**
- * the global xauth_module struct is defined here
- */
-xauth_module_t xauth_module;
-
-/**
- * Assign the default xauth functions to any null function pointers
- */
-void xauth_defaults(void)
-{
-	if (xauth_module.get_secret == NULL)
-	{
-		DBG(DBG_CONTROL,
-			DBG_log("xauth module: using default get_secret() function")
-		)
-		xauth_module.get_secret = xauth_get_secret;
-	}
-	if (xauth_module.verify_secret == NULL)
-	{
-		DBG(DBG_CONTROL,
-			DBG_log("xauth module: using default verify_secret() function")
-		)
-		xauth_module.verify_secret = xauth_verify_secret;
-	}
-};
 
 /**
  * Process pin read from ipsec.secrets or prompted for it using whack
@@ -676,7 +605,7 @@ static err_t process_pin(secret_t *s, int whackfd)
 	smartcard_t *sc;
 	const char *pin_status = "no pin";
 
-	s->kind = PPK_PIN;
+	s->kind = SECRET_PIN;
 
 	/* looking for the smartcard keyword */
 	if (!shift() || strncmp(tok, SCX_TOKEN, strlen(SCX_TOKEN)) != 0)
@@ -721,7 +650,7 @@ static err_t process_pin(secret_t *s, int whackfd)
 		}
 	}
 	else
-	{   
+	{
 		/* we read the pin directly from ipsec.secrets */
 		err_t ugh = process_psk_secret(&sc->pin);
 		if (ugh != NULL)
@@ -747,53 +676,61 @@ static err_t process_pin(secret_t *s, int whackfd)
 	return NULL;
 }
 
-static void log_psk(secret_t *s)
+static void log_psk(char *label, secret_t *s)
 {
 	int n = 0;
 	char buf[BUF_LEN];
-	id_list_t *id_list = s->ids;
+	enumerator_t *enumerator;
+	identification_t *id;
 
-	if (id_list == NULL)
+	if (s->ids->get_count(s->ids) == 0)
 	{
 		n = snprintf(buf, BUF_LEN, "%%any");
 	}
 	else
 	{
-		do
+		enumerator = s->ids->create_enumerator(s->ids);
+		while(enumerator->enumerate(enumerator, &id))
 		{
-			n += idtoa(&id_list->id, buf + n, BUF_LEN - n);
+			n += snprintf(buf + n, BUF_LEN - n, "%Y ", id);
 			if (n >= BUF_LEN)
 			{
 				n = BUF_LEN - 1;
 				break;
 			}
-			else if (n < BUF_LEN - 1)
-			{
-				n += snprintf(buf + n, BUF_LEN - n, " ");
-			}
-			id_list = id_list->next;
 		}
-		while (id_list);
+		enumerator->destroy(enumerator);
 	}
-	plog("  loaded shared key for %.*s", n, buf);
+	plog("  loaded %s secret for %.*s", label, n, buf);
 }
 
 static void process_secret(secret_t *s, int whackfd)
 {
 	err_t ugh = NULL;
 
-	s->kind = PPK_PSK;  /* default */
+	s->kind = SECRET_PSK;  /* default */
 	if (*tok == '"' || *tok == '\'')
 	{
+		log_psk("PSK", s);
+
 		/* old PSK format: just a string */
-		log_psk(s);
 		ugh = process_psk_secret(&s->u.preshared_secret);
 	}
 	else if (tokeqword("psk"))
 	{
+		log_psk("PSK", s);
+
 		/* preshared key: quoted string or ttodata format */
-		log_psk(s);
 		ugh = !shift()? "unexpected end of record in PSK"
+			: process_psk_secret(&s->u.preshared_secret);
+	}
+	else if (tokeqword("xauth"))
+	{
+		s->kind = SECRET_XAUTH;
+		log_psk("XAUTH", s);
+
+		/* xauth secret: quoted string or ttodata format */
+		ugh = !shift()? "unexpected end of record in XAUTH"
 			: process_psk_secret(&s->u.preshared_secret);
 	}
 	else if (tokeqword("rsa"))
@@ -801,7 +738,7 @@ static void process_secret(secret_t *s, int whackfd)
 		/* RSA key: the fun begins.
 		 * A braced list of keyword and value pairs.
 		 */
-		s->kind = PPK_PUBKEY;
+		s->kind = SECRET_PUBKEY;
 		if (!shift())
 		{
 			ugh = "bad RSA key syntax";
@@ -817,7 +754,7 @@ static void process_secret(secret_t *s, int whackfd)
 	}
 	else if (tokeqword("ecdsa"))
 	{
-		s->kind = PPK_PUBKEY;
+		s->kind = SECRET_PUBKEY;
 		if (!shift())
 		{
 			ugh = "bad ECDSA key syntax";
@@ -826,10 +763,6 @@ static void process_secret(secret_t *s, int whackfd)
 		{
 		   ugh = process_keyfile(&s->u.private_key, KEY_ECDSA, whackfd);
 		}
-	}
-	else if (tokeqword("xauth"))
-	{
-		ugh = process_xauth(s);
 	}
 	else if (tokeqword("pin"))
 	{
@@ -922,8 +855,8 @@ static void process_secret_records(int whackfd)
 			secret_t *s = malloc_thing(secret_t);
 
 			zero(s);
-			s->ids = NULL;
-			s->kind = PPK_PSK;  /* default */
+			s->ids = linked_list_create();
+			s->kind = SECRET_PSK;  /* default */
 			s->u.preshared_secret = chunk_empty;
 			s->next = NULL;
 
@@ -944,45 +877,11 @@ static void process_secret_records(int whackfd)
 				}
 				else
 				{
-					/* an id
-					 * See RFC2407 IPsec Domain of Interpretation 4.6.2
-					 */
-					struct id id;
-					err_t ugh;
+					identification_t *id;
 
-					if (tokeq("%any"))
-					{
-						id = empty_id;
-						id.kind = ID_IPV4_ADDR;
-						ugh = anyaddr(AF_INET, &id.ip_addr);
-					}
-					else if (tokeq("%any6"))
-					{
-						id = empty_id;
-						id.kind = ID_IPV6_ADDR;
-						ugh = anyaddr(AF_INET6, &id.ip_addr);
-					}
-					else
-					{
-						ugh = atoid(tok, &id, FALSE);
-					}
+					id = identification_create_from_string(tok);
+					s->ids->insert_last(s->ids, id);
 
-					if (ugh != NULL)
-					{
-						loglog(RC_LOG_SERIOUS
-							, "ERROR \"%s\" line %d: index \"%s\" %s"
-							, flp->filename, flp->lino, tok, ugh);
-					}
-					else
-					{
-						id_list_t *i = malloc_thing(id_list_t);
-
-						i->id = id;
-						unshare_id_content(&i->id);
-						i->next = s->ids;
-						s->ids = i;
-						/* DBG_log("id type %d: %s %.*s", i->kind, ip_str(&i->ip_addr), (int)i->name.len, i->name.ptr); */
-					}
 					if (!shift())
 					{
 						/* unexpected Record Boundary or EOF */
@@ -1068,32 +967,23 @@ void free_preshared_secrets(void)
 
 		for (s = secrets; s != NULL; s = ns)
 		{
-			id_list_t *i, *ni;
+			ns = s->next;
+			s->ids->destroy_offset(s->ids, offsetof(identification_t, destroy));
 
-			ns = s->next;       /* grab before freeing s */
-			for (i = s->ids; i != NULL; i = ni)
-			{
-				ni = i->next;   /* grab before freeing i */
-				free_id_content(&i->id);
-				free(i);
-			}
 			switch (s->kind)
 			{
-			case PPK_PSK:
-				free(s->u.preshared_secret.ptr);
-				break;
-			case PPK_PUBKEY:
-				DESTROY_IF(s->u.private_key);
-				break;
-			case PPK_XAUTH:
-				free(s->u.xauth_secret.user_name.ptr);
-				free(s->u.xauth_secret.user_password.ptr);
-				break;
-			case PPK_PIN:
-				scx_release(s->u.smartcard);
-				break;
-			default:
-				bad_case(s->kind);
+				case SECRET_PSK:
+				case SECRET_XAUTH:
+					free(s->u.preshared_secret.ptr);
+					break;
+				case SECRET_PUBKEY:
+					DESTROY_IF(s->u.private_key);
+					break;
+				case SECRET_PIN:
+					scx_release(s->u.smartcard);
+					break;
+				default:
+					bad_case(s->kind);
 			}
 			free(s);
 		}
@@ -1118,8 +1008,8 @@ pubkey_t* public_key_from_rsa(public_key_t *key)
 	pubkey_t *p = malloc_thing(pubkey_t);
 
 	zero(p);
-	p->id = empty_id;   /* don't know, doesn't matter */
-	p->issuer = chunk_empty;
+	p->id = identification_create_from_string("%any");  /* don't know, doesn't matter */
+	p->issuer = NULL;
 	p->serial = chunk_empty;
 	p->public_key = key;
 
@@ -1127,7 +1017,6 @@ pubkey_t* public_key_from_rsa(public_key_t *key)
 	 * invariant: recount > 0.
 	 */
 	p->refcnt = 1;
-	time(&p->installed_time);
 	return p;
 }
 
@@ -1206,25 +1095,14 @@ static void install_public_key(pubkey_t *pk, pubkey_list_t **head)
 {
 	pubkey_list_t *p = malloc_thing(pubkey_list_t);
 
-	unshare_id_content(&pk->id);
-
-	/* copy issuer dn */
-	pk->issuer = chunk_clone(pk->issuer);
-
-	/* copy serial number */
-	pk->serial = chunk_clone(pk->serial);
-
-	/* store the time the public key was installed */
-	time(&pk->installed_time);
-
 	/* install new key at front */
 	p->key = reference_key(pk);
 	p->next = *head;
 	*head = p;
 }
 
-void delete_public_keys(const struct id *id, key_type_t type,
-						chunk_t issuer, chunk_t serial)
+void delete_public_keys(identification_t *id, key_type_t type,
+						identification_t *issuer, chunk_t serial)
 {
 	pubkey_list_t **pp, *p;
 	pubkey_t *pk;
@@ -1235,10 +1113,10 @@ void delete_public_keys(const struct id *id, key_type_t type,
 		pk = p->key;
 		pk_type = pk->public_key->get_type(pk->public_key);
 
-		if (same_id(id, &pk->id) && pk_type == type
-		&& (issuer.ptr == NULL || pk->issuer.ptr == NULL
-			|| same_dn(issuer, pk->issuer))
-		&& same_serial(serial, pk->serial))
+		if (id->equals(id, pk->id) && pk_type == type
+		&& (issuer == NULL || pk->issuer == NULL
+			|| issuer->equals(issuer, pk->issuer))
+		&& (serial.ptr == NULL || chunk_equals(serial, pk->serial)))
 		{
 			*pp = free_public_keyentry(p);
 		}
@@ -1251,25 +1129,26 @@ void delete_public_keys(const struct id *id, key_type_t type,
 
 pubkey_t* reference_key(pubkey_t *pk)
 {
+	DBG(DBG_CONTROLMORE,
+		DBG_log("  ref key: %p %p cnt %d '%Y'",
+				 pk, pk->public_key, pk->refcnt, pk->id)
+	)
 	pk->refcnt++;
 	return pk;
 }
 
-void
-unreference_key(pubkey_t **pkp)
+void unreference_key(pubkey_t **pkp)
 {
 	pubkey_t *pk = *pkp;
-	char b[BUF_LEN];
 
 	if (pk == NULL)
 	{
 		return;
 	}
 
-	/* print stuff */
 	DBG(DBG_CONTROLMORE,
-		idtoa(&pk->id, b, sizeof(b));
-		DBG_log("unreference key: %p %s cnt %d--", pk, b, pk->refcnt)
+		DBG_log("unref key: %p %p cnt %d '%Y'",
+				 pk, pk->public_key, pk->refcnt, pk->id)
 	)
 
 	/* cancel out the pointer */
@@ -1283,7 +1162,7 @@ unreference_key(pubkey_t **pkp)
 	}
 }
 
-bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
+bool add_public_key(identification_t *id, enum dns_auth_level dns_auth_level,
 					enum pubkey_alg alg, chunk_t rfc3110_key,
 					pubkey_list_t **head)
 {
@@ -1295,7 +1174,7 @@ bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
 	{
 		case PUBKEY_ALG_RSA:
 			key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-										BUILD_BLOB_RFC_3110, rfc3110_key,
+										BUILD_BLOB_DNSKEY, rfc3110_key,
 										BUILD_END);
 			if (key == NULL)
 			{
@@ -1309,90 +1188,97 @@ bool add_public_key(const struct id *id, enum dns_auth_level dns_auth_level,
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
 	pk->public_key = key;
-	pk->id = *id;
+	pk->id = id->clone(id);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = UNDEFINED_TIME;
-	pk->issuer = chunk_empty;
+	pk->issuer = NULL;
 	pk->serial = chunk_empty;
 	install_public_key(pk, head);
 	return TRUE;
 }
 
-/* extract id and public key from x.509 certificate and
- * insert it into a pubkeyrec
+/**
+ * Extract id and public key a certificate and insert it into a pubkeyrec
  */
-void add_x509_public_key(x509cert_t *cert , time_t until,
-						 enum dns_auth_level dns_auth_level)
+void add_public_key_from_cert(cert_t *cert , time_t until,
+							  enum dns_auth_level dns_auth_level)
 {
-	generalName_t *gn;
+	certificate_t *certificate = cert->cert;
+	identification_t *subject = certificate->get_subject(certificate);
+	identification_t *issuer = NULL;
+	identification_t *id;
+	chunk_t serialNumber = chunk_empty;
 	pubkey_t *pk;
 	key_type_t pk_type;
 
 	/* ID type: ID_DER_ASN1_DN  (X.509 subject field) */
 	pk = malloc_thing(pubkey_t);
 	zero(pk);
-	pk->public_key = cert->public_key->get_ref(cert->public_key);
-	pk->id.kind = ID_DER_ASN1_DN;
-	pk->id.name = cert->subject;
+	pk->public_key = certificate->get_public_key(certificate);
+	pk_type = pk->public_key->get_type(pk->public_key);
+	pk->id = subject->clone(subject);
 	pk->dns_auth_level = dns_auth_level;
 	pk->until_time = until;
-	pk->issuer = cert->issuer;
-	pk->serial = cert->serialNumber;
-	pk_type = pk->public_key->get_type(pk->public_key);
-	delete_public_keys(&pk->id, pk_type, pk->issuer, pk->serial);
-	install_public_key(pk, &pubkeys);
-
-	gn = cert->subjectAltName;
-
-	while (gn != NULL) /* insert all subjectAltNames */
+	if (certificate->get_type(certificate) == CERT_X509)
 	{
-		struct id id = empty_id;
+		x509_t *x509 = (x509_t*)certificate;
 
-		gntoid(&id, gn);
-		if (id.kind != ID_ANY)
-		{
-			pk = malloc_thing(pubkey_t);
-			zero(pk);
-			pk->public_key = cert->public_key->get_ref(cert->public_key);
-			pk->id = id;
-			pk->dns_auth_level = dns_auth_level;
-			pk->until_time = until;
-			pk->issuer = cert->issuer;
-			pk->serial = cert->serialNumber;
-			delete_public_keys(&pk->id, pk_type, pk->issuer, pk->serial);
-			install_public_key(pk, &pubkeys);
-		}
-		gn = gn->next;
+		issuer = certificate->get_issuer(certificate);
+		serialNumber = x509->get_serial(x509);
+		pk->issuer = issuer->clone(issuer);
+		pk->serial = chunk_clone(serialNumber);
 	}
-}
-
-/* extract id and public key from OpenPGP certificate and
- * insert it into a pubkeyrec
- */
-void add_pgp_public_key(pgpcert_t *cert , time_t until,
-						enum dns_auth_level dns_auth_level)
-{
-	pubkey_t *pk;
-	key_type_t pk_type;
-
-	pk = malloc_thing(pubkey_t);
-	zero(pk);
-	pk->public_key = cert->public_key->get_ref(cert->public_key);
-	pk->id.kind = ID_KEY_ID;
-	pk->id.name = cert->fingerprint->get_encoding(cert->fingerprint);
-	pk->dns_auth_level = dns_auth_level;
-	pk->until_time = until;
-	pk_type = pk->public_key->get_type(pk->public_key);
-	delete_public_keys(&pk->id, pk_type, chunk_empty, chunk_empty);
+	delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
 	install_public_key(pk, &pubkeys);
+
+	if (certificate->get_type(certificate) == CERT_X509)
+	{
+		x509_t *x509 = (x509_t*)certificate;
+		enumerator_t *enumerator;
+
+		/* insert all subjectAltNames from X.509 certificates */
+		enumerator = x509->create_subjectAltName_enumerator(x509);
+		while (enumerator->enumerate(enumerator, &id))
+		{
+			if (id->get_type(id) != ID_ANY)
+			{
+				pk = malloc_thing(pubkey_t);
+				zero(pk);
+				pk->id = id->clone(id);
+				pk->public_key = certificate->get_public_key(certificate);
+				pk->dns_auth_level = dns_auth_level;
+				pk->until_time = until;
+				pk->issuer = issuer->clone(issuer);
+				pk->serial = chunk_clone(serialNumber);
+				delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
+				install_public_key(pk, &pubkeys);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		pgp_certificate_t *pgp_cert = (pgp_certificate_t*)certificate;
+		chunk_t fingerprint = pgp_cert->get_fingerprint(pgp_cert);
+
+		/* add v3 or v4 PGP fingerprint */
+		pk = malloc_thing(pubkey_t);
+		zero(pk);
+		pk->id = identification_create_from_encoding(ID_KEY_ID, fingerprint);
+		pk->public_key = certificate->get_public_key(certificate);
+		pk->dns_auth_level = dns_auth_level;
+		pk->until_time = until;
+		delete_public_keys(pk->id, pk_type, pk->issuer, pk->serial);
+		install_public_key(pk, &pubkeys);
+	}
 }
 
 /*  when a X.509 certificate gets revoked, all instances of
  *  the corresponding public key must be removed
  */
-void remove_x509_public_key(const x509cert_t *cert)
+void remove_x509_public_key(const cert_t *cert)
 {
-	public_key_t *revoked_key = cert->public_key;
+	public_key_t *revoked_key = cert->cert->get_public_key(cert->cert);
 	pubkey_list_t *p, **pp;
 
 	p  = pubkeys;
@@ -1412,6 +1298,7 @@ void remove_x509_public_key(const x509cert_t *cert)
 		}
 		p =*pp;
 	}
+	revoked_key->destroy(revoked_key);
 }
 
 /*
@@ -1425,34 +1312,32 @@ void list_public_keys(bool utc)
 	{
 		whack_log(RC_COMMENT, " ");
 		whack_log(RC_COMMENT, "List of Public Keys:");
-		whack_log(RC_COMMENT, " ");
 	}
 
 	while (p != NULL)
 	{
 		pubkey_t *key = p->key;
 		public_key_t *public = key->public_key;
-		identification_t *keyid = public->get_id(public, ID_PUBKEY_INFO_SHA1);
-		char buf[BUF_LEN];
+		chunk_t keyid;
 
-		idtoa(&key->id, buf, BUF_LEN);
-		whack_log(RC_COMMENT,"%T, '%s'", &key->installed_time, utc, buf);
-		whack_log(RC_COMMENT, "       pubkey:  %N %4d bits, until %T %s",
+		whack_log(RC_COMMENT, " ");
+		whack_log(RC_COMMENT, "  identity: '%Y'", key->id);
+		whack_log(RC_COMMENT, "  pubkey:    %N %4d bits, until %T %s",
 			key_type_names, public->get_type(public),
 			public->get_keysize(public) * BITS_PER_BYTE,
 			&key->until_time, utc,
 			check_expiry(key->until_time, PUBKEY_WARNING_INTERVAL, TRUE));
-		whack_log(RC_COMMENT,"       keyid:   %Y", keyid);
-		if (key->issuer.len > 0)
+		if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 		{
-			dntoa(buf, BUF_LEN, key->issuer);
-			whack_log(RC_COMMENT,"       issuer: '%s'", buf);
+			whack_log(RC_COMMENT,"  keyid:     %#B", &keyid);
 		}
-		if (key->serial.len > 0)
+		if (key->issuer)
 		{
-			datatot(key->serial.ptr, key->serial.len, ':'
-					, buf, BUF_LEN);
-			whack_log(RC_COMMENT,"       serial:  %s", buf);
+			whack_log(RC_COMMENT,"  issuer:   \"%Y\"", key->issuer);
+		}
+		if (key->serial.len)
+		{
+			whack_log(RC_COMMENT,"  serial:    %#B", &key->serial);
 		}
 		p = p->next;
 	}

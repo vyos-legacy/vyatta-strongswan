@@ -33,7 +33,6 @@
 
 #include "constants.h"
 #include "defs.h"
-#include "id.h"
 #include "ca.h"
 #include "certs.h"
 #include "ac.h"
@@ -55,16 +54,17 @@
 #include "fetch.h"
 #include "ocsp.h"
 #include "crl.h"
-
+#include "myid.h"
 #include "kernel_alg.h"
 #include "ike_alg.h"
+#include "whack_attribute.h"
+
 /* helper variables and function to decode strings from whack message */
 
 static char *next_str
 	, *str_roof;
 
-static bool
-unpack_str(char **p)
+static bool unpack_str(char **p)
 {
 	char *end = memchr(next_str, '\0', str_roof - next_str);
 
@@ -103,19 +103,13 @@ struct key_add_continuation {
 	enum key_add_attempt lookingfor;
 };
 
-static void
-key_add_ugh(const struct id *keyid, err_t ugh)
+static void key_add_ugh(identification_t *keyid, err_t ugh)
 {
-	char name[BUF_LEN]; /* longer IDs will be truncated in message */
-
-	(void)idtoa(keyid, name, sizeof(name));
-	loglog(RC_NOKEY
-		, "failure to fetch key for %s from DNS: %s", name, ugh);
+	loglog(RC_NOKEY, "failure to fetch key for %'Y' from DNS: %s", keyid, ugh);
 }
 
 /* last one out: turn out the lights */
-static void
-key_add_merge(struct key_add_common *oc, const struct id *keyid)
+static void key_add_merge(struct key_add_common *oc, identification_t *keyid)
 {
 	if (oc->refCount == 0)
 	{
@@ -123,9 +117,12 @@ key_add_merge(struct key_add_common *oc, const struct id *keyid)
 
 		/* if no success, print all diagnostics */
 		if (!oc->success)
+		{
 			for (kaa = ka_TXT; kaa != ka_roof; kaa++)
+			{
 				key_add_ugh(keyid, oc->diag[kaa]);
-
+			}
+		}
 		for (kaa = ka_TXT; kaa != ka_roof; kaa++)
 		{
 			free(oc->diag[kaa]);
@@ -135,8 +132,7 @@ key_add_merge(struct key_add_common *oc, const struct id *keyid)
 	}
 }
 
-static void
-key_add_continue(struct adns_continuation *ac, err_t ugh)
+static void key_add_continue(struct adns_continuation *ac, err_t ugh)
 {
 	struct key_add_continuation *kc = (void *) ac;
 	struct key_add_common *oc = kc->common;
@@ -159,95 +155,87 @@ key_add_continue(struct adns_continuation *ac, err_t ugh)
 	}
 
 	oc->refCount--;
-	key_add_merge(oc, &ac->id);
+	key_add_merge(oc, ac->id);
 	whack_log_fd = NULL_FD;
 }
 
-static void
-key_add_request(const whack_message_t *msg)
+static void key_add_request(const whack_message_t *msg)
 {
-	struct id keyid;
-	err_t ugh = atoid(msg->keyid, &keyid, FALSE);
+	identification_t *key_id;
 
-	if (ugh != NULL)
+	key_id = identification_create_from_string(msg->keyid);
+
+	if (!msg->whack_addkey)
 	{
-		loglog(RC_BADID, "bad --keyid \"%s\": %s", msg->keyid, ugh);
+		delete_public_keys(key_id, msg->pubkey_alg, NULL, chunk_empty);
 	}
-	else
+	if (msg->keyval.len == 0)
 	{
-		if (!msg->whack_addkey)
-			delete_public_keys(&keyid, msg->pubkey_alg
-				, chunk_empty, chunk_empty);
+		struct key_add_common *oc = malloc_thing(struct key_add_common);
+		enum key_add_attempt kaa;
+		err_t ugh;
 
-		if (msg->keyval.len == 0)
+		/* initialize state shared by queries */
+		oc->refCount = 0;
+		oc->whack_fd = dup_any(whack_log_fd);
+		oc->success = FALSE;
+
+		for (kaa = ka_TXT; kaa != ka_roof; kaa++)
 		{
-			struct key_add_common *oc = malloc_thing(struct key_add_common);
-			enum key_add_attempt kaa;
+			struct key_add_continuation *kc;
 
-			/* initialize state shared by queries */
-			oc->refCount = 0;
-			oc->whack_fd = dup_any(whack_log_fd);
-			oc->success = FALSE;
+			oc->diag[kaa] = NULL;
+			oc->refCount++;
+			kc = malloc_thing(struct key_add_continuation);
+			kc->common = oc;
+			kc->lookingfor = kaa;
 
-			for (kaa = ka_TXT; kaa != ka_roof; kaa++)
+			switch (kaa)
 			{
-				struct key_add_continuation *kc;
-
-				oc->diag[kaa] = NULL;
-				oc->refCount++;
-				kc = malloc_thing(struct key_add_continuation);
-				kc->common = oc;
-				kc->lookingfor = kaa;
-
-				switch (kaa)
-				{
 				case ka_TXT:
-					ugh = start_adns_query(&keyid
-						, &keyid        /* same */
-						, T_TXT
-						, key_add_continue
-						, &kc->ac);
+					ugh = start_adns_query(key_id
+							, key_id        /* same */
+							, T_TXT
+							, key_add_continue
+							, &kc->ac);
 					break;
 #ifdef USE_KEYRR
 				case ka_KEY:
-					ugh = start_adns_query(&keyid
-						, NULL
-						, T_KEY
-						, key_add_continue
-						, &kc->ac);
+					ugh = start_adns_query(key_id
+							, NULL
+							, T_KEY
+							, key_add_continue
+							, &kc->ac);
 					break;
 #endif /* USE_KEYRR */
 				default:
 					bad_case(kaa);      /* suppress gcc warning */
-				}
-				if (ugh != NULL)
-				{
-					oc->diag[kaa] = clone_str(ugh);
-					oc->refCount--;
-				}
 			}
-
-			/* Done launching queries.
-			 * Handle total failure case.
-			 */
-			key_add_merge(oc, &keyid);
-		}
-		else
-		{
-			if (!add_public_key(&keyid, DAL_LOCAL, msg->pubkey_alg, msg->keyval,
-				&pubkeys))
+			if (ugh)
 			{
-				loglog(RC_LOG_SERIOUS, "failed to add public key");
+				oc->diag[kaa] = clone_str(ugh);
+				oc->refCount--;
 			}
+		}
+
+		/* Done launching queries. Handle total failure case. */
+		key_add_merge(oc, key_id);
+	}
+	else
+	{
+		if (!add_public_key(key_id, DAL_LOCAL, msg->pubkey_alg, msg->keyval,
+			&pubkeys))
+		{
+			loglog(RC_LOG_SERIOUS, "failed to add public key");
 		}
 	}
+	key_id->destroy(key_id);
 }
 
 /* Handle a kernel request. Supposedly, there's a message in
  * the kernelsock socket.
  */
-void
-whack_handle(int whackctlfd)
+void whack_handle(int whackctlfd)
 {
 	whack_message_t msg;
 	struct sockaddr_un whackaddr;
@@ -319,24 +307,29 @@ whack_handle(int whackctlfd)
 		|| !unpack_str(&msg.left.ca)            /* string  4 */
 		|| !unpack_str(&msg.left.groups)        /* string  5 */
 		|| !unpack_str(&msg.left.updown)        /* string  6 */
-		|| !unpack_str(&msg.left.virt)          /* string  7 */
-		|| !unpack_str(&msg.right.id)           /* string  8 */
-		|| !unpack_str(&msg.right.cert)         /* string  9 */
-		|| !unpack_str(&msg.right.ca)           /* string 10 */
-		|| !unpack_str(&msg.right.groups)       /* string 11 */
-		|| !unpack_str(&msg.right.updown)       /* string 12 */
-		|| !unpack_str(&msg.right.virt)         /* string 13 */
-		|| !unpack_str(&msg.keyid)              /* string 14 */
-		|| !unpack_str(&msg.myid)               /* string 15 */
-		|| !unpack_str(&msg.cacert)             /* string 16 */
-		|| !unpack_str(&msg.ldaphost)           /* string 17 */
-		|| !unpack_str(&msg.ldapbase)           /* string 18 */
-		|| !unpack_str(&msg.crluri)             /* string 19 */
-		|| !unpack_str(&msg.crluri2)            /* string 20 */
-		|| !unpack_str(&msg.ocspuri)            /* string 21 */
-		|| !unpack_str(&msg.ike)                /* string 22 */
-		|| !unpack_str(&msg.esp)                /* string 23 */
-		|| !unpack_str(&msg.sc_data)            /* string 24 */
+		|| !unpack_str(&msg.left.sourceip)      /* string  7 */
+		|| !unpack_str(&msg.left.virt)          /* string  8 */
+		|| !unpack_str(&msg.right.id)           /* string  9 */
+		|| !unpack_str(&msg.right.cert)         /* string 10 */
+		|| !unpack_str(&msg.right.ca)           /* string 11 */
+		|| !unpack_str(&msg.right.groups)       /* string 12 */
+		|| !unpack_str(&msg.right.updown)       /* string 13 */
+		|| !unpack_str(&msg.right.sourceip)     /* string 14 */
+		|| !unpack_str(&msg.right.virt)         /* string 15 */
+		|| !unpack_str(&msg.keyid)              /* string 16 */
+		|| !unpack_str(&msg.myid)               /* string 17 */
+		|| !unpack_str(&msg.cacert)             /* string 18 */
+		|| !unpack_str(&msg.ldaphost)           /* string 19 */
+		|| !unpack_str(&msg.ldapbase)           /* string 20 */
+		|| !unpack_str(&msg.crluri)             /* string 21 */
+		|| !unpack_str(&msg.crluri2)            /* string 22 */
+		|| !unpack_str(&msg.ocspuri)            /* string 23 */
+		|| !unpack_str(&msg.ike)                /* string 24 */
+		|| !unpack_str(&msg.esp)                /* string 25 */
+		|| !unpack_str(&msg.sc_data)            /* string 26 */
+		|| !unpack_str(&msg.whack_lease_ip)     /* string 27 */
+		|| !unpack_str(&msg.whack_lease_id)     /* string 28 */
+		|| !unpack_str(&msg.xauth_identity)     /* string 29 */
 		|| str_roof - next_str != (ptrdiff_t)msg.keyval.len)    /* check chunk */
 		{
 			ugh = "message from whack contains bad string";
@@ -372,7 +365,7 @@ whack_handle(int whackctlfd)
 		}
 		else if (!msg.whack_connection)
 		{
-			struct connection *c = con_by_name(msg.name, TRUE);
+			connection_t *c = con_by_name(msg.name, TRUE);
 
 			if (c != NULL)
 			{
@@ -387,7 +380,9 @@ whack_handle(int whackctlfd)
 	}
 
 	if (msg.whack_myid)
+	{
 		set_myid(MYID_SPECIFIED, msg.myid);
+	}
 
 	/* Deleting combined with adding a connection works as replace.
 	 * To make this more useful, in only this combination,
@@ -396,9 +391,13 @@ whack_handle(int whackctlfd)
 	if (msg.whack_delete)
 	{
 		if (msg.whack_ca)
+		{
 			find_ca_info_by_name(msg.name, TRUE);
+		}
 		else
+		{
 			delete_connections_by_name(msg.name, !msg.whack_connection);
+		}
 	}
 
 	if (msg.whack_deletestate)
@@ -417,14 +416,20 @@ whack_handle(int whackctlfd)
 	}
 
 	if (msg.whack_crash)
+	{
 		delete_states_by_peer(&msg.whack_crash_peer);
+	}
 
 	if (msg.whack_connection)
+	{
 		add_connection(&msg);
+	}
 
 	if (msg.whack_ca && msg.cacert != NULL)
+	{
 		add_ca_info(&msg);
-		
+	}
+
 	/* process "listen" before any operation that could require it */
 	if (msg.whack_listen)
 	{
@@ -451,22 +456,22 @@ whack_handle(int whackctlfd)
 
 	if (msg.whack_reread & REREAD_CACERTS)
 	{
-		load_authcerts("CA cert", CA_CERT_PATH, AUTH_CA);
+		load_authcerts("ca", CA_CERT_PATH, X509_CA);
 	}
 
 	if (msg.whack_reread & REREAD_AACERTS)
 	{
-		load_authcerts("AA cert", AA_CERT_PATH, AUTH_AA);
+		load_authcerts("aa", AA_CERT_PATH, X509_AA);
 	}
 
 	if (msg.whack_reread & REREAD_OCSPCERTS)
 	{
-		load_authcerts("OCSP cert", OCSP_CERT_PATH, AUTH_OCSP);
+		load_authcerts("ocsp", OCSP_CERT_PATH, X509_OCSP_SIGNER);
 	}
 
 	if (msg.whack_reread & REREAD_ACERTS)
 	{
-		load_acerts();
+		ac_load_certs();
 	}
 
 	if (msg.whack_reread & REREAD_CRLS)
@@ -480,39 +485,39 @@ whack_handle(int whackctlfd)
 		free_ocsp_cache();
 	}
 
-   if (msg.whack_list & LIST_PUBKEYS)
+	if (msg.whack_leases)
+	{
+		list_leases(msg.name, msg.whack_lease_ip, msg.whack_lease_id);
+	}
+
+	if (msg.whack_list & LIST_PUBKEYS)
 	{
 		list_public_keys(msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_CERTS)
 	{
-		list_certs(msg.whack_utc);
+		cert_list(msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_CACERTS)
 	{
-		list_authcerts("CA", AUTH_CA, msg.whack_utc);
+		list_authcerts("CA", X509_CA, msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_AACERTS)
 	{
-		list_authcerts("AA", AUTH_AA, msg.whack_utc);
+		list_authcerts("AA", X509_AA, msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_OCSPCERTS)
 	{
-		list_authcerts("OCSP", AUTH_OCSP, msg.whack_utc);
+		list_authcerts("OCSP", X509_OCSP_SIGNER, msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_ACERTS)
 	{
-		list_acerts(msg.whack_utc);
-	}
-
-	if (msg.whack_list & LIST_GROUPS)
-	{
-		list_groups(msg.whack_utc);
+		ac_list_certs(msg.whack_utc);
 	}
 
 	if (msg.whack_list & LIST_CAINFOS)
@@ -562,18 +567,24 @@ whack_handle(int whackctlfd)
 		}
 		else
 		{
-			struct connection *c = con_by_name(msg.name, TRUE);
+			connection_t *c = con_by_name(msg.name, TRUE);
 
 			if (c != NULL && c->ikev1)
 			{
 				set_cur_connection(c);
 				if (!oriented(*c))
+				{
 					whack_log(RC_ORIENT
 						, "we have no ipsecN interface for either end of this connection");
+				}
 				else if (c->policy & POLICY_GROUP)
+				{
 					route_group(c);
+				}
 				else if (!trap_connection(c))
+				{
 					whack_log(RC_ROUTE, "could not route");
+				}
 				reset_cur_connection();
 			}
 		}
@@ -588,7 +599,7 @@ whack_handle(int whackctlfd)
 		}
 		else
 		{
-			struct connection *c = con_by_name(msg.name, TRUE);
+			connection_t *c = con_by_name(msg.name, TRUE);
 
 			if (c != NULL && c->ikev1)
 			{
@@ -600,14 +611,22 @@ whack_handle(int whackctlfd)
 				for (sr = &c->spd; sr != NULL; sr = sr->next)
 				{
 					if (sr->routing >= RT_ROUTED_TUNNEL)
+					{
 						fail++;
+					}
 				}
 				if (fail > 0)
+				{
 					whack_log(RC_RTBUSY, "cannot unroute: route busy");
+				}
 				else if (c->policy & POLICY_GROUP)
+				{
 					unroute_group(c);
+				}
 				else
+				{
 					unroute_connection(c);
+				}
 				reset_cur_connection();
 			}
 		}
@@ -634,11 +653,15 @@ whack_handle(int whackctlfd)
 	if (msg.whack_oppo_initiate)
 	{
 		if (!listening)
+		{
 			whack_log(RC_DEAF, "need --listen before opportunistic initiation");
+		}
 		else
+		{
 			initiate_opportunistic(&msg.oppo_my_client, &msg.oppo_peer_client, 0
 				, FALSE
 				, msg.whack_async? NULL_FD : dup_any(whackfd));
+		}
 	}
 
 	if (msg.whack_terminate)
@@ -655,7 +678,9 @@ whack_handle(int whackctlfd)
 	}
 
 	if (msg.whack_status)
+	{
 		show_status(msg.whack_statusall, msg.name);
+	}
 
 	if (msg.whack_shutdown)
 	{
@@ -666,10 +691,14 @@ whack_handle(int whackctlfd)
 	if (msg.whack_sc_op != SC_OP_NONE)
 	{
 		if (pkcs11_proxy)
+		{
 			scx_op_via_whack(msg.sc_data, msg.inbase, msg.outbase
 						   , msg.whack_sc_op, msg.keyid, whackfd);
+		}
 		else
+		{
 		   plog("pkcs11 access to smartcard not allowed (set pkcs11proxy=yes)");
+		}
 	}
 
 	whack_log_fd = NULL_FD;

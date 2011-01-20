@@ -47,17 +47,17 @@ static void destroy(private_sha1_plugin_t *this)
 /*
  * see header file
  */
-plugin_t *plugin_create()
+plugin_t *sha1_plugin_create()
 {
 	private_sha1_plugin_t *this = malloc_thing(private_sha1_plugin_t);
-	
+
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-	
+
 	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
 							(hasher_constructor_t)sha1_hasher_create);
 	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1,
 							(prf_constructor_t)sha1_prf_create);
-	
+
 	return &this->public.plugin;
 }
 

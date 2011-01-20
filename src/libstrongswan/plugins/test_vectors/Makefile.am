@@ -3,7 +3,11 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = -rdynamic
 
+if MONOLITHIC
+noinst_LTLIBRARIES = libstrongswan-test-vectors.la
+else
 plugin_LTLIBRARIES = libstrongswan-test-vectors.la
+endif
 
 libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors_plugin.h test_vectors_plugin.c test_vectors.h \
@@ -29,5 +33,5 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/sha2_hmac.c \
 	test_vectors/fips_prf.c \
 	test_vectors/rng.c
-libstrongswan_test_vectors_la_LDFLAGS = -module
 
+libstrongswan_test_vectors_la_LDFLAGS = -module -avoid-version

@@ -76,8 +76,9 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 							   char **absolute, struct stat *st)
 {
 	struct dirent *entry = readdir(this->dir);
-	size_t len, remaining;
-	
+	size_t remaining;
+	int len;
+
 	if (!entry)
 	{
 		return FALSE;
@@ -91,12 +92,13 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 		*relative = entry->d_name;
 	}
 	if (absolute || st)
-	{	
+	{
 		remaining = sizeof(this->full) - (this->full_end - this->full);
 		len = snprintf(this->full_end, remaining, "%s", entry->d_name);
 		if (len < 0 || len >= remaining)
 		{
-			DBG1("buffer too small to enumerate file '%s'", entry->d_name);
+			DBG1(DBG_LIB, "buffer too small to enumerate file '%s'",
+				 entry->d_name);
 			return FALSE;
 		}
 		if (absolute)
@@ -107,7 +109,8 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 		{
 			if (stat(this->full, st))
 			{
-				DBG1("stat() on '%s' failed: %s", this->full, strerror(errno));
+				DBG1(DBG_LIB, "stat() on '%s' failed: %s", this->full,
+					 strerror(errno));
 				return FALSE;
 			}
 		}
@@ -120,11 +123,11 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
  */
 enumerator_t* enumerator_create_directory(char *path)
 {
-	size_t len;
+	int len;
 	dir_enum_t *this = malloc_thing(dir_enum_t);
 	this->public.enumerate = (void*)enumerate_dir_enum;
 	this->public.destroy = (void*)destroy_dir_enum;
-	
+
 	if (*path == '\0')
 	{
 		path = "./";
@@ -132,7 +135,7 @@ enumerator_t* enumerator_create_directory(char *path)
 	len = snprintf(this->full, sizeof(this->full)-1, "%s", path);
 	if (len < 0 || len >= sizeof(this->full)-1)
 	{
-		DBG1("path string %s too long", path);
+		DBG1(DBG_LIB, "path string '%s' too long", path);
 		free(this);
 		return NULL;
 	}
@@ -143,11 +146,11 @@ enumerator_t* enumerator_create_directory(char *path)
 		this->full[len] = '\0';
 	}
 	this->full_end = &this->full[len];
-	
+
 	this->dir = opendir(path);
 	if (this->dir == NULL)
 	{
-		DBG1("opening directory %s failed: %s", path, strerror(errno));
+		DBG1(DBG_LIB, "opening directory '%s' failed: %s", path, strerror(errno));
 		free(this);
 		return NULL;
 	}
@@ -186,7 +189,7 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 {
 	char *pos = NULL, *tmp, *sep, *trim;
 	bool last = FALSE;
-	
+
 	/* trim leading characters/separators */
 	while (*this->pos)
 	{
@@ -215,7 +218,7 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 			break;
 		}
 	}
-	
+
 	switch (*this->pos)
 	{
 		case '"':
@@ -259,7 +262,7 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 			break;
 		}
 	}
-	
+
 	/* trim trailing characters/separators */
 	pos--;
 	while (pos >= *token)
@@ -289,7 +292,7 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 			break;
 		}
 	}
-	
+
 	if (!last || pos >= *token)
 	{
 		return TRUE;
@@ -303,14 +306,14 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 enumerator_t* enumerator_create_token(char *string, char *sep, char *trim)
 {
 	token_enum_t *enumerator = malloc_thing(token_enum_t);
-	
+
 	enumerator->public.enumerate = (void*)enumerate_token_enum;
 	enumerator->public.destroy = (void*)destroy_token_enum;
 	enumerator->string = strdup(string);
 	enumerator->pos = enumerator->string;
 	enumerator->sep = sep;
 	enumerator->trim = trim;
-	
+
 	return &enumerator->public;
 }
 
@@ -342,9 +345,9 @@ static bool enumerate_nested(nested_enumerator_t *this, void *v1, void *v2,
 	while (TRUE)
 	{
 		while (this->inner == NULL)
-		{	
+		{
 			void *outer;
-			
+
 			if (!this->outer->enumerate(this->outer, &outer))
 			{
 				return FALSE;
@@ -382,7 +385,7 @@ enumerator_t *enumerator_create_nested(enumerator_t *outer,
 					void *data, void (*destroy_data)(void *data))
 {
 	nested_enumerator_t *enumerator = malloc_thing(nested_enumerator_t);
-	
+
 	enumerator->public.enumerate = (void*)enumerate_nested;
 	enumerator->public.destroy = (void*)destroy_nested;
 	enumerator->outer = outer;
@@ -390,7 +393,7 @@ enumerator_t *enumerator_create_nested(enumerator_t *outer,
 	enumerator->create_inner = (void*)inner_constructor;
 	enumerator->data = data;
 	enumerator->destroy_data = destroy_data;
-	
+
 	return &enumerator->public;
 }
 
@@ -408,7 +411,7 @@ typedef struct {
 /**
  * Implementation of enumerator_create_filter().destroy
  */
-void destroy_filter(filter_enumerator_t *this)
+static void destroy_filter(filter_enumerator_t *this)
 {
 	if (this->destructor)
 	{
@@ -421,8 +424,8 @@ void destroy_filter(filter_enumerator_t *this)
 /**
  * Implementation of enumerator_create_filter().enumerate
  */
-bool enumerate_filter(filter_enumerator_t *this, void *o1, void *o2,
-					  void *o3, void *o4, void *o5)
+static bool enumerate_filter(filter_enumerator_t *this, void *o1, void *o2,
+							 void *o3, void *o4, void *o5)
 {
 	void *i1, *i2, *i3, *i4, *i5;
 
@@ -444,14 +447,14 @@ enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
 									   void *data, void (*destructor)(void *data))
 {
 	filter_enumerator_t *this = malloc_thing(filter_enumerator_t);
-	
+
 	this->public.enumerate = (void*)enumerate_filter;
 	this->public.destroy = (void*)destroy_filter;
 	this->unfiltered = unfiltered;
 	this->filter = filter;
 	this->data = data;
 	this->destructor = destructor;
-	
+
 	return &this->public;
 }
 
@@ -491,13 +494,13 @@ enumerator_t *enumerator_create_cleaner(enumerator_t *wrapped,
 										void (*cleanup)(void *data), void *data)
 {
 	cleaner_enumerator_t *this = malloc_thing(cleaner_enumerator_t);
-	
+
 	this->public.enumerate = (void*)enumerate_cleaner;
 	this->public.destroy = (void*)destroy_cleaner;
 	this->wrapped = wrapped;
 	this->cleanup = cleanup;
 	this->data = data;
-	
+
 	return &this->public;
 }
 
@@ -543,13 +546,13 @@ static bool enumerate_single(single_enumerator_t *this, void **item)
 enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item))
 {
 	single_enumerator_t *this = malloc_thing(single_enumerator_t);
-	
+
 	this->public.enumerate = (void*)enumerate_single;
 	this->public.destroy = (void*)destroy_single;
 	this->item = item;
 	this->cleanup = cleanup;
 	this->done = FALSE;
-	
+
 	return &this->public;
 }
 

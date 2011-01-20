@@ -51,19 +51,19 @@ struct fetcher_manager_t {
 	 */
 	void (*add_fetcher)(fetcher_manager_t *this,
 						fetcher_constructor_t constructor, char *url);
-	
+
 	/**
 	 * Unregister a previously registered fetcher implementation.
 	 *
 	 * @param constructor	fetcher constructor function to unregister
 	 */
-	void (*remove_fetcher)(fetcher_manager_t *this, 
+	void (*remove_fetcher)(fetcher_manager_t *this,
 						   fetcher_constructor_t constructor);
-	
+
 	/**
-     * Destroy a fetcher_manager instance.
-     */
-    void (*destroy)(fetcher_manager_t *this);
+	 * Destroy a fetcher_manager instance.
+	 */
+	void (*destroy)(fetcher_manager_t *this);
 };
 
 /**

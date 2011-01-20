@@ -1,0 +1,42 @@
+Description: Upstream changes introduced in version 4.4.1-5
+ This patch has been created by dpkg-source during the package build.
+ Here's the last changelog entry, hopefully it gives details on why
+ those changes were made:
+ .
+ strongswan (4.4.1-5) unstable; urgency=medium
+ .
+   * Fixed init script for restart to work when either pluto or charon
+     are not installed.
+     Closes: #598074: init script doesn't re-start the service on restart
+   * Enable built-in crypto test vectors.
+     Closes: #598136: strongswan: Please enable --enable-test-vectors
+                      configure option
+   * Install libchecksum.so into correct directory (/usr/lib/ipsec instead of
+     /usr/lib). It still doesn't fix #598138 because of the size mismatch.
+ .
+ The person named in the Author field signed this changelog entry.
+Author: Rene Mayrhofer <rmayr@debian.org>
+Bug-Debian: http://bugs.debian.org/598074
+Bug-Debian: http://bugs.debian.org/598136
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- strongswan-4.4.1.orig/src/starter/ipsec.conf.5
++++ strongswan-4.4.1/src/starter/ipsec.conf.5
+@@ -1,4 +1,4 @@
+-.TH IPSEC.CONF 5 "2010-05-30" "4.4.1rc3" "strongSwan"
++.TH IPSEC.CONF 5 "2010-05-30" "4.4.1" "strongSwan"
+ .SH NAME
+ ipsec.conf \- IPsec configuration and connections
+ .SH DESCRIPTION

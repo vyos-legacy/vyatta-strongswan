@@ -16,7 +16,7 @@
 /**
  * @defgroup gmp_p gmp
  * @ingroup plugins
- * 
+ *
  * @defgroup gmp_plugin gmp_plugin
  * @{ @ingroup gmp_p
  */
@@ -38,10 +38,5 @@ struct gmp_plugin_t {
 	 */
 	plugin_t plugin;
 };
-
-/**
- * Create a gmp_plugin instance.
- */
-plugin_t *plugin_create();
 
 #endif /** GMP_PLUGIN_H_ @}*/

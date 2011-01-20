@@ -36,6 +36,7 @@ typedef enum {
 	ARG_UINT,
 	ARG_TIME,
 	ARG_ULNG,
+	ARG_ULLI,
 	ARG_PCNT,
 	ARG_STR,
 	ARG_LST,
@@ -111,6 +112,11 @@ static const char *LST_pfsgroup[] = {
 	"modp4096",
 	"modp6144",
 	"modp8192",
+	"ecp192",
+	"ecp224",
+	"ecp256",
+	"ecp384",
+	"ecp521",
 	 NULL
 };
 
@@ -208,6 +214,10 @@ static const token_info_t token_info[] =
 	{ ARG_TIME, offsetof(starter_conn_t, sa_ike_life_seconds), NULL                },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_ipsec_life_seconds), NULL              },
 	{ ARG_TIME, offsetof(starter_conn_t, sa_rekey_margin), NULL                    },
+	{ ARG_ULLI, offsetof(starter_conn_t, sa_ipsec_life_bytes), NULL                },
+	{ ARG_ULLI, offsetof(starter_conn_t, sa_ipsec_margin_bytes), NULL              },
+	{ ARG_ULLI, offsetof(starter_conn_t, sa_ipsec_life_packets), NULL              },
+	{ ARG_ULLI, offsetof(starter_conn_t, sa_ipsec_margin_packets), NULL            },
 	{ ARG_MISC, 0, NULL  /* KW_KEYINGTRIES */                                      },
 	{ ARG_PCNT, offsetof(starter_conn_t, sa_rekey_fuzz), NULL                      },
 	{ ARG_MISC, 0, NULL  /* KW_REKEY */                                            },
@@ -218,11 +228,17 @@ static const token_info_t token_info[] =
 	{ ARG_TIME, offsetof(starter_conn_t, dpd_delay), NULL                          },
 	{ ARG_TIME, offsetof(starter_conn_t, dpd_timeout), NULL                        },
 	{ ARG_ENUM, offsetof(starter_conn_t, dpd_action), LST_dpd_action               },
+	{ ARG_TIME, offsetof(starter_conn_t, inactivity), NULL                         },
 	{ ARG_MISC, 0, NULL  /* KW_MODECONFIG */                                       },
 	{ ARG_MISC, 0, NULL  /* KW_XAUTH */                                            },
+	{ ARG_STR,  offsetof(starter_conn_t, xauth_identity), NULL                     },
 	{ ARG_ENUM, offsetof(starter_conn_t, me_mediation), LST_bool                   },
 	{ ARG_STR,  offsetof(starter_conn_t, me_mediated_by), NULL                     },
 	{ ARG_STR,  offsetof(starter_conn_t, me_peerid), NULL                          },
+	{ ARG_UINT, offsetof(starter_conn_t, reqid), NULL                              },
+	{ ARG_MISC, 0, NULL  /* KW_MARK */                                             },
+	{ ARG_MISC, 0, NULL  /* KW_MARK_IN */                                          },
+	{ ARG_MISC, 0, NULL  /* KW_MARK_OUT */                                         },
 
 	/* ca section keywords */
 	{ ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },
@@ -238,11 +254,12 @@ static const token_info_t token_info[] =
 
 	/* end keywords */
 	{ ARG_MISC, 0, NULL  /* KW_HOST */                                             },
+	{ ARG_UINT, offsetof(starter_end_t, ikeport), NULL                             },
 	{ ARG_MISC, 0, NULL  /* KW_NEXTHOP */                                          },
 	{ ARG_STR, offsetof(starter_end_t, subnet), NULL                               },
 	{ ARG_MISC, 0, NULL  /* KW_SUBNETWITHIN */                                     },
 	{ ARG_MISC, 0, NULL  /* KW_PROTOPORT */                                        },
-	{ ARG_STR, offsetof(starter_end_t, srcip), NULL                                },
+	{ ARG_STR,  offsetof(starter_end_t, sourceip), NULL                            },
 	{ ARG_MISC, 0, NULL  /* KW_NATIP */                                            },
 	{ ARG_ENUM, offsetof(starter_end_t, firewall), LST_bool                        },
 	{ ARG_ENUM, offsetof(starter_end_t, hostaccess), LST_bool                      },
@@ -262,8 +279,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_end_t, iface), NULL                               }
 };
 
-static void
-free_list(char **list)
+static void free_list(char **list)
 {
 	char **s;
 
@@ -274,22 +290,25 @@ free_list(char **list)
 	free(list);
 }
 
-char **
-new_list(char *value)
+char** new_list(char *value)
 {
 	char *val, *b, *e, *end, **ret;
 	int count;
 
 	val = value ? clone_str(value) : NULL;
 	if (!val)
+	{
 		return NULL;
+	}
 	end = val + strlen(val);
 	for (b = val, count = 0; b < end;)
 	{
 		for (e = b; ((*e != ' ') && (*e != '\0')); e++);
 		*e = '\0';
 		if (e != b)
+		{
 			count++;
+		}
 		b = e + 1;
 	}
 	if (count == 0)
@@ -303,7 +322,9 @@ new_list(char *value)
 	{
 		for (e = b; (*e != '\0'); e++);
 		if (e != b)
+		{
 			ret[count++] = clone_str(b);
+		}
 		b = e + 1;
 	}
 	ret[count] = NULL;
@@ -315,9 +336,8 @@ new_list(char *value)
 /*
  * assigns an argument value to a struct field
  */
-bool
-assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
-	, bool *assigned)
+bool assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base,
+				bool *assigned)
 {
 	char *p = base + token_info[token].offset;
 	const char **list = token_info[token].list;
@@ -389,7 +409,7 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 	case ARG_UINT:
 		{
 			char *endptr;
-			u_int *u = (u_int *)p; 
+			u_int *u = (u_int *)p;
 
 			*u = strtoul(kw->value, &endptr, 10);
 
@@ -427,6 +447,20 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 
 		}
 		break;
+	case ARG_ULLI:
+		{
+			char *endptr;
+			unsigned long long *ll = (unsigned long long *)p;
+
+			*ll = strtoull(kw->value, &endptr, 10);
+
+			if (*endptr != '\0')
+			{
+				plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+				return FALSE;
+			}
+		}
+		break;
 	case ARG_TIME:
 		{
 			char *endptr;
@@ -436,8 +470,9 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 
 			/* time in seconds? */
 			if (*endptr == '\0' || (*endptr == 's' && endptr[1] == '\0'))
+			{
 				break;
-
+			}
 			if (endptr[1] == '\0')
 			{
 				if (*endptr == 'm')  /* time in minutes? */
@@ -476,8 +511,9 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 
 			/* free any existing list */
 			if (*listp != NULL)
+			{
 				free_list(*listp);
-
+			}
 			/* create a new list and assign values */
 			*listp = new_list(kw->value);
 
@@ -486,12 +522,12 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 			{
 				char ** lst;
 
-				for (lst = *listp; lst && *lst; lst++) 
+				for (lst = *listp; lst && *lst; lst++)
 				{
 					bool match = FALSE;
 
 					list = token_info[token].list;
-				
+
 					while (*list != NULL && !match)
 					{
 						match = streq(*lst, *list++);
@@ -515,8 +551,7 @@ assign_arg(kw_token_t token, kw_token_t first, kw_list_t *kw, char *base
 /*
  *  frees all dynamically allocated arguments in a struct
  */
-void
-free_args(kw_token_t first, kw_token_t last, char *base)
+void free_args(kw_token_t first, kw_token_t last, char *base)
 {
 	kw_token_t token;
 
@@ -554,8 +589,7 @@ free_args(kw_token_t first, kw_token_t last, char *base)
 /*
  *  clone all dynamically allocated arguments in a struct
  */
-void
-clone_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
+void clone_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 {
 	kw_token_t token;
 
@@ -571,22 +605,29 @@ clone_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 	}
 }
 
-static bool
-cmp_list(char **list1, char **list2)
+static bool cmp_list(char **list1, char **list2)
 {
 	if ((list1 == NULL) && (list2 == NULL))
+	{
 		return TRUE;
+	}
 	if ((list1 == NULL) || (list2 == NULL))
+	{
 		return FALSE;
+	}
 
 	for ( ; *list1 && *list2; list1++, list2++)
 	{
 		if (strcmp(*list1,*list2) != 0)
+		{
 			return FALSE;
+		}
 	}
 
 	if ((*list1 != NULL) || (*list2 != NULL))
+	{
 		return FALSE;
+	}
 
 	return TRUE;
 }
@@ -594,8 +635,7 @@ cmp_list(char **list1, char **list2)
 /*
  *  compare all arguments in a struct
  */
-bool
-cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
+bool cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 {
 	kw_token_t token;
 
@@ -607,12 +647,25 @@ cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 		switch (token_info[token].type)
 		{
 		case ARG_ENUM:
+			if (token_info[token].list == LST_bool)
+			{
+				bool *b1 = (bool *)p1;
+				bool *b2 = (bool *)p2;
+
+				if (*b1 != *b2)
+				{
+					return FALSE;
+				}
+			}
+			else
 			{
 				int *i1 = (int *)p1;
 				int *i2 = (int *)p2;
 
 				if (*i1 != *i2)
+				{
 					return FALSE;
+				}
 			}
 			break;
 		case ARG_UINT:
@@ -621,7 +674,9 @@ cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				u_int *u2 = (u_int *)p2;
 
 				if (*u1 != *u2)
+				{
 					return FALSE;
+				}
 			}
 			break;
 		case ARG_ULNG:
@@ -631,7 +686,20 @@ cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				unsigned long *l2 = (unsigned long *)p2;
 
 				if (*l1 != *l2)
+				{
 					return FALSE;
+				}
+			}
+			break;
+		case ARG_ULLI:
+			{
+				unsigned long long *ll1 = (unsigned long long *)p1;
+				unsigned long long *ll2 = (unsigned long long *)p2;
+
+				if (*ll1 != *ll2)
+				{
+					return FALSE;
+				}
 			}
 			break;
 		case ARG_TIME:
@@ -640,7 +708,9 @@ cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				time_t *t2 = (time_t *)p2;
 
 				if (*t1 != *t2)
+				{
 					return FALSE;
+				}
 			}
 			break;
 		case ARG_STR:
@@ -649,9 +719,13 @@ cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				char **cp2 = (char **)p2;
 
 				if (*cp1 == NULL && *cp2 == NULL)
+				{
 					break;
+				}
 				if (*cp1 == NULL || *cp2 == NULL || strcmp(*cp1, *cp2) != 0)
+				{
 					return FALSE;
+				}
 			}
 			break;
 		case ARG_LST:
@@ -660,7 +734,9 @@ cmp_args(kw_token_t first, kw_token_t last, char *base1, char *base2)
 				char ***listp2 = (char ***)p2;
 
 				if (!cmp_list(*listp1, *listp2))
+				{
 					return FALSE;
+				}
 			}
 			break;
 		default:

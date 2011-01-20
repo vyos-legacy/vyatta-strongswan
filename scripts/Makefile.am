@@ -1,7 +1,6 @@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = \
--DIPSEC_PLUGINDIR=\"${plugindir}\" \
--DSTRONGSWAN_CONF=\"${strongswan_conf}\"
+-DPLUGINS="\"${libstrongswan_plugins}\""
 
 noinst_PROGRAMS = bin2array bin2sql id2sql key2keyid keyid2sql \
 	thread_analysis dh_speed pubkey_speed
@@ -18,3 +17,7 @@ key2keyid_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 keyid2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dh_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
 pubkey_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
+
+key2keyid.o :	$(top_builddir)/config.status
+
+keyid2sql.o :	$(top_builddir)/config.status

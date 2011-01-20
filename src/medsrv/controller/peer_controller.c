@@ -42,8 +42,8 @@ struct private_peer_controller_t {
 	 * active user session
 	 */
 	user_t *user;
-	
-	/** 
+
+	/**
 	 * underlying database
 	 */
 	database_t *db;
@@ -55,19 +55,19 @@ struct private_peer_controller_t {
 static void list(private_peer_controller_t *this, request_t *request)
 {
 	enumerator_t *query;
-	
+
 	query = this->db->query(this->db,
 			"SELECT id, alias, keyid FROM peer WHERE user = ? ORDER BY alias",
 			DB_UINT, this->user->get_user(this->user),
 			DB_UINT, DB_TEXT, DB_BLOB);
-	
+
 	if (query)
 	{
 		u_int id;
 		char *alias;
 		chunk_t keyid;
 		identification_t *identifier;
-	
+
 		while (query->enumerate(query, &id, &alias, &keyid))
 		{
 			request->setf(request, "peers.%d.alias=%s", id, alias);
@@ -89,7 +89,7 @@ static bool verify_alias(private_peer_controller_t *this, request_t *request,
 	if (!alias || *alias == '\0')
 	{
 		request->setf(request, "error=Alias is missing.");
-		return FALSE;	
+		return FALSE;
 	}
 	while (*alias != '\0')
 	{
@@ -121,27 +121,31 @@ static bool parse_public_key(private_peer_controller_t *this,
 							 chunk_t *encoding, chunk_t *keyid)
 {
 	public_key_t *public;
-	identification_t *id;
-		
+	chunk_t blob, id;
+
 	if (!public_key || *public_key == '\0')
 	{
 		request->setf(request, "error=Public key is missing.");
 		return FALSE;
 	}
+	blob = chunk_clone(chunk_create(public_key, strlen(public_key)));
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
-								BUILD_BLOB_ASN1_PEM, public_key,
+								BUILD_BLOB_PEM, blob,
 								BUILD_END);
+	chunk_free(&blob);
 	if (!public)
 	{
 		request->setf(request, "error=Parsing public key failed.");
 		return FALSE;
 	}
 	/* TODO: use get_encoding() with an encoding type */
-	*encoding = asn1_wrap(ASN1_SEQUENCE, "cm",
-						  asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-						  asn1_bitstring("m", public->get_encoding(public)));
-	id = public->get_id(public, ID_PUBKEY_SHA1);
-	*keyid = chunk_clone(id->get_encoding(id));
+	if (!public->get_fingerprint(public, KEYID_PUBKEY_SHA1, &id) ||
+		!public->get_encoding(public, PUBKEY_SPKI_ASN1_DER, encoding))
+	{
+		request->setf(request, "error=Encoding public key failed.");
+		return FALSE;
+	}
+	*keyid = chunk_clone(id);
 	public->destroy(public);
 	return TRUE;
 }
@@ -152,7 +156,7 @@ static bool parse_public_key(private_peer_controller_t *this,
 static void add(private_peer_controller_t *this, request_t *request)
 {
 	char *alias = "", *public_key = "";
-	
+
 	if (request->get_query_data(request, "back"))
 	{
 		return request->redirect(request, "peer/list");
@@ -160,10 +164,10 @@ static void add(private_peer_controller_t *this, request_t *request)
 	while (request->get_query_data(request, "add"))
 	{
 		chunk_t encoding, keyid;
-	
+
 		alias = request->get_query_data(request, "alias");
 		public_key = request->get_query_data(request, "public_key");
-		
+
 		if (!verify_alias(this, request, alias))
 		{
 			break;
@@ -190,7 +194,7 @@ static void add(private_peer_controller_t *this, request_t *request)
 	}
 	request->set(request, "alias", alias);
 	request->set(request, "public_key", public_key);
-	
+
 	return request->render(request, "templates/peer/add.cs");
 }
 
@@ -205,7 +209,7 @@ char* pem_encode(chunk_t der)
 	char *pem;
 	chunk_t base64;
 	int i = 0;
-	
+
 	base64 = chunk_to_base64(der, NULL);
 	len = strlen(begin) + base64.len + base64.len/64 + strlen(end) + 2;
 	pem = malloc(len + 1);
@@ -219,7 +223,7 @@ char* pem_encode(chunk_t der)
 	}
 	while (i < base64.len - 2);
 	strcat(pem, end);
-	
+
 	free(base64.ptr);
 	return pem;
 }
@@ -231,7 +235,7 @@ static void edit(private_peer_controller_t *this, request_t *request, int id)
 {
 	char *alias = "", *public_key = "", *pem;
 	chunk_t encoding, keyid;
-	
+
 	if (request->get_query_data(request, "back"))
 	{
 		return request->redirect(request, "peer/list");
@@ -249,7 +253,7 @@ static void edit(private_peer_controller_t *this, request_t *request, int id)
 		{
 			alias = request->get_query_data(request, "alias");
 			public_key = request->get_query_data(request, "public_key");
-		
+
 			if (!verify_alias(this, request, alias))
 			{
 				break;
@@ -329,7 +333,7 @@ static void handle(private_peer_controller_t *this, request_t *request,
 		{
 			id = atoi(idstr);
 		}
-		
+
 		if (streq(action, "list"))
 		{
 			return list(this, request);

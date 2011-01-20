@@ -19,10 +19,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "chunk.h"
-
-#include <debug.h>
+#include "debug.h"
 
 /* required for chunk_hash */
 #undef get16bits
@@ -45,14 +45,14 @@ chunk_t chunk_empty = { NULL, 0 };
 chunk_t chunk_create_clone(u_char *ptr, chunk_t chunk)
 {
 	chunk_t clone = chunk_empty;
-	
+
 	if (chunk.ptr && chunk.len > 0)
 	{
 		clone.ptr = ptr;
 		clone.len = chunk.len;
 		memcpy(clone.ptr, chunk.ptr, chunk.len);
 	}
-	
+
 	return clone;
 }
 
@@ -63,7 +63,7 @@ size_t chunk_length(const char* mode, ...)
 {
 	va_list chunks;
 	size_t length = 0;
-	
+
 	va_start(chunks, mode);
 	while (TRUE)
 	{
@@ -71,6 +71,7 @@ size_t chunk_length(const char* mode, ...)
 		{
 			case 'm':
 			case 'c':
+			case 's':
 			{
 				chunk_t ch = va_arg(chunks, chunk_t);
 				length += ch.len;
@@ -92,36 +93,42 @@ chunk_t chunk_create_cat(u_char *ptr, const char* mode, ...)
 {
 	va_list chunks;
 	chunk_t construct = chunk_create(ptr, 0);
-	
+
 	va_start(chunks, mode);
 	while (TRUE)
 	{
-		bool free_chunk = FALSE;
+		bool free_chunk = FALSE, clear_chunk = FALSE;
+		chunk_t ch;
+
 		switch (*mode++)
 		{
+			case 's':
+				clear_chunk = TRUE;
+				/* FALL */
 			case 'm':
-			{
 				free_chunk = TRUE;
-			}
+				/* FALL */
 			case 'c':
-			{
-				chunk_t ch = va_arg(chunks, chunk_t);
-				memcpy(ptr, ch.ptr, ch.len); 
+				ch = va_arg(chunks, chunk_t);
+				memcpy(ptr, ch.ptr, ch.len);
 				ptr += ch.len;
 				construct.len += ch.len;
-				if (free_chunk)
+				if (clear_chunk)
+				{
+					chunk_clear(&ch);
+				}
+				else if (free_chunk)
 				{
 					free(ch.ptr);
 				}
 				continue;
-			}
 			default:
 				break;
 		}
 		break;
 	}
 	va_end(chunks);
-	
+
 	return construct;
 }
 
@@ -133,7 +140,7 @@ void chunk_split(chunk_t chunk, const char *mode, ...)
 	va_list chunks;
 	u_int len;
 	chunk_t *ch;
-	
+
 	va_start(chunks, mode);
 	while (TRUE)
 	{
@@ -214,7 +221,7 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 
 	if (!force && access(path, F_OK) == 0)
 	{
-		DBG1("  %s file '%s' already exists", label, path);
+		DBG1(DBG_LIB, "  %s file '%s' already exists", label, path);
 		return FALSE;
 	}
 	oldmask = umask(mask);
@@ -223,20 +230,21 @@ bool chunk_write(chunk_t chunk, char *path, char *label, mode_t mask, bool force
 	{
 		if (fwrite(chunk.ptr, sizeof(u_char), chunk.len, fd) == chunk.len)
 		{
-			DBG1("  written %s file '%s' (%d bytes)",
+			DBG1(DBG_LIB, "  written %s file '%s' (%d bytes)",
 				 label, path, chunk.len);
 			good = TRUE;
 		}
 		else
 		{
-			DBG1("  writing %s file '%s' failed: %s",
+			DBG1(DBG_LIB, "  writing %s file '%s' failed: %s",
 				 label, path, strerror(errno));
 		}
 		fclose(fd);
 	}
 	else
 	{
-		DBG1("  could not open %s file '%s': %s", label, path, strerror(errno));
+		DBG1(DBG_LIB, "  could not open %s file '%s': %s", label, path,
+			 strerror(errno));
 	}
 	umask(oldmask);
 	return good;
@@ -254,19 +262,19 @@ chunk_t chunk_to_hex(chunk_t chunk, char *buf, bool uppercase)
 {
 	int i, len;
 	char *hexdig = hexdig_lower;
-	
+
 	if (uppercase)
 	{
 		hexdig = hexdig_upper;
 	}
-	
+
 	len = chunk.len * 2;
 	if (!buf)
 	{
 		buf = malloc(len + 1);
 	}
 	buf[len] = '\0';
-	
+
 	for (i = 0; i < chunk.len; i++)
 	{
 		buf[i*2]   = hexdig[(chunk.ptr[i] >> 4) & 0xF];
@@ -300,7 +308,7 @@ chunk_t chunk_from_hex(chunk_t hex, char *buf)
 {
 	int i, len;
 	bool odd = FALSE;
-	
+
 	len = (hex.len / 2);
 	if (hex.len % 2)
 	{
@@ -326,7 +334,7 @@ chunk_t chunk_from_hex(chunk_t hex, char *buf)
 }
 
 /** base 64 conversion digits */
-static char b64digits[] = 
+static char b64digits[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /**
@@ -336,7 +344,7 @@ chunk_t chunk_to_base64(chunk_t chunk, char *buf)
 {
 	int i, len;
 	char *pos;
-	
+
 	len = chunk.len + ((3 - chunk.len % 3) % 3);
 	if (!buf)
 	{
@@ -400,7 +408,7 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf)
 {
 	u_char *pos, byte[4];
 	int i, j, len, outlen;
-	
+
 	len = base64.len / 4 * 3;
 	if (!buf)
 	{
@@ -426,6 +434,69 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf)
 	return chunk_create(buf, outlen);
 }
 
+/** base 32 conversion digits */
+static char b32digits[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_to_base32(chunk_t chunk, char *buf)
+{
+	int i, len;
+	char *pos;
+
+	len = chunk.len + ((5 - chunk.len % 5) % 5);
+	if (!buf)
+	{
+		buf = malloc(len * 8 / 5 + 1);
+	}
+	pos = buf;
+	for (i = 0; i < len; i+=5)
+	{
+		*pos++ = b32digits[chunk.ptr[i] >> 3];
+		if (i+1 >= chunk.len)
+		{
+			*pos++ = b32digits[(chunk.ptr[i] & 0x07) << 2];
+			memset(pos, '=', 6);
+			pos += 6;
+			break;
+		}
+		*pos++ = b32digits[((chunk.ptr[i] & 0x07) << 2) |
+						   (chunk.ptr[i+1] >> 6)];
+		*pos++ = b32digits[(chunk.ptr[i+1] & 0x3E) >> 1];
+		if (i+2 >= chunk.len)
+		{
+			*pos++ = b32digits[(chunk.ptr[i+1] & 0x01) << 4];
+			memset(pos, '=', 4);
+			pos += 4;
+			break;
+		}
+		*pos++ = b32digits[((chunk.ptr[i+1] & 0x01) << 4) |
+						   (chunk.ptr[i+2] >> 4)];
+		if (i+3 >= chunk.len)
+		{
+			*pos++ = b32digits[(chunk.ptr[i+2] & 0x0F) << 1];
+			memset(pos, '=', 3);
+			pos += 3;
+			break;
+		}
+		*pos++ = b32digits[((chunk.ptr[i+2] & 0x0F) << 1) |
+						   (chunk.ptr[i+3] >> 7)];
+		*pos++ = b32digits[(chunk.ptr[i+3] & 0x7F) >> 2];
+		if (i+4 >= chunk.len)
+		{
+			*pos++ = b32digits[(chunk.ptr[i+3] & 0x03) << 3];
+			*pos++ = '=';
+			break;
+		}
+		*pos++ = b32digits[((chunk.ptr[i+3] & 0x03) << 3) |
+						   (chunk.ptr[i+4] >> 5)];
+		*pos++ = b32digits[chunk.ptr[i+4] & 0x1F];
+	}
+	*pos = '\0';
+	return chunk_create(buf, len * 8 / 5);
+}
+
 /**
  * Described in header.
  */
@@ -441,11 +512,55 @@ int chunk_compare(chunk_t a, chunk_t b)
 	return memcmp(a.ptr, b.ptr, len);
 };
 
+
 /**
  * Described in header.
- * 
+ */
+bool chunk_increment(chunk_t chunk)
+{
+	int i;
+
+	for (i = chunk.len - 1; i >= 0; i--)
+	{
+		if (++chunk.ptr[i] != 0)
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Remove non-printable characters from a chunk.
+ */
+bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace)
+{
+	bool printable = TRUE;
+	int i;
+
+	if (sane)
+	{
+		*sane = chunk_clone(chunk);
+	}
+	for (i = 0; i < chunk.len; i++)
+	{
+		if (!isprint(chunk.ptr[i]))
+		{
+			if (sane)
+			{
+				sane->ptr[i] = replace;
+			}
+			printable = FALSE;
+		}
+	}
+	return printable;
+}
+
+/**
+ * Described in header.
+ *
  * The implementation is based on Paul Hsieh's SuperFastHash:
- * 	 http://www.azillionmonkeys.com/qed/hash.html
+ *	 http://www.azillionmonkeys.com/qed/hash.html
  */
 u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 {
@@ -453,15 +568,15 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 	size_t len = chunk.len;
 	u_int32_t tmp;
 	int rem;
-	
+
 	if (!len || data == NULL)
 	{
 		return 0;
 	}
-	
+
 	rem = len & 3;
 	len >>= 2;
-	
+
 	/* Main loop */
 	for (; len > 0; --len)
 	{
@@ -471,7 +586,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 		data += 2 * sizeof(u_int16_t);
 		hash += hash >> 11;
 	}
-	
+
 	/* Handle end cases */
 	switch (rem)
 	{
@@ -498,7 +613,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 			break;
 		}
 	}
-	
+
 	/* Force "avalanching" of final 127 bits */
 	hash ^= hash << 3;
 	hash += hash >> 5;
@@ -506,7 +621,7 @@ u_int32_t chunk_hash_inc(chunk_t chunk, u_int32_t hash)
 	hash += hash >> 17;
 	hash ^= hash << 25;
 	hash += hash >> 6;
-	
+
 	return hash;
 }
 
@@ -528,13 +643,13 @@ int chunk_printf_hook(char *dst, size_t len, printf_hook_spec_t *spec,
 	bool first = TRUE;
 	chunk_t copy = *chunk;
 	int written = 0;
-	
+
 	if (!spec->hash)
 	{
 		const void *new_args[] = {&chunk->ptr, &chunk->len};
 		return mem_printf_hook(dst, len, spec, new_args);
 	}
-	
+
 	while (copy.len > 0)
 	{
 		if (first)

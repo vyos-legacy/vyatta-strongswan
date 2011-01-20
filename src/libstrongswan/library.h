@@ -28,21 +28,24 @@
  * @defgroup certificates certificates
  * @ingroup credentials
  *
+ * @defgroup sets sets
+ * @ingroup credentials
+ *
  * @defgroup crypto crypto
  * @ingroup libstrongswan
- 
+ *
  * @defgroup database database
  * @ingroup libstrongswan
- 
+ *
  * @defgroup fetcher fetcher
  * @ingroup libstrongswan
- 
- * @defgroup fips fips
- * @ingroup libstrongswan
- 
+ *
  * @defgroup plugins plugins
  * @ingroup libstrongswan
- 
+ *
+ * @defgroup threading threading
+ * @ingroup libstrongswan
+ *
  * @defgroup utils utils
  * @ingroup libstrongswan
  */
@@ -55,15 +58,18 @@
 #ifndef LIBRARY_H_
 #define LIBRARY_H_
 
-#include <printf_hook.h>
-#include <utils.h>
-#include <chunk.h>
-#include <settings.h>
-#include <plugins/plugin_loader.h>
-#include <crypto/crypto_factory.h>
-#include <fetcher/fetcher_manager.h>
-#include <database/database_factory.h>
-#include <credentials/credential_factory.h>
+#include "printf_hook.h"
+#include "utils.h"
+#include "chunk.h"
+#include "settings.h"
+#include "integrity_checker.h"
+#include "plugins/plugin_loader.h"
+#include "crypto/crypto_factory.h"
+#include "fetcher/fetcher_manager.h"
+#include "database/database_factory.h"
+#include "credentials/credential_factory.h"
+#include "credentials/credential_manager.h"
+#include "credentials/cred_encoding.h"
 
 typedef struct library_t library_t;
 
@@ -76,37 +82,52 @@ struct library_t {
 	 * Printf hook registering facility
 	 */
 	printf_hook_t *printf_hook;
-	
+
 	/**
 	 * crypto algorithm registry and factory
 	 */
 	crypto_factory_t *crypto;
-	
+
 	/**
 	 * credential constructor registry and factory
 	 */
 	credential_factory_t *creds;
-	
+
+	/**
+	 * Manager for the credential set backends
+	 */
+	credential_manager_t *credmgr;
+
+	/**
+	 * Credential encoding registry and factory
+	 */
+	cred_encoding_t *encoding;
+
 	/**
 	 * URL fetching facility
 	 */
 	fetcher_manager_t *fetcher;
-	
+
 	/**
 	 * database construction factory
 	 */
 	database_factory_t *db;
-	
+
 	/**
 	 * plugin loading facility
 	 */
 	plugin_loader_t *plugins;
-	
+
 	/**
 	 * various settings loaded from settings file
 	 */
 	settings_t *settings;
-	
+
+	/**
+	 * integrity checker to verify code integrity
+	 */
+	integrity_checker_t *integrity;
+
 	/**
 	 * is leak detective running?
 	 */
@@ -117,8 +138,9 @@ struct library_t {
  * Initialize library, creates "lib" instance.
  *
  * @param settings		file to read settings from, may be NULL for none
+ * @return				FALSE if integrity check failed
  */
-void library_init(char *settings);
+bool library_init(char *settings);
 
 /**
  * Deinitialize library, destroys "lib" instance.

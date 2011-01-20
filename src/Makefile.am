@@ -4,6 +4,14 @@ if USE_LIBSTRONGSWAN
   SUBDIRS += libstrongswan
 endif
 
+if USE_LIBHYDRA
+  SUBDIRS += libhydra
+endif
+
+if USE_SIMAKA
+  SUBDIRS += libsimaka
+endif
+
 if USE_FILE_CONFIG
   SUBDIRS += libfreeswan starter ipsec _copyright
 endif
@@ -13,7 +21,7 @@ if USE_PLUTO
 endif
 
 if USE_CHARON
-  SUBDIRS += charon
+  SUBDIRS += libcharon charon
 endif
 
 if USE_STROKE
@@ -25,7 +33,7 @@ if USE_UPDOWN
 endif
 
 if USE_TOOLS
-  SUBDIRS += openac scepclient newhostkey rsasigkey barf _include _keycensor _secretcensor
+  SUBDIRS += openac scepclient pki newhostkey rsasigkey barf _include _keycensor _secretcensor
 endif
 
 if USE_DUMM
@@ -44,8 +52,12 @@ if USE_MEDSRV
   SUBDIRS += medsrv
 endif
 
+if USE_INTEGRITY_TEST
+  SUBDIRS += checksum
+endif
+
 EXTRA_DIST = strongswan.conf
 
-install-exec-local :	
+install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)"
-		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -o ${ipsecuser} -g ${ipsecgroup} -m 640 strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true
+		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true

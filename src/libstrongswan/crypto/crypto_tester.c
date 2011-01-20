@@ -24,42 +24,42 @@ typedef struct private_crypto_tester_t private_crypto_tester_t;
  * Private data of an crypto_tester_t object.
  */
 struct private_crypto_tester_t {
-	
+
 	/**
 	 * Public crypto_tester_t interface.
 	 */
 	crypto_tester_t public;
-	
+
 	/**
 	 * List of crypter test vectors
 	 */
 	linked_list_t *crypter;
-	
+
 	/**
 	 * List of signer test vectors
 	 */
 	linked_list_t *signer;
-	
+
 	/**
 	 * List of hasher test vectors
 	 */
 	linked_list_t *hasher;
-	
+
 	/**
 	 * List of PRF test vectors
 	 */
 	linked_list_t *prf;
-	
+
 	/**
 	 * List of RNG test vectors
 	 */
 	linked_list_t *rng;
-	
+
 	/**
 	 * Is a test vector required to pass a test?
 	 */
 	bool required;
-	
+
 	/**
 	 * should we run RNG_TRUE tests? Enough entropy?
 	 */
@@ -76,13 +76,13 @@ static bool test_crypter(private_crypto_tester_t *this,
 	crypter_test_vector_t *vector;
 	bool failed = FALSE;
 	u_int tested = 0;
-	
+
 	enumerator = this->crypter->create_enumerator(this->crypter);
 	while (enumerator->enumerate(enumerator, &vector))
 	{
 		crypter_t *crypter;
 		chunk_t key, plain, cipher, iv;
-		
+
 		if (vector->alg != alg)
 		{
 			continue;
@@ -96,14 +96,14 @@ static bool test_crypter(private_crypto_tester_t *this,
 		{	/* key size not supported... */
 			continue;
 		}
-		
+
 		failed = FALSE;
 		tested++;
-		
+
 		key = chunk_create(vector->key, crypter->get_key_size(crypter));
 		crypter->set_key(crypter, key);
 		iv = chunk_create(vector->iv, crypter->get_block_size(crypter));
-		
+
 		/* allocated encryption */
 		plain = chunk_create(vector->plain, vector->len);
 		crypter->encrypt(crypter, plain, iv, &cipher);
@@ -132,11 +132,11 @@ static bool test_crypter(private_crypto_tester_t *this,
 			failed = TRUE;
 		}
 		free(plain.ptr);
-		
+
 		crypter->destroy(crypter);
 		if (failed)
 		{
-			DBG1("disabled %N: test vector %d failed",
+			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
 				 encryption_algorithm_names, alg, tested);
 			break;
 		}
@@ -144,14 +144,14 @@ static bool test_crypter(private_crypto_tester_t *this,
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
 			 encryption_algorithm_names, alg);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
 			 encryption_algorithm_names, alg, tested);
 	}
 	return !failed;
@@ -167,33 +167,33 @@ static bool test_signer(private_crypto_tester_t *this,
 	signer_test_vector_t *vector;
 	bool failed = FALSE;
 	u_int tested = 0;
-	
+
 	enumerator = this->signer->create_enumerator(this->signer);
 	while (enumerator->enumerate(enumerator, &vector))
 	{
 		signer_t *signer;
 		chunk_t key, data, mac;
-		
+
 		if (vector->alg != alg)
 		{
 			continue;
 		}
-		
+
 		tested++;
 		signer = create(alg);
 		if (!signer)
 		{
-			DBG1("disabled %N: creating instance failed",
+			DBG1(DBG_LIB, "disabled %N: creating instance failed",
 				 integrity_algorithm_names, alg);
 			failed = TRUE;
 			break;
 		}
-		
+
 		failed = FALSE;
-		
+
 		key = chunk_create(vector->key, signer->get_key_size(signer));
 		signer->set_key(signer, key);
-		
+
 		/* allocated signature */
 		data = chunk_create(vector->data, vector->len);
 		signer->allocate_signature(signer, data, &mac);
@@ -236,11 +236,11 @@ static bool test_signer(private_crypto_tester_t *this,
 			}
 		}
 		free(mac.ptr);
-		
+
 		signer->destroy(signer);
 		if (failed)
 		{
-			DBG1("disabled %N: test vector %d failed",
+			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
 				 integrity_algorithm_names, alg, tested);
 			break;
 		}
@@ -248,14 +248,14 @@ static bool test_signer(private_crypto_tester_t *this,
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
 			 integrity_algorithm_names, alg);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
 			 integrity_algorithm_names, alg, tested);
 	}
 	return !failed;
@@ -271,30 +271,30 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 	hasher_test_vector_t *vector;
 	bool failed = FALSE;
 	u_int tested = 0;
-	
+
 	enumerator = this->hasher->create_enumerator(this->hasher);
 	while (enumerator->enumerate(enumerator, &vector))
 	{
 		hasher_t *hasher;
 		chunk_t data, hash;
-		
+
 		if (vector->alg != alg)
 		{
 			continue;
 		}
-		
+
 		tested++;
 		hasher = create(alg);
 		if (!hasher)
 		{
-			DBG1("disabled %N: creating instance failed",
+			DBG1(DBG_LIB, "disabled %N: creating instance failed",
 				 hash_algorithm_names, alg);
 			failed = TRUE;
 			break;
 		}
-		
+
 		failed = FALSE;
-		
+
 		/* allocated hash */
 		data = chunk_create(vector->data, vector->len);
 		hasher->allocate_hash(hasher, data, &hash);
@@ -326,26 +326,26 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 			}
 		}
 		free(hash.ptr);
-		
+
 		hasher->destroy(hasher);
 		if (failed)
 		{
-			DBG1("disabled %N: test vector %d failed",
-				 hash_algorithm_names, alg), tested;
+			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
+				 hash_algorithm_names, alg, tested);
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
 			 hash_algorithm_names, alg);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
 			 hash_algorithm_names, alg, tested);
 	}
 	return !failed;
@@ -361,33 +361,33 @@ static bool test_prf(private_crypto_tester_t *this,
 	prf_test_vector_t *vector;
 	bool failed = FALSE;
 	u_int tested = 0;
-	
+
 	enumerator = this->prf->create_enumerator(this->prf);
 	while (enumerator->enumerate(enumerator, &vector))
 	{
 		prf_t *prf;
 		chunk_t key, seed, out;
-		
+
 		if (vector->alg != alg)
 		{
 			continue;
 		}
-		
+
 		tested++;
 		prf = create(alg);
 		if (!prf)
 		{
-			DBG1("disabled %N: creating instance failed",
+			DBG1(DBG_LIB, "disabled %N: creating instance failed",
 				 pseudo_random_function_names, alg);
 			failed = TRUE;
 			break;
 		}
-		
+
 		failed = FALSE;
-		
+
 		key = chunk_create(vector->key, vector->key_size);
 		prf->set_key(prf, key);
-		
+
 		/* allocated bytes */
 		seed = chunk_create(vector->seed, vector->len);
 		prf->allocate_bytes(prf, seed, &out);
@@ -427,11 +427,11 @@ static bool test_prf(private_crypto_tester_t *this,
 			}
 		}
 		free(out.ptr);
-		
+
 		prf->destroy(prf);
 		if (failed)
 		{
-			DBG1("disabled %N: test vector %d failed",
+			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
 				 pseudo_random_function_names, alg, tested);
 			break;
 		}
@@ -439,14 +439,14 @@ static bool test_prf(private_crypto_tester_t *this,
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
 			 pseudo_random_function_names, alg);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
 			 pseudo_random_function_names, alg, tested);
 	}
 	return !failed;
@@ -462,37 +462,37 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 	rng_test_vector_t *vector;
 	bool failed = FALSE;
 	u_int tested = 0;
-	
+
 	if (!this->rng_true && quality == RNG_TRUE)
 	{
-		DBG1("enabled  %N: skipping test (disabled by config)",
+		DBG1(DBG_LIB, "enabled  %N: skipping test (disabled by config)",
 			 rng_quality_names, quality);
 		return TRUE;
 	}
-	
+
 	enumerator = this->rng->create_enumerator(this->rng);
 	while (enumerator->enumerate(enumerator, &vector))
 	{
 		rng_t *rng;
 		chunk_t data;
-		
+
 		if (vector->quality != quality)
 		{
 			continue;
 		}
-		
+
 		tested++;
 		rng = create(quality);
 		if (!rng)
 		{
-			DBG1("disabled %N: creating instance failed",
+			DBG1(DBG_LIB, "disabled %N: creating instance failed",
 				 rng_quality_names, quality);
 			failed = TRUE;
 			break;
 		}
-		
+
 		failed = FALSE;
-		
+
 		/* allocated bytes */
 		rng->allocate_bytes(rng, vector->len, &data);
 		if (data.len != vector->len)
@@ -511,11 +511,11 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 			failed = TRUE;
 		}
 		free(data.ptr);
-		
+
 		rng->destroy(rng);
 		if (failed)
 		{
-			DBG1("disabled %N: test vector %d failed",
+			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
 				 rng_quality_names, quality, tested);
 			break;
 		}
@@ -523,14 +523,14 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1("%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N: no test vectors found",
 			 this->required ? ", disabled" : "enabled ",
 			 rng_quality_names, quality);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1("enabled  %N: successfully passed %d test vectors",
+		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
 			 rng_quality_names, quality, tested);
 	}
 	return !failed;
@@ -600,7 +600,7 @@ static void destroy(private_crypto_tester_t *this)
 crypto_tester_t *crypto_tester_create()
 {
 	private_crypto_tester_t *this = malloc_thing(private_crypto_tester_t);
-	
+
 	this->public.test_crypter = (bool(*)(crypto_tester_t*, encryption_algorithm_t alg,size_t key_size, crypter_constructor_t create))test_crypter;
 	this->public.test_signer = (bool(*)(crypto_tester_t*, integrity_algorithm_t alg, signer_constructor_t create))test_signer;
 	this->public.test_hasher = (bool(*)(crypto_tester_t*, hash_algorithm_t alg, hasher_constructor_t create))test_hasher;
@@ -612,18 +612,18 @@ crypto_tester_t *crypto_tester_create()
 	this->public.add_prf_vector = (void(*)(crypto_tester_t*, prf_test_vector_t *vector))add_prf_vector;
 	this->public.add_rng_vector = (void(*)(crypto_tester_t*, rng_test_vector_t *vector))add_rng_vector;
 	this->public.destroy = (void(*)(crypto_tester_t*))destroy;
-	
+
 	this->crypter = linked_list_create();
 	this->signer = linked_list_create();
 	this->hasher = linked_list_create();
 	this->prf = linked_list_create();
 	this->rng = linked_list_create();
-	
+
 	this->required = lib->settings->get_bool(lib->settings,
 								"libstrongswan.crypto_test.required", FALSE);
 	this->rng_true = lib->settings->get_bool(lib->settings,
 								"libstrongswan.crypto_test.rng_true", FALSE);
-	
+
 	return &this->public;
 }
 

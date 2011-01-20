@@ -23,6 +23,8 @@
 
 #include <utils/linked_list.h>
 
+#define COOKIE_LEN 16
+
 typedef struct private_session_t private_session_t;
 
 /**
@@ -34,22 +36,27 @@ struct private_session_t {
 	 * public functions
 	 */
 	session_t public;
-	
+
 	/**
 	 * session ID
 	 */
-	char *sid;
-	
+	char sid[COOKIE_LEN * 2 + 1];
+
+	/**
+	 * have we sent the session cookie?
+	 */
+	bool cookie_sent;
+
 	/**
 	 * list of controller instances controller_t
 	 */
 	linked_list_t *controllers;
-	
+
 	/**
 	 * list of filter instances filter_t
 	 */
 	linked_list_t *filters;
-	
+
 	/**
 	 * user defined session context
 	 */
@@ -75,20 +82,20 @@ static void add_filter(private_session_t *this, filter_t *filter)
 /**
  * Create a session ID and a cookie
  */
-static void create_sid(private_session_t *this, request_t *request)
+static void create_sid(private_session_t *this)
 {
-	char buf[16];
-	chunk_t chunk = chunk_from_buf(buf);
+	char buf[COOKIE_LEN];
 	rng_t *rng;
-	
+
+	memset(buf, 0, sizeof(buf));
+	memset(this->sid, 0, sizeof(this->sid));
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
 	if (rng)
 	{
 		rng->get_bytes(rng, sizeof(buf), buf);
-		this->sid = chunk_to_hex(chunk, NULL, FALSE).ptr;
-		request->add_cookie(request, "SID", this->sid);
 		rng->destroy(rng);
 	}
+	chunk_to_hex(chunk_create(buf, sizeof(buf)), this->sid, FALSE);
 }
 
 /**
@@ -99,7 +106,7 @@ static bool run_filter(private_session_t *this, request_t *request, char *p0,
 {
 	enumerator_t *enumerator;
 	filter_t *filter;
-	
+
 	enumerator = this->filters->create_enumerator(this->filters);
 	while (enumerator->enumerate(enumerator, &filter))
 	{
@@ -123,12 +130,13 @@ static void process(private_session_t *this, request_t *request)
 	bool handled = FALSE;
 	controller_t *current;
 	int i = 0;
-	
-	if (this->sid == NULL)
+
+	if (!this->cookie_sent)
 	{
-		create_sid(this, request);
+		request->add_cookie(request, "SID", this->sid);
+		this->cookie_sent = TRUE;
 	}
-	
+
 	start = request->get_path(request);
 	if (start)
 	{
@@ -142,15 +150,15 @@ static void process(private_session_t *this, request_t *request)
 			start = pos + 1;
 		}
 		param[i] = strdupa(start);
-		
-		if (run_filter(this, request, param[0], param[1], param[2], param[3], 
-					    param[4], param[5]))
+
+		if (run_filter(this, request, param[0], param[1], param[2], param[3],
+						param[4], param[5]))
 		{
 			enumerator = this->controllers->create_enumerator(this->controllers);
 			while (enumerator->enumerate(enumerator, &current))
 			{
 				if (streq(current->get_name(current), param[0]))
-				{	
+				{
 					current->handle(current, request, param[1], param[2],
 									param[3], param[4], param[5]);
 					handled = TRUE;
@@ -169,7 +177,9 @@ static void process(private_session_t *this, request_t *request)
 		if (this->controllers->get_first(this->controllers,
 										 (void**)&current) == SUCCESS)
 		{
-			request->redirect(request, current->get_name(current));
+			request->streamf(request,
+				"Status: 301 Moved permanently\nLocation: %s/%s\n\n",
+				request->get_base(request), current->get_name(current));
 		}
 	}
 }
@@ -190,7 +200,6 @@ static void destroy(private_session_t *this)
 	this->controllers->destroy_offset(this->controllers, offsetof(controller_t, destroy));
 	this->filters->destroy_offset(this->filters, offsetof(filter_t, destroy));
 	DESTROY_IF(this->context);
-	free(this->sid);
 	free(this);
 }
 
@@ -207,11 +216,12 @@ session_t *session_create(context_t *context)
 	this->public.get_sid = (char*(*)(session_t*))get_sid;
 	this->public.destroy = (void(*)(session_t*))destroy;
 
-	this->sid = NULL;
+	create_sid(this);
+	this->cookie_sent = FALSE;
 	this->controllers = linked_list_create();
 	this->filters = linked_list_create();
 	this->context = context;
-	
+
 	return &this->public;
 }
 

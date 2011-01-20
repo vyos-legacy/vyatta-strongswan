@@ -1,12 +1,12 @@
 /*
  * conversion from text forms of addresses to internal ones
  * Copyright (C) 2000  Henry Spencer.
- * 
+ *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
- * 
+ *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
@@ -61,7 +61,7 @@ ip_address *dst;
 	case AF_INET6:
 	case 0:                  /* guess */
 		break;
-	    
+
 	default:
 		return "invalid address family";
 	}
@@ -78,7 +78,7 @@ ip_address *dst;
 	    {
 		af = AF_INET6;
 	    }
-	    
+
 		if (af != AF_INET6)
 			return "non-ipv6 address may not contain `:'";
 		return colon(src, srclen, dst);
@@ -127,7 +127,7 @@ ip_address *dst;
 		}
 		return "does not appear to be either IPv4 or IPv6 numeric address";
 		break;
-	    
+
 	case AF_INET6:
 		return colon(src, srclen, dst);
 		break;
@@ -157,12 +157,15 @@ int nultermd;			/* is it known to be NUL-terminated? */
 int af;
 ip_address *dst;
 {
-	struct hostent *h;
+	struct addrinfo hints, *res;
 	struct netent *ne = NULL;
 	char namebuf[100];	/* enough for most DNS names */
 	const char *cp;
 	char *p = namebuf;
+	unsigned char *addr = NULL;
 	size_t n;
+	int error;
+	err_t err = NULL;
 
 	for (cp = src, n = srclen; n > 0; cp++, n--)
 		if (ISASCII(*cp) && strchr(namechars, *cp) == NULL)
@@ -181,25 +184,67 @@ ip_address *dst;
 		cp = (const char *)p;
 	}
 
-	h = gethostbyname2(cp, af);
-	if (h == NULL && af == AF_INET)
-		ne = getnetbyname(cp);
-	if (p != namebuf)
-		FREE(p);
-	if (h == NULL && ne == NULL)
-		return "does not look numeric and name lookup failed";
-
-	if (h != NULL) {
-		if (h->h_addrtype != af)
-			return "address-type mismatch from gethostbyname2!!!";
-		return initaddr((unsigned char *)h->h_addr, h->h_length, af, dst);
-	} else {
-		if (ne->n_addrtype != af)
-			return "address-type mismatch from getnetbyname!!!";
-		ne->n_net = htonl(ne->n_net);
-		return initaddr((unsigned char *)&ne->n_net, sizeof(ne->n_net),
-								af, dst);
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = af;
+	error = getaddrinfo(cp, NULL, &hints, &res);
+	if (error != 0)
+	{	/* getaddrinfo failed, try getnetbyname */
+		if (af == AF_INET)
+		{
+			ne = getnetbyname(cp);
+			if (ne != NULL)
+			{
+				ne->n_net = htonl(ne->n_net);
+				addr = (unsigned char*)&ne->n_net;
+				err = initaddr(addr, sizeof(ne->n_net), af, dst);
+			}
+		}
 	}
+	else
+	{
+		struct addrinfo *r = res;
+		while (r)
+		{
+			size_t addr_len;
+			switch (r->ai_family)
+			{
+				case AF_INET:
+				{
+					struct sockaddr_in *in = (struct sockaddr_in*)r->ai_addr;
+					addr_len = 4;
+					addr = (unsigned char*)&in->sin_addr.s_addr;
+					break;
+				}
+				case AF_INET6:
+				{
+					struct sockaddr_in6 *in6 = (struct sockaddr_in6*)r->ai_addr;
+					addr_len = 16;
+					addr = (unsigned char*)&in6->sin6_addr.s6_addr;
+					break;
+				}
+				default:
+				{	/* unknown family, try next result */
+					r = r->ai_next;
+					continue;
+				}
+			}
+			err = initaddr(addr, addr_len, r->ai_family, dst);
+			break;
+		}
+		freeaddrinfo(res);
+	}
+
+	if (p != namebuf)
+	{
+		FREE(p);
+	}
+
+	if (addr == NULL)
+	{
+		return "does not look numeric and name lookup failed";
+	}
+
+	return err;
 }
 
 /*

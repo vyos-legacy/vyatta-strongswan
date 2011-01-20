@@ -41,6 +41,8 @@ enum shared_key_type_t {
 	SHARED_PRIVATE_KEY_PASS,
 	/** PIN to unlock a smartcard */
 	SHARED_PIN,
+	/** Calculated NT Hash = MD4(UTF-16LE(password)) */
+	SHARED_NT_HASH,
 };
 
 /**
@@ -55,32 +57,32 @@ extern enum_name_t *shared_key_type_names;
  * reading.
  */
 struct shared_key_t {
-	
+
 	/**
 	 * Get the kind of this key.
 	 *
 	 * @return			type of the key
 	 */
 	shared_key_type_t (*get_type)(shared_key_t *this);
-	
+
 	/**
 	 * Get the shared key data.
 	 *
 	 * @return			chunk pointing to the internal key
 	 */
 	chunk_t (*get_key)(shared_key_t *this);
-	
-	/** 
+
+	/**
 	 * Increase refcount of the key.
 	 *
-	 * @return			this with an increased refcount 
+	 * @return			this with an increased refcount
 	 */
 	shared_key_t* (*get_ref)(shared_key_t *this);
-		
+
 	/**
-     * Destroy a shared_key instance if all references are gone.
-     */
-    void (*destroy)(shared_key_t *this);
+	 * Destroy a shared_key instance if all references are gone.
+	 */
+	void (*destroy)(shared_key_t *this);
 };
 
 /**

@@ -1,17 +1,19 @@
 /*
  * conversion from ASCII forms of addresses to internal ones
  * Copyright (C) 1998, 1999  Henry Spencer.
- * 
+ *
  * This library is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Library General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
- * 
+ *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
  * License for more details.
  */
+#include <sys/socket.h>
+
 #include "internal.h"
 #include "freeswan.h"
 
@@ -41,7 +43,7 @@ const char *src;
 size_t srclen;			/* 0 means "apply strlen" */
 struct in_addr *addrp;
 {
-	struct hostent *h;
+	struct addrinfo hints, *res;
 	struct netent *ne = NULL;
 	const char *oops;
 #	define	HEXLEN	10	/* strlen("0x11223344") */
@@ -51,6 +53,7 @@ struct in_addr *addrp;
 	char namebuf[ATOADDRBUF];
 	char *p = namebuf;
 	char *q;
+	int error;
 
 	if (srclen == 0)
 		srclen = strlen(src);
@@ -87,18 +90,34 @@ struct in_addr *addrp;
 		return "illegal (non-DNS-name) character in name";
 
 	/* try as host name, failing that as /etc/networks network name */
-	h = gethostbyname(p);
-	if (h == NULL)
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	error = getaddrinfo(p, NULL, &hints, &res);
+	if (error != 0)
+	{
 		ne = getnetbyname(p);
-	if (p != namebuf)
-		FREE(p);
-	if (h == NULL && ne == NULL)
-		return "name lookup failed";
-
-	if (h != NULL)
-		memcpy(&addrp->s_addr, h->h_addr, sizeof(addrp->s_addr));
-	else
+		if (ne == NULL)
+		{
+			if (p != namebuf)
+			{
+				FREE(p);
+			}
+			return "name lookup failed";
+		}
 		addrp->s_addr = htonl(ne->n_net);
+	}
+	else
+	{
+		struct sockaddr_in *in = (struct sockaddr_in*)res->ai_addr;
+		memcpy(&addrp->s_addr, &in->sin_addr.s_addr, sizeof(addrp->s_addr));
+		freeaddrinfo(res);
+	}
+
+	if (p != namebuf)
+	{
+		FREE(p);
+	}
+
 	return NULL;
 }
 

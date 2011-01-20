@@ -25,6 +25,8 @@
 
 #include <sys/types.h>
 
+#include <library.h>
+
 /**
  * Socket which is used to communicate between charon and stroke
  */
@@ -135,8 +137,9 @@ struct stroke_end_t {
 	char *groups;
 	char *updown;
 	char *address;
+	u_int16_t ikeport;
 	char *sourceip;
-	int sourceip_size;
+	int sourceip_mask;
 	char *subnets;
 	int sendcert;
 	int hostaccess;
@@ -192,7 +195,7 @@ struct stroke_msg_t {
 		STR_LEASES,
 		/* more to come */
 	} type;
-	
+
 	/* verbosity of output returned from charon (-from -1=silent to 4=private)*/
 	int output_verbosity;
 
@@ -201,7 +204,7 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 		} initiate, route, unroute, terminate, status, del_conn, del_ca;
-		
+
 		/* data for STR_TERMINATE_SRCIP */
 		struct {
 			char *start;
@@ -221,8 +224,10 @@ struct stroke_msg_t {
 			int mobike;
 			int force_encap;
 			int ipcomp;
+			time_t inactivity;
 			int proxy_mode;
 			int install_policy;
+			u_int32_t reqid;
 
 			crl_policy_t crl_policy;
 			int unique;
@@ -235,6 +240,10 @@ struct stroke_msg_t {
 				time_t ipsec_lifetime;
 				time_t ike_lifetime;
 				time_t margin;
+				u_int64_t life_bytes;
+				u_int64_t margin_bytes;
+				u_int64_t life_packets;
+				u_int64_t margin_packets;
 				unsigned long tries;
 				unsigned long fuzz;
 			} rekey;
@@ -247,6 +256,10 @@ struct stroke_msg_t {
 				char *mediated_by;
 				char *peerid;
 			} ikeme;
+			struct {
+				u_int32_t value;
+				u_int32_t mask;
+			} mark_in, mark_out;
 			stroke_end_t me, other;
 		} add_conn;
 
@@ -266,7 +279,7 @@ struct stroke_msg_t {
 			char *type;
 			int level;
 		} loglevel;
-		
+
 		/* data for STR_CONFIG */
 		struct {
 			int cachecrl;

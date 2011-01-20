@@ -25,7 +25,6 @@
 #include <resolv.h>
 #include <arpa/nameser.h>       /* missing from <resolv.h> on old systems */
 #include <sys/queue.h>
-#include <sys/time.h>           /* for gettimeofday */
 
 #include <freeswan.h>
 
@@ -36,12 +35,14 @@
 #include <crypto/rngs/rng.h>
 #include <credentials/keys/private_key.h>
 #include <credentials/keys/public_key.h>
+#include <utils/identification.h>
 
 #include "constants.h"
 #include "defs.h"
+#include "myid.h"
 #include "state.h"
-#include "id.h"
 #include "x509.h"
+#include "ac.h"
 #include "crl.h"
 #include "ca.h"
 #include "certs.h"
@@ -101,21 +102,24 @@
  * and return from the ENCLOSING stf_status returning function if it fails.
  */
 #define RETURN_STF_FAILURE(f) \
-	{ int r = (f); if (r != NOTHING_WRONG) return STF_FAIL + r; }
+	{ int r = (f); if (r != ISAKMP_NOTHING_WRONG) return STF_FAIL + r; }
 
 /* create output HDR as replica of input HDR */
-void
-echo_hdr(struct msg_digest *md, bool enc, u_int8_t np)
+void echo_hdr(struct msg_digest *md, bool enc, u_int8_t np)
 {
 	struct isakmp_hdr r_hdr = md->hdr;  /* mostly same as incoming header */
 
 	r_hdr.isa_flags &= ~ISAKMP_FLAG_COMMIT;     /* we won't ever turn on this bit */
 	if (enc)
+	{
 		r_hdr.isa_flags |= ISAKMP_FLAG_ENCRYPTION;
+	}
 	/* some day, we may have to set r_hdr.isa_version */
 	r_hdr.isa_np = np;
 	if (!out_struct(&r_hdr, &isakmp_hdr_desc, &md->reply, &md->rbody))
+	{
 		impossible();   /* surely must have room and be well-formed */
+	}
 }
 
 /* Compute DH shared secret from our local secret and the peer's public value.
@@ -172,13 +176,13 @@ static notification_t accept_KE(chunk_t *dest, const char *val_name,
 		loglog(RC_LOG_SERIOUS, "KE has %u byte DH public value; %u required"
 			, (unsigned) pbs_left(pbs), gr->ke_size);
 		/* XXX Could send notification back */
-		return INVALID_KEY_INFORMATION;
+		return ISAKMP_INVALID_KEY_INFORMATION;
 	}
 	free(dest->ptr);
 	*dest = chunk_create(pbs->cur, pbs_left(pbs));
 	*dest = chunk_clone(*dest);
 	DBG_cond_dump_chunk(DBG_CRYPT, "DH public value received:\n", *dest);
-	return NOTHING_WRONG;
+	return ISAKMP_NOTHING_WRONG;
 }
 
 /* accept_PFS_KE
@@ -197,7 +201,7 @@ static notification_t accept_PFS_KE(struct msg_digest *md, chunk_t *dest,
 		if (st->st_pfs_group != NULL)
 		{
 			loglog(RC_LOG_SERIOUS, "missing KE payload in %s message", msg_name);
-			return INVALID_KEY_INFORMATION;
+			return ISAKMP_INVALID_KEY_INFORMATION;
 		}
 	}
 	else
@@ -206,16 +210,16 @@ static notification_t accept_PFS_KE(struct msg_digest *md, chunk_t *dest,
 		{
 			loglog(RC_LOG_SERIOUS, "%s message KE payload requires a GROUP_DESCRIPTION attribute in SA"
 				, msg_name);
-			return INVALID_KEY_INFORMATION;
+			return ISAKMP_INVALID_KEY_INFORMATION;
 		}
 		if (ke_pd->next != NULL)
 		{
 			loglog(RC_LOG_SERIOUS, "%s message contains several KE payloads; we accept at most one", msg_name);
-			return INVALID_KEY_INFORMATION;     /* ??? */
+			return ISAKMP_INVALID_KEY_INFORMATION;     /* ??? */
 		}
 		return accept_KE(dest, val_name, st->st_pfs_group, &ke_pd->pbs);
 	}
-	return NOTHING_WRONG;
+	return ISAKMP_NOTHING_WRONG;
 }
 
 static bool build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np,
@@ -231,39 +235,42 @@ static bool build_and_ship_nonce(chunk_t *n, pb_stream *outs, u_int8_t np,
 	return out_generic_chunk(np, &isakmp_nonce_desc, outs, *n, name);
 }
 
-static bool collect_rw_ca_candidates(struct msg_digest *md, generalName_t **top)
+static linked_list_t* collect_rw_ca_candidates(struct msg_digest *md)
 {
-	struct connection *d = find_host_connection(&md->iface->addr
-		, pluto_port, (ip_address*)NULL, md->sender_port, LEMPTY);
+	linked_list_t *list = linked_list_create();
+	connection_t *d;
+
+	d = find_host_connection(&md->iface->addr, pluto_port, (ip_address*)NULL,
+							  md->sender_port, LEMPTY);
 
 	for (; d != NULL; d = d->hp_next)
 	{
 		/* must be a road warrior connection */
-		if (d->kind == CK_TEMPLATE && !(d->policy & POLICY_OPPO)
-		&& d->spd.that.ca.ptr != NULL)
+		if (d->kind == CK_TEMPLATE && !(d->policy & POLICY_OPPO) &&
+			d->spd.that.ca)
 		{
-			generalName_t *gn;
+			enumerator_t *enumerator;
+			identification_t *ca;
 			bool new_entry = TRUE;
 
-			for (gn = *top; gn != NULL; gn = gn->next)
+			enumerator = list->create_enumerator(list);
+			while (enumerator->enumerate(enumerator, &ca))
 			{
-				if (same_dn(gn->name, d->spd.that.ca))
+				if (ca->equals(ca, d->spd.that.ca))
 				{
 					new_entry = FALSE;
 					break;
 				}
 			}
+			enumerator->destroy(enumerator);
+
 			if (new_entry)
 			{
-				gn = malloc_thing(generalName_t);
-				gn->kind = GN_DIRECTORY_NAME;
-				gn->name = d->spd.that.ca;
-				gn->next = *top;
-				*top = gn;
+				list->insert_last(list, d->spd.that.ca->clone(d->spd.that.ca));
 			}
 		}
 	}
-	return *top != NULL;
+	return list;
 }
 
 static bool build_and_ship_CR(u_int8_t type, chunk_t ca, pb_stream *outs,
@@ -276,8 +283,9 @@ static bool build_and_ship_CR(u_int8_t type, chunk_t ca, pb_stream *outs,
 
 	/* build CR header */
 	if (!out_struct(&cr_hd, &isakmp_ipsec_cert_req_desc, outs, &cr_pbs))
+	{
 		return FALSE;
-
+	}
 	if (ca.ptr != NULL)
 	{
 		/* build CR body containing the distinguished name of the CA */
@@ -323,24 +331,33 @@ static void send_notification(struct state *sndst, u_int16_t type,
 		hdr.isa_msgid = msgid;
 		hdr.isa_flags = encst ? ISAKMP_FLAG_ENCRYPTION : 0;
 		if (icookie)
+		{
 			memcpy(hdr.isa_icookie, icookie, COOKIE_SIZE);
+		}
 		if (rcookie)
+		{
 			memcpy(hdr.isa_rcookie, rcookie, COOKIE_SIZE);
+		}
 		if (!out_struct(&hdr, &isakmp_hdr_desc, &pbs, &r_hdr_pbs))
+		{
 			impossible();
+		}
 	}
 
 	/* HASH -- value to be filled later */
 	if (encst)
 	{
 		pb_stream hash_pbs;
-		if (!out_generic(ISAKMP_NEXT_N, &isakmp_hash_desc, &r_hdr_pbs,
-			&hash_pbs))
+		if (!out_generic(ISAKMP_NEXT_N, &isakmp_hash_desc, &r_hdr_pbs, &hash_pbs))
+		{
 			impossible();
+		}
 		r_hashval = hash_pbs.cur;  /* remember where to plant value */
 		if (!out_zero(
 		encst->st_oakley.hasher->hash_digest_size, &hash_pbs, "HASH"))
+		{
 			impossible();
+		}
 		close_output_pbs(&hash_pbs);
 		r_hash_start = r_hdr_pbs.cur; /* hash from after HASH */
 	}
@@ -358,7 +375,9 @@ static void send_notification(struct state *sndst, u_int16_t type,
 
 		if (!out_struct(&isan, &isakmp_notification_desc, &r_hdr_pbs, &not_pbs)
 			|| !out_raw(spi, spisize, &not_pbs, "spi"))
+		{
 			impossible();
+		}
 		close_output_pbs(&not_pbs);
 	}
 
@@ -393,8 +412,9 @@ static void send_notification(struct state *sndst, u_int16_t type,
 		u_int new_iv_len = encst->st_new_iv_len;
 
 		if (old_iv_len > MAX_DIGEST_LEN || new_iv_len > MAX_DIGEST_LEN)
+		{
 			impossible();
-
+		}
 		memcpy(old_iv, encst->st_iv, old_iv_len);
 		memcpy(new_iv, encst->st_new_iv, new_iv_len);
 
@@ -405,8 +425,10 @@ static void send_notification(struct state *sndst, u_int16_t type,
 		}
 		init_phase2_iv(encst, &msgid);
 		if (!encrypt_message(&r_hdr_pbs, encst))
+		{
 			impossible();
-			
+		}
+
 		/* restore preserved st_iv and st_new_iv */
 		memcpy(encst->st_iv, old_iv, old_iv_len);
 		memcpy(encst->st_new_iv, new_iv, new_iv_len);
@@ -475,7 +497,7 @@ void send_notification_from_md(struct msg_digest *md, u_int16_t type)
 	 *   st_connection->interface
 	 */
 	struct state st;
-	struct connection cnx;
+	connection_t cnx;
 
 	passert(md);
 
@@ -569,10 +591,14 @@ void send_delete(struct state *st)
 		pb_stream hash_pbs;
 
 		if (!out_generic(ISAKMP_NEXT_D, &isakmp_hash_desc, &r_hdr_pbs, &hash_pbs))
+		{
 			impossible();
+		}
 		r_hashval = hash_pbs.cur;       /* remember where to plant value */
 		if (!out_zero(p1st->st_oakley.hasher->hash_digest_size, &hash_pbs, "HASH(1)"))
+		{
 			impossible();
+		}
 		close_output_pbs(&hash_pbs);
 		r_hash_start = r_hdr_pbs.cur;   /* hash from after HASH(1) */
 	}
@@ -595,7 +621,9 @@ void send_delete(struct state *st)
 
 		if (!out_struct(&isad, &isakmp_delete_desc, &r_hdr_pbs, &del_pbs)
 		|| !out_raw(&isakmp_spi, (2*COOKIE_SIZE), &del_pbs, "delete payload"))
+		{
 			impossible();
+		}
 		close_output_pbs(&del_pbs);
 	}
 	else
@@ -615,7 +643,9 @@ void send_delete(struct state *st)
 			isad.isad_nospi = 1;
 			if (!out_struct(&isad, &isakmp_delete_desc, &r_hdr_pbs, &del_pbs)
 			|| !out_raw(&ns->spi, sizeof(ipsec_spi_t), &del_pbs, "delete payload"))
+			{
 				impossible();
+			}
 			close_output_pbs(&del_pbs);
 		}
 	}
@@ -656,8 +686,9 @@ void send_delete(struct state *st)
 		init_phase2_iv(p1st, &msgid);
 
 		if (!encrypt_message(&r_hdr_pbs, p1st))
+		{
 			impossible();
-
+		}
 		p1st->st_tpacket = chunk_create(reply_pbs.start, pbs_offset(&reply_pbs));
 		send_packet(p1st, "delete notify");
 		p1st->st_tpacket = saved_tpacket;
@@ -671,6 +702,8 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				   struct payload_digest *p)
 {
 	struct isakmp_delete *d = &(p->payload.delete);
+	identification_t *this_id = NULL, *that_id = NULL;
+	ip_address peer_addr;
 	size_t sizespi;
 	int i;
 
@@ -728,6 +761,15 @@ void accept_delete(struct state *st, struct msg_digest *md,
 		return;
 	}
 
+	if (d->isad_protoid == PROTO_ISAKMP)
+	{
+		struct end *this = &st->st_connection->spd.this;
+		struct end *that = &st->st_connection->spd.that;
+		this_id = this->id->clone(this->id);
+		that_id = that->id->clone(that->id);
+		peer_addr = st->st_connection->spd.that.host_addr;
+	}
+
 	for (i = 0; i < d->isad_nospi; i++)
 	{
 		u_char *spi = p->pbs.cur + (i * sizespi);
@@ -739,7 +781,7 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			 */
 			struct state *dst = find_state(spi /*iCookie*/
 				, spi+COOKIE_SIZE /*rCookie*/
-				, &st->st_connection->spd.that.host_addr
+				, &peer_addr
 				, MAINMODE_MSGID);
 
 			if (dst == NULL)
@@ -747,7 +789,8 @@ void accept_delete(struct state *st, struct msg_digest *md,
 				loglog(RC_LOG_SERIOUS, "ignoring Delete SA payload: "
 					"ISAKMP SA not found (maybe expired)");
 			}
-			else if (!same_peer_ids(st->st_connection, dst->st_connection, NULL))
+			else if (! this_id->equals(this_id, dst->st_connection->spd.this.id) ||
+					 ! that_id->equals(that_id, dst->st_connection->spd.that.id))
 			{
 				/* we've not authenticated the relevant identities */
 				loglog(RC_LOG_SERIOUS, "ignoring Delete SA payload: "
@@ -755,14 +798,15 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			}
 			else
 			{
-				struct connection *oldc;
-				
+				connection_t *oldc;
+
 				oldc = cur_connection;
 				set_cur_connection(dst->st_connection);
 
 				if (nat_traversal_enabled)
+				{
 					nat_traversal_change_port_lookup(md, dst);
-
+				}
 				loglog(RC_LOG_SERIOUS, "received Delete SA payload: "
 					"deleting ISAKMP State #%lu", dst->st_serialno);
 				delete_state(dst);
@@ -790,18 +834,19 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			}
 			else
 			{
-				struct connection *rc = dst->st_connection;
-				struct connection *oldc;
-				
+				connection_t *rc = dst->st_connection;
+				connection_t *oldc;
+
 				oldc = cur_connection;
 				set_cur_connection(rc);
 
 				if (nat_traversal_enabled)
+				{
 					nat_traversal_change_port_lookup(md, dst);
-
+				}
 				if (rc->newest_ipsec_sa == dst->st_serialno
 				&& (rc->policy & POLICY_UP))
-					{
+				{
 					/* Last IPSec SA for a permanent connection that we
 					 * have initiated.  Replace it in a few seconds.
 					 *
@@ -843,6 +888,12 @@ void accept_delete(struct state *st, struct msg_digest *md,
 			}
 		}
 	}
+
+	if (d->isad_protoid == PROTO_ISAKMP)
+	{
+		this_id->destroy(this_id);
+		that_id->destroy(that_id);
+	}
 }
 
 /* The whole message must be a multiple of 4 octets.
@@ -855,7 +906,9 @@ void close_message(pb_stream *pbs)
 	size_t padding =  pad_up(pbs_offset(pbs), 4);
 
 	if (padding != 0)
+	{
 		(void) out_zero(padding, pbs, "message padding");
+	}
 	close_output_pbs(pbs);
 }
 
@@ -864,15 +917,14 @@ void close_message(pb_stream *pbs)
  * Note: this is not called from demux.c
  */
 static stf_status
-main_outI1(int whack_sock, struct connection *c, struct state *predecessor
+main_outI1(int whack_sock, connection_t *c, struct state *predecessor
 	, lset_t policy, unsigned long try)
 {
 	struct state *st = new_state();
 	pb_stream reply;    /* not actually a reply, but you know what I mean */
 	pb_stream rbody;
-
 	int vids_to_send = 0;
-	
+
 	/* set up new state */
 	st->st_connection = c;
 	set_cur_state(st);  /* we must reset before exit */
@@ -883,30 +935,48 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 
 	/* determine how many Vendor ID payloads we will be sending */
 	if (SEND_PLUTO_VID)
+	{
 		vids_to_send++;
+	}
 	if (SEND_CISCO_UNITY_VID)
+	{
 		vids_to_send++;
-	if (c->spd.this.cert.type == CERT_PGP)
+	}
+	if (c->spd.this.cert &&
+		c->spd.this.cert->cert->get_type(c->spd.this.cert->cert) == CERT_GPG)
+	{
 		vids_to_send++;
+	}
 	if (SEND_XAUTH_VID)
+	{
 		vids_to_send++;
+	}
+
 	/* always send DPD Vendor ID */
-		vids_to_send++;
+	vids_to_send++;
+
 	if (nat_traversal_enabled)
+	{
 		vids_to_send++;
+	}
 
    get_cookie(TRUE, st->st_icookie, COOKIE_SIZE, &c->spd.that.host_addr);
 
 	insert_state(st);   /* needs cookies, connection, and msgid (0) */
 
 	if (HAS_IPSEC_POLICY(policy))
+	{
 		add_pending(dup_any(whack_sock), st, c, policy, 1
 			, predecessor == NULL? SOS_NOBODY : predecessor->st_serialno);
-
+	}
 	if (predecessor == NULL)
+	{
 		plog("initiating Main Mode");
+	}
 	else
+	{
 		plog("initiating Main Mode to replace #%lu", predecessor->st_serialno);
+	}
 
 	/* set up reply */
 	init_pbs(&reply, reply_buffer, sizeof(reply_buffer), "reply packet");
@@ -970,7 +1040,8 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	/* if we  have an OpenPGP certificate we assume an
 	 * OpenPGP peer and have to send the Vendor ID
 	 */
-	if (c->spd.this.cert.type == CERT_PGP)
+	if (c->spd.this.cert &&
+		c->spd.this.cert->cert->get_type(c->spd.this.cert->cert) == CERT_GPG)
 	{
 		if (!out_vendorid(vids_to_send-- ? ISAKMP_NEXT_VID : ISAKMP_NEXT_NONE
 		, &rbody, VID_OPENPGP))
@@ -1042,7 +1113,7 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	return STF_OK;
 }
 
-void ipsecdoi_initiate(int whack_sock, struct connection *c, lset_t policy,
+void ipsecdoi_initiate(int whack_sock, connection_t *c, lset_t policy,
 					   unsigned long try, so_serial_t replacing)
 {
 	/* If there's already an ISAKMP SA established, use that and
@@ -1155,7 +1226,7 @@ static bool skeyid_preshared(struct state *st)
 		{
 			loglog(RC_LOG_SERIOUS, "%N not available to compute skeyid",
 									pseudo_random_function_names, prf_alg);
-		return FALSE;
+			return FALSE;
 		}
 		free(st->st_skeyid.ptr);
 		prf->set_key(prf, *pss);
@@ -1166,8 +1237,7 @@ static bool skeyid_preshared(struct state *st)
 	}
 }
 
-static bool
-skeyid_digisig(struct state *st)
+static bool skeyid_digisig(struct state *st)
 {
 	chunk_t nir;
 	pseudo_random_function_t prf_alg;
@@ -1234,12 +1304,9 @@ static bool generate_skeyids_iv(struct state *st)
 
 	/* generate SKEYID_* from SKEYID */
 	{
-		char buf_skeyid_d[] = { 0x00 };
-		char buf_skeyid_a[] = { 0x01 };
-		char buf_skeyid_e[] = { 0x02 };
-		chunk_t seed_skeyid_d = chunk_from_buf(buf_skeyid_d);
-		chunk_t seed_skeyid_a = chunk_from_buf(buf_skeyid_a);
-		chunk_t seed_skeyid_e = chunk_from_buf(buf_skeyid_e);
+		chunk_t seed_skeyid_d = chunk_from_chars(0x00);
+		chunk_t seed_skeyid_a = chunk_from_chars(0x01);
+		chunk_t seed_skeyid_e = chunk_from_chars(0x02);
 		chunk_t icookie = { st->st_icookie, COOKIE_SIZE };
 		chunk_t rcookie = { st->st_rcookie, COOKIE_SIZE };
 		pseudo_random_function_t prf_alg;
@@ -1254,7 +1321,7 @@ static bool generate_skeyids_iv(struct state *st)
 		prf->allocate_bytes(prf, st->st_shared, NULL);
 		prf->allocate_bytes(prf, icookie, NULL);
 		prf->allocate_bytes(prf, rcookie, NULL);
-		prf->allocate_bytes(prf, seed_skeyid_d, &st->st_skeyid_d); 
+		prf->allocate_bytes(prf, seed_skeyid_d, &st->st_skeyid_d);
 
 		/* SKEYID_A */
 		free(st->st_skeyid_a.ptr);
@@ -1262,7 +1329,7 @@ static bool generate_skeyids_iv(struct state *st)
 		prf->allocate_bytes(prf, st->st_shared, NULL);
 		prf->allocate_bytes(prf, icookie, NULL);
 		prf->allocate_bytes(prf, rcookie, NULL);
-		prf->allocate_bytes(prf, seed_skeyid_a, &st->st_skeyid_a); 
+		prf->allocate_bytes(prf, seed_skeyid_a, &st->st_skeyid_a);
 
 		/* SKEYID_E */
 		free(st->st_skeyid_e.ptr);
@@ -1270,7 +1337,7 @@ static bool generate_skeyids_iv(struct state *st)
 		prf->allocate_bytes(prf, st->st_shared, NULL);
 		prf->allocate_bytes(prf, icookie, NULL);
 		prf->allocate_bytes(prf, rcookie, NULL);
-		prf->allocate_bytes(prf, seed_skeyid_e, &st->st_skeyid_e); 
+		prf->allocate_bytes(prf, seed_skeyid_e, &st->st_skeyid_e);
 
 		prf->destroy(prf);
 	}
@@ -1289,7 +1356,7 @@ static bool generate_skeyids_iv(struct state *st)
 			DBG_dump_chunk("DH_i:", st->st_gi);
 			DBG_dump_chunk("DH_r:", st->st_gr);
 		);
-		
+
 		hasher->get_hash(hasher, st->st_gi, NULL);
 		hasher->get_hash(hasher, st->st_gr, st->st_new_iv);
 		hasher->destroy(hasher);
@@ -1302,15 +1369,14 @@ static bool generate_skeyids_iv(struct state *st)
 	 */
 	{
 		size_t keysize = st->st_oakley.enckeylen/BITS_PER_BYTE;
- 
+
 		/* free any existing key */
 		free(st->st_enc_key.ptr);
 
 		if (keysize > st->st_skeyid_e.len)
 		{
 			u_char keytemp[MAX_OAKLEY_KEY_LEN + MAX_DIGEST_LEN];
-			char seed_buf[] = { 0x00 };
-			chunk_t seed = chunk_from_buf(seed_buf);
+			chunk_t seed = chunk_from_chars(0x00);
 			size_t prf_block_size, i;
 			pseudo_random_function_t prf_alg;
 			prf_t *prf;
@@ -1319,7 +1385,7 @@ static bool generate_skeyids_iv(struct state *st)
 			prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 			prf->set_key(prf, st->st_skeyid_e);
 			prf_block_size = prf->get_block_size(prf);
-			
+
 			for (i = 0;;)
 			{
 				prf->get_bytes(prf, seed, &keytemp[i]);
@@ -1336,7 +1402,7 @@ static bool generate_skeyids_iv(struct state *st)
 		else
 		{
 			st->st_enc_key = chunk_create(st->st_skeyid_e.ptr, keysize);
-		}			
+		}
 		st->st_enc_key = chunk_clone(st->st_enc_key);
 	}
 
@@ -1421,7 +1487,7 @@ static bool generate_skeyids_iv(struct state *st)
  * Use PKCS#1 version 1.5 encryption of hash (called
  * RSAES-PKCS1-V1_5) in PKCS#2.
  */
-static size_t sign_hash(signature_scheme_t scheme, struct connection *c,
+static size_t sign_hash(signature_scheme_t scheme, connection_t *c,
 						u_char sig_val[RSA_MAX_OCTETS], chunk_t hash)
 {
 	size_t sz = 0;
@@ -1469,7 +1535,9 @@ static size_t sign_hash(signature_scheme_t scheme, struct connection *c,
 		)
 		sz = scx_sign_hash(sc, hash.ptr, hash.len, sig_val, sz) ? sz : 0;
 		if (!pkcs11_keep_state)
+		{
 			scx_release_context(sc);
+		}
 		unlock_certs_and_keys("sign_hash");
 	}
 	return sz;
@@ -1487,7 +1555,7 @@ static size_t sign_hash(signature_scheme_t scheme, struct connection *c,
  */
 struct tac_state {
 	struct state *st;
-	chunk_t hash;	
+	chunk_t hash;
 	chunk_t sig;
 	int tried_cnt;      /* number of keys tried */
 };
@@ -1495,17 +1563,18 @@ struct tac_state {
 static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 {
 	public_key_t *pub_key = kr->public_key;
-	identification_t *keyid = pub_key->get_id(pub_key, ID_PUBKEY_INFO_SHA1);
+	chunk_t keyid = chunk_empty;
 	signature_scheme_t scheme;
 
 	s->tried_cnt++;
 	scheme = oakley_to_signature_scheme(s->st->st_oakley.auth);
+	pub_key->get_fingerprint(pub_key, KEYID_PUBKEY_INFO_SHA1, &keyid);
 
 	if (pub_key->verify(pub_key, scheme, s->hash, s->sig))
 	{
 		DBG(DBG_CRYPT | DBG_CONTROL,
-			DBG_log("%s check passed with keyid %Y",
-					enum_show(&oakley_auth_names, s->st->st_oakley.auth), keyid)
+			DBG_log("%s check passed with keyid %#B",
+					enum_show(&oakley_auth_names, s->st->st_oakley.auth), &keyid)
 		)
 		unreference_key(&s->st->st_peer_pubkey);
 		s->st->st_peer_pubkey = reference_key(kr);
@@ -1514,14 +1583,14 @@ static bool take_a_crack(struct tac_state *s, pubkey_t *kr)
 	else
 	{
 		DBG(DBG_CRYPT,
-			DBG_log("%s check failed with keyid %Y",
-					enum_show(&oakley_auth_names, s->st->st_oakley.auth), keyid)
+			DBG_log("%s check failed with keyid %#B",
+					enum_show(&oakley_auth_names, s->st->st_oakley.auth), &keyid)
 		)
 		return FALSE;
 	}
 }
 
-static stf_status check_signature(key_type_t key_type, const struct id* peer,
+static stf_status check_signature(key_type_t key_type, identification_t* peer,
 								  struct state *st, chunk_t hash,
 								  const pb_stream *sig_pbs,
 #ifdef USE_KEYRR
@@ -1529,7 +1598,7 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 #endif /* USE_KEYRR */
 								  const struct gw_info *gateways_from_dns)
 {
-	const struct connection *c = st->st_connection;
+	const connection_t *c = st->st_connection;
 	struct tac_state s;
 
 	s.st = st;
@@ -1545,7 +1614,8 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 		for (gw = c->gw_info; gw != NULL; gw = gw->next)
 		{
 			/* only consider entries that have a key and are for our peer */
-			if (gw->gw_key_present && same_id(&gw->gw_id, &c->spd.that.id)&&
+			if (gw->gw_key_present &&
+				gw->gw_id->equals(gw->gw_id, c->spd.that.id) &&
 				take_a_crack(&s, gw->key))
 			{
 				return STF_OK;
@@ -1564,7 +1634,7 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
 
-			if (type == key_type && same_id(peer, &key->id))
+			if (type == key_type && peer->equals(peer, key->id))
 			{
 				time_t now = time(NULL);
 
@@ -1576,7 +1646,6 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 					*pp = free_public_keyentry(p);
 					continue; /* continue with next public key */
 				}
-
 				if (take_a_crack(&s, key))
 				{
 					return STF_OK;
@@ -1628,34 +1697,30 @@ static stf_status check_signature(key_type_t key_type, const struct id* peer,
 
 	/* no acceptable key was found: diagnose */
 	{
-		char id_buf[BUF_LEN];   /* arbitrary limit on length of ID reported */
-
-		idtoa(peer, id_buf, sizeof(id_buf));
-
 		if (s.tried_cnt == 0)
 		{
-			loglog(RC_LOG_SERIOUS, "no public key known for '%s'", id_buf);
+			loglog(RC_LOG_SERIOUS, "no public key known for '%Y'", peer);
 		}
 		else if (s.tried_cnt == 1)
 		{
-			loglog(RC_LOG_SERIOUS, "signature check for '%s' failed: "
-					" wrong key?; tried %d", id_buf, s.tried_cnt);
+			loglog(RC_LOG_SERIOUS, "signature check for '%Y' failed: "
+					" wrong key?; tried %d", peer, s.tried_cnt);
 			DBG(DBG_CONTROL,
-				DBG_log("public key for '%s' failed: "
-						"decrypted SIG payload into a malformed ECB", id_buf)
+				DBG_log("public key for '%Y' failed: "
+						"decrypted SIG payload into a malformed ECB", peer)
 			)
 		}
 		else
 		{
-			loglog(RC_LOG_SERIOUS, "signature check for '%s' failed: "
-					  "tried %d keys but none worked.", id_buf, s.tried_cnt);
+			loglog(RC_LOG_SERIOUS, "signature check for '%Y' failed: "
+					  "tried %d keys but none worked.", peer, s.tried_cnt);
 			DBG(DBG_CONTROL,
-				DBG_log("all %d public keys for '%s' failed: "
+				DBG_log("all %d public keys for '%Y' failed: "
 						"best decrypted SIG payload into a malformed ECB",
-						s.tried_cnt, id_buf)
+						s.tried_cnt, peer)
 			)
 		}
-		return STF_FAIL + INVALID_KEY_INFORMATION;
+		return STF_FAIL + ISAKMP_INVALID_KEY_INFORMATION;
 	}
 }
 
@@ -1669,12 +1734,12 @@ static notification_t accept_nonce(struct msg_digest *md, chunk_t *dest,
 	{
 		loglog(RC_LOG_SERIOUS, "%s length not between %d and %d"
 			, name , MINIMUM_NONCE_SIZE, MAXIMUM_NONCE_SIZE);
-		return PAYLOAD_MALFORMED;       /* ??? */
+		return ISAKMP_PAYLOAD_MALFORMED;       /* ??? */
 	}
 	free(dest->ptr);
 	*dest = chunk_create(nonce_pbs->cur, len);
 	*dest = chunk_clone(*dest);
-	return NOTHING_WRONG;
+	return ISAKMP_NOTHING_WRONG;
 }
 
 /* encrypt message, sans fixed part of header
@@ -1682,8 +1747,7 @@ static notification_t accept_nonce(struct msg_digest *md, chunk_t *dest,
  * The theory is that there will be no "backing out", so we commit to IV.
  * We also close the pbs.
  */
-bool
-encrypt_message(pb_stream *pbs, struct state *st)
+bool encrypt_message(pb_stream *pbs, struct state *st)
 {
 	u_int8_t *enc_start = pbs->start + sizeof(struct isakmp_hdr);
 	size_t enc_len = pbs_offset(pbs) - sizeof(struct isakmp_hdr);
@@ -1723,7 +1787,7 @@ encrypt_message(pb_stream *pbs, struct state *st)
 	crypter->set_key(crypter, st->st_enc_key);
 	crypter->encrypt(crypter, data, iv, NULL);
 	crypter->destroy(crypter);
- 
+
 	new_iv = data.ptr + data.len - crypter_block_size;
 	memcpy(st->st_new_iv, new_iv, crypter_block_size);
 	update_iv(st);
@@ -1755,7 +1819,7 @@ static size_t quick_mode_hash12(u_char *dest, u_char *start, u_char *roof,
 	if (hash2)
 	{
 		prf->get_bytes(prf, st->st_ni, NULL); /* include Ni_b in the hash */
-	}     
+	}
 	prf->get_bytes(prf, msg_chunk, dest);
 	prf_block_size = prf->get_block_size(prf);
 	prf->destroy(prf);
@@ -1775,13 +1839,12 @@ static size_t quick_mode_hash12(u_char *dest, u_char *start, u_char *roof,
  */
 static size_t quick_mode_hash3(u_char *dest, struct state *st)
 {
-	char seed_buf[] = { 0x00 };
-	chunk_t seed_chunk = chunk_from_buf(seed_buf);
+	chunk_t seed_chunk = chunk_from_chars(0x00);
 	chunk_t msgid_chunk = chunk_from_thing(st->st_msgid);
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
 	size_t prf_block_size;
-	
+
 	prf_alg = oakley_to_prf(st->st_oakley.hash);
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	prf->set_key(prf, st->st_skeyid_a);
@@ -1814,7 +1877,7 @@ void init_phase2_iv(struct state *st, const msgid_t *msgid)
 
 	st->st_new_iv_len = hasher->get_hash_size(hasher);
 	passert(st->st_new_iv_len <= sizeof(st->st_new_iv));
-		
+
 	hasher->get_hash(hasher, iv_chunk, NULL);
 	hasher->get_hash(hasher, msgid_chunk, st->st_new_iv);
 	hasher->destroy(hasher);
@@ -1846,27 +1909,30 @@ static bool emit_subnet_id(ip_subnet *net, u_int8_t np, u_int8_t protoid,
 	id.isaiid_port = port;
 
 	if (!out_struct(&id, &isakmp_ipsec_identification_desc, outs, &id_pbs))
+	{
 		return FALSE;
-
+	}
 	networkof(net, &ta);
 	tal = addrbytesptr(&ta, &tbp);
 	if (!out_raw(tbp, tal, &id_pbs, "client network"))
+	{
 		return FALSE;
-
+	}
 	if (!subnetishost(net))
 	{
 		maskof(net, &ta);
 		tal = addrbytesptr(&ta, &tbp);
 		if (!out_raw(tbp, tal, &id_pbs, "client mask"))
+		{
 			return FALSE;
+		}
 	}
-
 	close_output_pbs(&id_pbs);
 	return TRUE;
 }
 
 stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
-					   struct connection *c, lset_t policy, unsigned long try,
+					   connection_t *c, lset_t policy, unsigned long try,
 					   so_serial_t replacing)
 {
 	struct state *st = duplicate_state(isakmp_sa);
@@ -1878,9 +1944,33 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	bool has_client = c->spd.this.has_client || c->spd.that.has_client ||
 					  c->spd.this.protocol || c->spd.that.protocol ||
 					  c->spd.this.port || c->spd.that.port;
-	
 	bool send_natoa = FALSE;
 	u_int8_t np = ISAKMP_NEXT_NONE;
+	connection_t *ph1_c = isakmp_sa->st_connection;
+
+	if (c->spd.this.modecfg && !c->spd.this.has_client &&
+		c->spd.this.host_srcip->is_anyaddr(c->spd.this.host_srcip))
+	{
+		host_t * ph1_srcip = ph1_c->spd.this.host_srcip;
+
+		if (ph1_c->spd.this.modecfg && !ph1_srcip->is_anyaddr(ph1_srcip))
+		{
+			c->spd.this.host_srcip->destroy(c->spd.this.host_srcip);
+			c->spd.this.host_srcip = ph1_srcip->clone(ph1_srcip);
+			c->spd.this.client = ph1_c->spd.this.client;
+			c->spd.this.has_client = TRUE;
+			plog("inheriting virtual IP source address %H from ModeCfg", ph1_srcip);
+		}
+	}
+
+	if (ph1_c->policy & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK) &&
+		ph1_c->xauth_identity && !c->xauth_identity)
+	{
+		DBG(DBG_CONTROL,
+			DBG_log("inheriting XAUTH identity %Y", ph1_c->xauth_identity)
+		)
+		c->xauth_identity = ph1_c->xauth_identity->clone(ph1_c->xauth_identity);
+	}
 
 	st->st_whack_sock = whack_sock;
 	st->st_connection = c;
@@ -1899,27 +1989,30 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	insert_state(st);   /* needs cookies, connection, and msgid */
 
 	if (replacing == SOS_NOBODY)
-		plog("initiating Quick Mode %s {using isakmp#%lu}"
-			 , prettypolicy(policy)
-			 , isakmp_sa->st_serialno);
+	{
+		plog("initiating Quick Mode %s {using isakmp#%lu}",
+			 prettypolicy(policy), isakmp_sa->st_serialno);
+	}
 	else
-		plog("initiating Quick Mode %s to replace #%lu {using isakmp#%lu}"
-			 , prettypolicy(policy)
-			 , replacing
-			 , isakmp_sa->st_serialno);
-
+	{
+		plog("initiating Quick Mode %s to replace #%lu {using isakmp#%lu}",
+			 prettypolicy(policy), replacing, isakmp_sa->st_serialno);
+	}
 	if (isakmp_sa->nat_traversal & NAT_T_DETECTED)
 	{
 		/* Duplicate nat_traversal status in new state */
 		st->nat_traversal = isakmp_sa->nat_traversal;
 
 		if (isakmp_sa->nat_traversal & LELEM(NAT_TRAVERSAL_NAT_BHND_ME))
+		{
 			has_client = TRUE;
-
+		}
 	   nat_traversal_change_port_lookup(NULL, st);
 	}
 	else
+	{
 		st->nat_traversal = 0;
+	}
 
 	/* are we going to send a NAT-OA payload? */
 	if ((st->nat_traversal & NAT_T_WITH_NATOA)
@@ -1957,13 +2050,15 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 
 	/* SA out */
 
-	/* 
+	/*
 	 * See if pfs_group has been specified for this conn,
 	 * if not, fallback to old use-same-as-P1 behaviour
 	 */
 #ifndef NO_IKE_ALG
 	if (st->st_connection)
+	{
 			st->st_pfs_group = ike_alg_pfsgroup(st->st_connection, policy);
+	}
 	if (!st->st_pfs_group)
 #endif
 	/* If PFS specified, use the same group as during Phase 1:
@@ -1979,11 +2074,12 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 		lset_t pm = POLICY_ENCRYPT | POLICY_AUTHENTICATE;
 
 		if (can_do_IPcomp)
+		{
 			pm |= POLICY_COMPRESS;
-
-		if (!out_sa(&rbody
-		, &ipsec_sadb[(st->st_policy & pm) >> POLICY_IPSEC_SHIFT]
-		, st, FALSE, ISAKMP_NEXT_NONCE))
+		}
+		if (!out_sa(&rbody,
+			&ipsec_sadb[(st->st_policy & pm) >> POLICY_IPSEC_SHIFT],
+			st, FALSE, ISAKMP_NEXT_NONCE))
 		{
 			reset_cur_state();
 			return STF_INTERNAL_ERROR;
@@ -2063,14 +2159,18 @@ stf_status quick_outI1(int whack_sock, struct state *isakmp_sa,
 	event_schedule(EVENT_RETRANSMIT, EVENT_RETRANSMIT_DELAY_0, st);
 
 	if (replacing == SOS_NOBODY)
+	{
 		whack_log(RC_NEW_STATE + STATE_QUICK_I1
 			, "%s: initiate"
 			, enum_name(&state_names, st->st_state));
+	}
 	else
+	{
 		whack_log(RC_NEW_STATE + STATE_QUICK_I1
 			, "%s: initiate to replace #%lu"
 			, enum_name(&state_names, st->st_state)
 			, replacing);
+	}
 	reset_cur_state();
 	return STF_OK;
 }
@@ -2092,35 +2192,45 @@ static void decode_cert(struct msg_digest *md)
 		blob.len = pbs_left(&p->pbs);
 		if (cert->isacert_type == CERT_X509_SIGNATURE)
 		{
-			x509cert_t cert = empty_x509cert;
-			if (parse_x509cert(blob, 0, &cert))
+			cert_t x509cert = cert_empty;
+
+			x509cert.cert = lib->creds->create(lib->creds,
+							  				   CRED_CERTIFICATE, CERT_X509,
+							  				   BUILD_BLOB_ASN1_DER, blob,
+							  				   BUILD_END);
+			if (x509cert.cert)
 			{
-				if (verify_x509cert(&cert, strict_crl_policy, &valid_until))
+				if (verify_x509cert(&x509cert, strict_crl_policy, &valid_until))
 				{
 					DBG(DBG_PARSING,
 						DBG_log("Public key validated")
 					)
-					add_x509_public_key(&cert, valid_until, DAL_SIGNED);
+					add_public_key_from_cert(&x509cert, valid_until, DAL_SIGNED);
 				}
 				else
 				{
 					plog("X.509 certificate rejected");
 				}
-				DESTROY_IF(cert.public_key);
-				free_generalNames(cert.subjectAltName, FALSE);
-				free_generalNames(cert.crlDistributionPoints, FALSE);
+				x509cert.cert->destroy(x509cert.cert);
 			}
 			else
+			{
 				plog("Syntax error in X.509 certificate");
+			}
 		}
 		else if (cert->isacert_type == CERT_PKCS7_WRAPPED_X509)
 		{
-			x509cert_t *cert = NULL;
+			linked_list_t *certs = linked_list_create();
 
-			if (pkcs7_parse_signedData(blob, NULL, &cert, NULL, NULL))
-				store_x509certs(&cert, strict_crl_policy);
+			if (pkcs7_parse_signedData(blob, NULL, certs, NULL, NULL))
+			{
+				store_x509certs(certs, strict_crl_policy);
+			}
 			else
+			{
 				plog("Syntax error in PKCS#7 wrapped X.509 certificates");
+			}
+			certs->destroy_offset(certs, offsetof(certificate_t, destroy));
 		}
 		else
 		{
@@ -2134,7 +2244,7 @@ static void decode_cert(struct msg_digest *md)
 /*
  * Decode the CR payload of Phase 1.
  */
-static void decode_cr(struct msg_digest *md, struct connection *c)
+static void decode_cr(struct msg_digest *md, connection_t *c)
 {
 	struct payload_digest *p;
 
@@ -2142,7 +2252,7 @@ static void decode_cr(struct msg_digest *md, struct connection *c)
 	{
 		struct isakmp_cr *const cr = &p->payload.cr;
 		chunk_t ca_name;
-		
+
 		ca_name.len = pbs_left(&p->pbs);
 		ca_name.ptr = (ca_name.len > 0)? p->pbs.cur : NULL;
 
@@ -2150,32 +2260,37 @@ static void decode_cr(struct msg_digest *md, struct connection *c)
 
 		if (cr->isacr_type == CERT_X509_SIGNATURE)
 		{
-			char buf[BUF_LEN];
-
 			if (ca_name.len > 0)
 			{
-				generalName_t *gn;
-				
-				if (!is_asn1(ca_name))
-					continue;
+				identification_t *ca;
 
-				gn = malloc_thing(generalName_t);
-				ca_name = chunk_clone(ca_name);
-				gn->kind = GN_DIRECTORY_NAME;
-				gn->name = ca_name;
-				gn->next = c->requested_ca;
-				c->requested_ca = gn;
+				if (!is_asn1(ca_name))
+				{
+					continue;
+				}
+				if (c->requested_ca == NULL)
+				{
+					c->requested_ca = linked_list_create();
+				}
+				ca = identification_create_from_encoding(ID_DER_ASN1_DN, ca_name);
+				c->requested_ca->insert_last(c->requested_ca, ca);
+				DBG(DBG_PARSING | DBG_CONTROL,
+					DBG_log("requested CA: \"%Y\"", ca)
+				)
+			}
+			else
+			{
+				DBG(DBG_PARSING | DBG_CONTROL,
+					DBG_log("requested CA: %%any")
+				)
 			}
 			c->got_certrequest = TRUE;
-
-			DBG(DBG_PARSING | DBG_CONTROL,
-				dntoa_or_null(buf, BUF_LEN, ca_name, "%any");
-				DBG_log("requested CA: '%s'", buf);
-			)
 		}
 		else
+		{
 			loglog(RC_LOG_SERIOUS, "ignoring %s certificate request payload",
 				   enum_show(&cert_type_names, cr->isacr_type));
+		}
 	}
 }
 
@@ -2184,12 +2299,13 @@ static void decode_cr(struct msg_digest *md, struct connection *c)
  * We must be called before SIG or HASH are decoded since we
  * may change the peer's public key or ID.
  */
-static bool decode_peer_id(struct msg_digest *md, struct id *peer)
+static bool decode_peer_id(struct msg_digest *md, identification_t **peer)
 {
 	struct state *const st = md->st;
 	struct payload_digest *const id_pld = md->chain[ISAKMP_NEXT_ID];
 	const pb_stream *const id_pbs = &id_pld->pbs;
 	struct isakmp_id *const id = &id_pld->payload.id;
+	chunk_t id_payload;
 
 	/* I think that RFC2407 (IPSEC DOI) 4.6.2 is confused.
 	 * It talks about the protocol ID and Port fields of the ID
@@ -2218,74 +2334,50 @@ static bool decode_peer_id(struct msg_digest *md, struct id *peer)
 		return FALSE;
 	}
 
-	peer->kind = id->isaid_idtype;
+	id_payload = chunk_create(id_pbs->cur, pbs_left(id_pbs));
 
-	switch (peer->kind)
+	switch (id->isaid_idtype)
 	{
-	case ID_IPV4_ADDR:
-	case ID_IPV6_ADDR:
-		/* failure mode for initaddr is probably inappropriate address length */
-		{
-			err_t ugh = initaddr(id_pbs->cur, pbs_left(id_pbs)
-				, peer->kind == ID_IPV4_ADDR? AF_INET : AF_INET6
-				, &peer->ip_addr);
-
-			if (ugh != NULL)
+		case ID_IPV4_ADDR:
+			if (id_payload.len != 4)
 			{
-				loglog(RC_LOG_SERIOUS, "improper %s identification payload: %s"
-					, enum_show(&ident_names, peer->kind), ugh);
-				/* XXX Could send notification back */
+				loglog(RC_LOG_SERIOUS, "improper %s Phase 1 ID payload",
+								enum_show(&ident_names, id->isaid_idtype));
 				return FALSE;
 			}
-		}
-		break;
-
-	case ID_USER_FQDN:
-		if (memchr(id_pbs->cur, '@', pbs_left(id_pbs)) == NULL)
-		{
-			loglog(RC_LOG_SERIOUS, "peer's ID_USER_FQDN contains no @");
+			break;
+		case ID_IPV6_ADDR:
+			if (id_payload.len != 16)
+			{
+				loglog(RC_LOG_SERIOUS, "improper %s Phase 1 ID payload",
+								enum_show(&ident_names, id->isaid_idtype));
+				return FALSE;
+			}
+			break;
+		case ID_USER_FQDN:
+		case ID_FQDN:
+			if (memchr(id_payload.ptr, '\0', id_payload.len) != NULL)
+			{
+				loglog(RC_LOG_SERIOUS, "%s Phase 1 ID payload contains "
+									   "a NUL character",
+								enum_show(&ident_names, id->isaid_idtype));
+				return FALSE;
+			}
+			break;
+		case ID_KEY_ID:
+		case ID_DER_ASN1_DN:
+			break;
+		default:
+			/* XXX Could send notification back */
+			loglog(RC_LOG_SERIOUS, "unacceptable identity type (%s) "
+								   "in Phase 1 ID payload",
+								enum_show(&ident_names, id->isaid_idtype));
 			return FALSE;
-		}
-		/* FALLTHROUGH */
-	case ID_FQDN:
-		if (memchr(id_pbs->cur, '\0', pbs_left(id_pbs)) != NULL)
-		{
-			loglog(RC_LOG_SERIOUS, "Phase 1 ID Payload of type %s contains a NUL"
-				, enum_show(&ident_names, peer->kind));
-			return FALSE;
-		}
-
-		/* ??? ought to do some more sanity check, but what? */
-
-		peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
-		break;
-
-	case ID_KEY_ID:
-		peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
-		DBG(DBG_PARSING,
-			DBG_dump_chunk("KEY ID:", peer->name));
-		break;
-
-	case ID_DER_ASN1_DN:
-		peer->name = chunk_create(id_pbs->cur, pbs_left(id_pbs));
-		DBG(DBG_PARSING,
-			DBG_dump_chunk("DER ASN1 DN:", peer->name));
-		break;
-
-	default:
-		/* XXX Could send notification back */
-		loglog(RC_LOG_SERIOUS, "Unacceptable identity type (%s) in Phase 1 ID Payload"
-			, enum_show(&ident_names, peer->kind));
-		return FALSE;
 	}
+	*peer = identification_create_from_encoding(id->isaid_idtype, id_payload);
 
-	{
-		char buf[BUF_LEN];
-
-		idtoa(peer, buf, sizeof(buf));
-		plog("Peer ID is %s: '%s'",
-			enum_show(&ident_names, id->isaid_idtype), buf);
-	}
+	plog("Peer ID is %s: '%Y'",	enum_show(&ident_names, id->isaid_idtype),
+								*peer);
 
 	/* check for certificates */
 	decode_cert(md);
@@ -2298,45 +2390,51 @@ static bool decode_peer_id(struct msg_digest *md, struct id *peer)
  * - if the initiation was explicit, we'd be ignoring user's intent
  * - if opportunistic, we'll lose our HOLD info
  */
-static bool switch_connection(struct msg_digest *md, struct id *peer,
+static bool switch_connection(struct msg_digest *md, identification_t *peer,
 							  bool initiator)
 {
 	struct state *const st = md->st;
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
+	identification_t *peer_ca;
 
-	chunk_t peer_ca = (st->st_peer_pubkey != NULL)
-					 ? st->st_peer_pubkey->issuer : chunk_empty;
-
-	DBG(DBG_CONTROL,
-		char buf[BUF_LEN];
-
-		dntoa_or_null(buf, BUF_LEN, peer_ca, "%none");
-		DBG_log("peer CA:      '%s'", buf);
-	)
+	peer_ca = st->st_peer_pubkey ? st->st_peer_pubkey->issuer : NULL;
+	if (peer_ca)
+	{
+		DBG(DBG_CONTROL,
+			DBG_log("peer CA:      \"%Y\"", peer_ca)
+		)
+	}
+	else
+	{
+		DBG(DBG_CONTROL,
+			DBG_log("peer CA:      %%none")
+		)
+	}
 
 	if (initiator)
 	{
 		int pathlen;
 
-		if (!same_id(&c->spd.that.id, peer))
+		if (!peer->equals(peer, c->spd.that.id))
 		{
-			char expect[BUF_LEN]
-				, found[BUF_LEN];
-
-			idtoa(&c->spd.that.id, expect, sizeof(expect));
-			idtoa(peer, found, sizeof(found));
-			loglog(RC_LOG_SERIOUS
-				, "we require peer to have ID '%s', but peer declares '%s'"
-				, expect, found);
+			loglog(RC_LOG_SERIOUS,
+					"we require peer to have ID '%Y', but peer declares '%Y'",
+					c->spd.that.id, peer);
 			return FALSE;
 		}
 
-		DBG(DBG_CONTROL,
-			char buf[BUF_LEN];
-
-			dntoa_or_null(buf, BUF_LEN, c->spd.that.ca, "%none");
-			DBG_log("required CA:  '%s'", buf);
-		)
+		if (c->spd.that.ca)
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("required CA:  \"%s\"", c->spd.that.ca);
+			)
+		}
+		else
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("required CA:  %%none");
+			)
+		}
 
 		if (!trusted_ca(peer_ca, c->spd.that.ca, &pathlen))
 		{
@@ -2347,7 +2445,7 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 	}
 	else
 	{
-		struct connection *r;
+		connection_t *r;
 
 		/* check for certificate requests */
 		decode_cr(md, c);
@@ -2355,24 +2453,31 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 		r = refine_host_connection(st, peer, peer_ca);
 
 		/* delete the collected certificate requests */
-		free_generalNames(c->requested_ca, TRUE);
-		c->requested_ca = NULL;
+		if (c->requested_ca)
+		{
+			c->requested_ca->destroy_offset(c->requested_ca,
+									 offsetof(identification_t, destroy));
+			c->requested_ca = NULL;
+		}
 
 		if (r == NULL)
 		{
-			char buf[BUF_LEN];
-
-			idtoa(peer, buf, sizeof(buf));
-			loglog(RC_LOG_SERIOUS, "no suitable connection for peer '%s'", buf);
+			loglog(RC_LOG_SERIOUS, "no suitable connection for peer '%Y'", peer);
 			return FALSE;
 		}
 
-		DBG(DBG_CONTROL,
-			char buf[BUF_LEN];
-
-			dntoa_or_null(buf, BUF_LEN, r->spd.this.ca, "%none");
-			DBG_log("offered CA:   '%s'", buf);
-		)
+		if (r->spd.this.ca)
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("offered CA:   \"%Y\"", r->spd.this.ca)
+			)
+		}
+		else
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("offered CA:   %%none")
+			)
+		}
 
 		if (r != c)
 		{
@@ -2396,10 +2501,9 @@ static bool switch_connection(struct msg_digest *md, struct id *peer,
 		}
 		else if (c->spd.that.has_id_wildcards)
 		{
-			free_id_content(&c->spd.that.id);
-			c->spd.that.id = *peer;
+			c->spd.that.id->destroy(c->spd.that.id);
+			c->spd.that.id = peer->clone(peer);
 			c->spd.that.has_id_wildcards = FALSE;
-			unshare_id_content(&c->spd.that.id);
 		}
 	}
 	return TRUE;
@@ -2489,13 +2593,19 @@ static bool decode_net_id(struct isakmp_ipsec_id *id, pb_stream *id_pbs,
 			ugh = initaddr(id_pbs->cur
 				, afi->ia_sz, afi->af, &temp_address);
 			if (ugh == NULL)
+			{
 				ugh = initaddr(id_pbs->cur + afi->ia_sz
 					, afi->ia_sz, afi->af, &temp_mask);
+			}
 			if (ugh == NULL)
+			{
 				ugh = initsubnet(&temp_address, masktocount(&temp_mask)
 					, '0', net);
+			}
 			if (ugh == NULL && subnetisnone(net))
+			{
 				ugh = "contains only anyaddr";
+			}
 			if (ugh != NULL)
 			{
 				loglog(RC_LOG_SERIOUS, "%s ID payload %s bad subnet in Quick I1 (%s)"
@@ -2528,8 +2638,10 @@ static bool decode_net_id(struct isakmp_ipsec_id *id, pb_stream *id_pbs,
 			}
 			ugh = initaddr(id_pbs->cur, afi->ia_sz, afi->af, &temp_address_from);
 			if (ugh == NULL)
+			{
 				ugh = initaddr(id_pbs->cur + afi->ia_sz
 					, afi->ia_sz, afi->af, &temp_address_to);
+			}
 			if (ugh != NULL)
 			{
 				loglog(RC_LOG_SERIOUS, "%s ID payload %s malformed (%s) in Quick I1"
@@ -2540,7 +2652,9 @@ static bool decode_net_id(struct isakmp_ipsec_id *id, pb_stream *id_pbs,
 
 			ugh = rangetosubnet(&temp_address_from, &temp_address_to, net);
 			if (ugh == NULL && subnetisnone(net))
+			{
 				ugh = "contains only anyaddr";
+			}
 			if (ugh != NULL)
 			{
 				char temp_buff1[ADDRTOT_BUF], temp_buff2[ADDRTOT_BUF];
@@ -2582,8 +2696,9 @@ static bool check_net_id(struct isakmp_ipsec_id *id, pb_stream *id_pbs,
 	ip_subnet net_temp;
 
 	if (!decode_net_id(id, id_pbs, &net_temp, which))
+	{
 		return FALSE;
-
+	}
 	if (!samesubnet(net, &net_temp)
 	|| *protoid != id->isaiid_protoid || *port != id->isaiid_port)
 	{
@@ -2598,7 +2713,7 @@ static bool check_net_id(struct isakmp_ipsec_id *id, pb_stream *id_pbs,
  */
 static bool has_preloaded_public_key(struct state *st)
 {
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 
 	/* do not consider rw connections since
 	 * the peer's identity must be known
@@ -2613,7 +2728,8 @@ static bool has_preloaded_public_key(struct state *st)
 			pubkey_t *key = p->key;
 			key_type_t type = key->public_key->get_type(key->public_key);
 
-			if (type == KEY_RSA && same_id(&c->spd.that.id, &key->id) &&
+			if (type == KEY_RSA &&
+				c->spd.that.id->equals(c->spd.that.id, key->id) &&
 				key->until_time == UNDEFINED_TIME)
 			{
 				/* found a preloaded public key */
@@ -2639,77 +2755,79 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 	 */
 	switch (protoid)
 	{
-	case PROTO_IPSEC_ESP:
-			switch (pi->attrs.transid)
+		case PROTO_IPSEC_ESP:
+		{
+			needed_len = kernel_alg_esp_enc_keylen(pi->attrs.transid);
+
+			if (needed_len && pi->attrs.key_len)
 			{
-			case ESP_NULL:
-				needed_len = 0;
-				break;
-			case ESP_DES:
-				needed_len = DES_CBC_BLOCK_SIZE;
-				break;
-			case ESP_3DES:
-				needed_len = DES_CBC_BLOCK_SIZE * 3;
-				break;
-			default:
-#ifndef NO_KERNEL_ALG
-				if((needed_len=kernel_alg_esp_enc_keylen(pi->attrs.transid))>0) {
-						/* XXX: check key_len "coupling with kernel.c's */
-						if (pi->attrs.key_len) {
-								needed_len=pi->attrs.key_len/8;
-								DBG(DBG_PARSING, DBG_log("compute_proto_keymat:"
-												"key_len=%d from peer",
-												(int)needed_len));
-						}
-						break;
-				}
-#endif
-				bad_case(pi->attrs.transid);
+				needed_len = pi->attrs.key_len / BITS_PER_BYTE;
 			}
 
-#ifndef NO_KERNEL_ALG
-			DBG(DBG_PARSING, DBG_log("compute_proto_keymat:"
-									"needed_len (after ESP enc)=%d",
-									(int)needed_len));
-			if (kernel_alg_esp_auth_ok(pi->attrs.auth, NULL)) {
+			switch (pi->attrs.transid)
+			{
+				case ESP_NULL:
+					needed_len = 0;
+					break;
+				case ESP_AES_CCM_8:
+				case ESP_AES_CCM_12:
+				case ESP_AES_CCM_16:
+					needed_len += 3;
+					break;
+				case ESP_AES_GCM_8:
+				case ESP_AES_GCM_12:
+				case ESP_AES_GCM_16:
+				case ESP_AES_CTR:
+				case ESP_AES_GMAC:
+					needed_len += 4;
+					break;
+				default:
+					if (needed_len == 0)
+					{
+						bad_case(pi->attrs.transid);
+					}
+			}
+
+			if (kernel_alg_esp_auth_ok(pi->attrs.auth, NULL))
+			{
 				needed_len += kernel_alg_esp_auth_keylen(pi->attrs.auth);
-			} else
-#endif
-			switch (pi->attrs.auth)
-			{
-			case AUTH_ALGORITHM_NONE:
-				break;
-			case AUTH_ALGORITHM_HMAC_MD5:
-				needed_len += HMAC_MD5_KEY_LEN;
-				break;
-			case AUTH_ALGORITHM_HMAC_SHA1:
-				needed_len += HMAC_SHA1_KEY_LEN;
-				break;
-			case AUTH_ALGORITHM_DES_MAC:
-			default:
-				bad_case(pi->attrs.auth);
 			}
-			DBG(DBG_PARSING, DBG_log("compute_proto_keymat:"
-									"needed_len (after ESP auth)=%d",
-									(int)needed_len));
+			else
+			{
+				switch (pi->attrs.auth)
+				{
+					case AUTH_ALGORITHM_NONE:
+						break;
+					case AUTH_ALGORITHM_HMAC_MD5:
+						needed_len += HMAC_MD5_KEY_LEN;
+						break;
+					case AUTH_ALGORITHM_HMAC_SHA1:
+						needed_len += HMAC_SHA1_KEY_LEN;
+						break;
+					case AUTH_ALGORITHM_DES_MAC:
+					default:
+						bad_case(pi->attrs.auth);
+				}
+			}
 			break;
-
-	case PROTO_IPSEC_AH:
+		}
+		case PROTO_IPSEC_AH:
+		{
 			switch (pi->attrs.transid)
 			{
-			case AH_MD5:
-				needed_len = HMAC_MD5_KEY_LEN;
-				break;
-			case AH_SHA:
-				needed_len = HMAC_SHA1_KEY_LEN;
-				break;
-			default:
-				bad_case(pi->attrs.transid);
+				case AH_MD5:
+					needed_len = HMAC_MD5_KEY_LEN;
+					break;
+				case AH_SHA:
+					needed_len = HMAC_SHA1_KEY_LEN;
+					break;
+				default:
+					bad_case(pi->attrs.transid);
 			}
 			break;
-
-	default:
-		bad_case(protoid);
+		}
+		default:
+			bad_case(protoid);
 	}
 
 	pi->keymat_len = needed_len;
@@ -2744,7 +2862,7 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 			char *keymat_i_peer = pi->peer_keymat + i;
 			chunk_t keymat_our  = { keymat_i_our,  prf_block_size };
 			chunk_t keymat_peer = { keymat_i_peer, prf_block_size };
-			
+
 			if (st->st_shared.ptr != NULL)
 			{
 				/* PFS: include the g^xy */
@@ -2784,9 +2902,13 @@ static void compute_proto_keymat(struct state *st, u_int8_t protoid,
 static void compute_keymats(struct state *st)
 {
 	if (st->st_ah.present)
+	{
 		compute_proto_keymat(st, PROTO_IPSEC_AH, &st->st_ah);
+	}
 	if (st->st_esp.present)
+	{
 		compute_proto_keymat(st, PROTO_IPSEC_ESP, &st->st_esp);
+	}
 }
 
 static bool uses_pubkey_auth(int auth)
@@ -2803,6 +2925,38 @@ static bool uses_pubkey_auth(int auth)
 			return TRUE;
 		default:
 			return FALSE;
+	}
+}
+
+/* build an ID payload
+ * Note: no memory is allocated for the body of the payload (tl->ptr).
+ * We assume it will end up being a pointer into a sufficiently
+ * stable datastructure.  It only needs to last a short time.
+ */
+static void build_id_payload(struct isakmp_ipsec_id *hd, chunk_t *tl, struct end *end)
+{
+	identification_t *id = resolve_myid(end->id);
+
+	zero(hd);
+	hd->isaiid_idtype = id->get_type(id);
+
+	switch (id->get_type(id))
+	{
+		case ID_ANY:
+			hd->isaiid_idtype = aftoinfo(addrtypeof(&end->host_addr))->id_addr;
+			tl->len = addrbytesptr(&end->host_addr,
+						(const unsigned char **)&tl->ptr); /* sets tl->ptr too */
+			break;
+		case ID_IPV4_ADDR:
+		case ID_IPV6_ADDR:
+		case ID_FQDN:
+		case ID_USER_FQDN:
+		case ID_DER_ASN1_DN:
+		case ID_KEY_ID:
+			*tl = id->get_encoding(id);
+			break;
+		default:
+			bad_case(id->get_type(id));
 	}
 }
 
@@ -2832,7 +2986,7 @@ stf_status main_inI1_outR1(struct msg_digest *md)
 {
 	struct payload_digest *const sa_pd = md->chain[ISAKMP_NEXT_SA];
 	struct state *st;
-	struct connection *c;
+	connection_t *c;
 	struct isakmp_proposal proposal;
 	pb_stream proposal_pbs;
 	pb_stream r_sa_pbs;
@@ -2876,7 +3030,7 @@ stf_status main_inI1_outR1(struct msg_digest *md)
 		 * but Food Groups kind of assumes one.
 		 */
 		{
-			struct connection *d;
+			connection_t *d;
 
 			d = find_host_connection(&md->iface->addr
 				, pluto_port, (ip_address*)NULL, md->sender_port, policy);
@@ -2935,7 +3089,7 @@ stf_status main_inI1_outR1(struct msg_digest *md)
 		/* Create an instance
 		 * This is a rare case: wildcard peer ID but static peer IP address
 		 */
-		 c = rw_instantiate(c, &md->sender, md->sender_port, NULL, &c->spd.that.id);
+		 c = rw_instantiate(c, &md->sender, md->sender_port, NULL, c->spd.that.id);
 	}
 
 	/* Set up state */
@@ -3125,7 +3279,7 @@ stf_status main_inR1_outI2(struct msg_digest *md)
 		{
 			loglog(RC_LOG_SERIOUS, "a single Transform is required in a selecting Oakley Proposal; found %u"
 			, (unsigned)proposal.isap_notrans);
-			RETURN_STF_FAILURE(BAD_PROPOSAL_SYNTAX);
+			RETURN_STF_FAILURE(ISAKMP_BAD_PROPOSAL_SYNTAX);
 		}
 		RETURN_STF_FAILURE(parse_isakmp_sa_body(ipsecdoisit
 			, &proposal_pbs, &proposal, NULL, st, TRUE));
@@ -3154,35 +3308,46 @@ stf_status main_inR1_outI2(struct msg_digest *md)
 	/* KE out */
 	if (!build_and_ship_KE(st, &st->st_gi, st->st_oakley.group
 	, &md->rbody, ISAKMP_NEXT_NONCE))
+	{
 		return STF_INTERNAL_ERROR;
+	}
 
 #ifdef DEBUG
 	/* Ni out */
 	if (!build_and_ship_nonce(&st->st_ni, &md->rbody
 	, (cur_debugging & IMPAIR_BUST_MI2)? ISAKMP_NEXT_VID : np, "Ni"))
+	{
 		return STF_INTERNAL_ERROR;
-
+	}
 	if (cur_debugging & IMPAIR_BUST_MI2)
 	{
 		/* generate a pointless large VID payload to push message over MTU */
 		pb_stream vid_pbs;
 
 		if (!out_generic(np, &isakmp_vendor_id_desc, &md->rbody, &vid_pbs))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 		if (!out_zero(1500 /*MTU?*/, &vid_pbs, "Filler VID"))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 		close_output_pbs(&vid_pbs);
 	}
 #else
 	/* Ni out */
 	if (!build_and_ship_nonce(&st->st_ni, &md->rbody, np, "Ni"))
+	{
 		return STF_INTERNAL_ERROR;
+	}
 #endif
 
 	if (st->nat_traversal & NAT_T_WITH_NATD)
 	{
 		if (!nat_traversal_add_natd(ISAKMP_NEXT_NONE, &md->rbody, md))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 	}
 
 	/* finish message */
@@ -3250,15 +3415,18 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 	/* KE out */
 	if (!build_and_ship_KE(st, &st->st_gr, st->st_oakley.group
 	, &md->rbody, ISAKMP_NEXT_NONCE))
+	{
 		return STF_INTERNAL_ERROR;
+	}
 
 #ifdef DEBUG
 	/* Nr out */
-	if (!build_and_ship_nonce(&st->st_nr, &md->rbody
-	, (cur_debugging & IMPAIR_BUST_MR2)? ISAKMP_NEXT_VID
+	if (!build_and_ship_nonce(&st->st_nr, &md->rbody,
+	   (cur_debugging & IMPAIR_BUST_MR2)? ISAKMP_NEXT_VID
 		: (send_cr? ISAKMP_NEXT_CR : np), "Nr"))
+	{
 		return STF_INTERNAL_ERROR;
-
+	}
 	if (cur_debugging & IMPAIR_BUST_MR2)
 	{
 		/* generate a pointless large VID payload to push message over MTU */
@@ -3266,9 +3434,13 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 
 		if (!out_generic((send_cr)? ISAKMP_NEXT_CR : np,
 			&isakmp_vendor_id_desc, &md->rbody, &vid_pbs))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 		if (!out_zero(1500 /*MTU?*/, &vid_pbs, "Filler VID"))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 		close_output_pbs(&vid_pbs);
 	}
 #else
@@ -3283,33 +3455,50 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 	{
 		if (st->st_connection->kind == CK_PERMANENT)
 		{
-			if (!build_and_ship_CR(CERT_X509_SIGNATURE
-			, st->st_connection->spd.that.ca
-			, &md->rbody, np))
+			identification_t *ca = st->st_connection->spd.that.ca;
+			chunk_t cr = (ca) ? ca->get_encoding(ca) : chunk_empty;
+
+			if (!build_and_ship_CR(CERT_X509_SIGNATURE, cr, &md->rbody, np))
+			{
 				return STF_INTERNAL_ERROR;
+			}
 		}
 		else
 		{
-			generalName_t *ca = NULL;
+			linked_list_t *list = collect_rw_ca_candidates(md);
+			int count = list->get_count(list);
+			bool error = FALSE;
 
-			if (collect_rw_ca_candidates(md, &ca))
+			if (count)
 			{
-				generalName_t *gn;
+				enumerator_t *enumerator;
+				identification_t *ca;
 
-				for (gn = ca; gn != NULL; gn = gn->next)
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &ca))
 				{
-					if (!build_and_ship_CR(CERT_X509_SIGNATURE, gn->name
-					, &md->rbody
-					, gn->next == NULL ? np : ISAKMP_NEXT_CR))
-						return STF_INTERNAL_ERROR;
+					if (!build_and_ship_CR(CERT_X509_SIGNATURE,
+										   ca->get_encoding(ca), &md->rbody,
+										   --count ? ISAKMP_NEXT_CR : np))
+					{
+						error = TRUE;
+						break;
+					}
 				}
-				free_generalNames(ca, FALSE);
+				enumerator->destroy(enumerator);
 			}
 			else
 			{
-				if (!build_and_ship_CR(CERT_X509_SIGNATURE, chunk_empty
-				, &md->rbody, np))
-					return STF_INTERNAL_ERROR;
+				if (!build_and_ship_CR(CERT_X509_SIGNATURE, chunk_empty,
+									   &md->rbody, np))
+				{
+					error = TRUE;
+				}
+			}
+			list->destroy_offset(list, offsetof(identification_t, destroy));
+			if (error)
+			{
+				return STF_INTERNAL_ERROR;
 			}
 		}
 	}
@@ -3317,7 +3506,9 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 	if (st->nat_traversal & NAT_T_WITH_NATD)
 	{
 	   if (!nat_traversal_add_natd(ISAKMP_NEXT_NONE, &md->rbody, md))
+		{
 		   return STF_INTERNAL_ERROR;
+		}
 	}
 
 	/* finish message */
@@ -3328,7 +3519,9 @@ stf_status main_inI2_outR2(struct msg_digest *md)
 	 */
 	compute_dh_shared(st, st->st_gi);
 	if (!generate_skeyids_iv(st))
-		return STF_FAIL + AUTHENTICATION_FAILED;
+	{
+		return STF_FAIL + ISAKMP_AUTHENTICATION_FAILED;
+	}
 	update_iv(st);
 
 	return STF_OK;
@@ -3350,8 +3543,9 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	pb_stream *const keyex_pbs = &md->chain[ISAKMP_NEXT_KE]->pbs;
 	pb_stream id_pbs;   /* ID Payload; also used for hash calculation */
 
-	certpolicy_t cert_policy = st->st_connection->spd.this.sendcert;
-	cert_t mycert = st->st_connection->spd.this.cert;
+	connection_t *c = st->st_connection;
+	certpolicy_t cert_policy = c->spd.this.sendcert;
+	cert_t *mycert = c->spd.this.cert;
 	bool requested, send_cert, send_cr;
 	bool pubkey_auth = uses_pubkey_auth(st->st_oakley.auth);
 
@@ -3364,22 +3558,26 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	RETURN_STF_FAILURE(accept_nonce(md, &st->st_nr, "Nr"));
 
 	/* decode certificate requests */
-	st->st_connection->got_certrequest = FALSE;
-	decode_cr(md, st->st_connection);
+	c->got_certrequest = FALSE;
+	decode_cr(md, c);
 
 	/* free collected certificate requests since as initiator
 	 * we don't heed them anyway
 	 */
-	free_generalNames(st->st_connection->requested_ca, TRUE);
-	st->st_connection->requested_ca = NULL;
+	if (c->requested_ca)
+	{
+		c->requested_ca->destroy_offset(c->requested_ca,
+								 offsetof(identification_t, destroy));
+		c->requested_ca = NULL;
+	}
 
 	/* send certificate if auth is RSA, we have one and we want
 	 * or are requested to send it
 	 */
-	requested = cert_policy == CERT_SEND_IF_ASKED
-				&& st->st_connection->got_certrequest;
-	send_cert = pubkey_auth && mycert.type != CERT_NONE
-				&& (cert_policy == CERT_ALWAYS_SEND || requested);
+	requested = cert_policy == CERT_SEND_IF_ASKED && c->got_certrequest;
+	send_cert = pubkey_auth && mycert &&
+				mycert->cert->get_type(mycert->cert) == CERT_X509 &&
+				(cert_policy == CERT_ALWAYS_SEND || requested);
 
 	/* send certificate request if we don't have a preloaded RSA public key */
 	send_cr = !no_cr_send && send_cert && !has_preloaded_public_key(st);
@@ -3387,8 +3585,9 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	/* done parsing; initialize crypto  */
 	compute_dh_shared(st, st->st_gr);
 	if (!generate_skeyids_iv(st))
-		return STF_FAIL + AUTHENTICATION_FAILED;
-
+	{
+		return STF_FAIL + ISAKMP_AUTHENTICATION_FAILED;
+	}
 	if (st->nat_traversal & NAT_T_WITH_NATD)
 	{
 		nat_traversal_natd_lookup(md);
@@ -3412,11 +3611,13 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		struct isakmp_ipsec_id id_hd;
 		chunk_t id_b;
 
-		build_id_payload(&id_hd, &id_b, &st->st_connection->spd.this);
+		build_id_payload(&id_hd, &id_b, &c->spd.this);
 		id_hd.isaiid_np = (send_cert)? ISAKMP_NEXT_CERT : auth_payload;
 		if (!out_struct(&id_hd, &isakmp_ipsec_identification_desc, &md->rbody, &id_pbs)
 		|| !out_chunk(id_b, &id_pbs, "my identity"))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 		close_output_pbs(&id_pbs);
 	}
 
@@ -3426,12 +3627,14 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 		DBG(DBG_CONTROL,
 			DBG_log("our certificate policy is %N", cert_policy_names, cert_policy)
 		)
-		if (mycert.type != CERT_NONE)
+		if (mycert && mycert->cert->get_type(mycert->cert) == CERT_X509)
 		{
 			const char *request_text = "";
 
 			if (cert_policy == CERT_SEND_IF_ASKED)
+			{
 				request_text = (send_cert)? "upon request":"without request";
+			}
 			plog("we have a cert %s sending it %s"
 				, send_cert? "and are":"but are not", request_text);
 		}
@@ -3442,31 +3645,46 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 	}
 	if (send_cert)
 	{
+		bool success = FALSE;
+		chunk_t cert_encoding;
 		pb_stream cert_pbs;
 
 		struct isakmp_cert cert_hd;
 		cert_hd.isacert_np = (send_cr)? ISAKMP_NEXT_CR : ISAKMP_NEXT_SIG;
-		cert_hd.isacert_type = mycert.type;
+		cert_hd.isacert_type = CERT_X509_SIGNATURE;
 
 		if (!out_struct(&cert_hd, &isakmp_ipsec_certificate_desc, &md->rbody, &cert_pbs))
+		{
 			return STF_INTERNAL_ERROR;
-		if (!out_chunk(cert_get_encoding(mycert), &cert_pbs, "CERT"))
+		}
+		if (mycert->cert->get_encoding(mycert->cert, CERT_ASN1_DER,
+									   &cert_encoding))
+		{
+			success = out_chunk(cert_encoding, &cert_pbs, "CERT");
+			free(cert_encoding.ptr);
+		}
+		if (!success)
+		{
 			return STF_INTERNAL_ERROR;
+		}
 		close_output_pbs(&cert_pbs);
 	}
 
 	/* CR out */
 	if (send_cr)
 	{
-		if (!build_and_ship_CR(mycert.type, st->st_connection->spd.that.ca
-		, &md->rbody, ISAKMP_NEXT_SIG))
+		identification_t *ca = st->st_connection->spd.that.ca;
+		chunk_t cr = (ca) ? ca->get_encoding(ca) : chunk_empty;
+
+		if (!build_and_ship_CR(CERT_X509_SIGNATURE, cr, &md->rbody, ISAKMP_NEXT_SIG))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 	}
 
    /* HASH_I or SIG_I out */
 	{
-		u_char hash_buf[MAX_DIGEST_LEN];
-		chunk_t hash = chunk_from_buf(hash_buf);
+		chunk_t hash = chunk_alloca(MAX_DIGEST_LEN);
 
 		main_mode_hash(st, &hash, TRUE, &id_pbs);
 
@@ -3488,16 +3706,18 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 
 			scheme = oakley_to_signature_scheme(st->st_oakley.auth);
 
-			sig_len = sign_hash(scheme, st->st_connection, sig_val, hash);
+			sig_len = sign_hash(scheme, c, sig_val, hash);
 			if (sig_len == 0)
 			{
 				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");
-				return STF_FAIL + AUTHENTICATION_FAILED;
+				return STF_FAIL + ISAKMP_AUTHENTICATION_FAILED;
 			}
 
 			if (!out_generic_raw(ISAKMP_NEXT_NONE, &isakmp_signature_desc
 			, &md->rbody, sig_val, sig_len, "SIG_I"))
+			{
 				return STF_INTERNAL_ERROR;
+			}
 		}
 	}
 
@@ -3505,8 +3725,9 @@ stf_status main_inR2_outI3(struct msg_digest *md)
 
 	/* st_new_iv was computed by generate_skeyids_iv */
 	if (!encrypt_message(&md->rbody, st))
+	{
 		return STF_INTERNAL_ERROR;      /* ??? we may be partly committed */
-
+	}
 	return STF_OK;
 }
 
@@ -3533,13 +3754,10 @@ struct key_continuation {
 typedef stf_status (key_tail_fn)(struct msg_digest *md
 								  , struct key_continuation *kc);
 
-static void report_key_dns_failure(struct id *id, err_t ugh)
+static void report_key_dns_failure(identification_t *id, err_t ugh)
 {
-	char id_buf[BUF_LEN];       /* arbitrary limit on length of ID reported */
-
-	(void) idtoa(id, id_buf, sizeof(id_buf));
-	loglog(RC_LOG_SERIOUS, "no RSA public key known for '%s'"
-		"; DNS search for KEY failed (%s)", id_buf, ugh);
+	loglog(RC_LOG_SERIOUS, "no RSA public key known for '%Y'"
+		"; DNS search for KEY failed (%s)", id, ugh);
 }
 
 
@@ -3557,15 +3775,16 @@ main_id_and_auth(struct msg_digest *md
 				 , const struct key_continuation *kc    /* current state, can be NULL */
 )
 {
-	u_char hash_buf[MAX_DIGEST_LEN];
-	chunk_t hash = chunk_from_buf(hash_buf);
+	chunk_t hash = chunk_alloca(MAX_DIGEST_LEN);
 	struct state *st = md->st;
-	struct id peer;
+	identification_t *peer;
 	stf_status r = STF_OK;
 
 	/* ID Payload in */
 	if (!decode_peer_id(md, &peer))
-		return STF_FAIL + INVALID_ID_INFORMATION;
+	{
+		return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
+	}
 
 	/* Hash the ID Payload.
 	 * main_mode_hash requires idpl->cur to be at end of payload
@@ -3595,7 +3814,7 @@ main_id_and_auth(struct msg_digest *md
 					, hash_pbs->cur, pbs_left(hash_pbs));
 				loglog(RC_LOG_SERIOUS, "received Hash Payload does not match computed value");
 				/* XXX Could send notification back */
-				r = STF_FAIL + INVALID_HASH_INFORMATION;
+				r = STF_FAIL + ISAKMP_INVALID_HASH_INFORMATION;
 			}
 		}
 		break;
@@ -3603,14 +3822,14 @@ main_id_and_auth(struct msg_digest *md
 	case OAKLEY_RSA_SIG:
 	case XAUTHInitRSA:
 	case XAUTHRespRSA:
-		r = check_signature(KEY_RSA, &peer, st, hash,
-				 &md->chain[ISAKMP_NEXT_SIG]->pbs,
+		r = check_signature(KEY_RSA, peer, st, hash,
+				 			&md->chain[ISAKMP_NEXT_SIG]->pbs,
 #ifdef USE_KEYRR
-				kc == NULL? NULL : kc->ac.keys_from_dns,
+							kc == NULL ? NULL : kc->ac.keys_from_dns,
 #endif /* USE_KEYRR */
-				kc == NULL? NULL : kc->ac.gateways_from_dns
+							kc == NULL ? NULL : kc->ac.gateways_from_dns
 			);
-	
+
 		if (r == STF_SUSPEND)
 		{
 			/* initiate/resume asynchronous DNS lookup for key */
@@ -3633,22 +3852,14 @@ main_id_and_auth(struct msg_digest *md
 #ifdef USE_KEYRR
 				nkc->failure_ok = TRUE;
 #endif
-				ugh = start_adns_query(&peer
-									   , &peer  /* SG itself */
-									   , T_TXT
-									   , cont_fn
-									   , &nkc->ac);
+				ugh = start_adns_query(peer, peer, T_TXT, cont_fn, &nkc->ac);
 				break;
 
 #ifdef USE_KEYRR
 			case kos_his_txt:
 				/* second try: look for the KEY records */
 				nkc->step = kos_his_key;
-				ugh = start_adns_query(&peer
-									   , NULL   /* no sgw for KEY */
-									   , T_KEY
-									   , cont_fn
-									   , &nkc->ac);
+				ugh = start_adns_query(peer, NULL, T_KEY, cont_fn, &nkc->ac);
 				break;
 #endif /* USE_KEYRR */
 
@@ -3658,9 +3869,9 @@ main_id_and_auth(struct msg_digest *md
 
 			if (ugh != NULL)
 			{
-				report_key_dns_failure(&peer, ugh);
+				report_key_dns_failure(peer, ugh);
 				st->st_suspended_md = NULL;
-				r = STF_FAIL + INVALID_KEY_INFORMATION;
+				r = STF_FAIL + ISAKMP_INVALID_KEY_INFORMATION;
 			}
 		}
 		break;
@@ -3668,7 +3879,7 @@ main_id_and_auth(struct msg_digest *md
 	case OAKLEY_ECDSA_256:
 	case OAKLEY_ECDSA_384:
 	case OAKLEY_ECDSA_521:
-		r = check_signature(KEY_ECDSA, &peer, st, hash,
+		r = check_signature(KEY_ECDSA, peer, st, hash,
 							&md->chain[ISAKMP_NEXT_SIG]->pbs,
 #ifdef USE_KEYRR
 							NULL,
@@ -3680,16 +3891,20 @@ main_id_and_auth(struct msg_digest *md
 		bad_case(st->st_oakley.auth);
 	}
 	if (r != STF_OK)
+	{
+		peer->destroy(peer);
 		return r;
-
+	}
 	DBG(DBG_CRYPT, DBG_log("authentication succeeded"));
 
 	/*
 	 * With the peer ID known, let's see if we need to switch connections.
 	 */
-	if (!switch_connection(md, &peer, initiator))
-		return STF_FAIL + INVALID_ID_INFORMATION;
-
+	if (!switch_connection(md, peer, initiator))
+	{
+		r = STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
+	}
+	peer->destroy(peer);
 	return r;
 }
 
@@ -3714,7 +3929,7 @@ main_id_and_auth(struct msg_digest *md
  * to find authentication, or we run out of things
  * to try.
  */
-static void key_continue(struct adns_continuation *cr, err_t ugh, 
+static void key_continue(struct adns_continuation *cr, err_t ugh,
 						 key_tail_fn *tail)
 {
 	struct key_continuation *kc = (void *)cr;
@@ -3733,8 +3948,8 @@ static void key_continue(struct adns_continuation *cr, err_t ugh,
 
 		if (!kc->failure_ok && ugh != NULL)
 		{
-			report_key_dns_failure(&st->st_connection->spd.that.id, ugh);
-			r = STF_FAIL + INVALID_KEY_INFORMATION;
+			report_key_dns_failure(st->st_connection->spd.that.id, ugh);
+			r = STF_FAIL + ISAKMP_INVALID_KEY_INFORMATION;
 		}
 		else
 		{
@@ -3750,7 +3965,9 @@ static void key_continue(struct adns_continuation *cr, err_t ugh,
 		complete_state_transition(&kc->md, r);
 	}
 	if (kc->md != NULL)
+	{
 		release_md(kc->md);
+	}
 	cur_state = NULL;
 }
 
@@ -3785,7 +4002,7 @@ main_inI3_outR3_tail(struct msg_digest *md
 	u_int8_t auth_payload;
 	pb_stream r_id_pbs; /* ID Payload; also used for hash calculation */
 	certpolicy_t cert_policy;
-	cert_t mycert;
+	cert_t *mycert;
 	bool pubkey_auth, send_cert, requested;
 
 	/* ID and HASH_I or SIG_I in
@@ -3797,7 +4014,9 @@ main_inI3_outR3_tail(struct msg_digest *md
 										, kc);
 
 		if (r != STF_OK)
+		{
 			return r;
+		}
 	}
 
 	/* send certificate if pubkey authentication is used, we have one
@@ -3808,7 +4027,8 @@ main_inI3_outR3_tail(struct msg_digest *md
 	requested = cert_policy == CERT_SEND_IF_ASKED
 				&& st->st_connection->got_certrequest;
 	pubkey_auth = uses_pubkey_auth(st->st_oakley.auth);
-	send_cert = pubkey_auth	&& mycert.type != CERT_NONE &&
+	send_cert = pubkey_auth	&& mycert &&
+				mycert->cert->get_type(mycert->cert) == CERT_X509 &&
 				(cert_policy == CERT_ALWAYS_SEND || requested);
 
 	/*************** build output packet HDR*;IDir;HASH/SIG_R ***************/
@@ -3839,7 +4059,9 @@ main_inI3_outR3_tail(struct msg_digest *md
 		id_hd.isaiid_np = (send_cert)? ISAKMP_NEXT_CERT : auth_payload;
 		if (!out_struct(&id_hd, &isakmp_ipsec_identification_desc, &md->rbody, &r_id_pbs)
 		|| !out_chunk(id_b, &r_id_pbs, "my identity"))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 		close_output_pbs(&r_id_pbs);
 	}
 
@@ -3849,12 +4071,14 @@ main_inI3_outR3_tail(struct msg_digest *md
 		DBG(DBG_CONTROL,
 			DBG_log("our certificate policy is %N", cert_policy_names, cert_policy)
 		)
-		if (mycert.type != CERT_NONE)
+		if (mycert && mycert->cert->get_type(mycert->cert) == CERT_X509)
 		{
 			const char *request_text = "";
 
 			if (cert_policy == CERT_SEND_IF_ASKED)
+			{
 				request_text = (send_cert)? "upon request":"without request";
+			}
 			plog("we have a cert %s sending it %s"
 				, send_cert? "and are":"but are not", request_text);
 		}
@@ -3865,23 +4089,34 @@ main_inI3_outR3_tail(struct msg_digest *md
 	}
 	if (send_cert)
 	{
+		bool success = FALSE;
+		chunk_t cert_encoding;
 		pb_stream cert_pbs;
-
 		struct isakmp_cert cert_hd;
+
 		cert_hd.isacert_np = ISAKMP_NEXT_SIG;
-		cert_hd.isacert_type = mycert.type;
+		cert_hd.isacert_type = CERT_X509_SIGNATURE;
 
 		if (!out_struct(&cert_hd, &isakmp_ipsec_certificate_desc, &md->rbody, &cert_pbs))
-		return STF_INTERNAL_ERROR;
-		if (!out_chunk(cert_get_encoding(mycert), &cert_pbs, "CERT"))
+		{
 			return STF_INTERNAL_ERROR;
+		}
+		if (mycert->cert->get_encoding(mycert->cert, CERT_ASN1_DER,
+									   &cert_encoding))
+		{
+			success = out_chunk(cert_encoding, &cert_pbs, "CERT");
+			free(cert_encoding.ptr);
+		}
+		if (!success)
+		{
+			return STF_INTERNAL_ERROR;
+		}
 		close_output_pbs(&cert_pbs);
 	}
 
 	/* HASH_R or SIG_R out */
 	{
-		u_char hash_buf[MAX_DIGEST_LEN];
-		chunk_t hash = chunk_from_buf(hash_buf);
+		chunk_t hash = chunk_alloca(MAX_DIGEST_LEN);
 
 		main_mode_hash(st, &hash, FALSE, &r_id_pbs);
 
@@ -3907,19 +4142,23 @@ main_inI3_outR3_tail(struct msg_digest *md
 			if (sig_len == 0)
 			{
 				loglog(RC_LOG_SERIOUS, "unable to locate my private key for signature");
-				return STF_FAIL + AUTHENTICATION_FAILED;
+				return STF_FAIL + ISAKMP_AUTHENTICATION_FAILED;
 			}
 
 			if (!out_generic_raw(ISAKMP_NEXT_NONE, &isakmp_signature_desc
 			, &md->rbody, sig_val, sig_len, "SIG_R"))
+			{
 				return STF_INTERNAL_ERROR;
+			}
 		}
 	}
 
 	/* encrypt message, sans fixed part of header */
 
 	if (!encrypt_message(&md->rbody, st))
+	{
 		return STF_INTERNAL_ERROR;      /* ??? we may be partly committed */
+	}
 
 	/* Last block of Phase 1 (R3), kept for Phase 2 IV generation */
 	DBG_cond_dump(DBG_CRYPT, "last encrypted block of Phase 1:"
@@ -3968,7 +4207,9 @@ static stf_status main_inR3_tail(struct msg_digest *md,
 		stf_status r = main_id_and_auth(md, TRUE, main_inR3_continue, kc);
 
 		if (r != STF_OK)
+		{
 			return r;
+		}
 	}
 
 	/**************** done input ****************/
@@ -4102,7 +4343,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 stf_status quick_inI1_outR1(struct msg_digest *md)
 {
 	const struct state *const p1st = md->st;
-	struct connection *c = p1st->st_connection;
+	connection_t *c = p1st->st_connection;
 	struct payload_digest *const id_pd = md->chain[ISAKMP_NEXT_ID];
 	struct verify_oppo_bundle b;
 
@@ -4126,12 +4367,16 @@ stf_status quick_inI1_outR1(struct msg_digest *md)
 
 		if (!decode_net_id(&id_pd->payload.ipsec_id, &id_pd->pbs
 		, &b.his.net, "peer client"))
-			return STF_FAIL + INVALID_ID_INFORMATION;
+		{
+			return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
+		}
 
 		/* Hack for MS 818043 NAT-T Update */
 
 		if (id_pd->payload.ipsec_id.isaiid_idtype == ID_FQDN)
+		{
 			happy(addrtosubnet(&c->spd.that.host_addr, &b.his.net));
+		}
 
 		/* End Hack for MS 818043 NAT-T Update */
 
@@ -4143,8 +4388,9 @@ stf_status quick_inI1_outR1(struct msg_digest *md)
 
 		if (!decode_net_id(&id_pd->next->payload.ipsec_id, &id_pd->next->pbs
 		, &b.my.net, "our client"))
-			return STF_FAIL + INVALID_ID_INFORMATION;
-		
+		{
+			return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
+		}
 		b.my.proto = id_pd->next->payload.ipsec_id.isaiid_protoid;
 		b.my.port = id_pd->next->payload.ipsec_id.isaiid_port;
 		b.my.net.addr.u.v4.sin_port = htons(b.my.port);
@@ -4153,8 +4399,9 @@ stf_status quick_inI1_outR1(struct msg_digest *md)
 	{
 		/* implicit IDci and IDcr: peer and self */
 		if (!sameaddrtype(&c->spd.this.host_addr, &c->spd.that.host_addr))
+		{
 			return STF_FAIL;
-
+		}
 		happy(addrtosubnet(&c->spd.this.host_addr, &b.my.net));
 		happy(addrtosubnet(&c->spd.that.host_addr, &b.his.net));
 		b.his.proto = b.my.proto = 0;
@@ -4223,7 +4470,7 @@ static void quick_inI1_outR1_continue(struct adns_continuation *cr, err_t ugh)
 		if (!b->failure_ok && ugh != NULL)
 		{
 			report_verify_failure(b, ugh);
-			r = STF_FAIL + INVALID_ID_INFORMATION;
+			r = STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 		}
 		else
 		{
@@ -4232,7 +4479,9 @@ static void quick_inI1_outR1_continue(struct adns_continuation *cr, err_t ugh)
 		complete_state_transition(&b->md, r);
 	}
 	if (b->md != NULL)
+	{
 		release_md(b->md);
+	}
 	cur_state = NULL;
 }
 
@@ -4241,11 +4490,11 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 {
 	struct msg_digest *md = b->md;
 	struct state *p1st = md->st;
-	struct connection *c = p1st->st_connection;
+	connection_t *c = p1st->st_connection;
 	struct verify_oppo_continuation *vc = malloc_thing(struct verify_oppo_continuation);
-	struct id id        /* subject of query */
-		, *our_id       /* needed for myid playing */
-		, our_id_space; /* ephemeral: no need for unshare_id_content */
+	identification_t *id;           /* subject of query */
+	identification_t *our_id;       /* needed for myid playing */
+	identification_t *our_id_space; /* ephemeral: no need for unshare_id_content */
 	ip_address client;
 	err_t ugh = NULL;
 
@@ -4281,20 +4530,20 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 	 * %myid makes no sense for the other side (but it is syntactically
 	 * legal).
 	 */
-	our_id = resolve_myid(&c->spd.this.id);
-	if (our_id->kind == ID_ANY)
+	our_id = resolve_myid(c->spd.this.id);
+	if (our_id->get_type(our_id) == ID_ANY)
 	{
-		iptoid(&c->spd.this.host_addr, &our_id_space);
-		our_id = &our_id_space;
+		our_id_space = identification_create_from_sockaddr((sockaddr_t*)&c->spd.this.host_addr);
+		our_id = our_id_space;
 	}
 
 	switch (next_step)
 	{
 	case vos_our_client:
 		networkof(&b->my.net, &client);
-		iptoid(&client, &id);
+		id = identification_create_from_sockaddr((sockaddr_t*)&client);
 		vc->b.failure_ok = b->failure_ok = FALSE;
-		ugh = start_adns_query(&id
+		ugh = start_adns_query(id
 			, our_id
 			, T_TXT
 			, quick_inI1_outR1_continue
@@ -4323,10 +4572,10 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 
 	case vos_his_client:
 		networkof(&b->his.net, &client);
-		iptoid(&client, &id);
+		id = identification_create_from_sockaddr((sockaddr_t*)&client);
 		vc->b.failure_ok = b->failure_ok = FALSE;
-		ugh = start_adns_query(&id
-			, &c->spd.that.id
+		ugh = start_adns_query(id
+			, c->spd.that.id
 			, T_TXT
 			, quick_inI1_outR1_continue
 			, &vc->ac);
@@ -4344,7 +4593,7 @@ static stf_status quick_inI1_outR1_start_query(struct verify_oppo_bundle *b,
 		 */
 		report_verify_failure(b, ugh);
 		p1st->st_suspended_md = NULL;
-		return STF_FAIL + INVALID_ID_INFORMATION;
+		return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 	}
 	else
 	{
@@ -4357,7 +4606,7 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 										struct adns_continuation *ac,
 										struct state *p1st)
 {
-	struct connection *c = p1st->st_connection;
+	connection_t *c = p1st->st_connection;
 	enum verify_oppo_step next_step = vos_our_client;
 	err_t ugh = NULL;
 
@@ -4490,14 +4739,12 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 		next_step = vos_done;
 		{
 			public_key_t *pub_key;
-			identification_t *p1st_keyid;
 			struct gw_info *gwp;
-		
+
 			/* check that the public key that authenticated
 			 * the ISAKMP SA (p1st) will do for this gateway.
 			 */
 			pub_key = p1st->st_peer_pubkey->public_key;
-			p1st_keyid = pub_key->get_id(pub_key, ID_PUBKEY_INFO_SHA1);
 
 			ugh = "peer's client does not delegate to peer";
 			for (gwp = ac->gateways_from_dns; gwp != NULL; gwp = gwp->next)
@@ -4509,10 +4756,8 @@ static enum verify_oppo_step quick_inI1_outR1_process_answer(
 				 * it implies fetching a KEY from the same
 				 * place we must have gotten it.
 				 */
-				if (!gwp->gw_key_present || p1st_keyid->equals(p1st_keyid,
-					 gwp->key->public_key->get_id(gwp->key->public_key,
-												  ID_PUBKEY_INFO_SHA1))
-				   )
+				if (!gwp->gw_key_present ||
+					pub_key->equals(pub_key, gwp->key->public_key))
 				{
 					ugh = NULL; /* good! */
 					break;
@@ -4538,7 +4783,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 {
 	struct msg_digest *md = b->md;
 	struct state *const p1st = md->st;
-	struct connection *c = p1st->st_connection;
+	connection_t *c = p1st->st_connection;
 	struct payload_digest *const id_pd = md->chain[ISAKMP_NEXT_ID];
 	ip_subnet *our_net = &b->my.net
 		, *his_net = &b->his.net;
@@ -4551,7 +4796,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 	 * a suitable connection (our current one only matches for hosts).
 	 */
 	{
-		struct connection *p = find_client_connection(c
+		connection_t *p = find_client_connection(c
 			, our_net, his_net, b->my.proto, b->my.port, b->his.proto, b->his.port);
 
 		if (p == NULL)
@@ -4581,7 +4826,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 			plog("cannot respond to IPsec SA request"
 				" because no connection is known for %s"
 				, buf);
-			return STF_FAIL + INVALID_ID_INFORMATION;
+			return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 		}
 		else if (p != c)
 		{
@@ -4608,14 +4853,18 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 
 					next_step = quick_inI1_outR1_process_answer(b, ac, p1st);
 					if (next_step == vos_fail)
-						return STF_FAIL + INVALID_ID_INFORMATION;
+					{
+						return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
+					}
 
 					/* short circuit: if peer's client is self,
 					 * accept that we've verified delegation in Phase 1
 					 */
 					if (next_step == vos_his_client
 					&& sameaddr(&c->spd.that.host_addr, &his_client))
+					{
 						next_step = vos_done;
+					}
 
 					/* the second chunk: initiate the next DNS query (if any) */
 					DBG(DBG_CONTROL,
@@ -4632,7 +4881,9 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 
 					/* start next DNS query and suspend (if necessary) */
 					if (next_step != vos_done)
+					{
 						return quick_inI1_outR1_start_query(b, next_step);
+					}
 
 					/* Instantiate inbound Opportunistic connection,
 					 * carrying over authenticated peer ID
@@ -4642,7 +4893,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					 * We should record DNS sec use, if any -- belongs in
 					 * state during perhaps.
 					 */
-					p = oppo_instantiate(p, &c->spd.that.host_addr, &c->spd.that.id
+					p = oppo_instantiate(p, &c->spd.that.host_addr, c->spd.that.id
 						, NULL, &our_client, &his_client);
 				}
 				else
@@ -4650,8 +4901,32 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 					/* Plain Road Warrior:
 					 * instantiate, carrying over authenticated peer ID
 					 */
+					host_t *vip = c->spd.that.host_srcip;
+
 					p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
-								, his_net, &c->spd.that.id);
+								, his_net, c->spd.that.id);
+
+					/* inherit any virtual IP assigned by a Mode Config exchange */
+					if (p->spd.that.modecfg && c->spd.that.modecfg &&
+						subnetisaddr(his_net, (ip_address*)vip->get_sockaddr(vip)))
+					{
+						DBG(DBG_CONTROL,
+							DBG_log("inheriting virtual IP source address %H from ModeCfg", vip)
+						)
+						p->spd.that.host_srcip->destroy(p->spd.that.host_srcip);
+						p->spd.that.host_srcip = vip->clone(vip);
+						p->spd.that.client = c->spd.that.client;
+						p->spd.that.has_client = TRUE;
+					}
+
+					if (c->policy & (POLICY_XAUTH_RSASIG | POLICY_XAUTH_PSK) &&
+						c->xauth_identity && !p->xauth_identity)
+					{
+						DBG(DBG_CONTROL,
+							DBG_log("inheriting XAUTH identity %Y", c->xauth_identity)
+						)
+						p->xauth_identity = c->xauth_identity->clone(c->xauth_identity);
+					}
 				}
 			}
 #ifdef DEBUG
@@ -4679,7 +4954,9 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 			c->spd.that.client = *his_net;
 			c->spd.that.virt = NULL;
 			if (subnetishost(his_net) && addrinsubnet(&c->spd.that.host_addr, his_net))
+			{
 				c->spd.that.has_client = FALSE;
+			}
 		}
 
 		/* fill in the client's true port */
@@ -4707,7 +4984,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 
 		if (st->st_connection != c)
 		{
-			struct connection *t = st->st_connection;
+			connection_t *t = st->st_connection;
 
 			st->st_connection = c;
 			set_cur_connection(c);
@@ -4780,7 +5057,9 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 			/* sa header is unchanged -- except for np */
 			sa.isasa_np = ISAKMP_NEXT_NONCE;
 			if (!out_struct(&sa, &isakmp_sa_desc, &md->rbody, &r_sa_pbs))
+			{
 				return STF_INTERNAL_ERROR;
+			}
 
 			/* parse and accept body */
 			st->st_pfs_group = &unset_group;
@@ -4793,7 +5072,7 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 		if ((st->st_policy & POLICY_PFS) && st->st_pfs_group == NULL)
 		{
 			loglog(RC_LOG_SERIOUS, "we require PFS but Quick I1 SA specifies no GROUP_DESCRIPTION");
-			return STF_FAIL + NO_PROPOSAL_CHOSEN;       /* ??? */
+			return STF_FAIL + ISAKMP_NO_PROPOSAL_CHOSEN;
 		}
 
 		/* Ni in */
@@ -4810,7 +5089,9 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 		if (!build_and_ship_nonce(&st->st_nr, &md->rbody
 		, st->st_pfs_group != NULL? ISAKMP_NEXT_KE : id_pd != NULL? ISAKMP_NEXT_ID : ISAKMP_NEXT_NONE
 		, "Nr"))
+		 {
 			return STF_INTERNAL_ERROR;
+		}
 
 		/* [ KE ] out (for PFS) */
 
@@ -4818,7 +5099,9 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 		{
 			if (!build_and_ship_KE(st, &st->st_gr, st->st_pfs_group
 			, &md->rbody, id_pd != NULL? ISAKMP_NEXT_ID : ISAKMP_NEXT_NONE))
-					return STF_INTERNAL_ERROR;
+			{
+				return STF_INTERNAL_ERROR;
+			}
 
 			/* MPZ-Operations might be done after sending the packet... */
 			compute_dh_shared(st, st->st_gi);
@@ -4830,13 +5113,17 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 			struct isakmp_ipsec_id *p = (void *)md->rbody.cur;  /* UGH! */
 
 			if (!out_raw(id_pd->pbs.start, pbs_room(&id_pd->pbs), &md->rbody, "IDci"))
+			{
 				return STF_INTERNAL_ERROR;
+			}
 			p->isaiid_np = ISAKMP_NEXT_ID;
 
 			p = (void *)md->rbody.cur;  /* UGH! */
 
 			if (!out_raw(id_pd->next->pbs.start, pbs_room(&id_pd->next->pbs), &md->rbody, "IDcr"))
+			{
 				return STF_INTERNAL_ERROR;
+			}
 			p->isaiid_np = ISAKMP_NEXT_NONE;
 		}
 
@@ -4872,12 +5159,16 @@ static stf_status quick_inI1_outR1_tail(struct verify_oppo_bundle *b,
 		 * failure won't look like success.
 		 */
 		if (!install_inbound_ipsec_sa(st))
+		{
 			return STF_INTERNAL_ERROR;  /* ??? we may be partly committed */
+		}
 
 		/* encrypt message, except for fixed part of header */
 
 		if (!encrypt_message(&md->rbody, st))
+		{
 			return STF_INTERNAL_ERROR;  /* ??? we may be partly committed */
+		}
 
 		return STF_OK;
 	}
@@ -4890,14 +5181,16 @@ static void dpd_init(struct state *st)
 {
 	struct state *p1st = find_state(st->st_icookie, st->st_rcookie
 								, &st->st_connection->spd.that.host_addr, 0);
-	
+
 	if (p1st == NULL)
+	{
 		loglog(RC_LOG_SERIOUS, "could not find phase 1 state for DPD");
+	}
 	else if (p1st->st_dpd)
 	{
 		plog("Dead Peer Detection (RFC 3706) enabled");
 		/* randomize the first DPD event */
-		
+
 		event_schedule(EVENT_DPD
 			, (0.5 + rand()/(RAND_MAX + 1.E0)) * st->st_connection->dpd_delay
 			, st);
@@ -4913,7 +5206,7 @@ static void dpd_init(struct state *st)
 stf_status quick_inR1_outI2(struct msg_digest *md)
 {
 	struct state *const st = md->st;
-	const struct connection *c = st->st_connection;
+	const connection_t *c = st->st_connection;
 
 	/* HASH(2) in */
 	CHECK_QUICK_HASH(md
@@ -4936,7 +5229,9 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 	RETURN_STF_FAILURE(accept_PFS_KE(md, &st->st_gr, "Gr", "Quick Mode R1"));
 
 	if (st->st_pfs_group != NULL)
+	{
 		compute_dh_shared(st, st->st_gr);
+	}
 
 	/* [ IDci, IDcr ] in; these must match what we sent */
 
@@ -4953,7 +5248,9 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 			, &st->st_myuserprotoid, &st->st_myuserport
 			, &st->st_connection->spd.this.client
 			, "our client"))
-				return STF_FAIL + INVALID_ID_INFORMATION;
+			{
+				return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
+			}
 
 			/* IDcr (responder is peer) */
 
@@ -4961,7 +5258,9 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 			, &st->st_peeruserprotoid, &st->st_peeruserport
 			, &st->st_connection->spd.that.client
 			, "peer client"))
-				return STF_FAIL + INVALID_ID_INFORMATION;
+			{
+				return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
+			}
 		}
 		else
 		{
@@ -4971,35 +5270,40 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 			{
 				loglog(RC_LOG_SERIOUS, "IDci, IDcr payloads missing in message"
 					" but default does not match proposal");
-				return STF_FAIL + INVALID_ID_INFORMATION;
+				return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 			}
 		}
 	}
 
 	/* check the peer's group attributes */
-	
 	{
-		const ietfAttrList_t *peer_list = NULL;
-		
-		get_peer_ca_and_groups(st->st_connection, &peer_list);
+		identification_t *peer_ca = NULL;
+		ietf_attributes_t *peer_attributes = NULL;
+		bool match;
 
-		if (!group_membership(peer_list, st->st_connection->name
-				, st->st_connection->spd.that.groups))
+		get_peer_ca_and_groups(st->st_connection, &peer_ca, &peer_attributes);
+		match = match_group_membership(peer_attributes,
+									   st->st_connection->name,
+									   st->st_connection->spd.that.groups);
+		DESTROY_IF(peer_attributes);
+
+		if (!match)
 		{
-			char buf[BUF_LEN];
+			ietf_attributes_t *groups = st->st_connection->spd.that.groups;
 
-			format_groups(st->st_connection->spd.that.groups, buf, BUF_LEN);
-			loglog(RC_LOG_SERIOUS, "peer is not member of one of the groups: %s"
-				, buf);
-			return STF_FAIL + INVALID_ID_INFORMATION;
+			loglog(RC_LOG_SERIOUS,
+				   "peer with attributes '%s' is not a member of the groups '%s'",
+					peer_attributes->get_string(peer_attributes),
+					groups->get_string(groups));
+			return STF_FAIL + ISAKMP_INVALID_ID_INFORMATION;
 		}
 	}
 
-		if ((st->nat_traversal & NAT_T_DETECTED)
-		&&  (st->nat_traversal & NAT_T_WITH_NATOA))
-		{
-			nat_traversal_natoa_lookup(md);
-		}
+	if ((st->nat_traversal & NAT_T_DETECTED)
+	&&  (st->nat_traversal & NAT_T_WITH_NATOA))
+	{
+		nat_traversal_natoa_lookup(md);
+	}
 
 	/* ??? We used to copy the accepted proposal into the state, but it was
 	 * never used.  From sa_pd->pbs.start, length pbs_room(&sa_pd->pbs).
@@ -5028,32 +5332,37 @@ stf_status quick_inR1_outI2(struct msg_digest *md)
 	 * failure won't look like success.
 	 */
 	if (!install_ipsec_sa(st, TRUE))
+	{
 		return STF_INTERNAL_ERROR;
+	}
 
 	/* encrypt message, except for fixed part of header */
 
 	if (!encrypt_message(&md->rbody, st))
-		return STF_INTERNAL_ERROR;      /* ??? we may be partly committed */
-
 	{
-	  DBG(DBG_CONTROLMORE, DBG_log("inR1_outI2: instance %s[%ld], setting newest_ipsec_sa to #%ld (was #%ld) (spd.eroute=#%ld)"
+		return STF_INTERNAL_ERROR;      /* ??? we may be partly committed */
+	}
+	DBG(DBG_CONTROLMORE,
+		DBG_log("inR1_outI2: instance %s[%ld], setting newest_ipsec_sa to #%ld (was #%ld) (spd.eroute=#%ld)"
 							   , st->st_connection->name
 							   , st->st_connection->instance_serial
 							   , st->st_serialno
 							   , st->st_connection->newest_ipsec_sa
-							   , st->st_connection->spd.eroute_owner));
-	}
-	
+							   , st->st_connection->spd.eroute_owner)
+	)
 	st->st_connection->newest_ipsec_sa = st->st_serialno;
 
 	/* note (presumed) success */
 	if (c->gw_info != NULL)
+	{
 		c->gw_info->key->last_worked_time = now();
+	}
 
 	/* If we want DPD on this connection then initialize it */
 	if (st->st_connection->dpd_action != DPD_ACTION_NONE)
+	{
 		dpd_init(st);
-
+	}
 	return STF_OK;
 }
 
@@ -5077,17 +5386,17 @@ stf_status quick_inI2(struct msg_digest *md)
 	 * failure won't look like success.
 	 */
 	if (!install_ipsec_sa(st, FALSE))
-		return STF_INTERNAL_ERROR;
-
 	{
-	  DBG(DBG_CONTROLMORE, DBG_log("inI2: instance %s[%ld], setting newest_ipsec_sa to #%ld (was #%ld) (spd.eroute=#%ld)"
+		return STF_INTERNAL_ERROR;
+	}
+	DBG(DBG_CONTROLMORE,
+		DBG_log("inI2: instance %s[%ld], setting newest_ipsec_sa to #%ld (was #%ld) (spd.eroute=#%ld)"
 							   , st->st_connection->name
 							   , st->st_connection->instance_serial
 							   , st->st_serialno
 							   , st->st_connection->newest_ipsec_sa
-							   , st->st_connection->spd.eroute_owner));
-	}
-
+							   , st->st_connection->spd.eroute_owner)
+	)
 	st->st_connection->newest_ipsec_sa = st->st_serialno;
 
 	update_iv(st);      /* not actually used, but tidy */
@@ -5097,13 +5406,16 @@ stf_status quick_inI2(struct msg_digest *md)
 		struct gw_info *gw = st->st_connection->gw_info;
 
 		if (gw != NULL)
+		{
 			gw->key->last_worked_time = now();
+		}
 	}
 
 	/* If we want DPD on this connection then initialize it */
 	if (st->st_connection->dpd_action != DPD_ACTION_NONE)
+	{
 		dpd_init(st);
-
+	}
 	return STF_OK;
 }
 
@@ -5116,9 +5428,9 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 	u_char
 		*r_hashval,     /* where in reply to jam hash value */
 		*r_hash_start;  /* start of what is to be hashed */
-		
+
 	msgid = generate_msgid(st);
-	
+
 	init_pbs(&reply, reply_buffer, sizeof(reply_buffer), "ISAKMP notify");
 
 	/* HDR* */
@@ -5133,7 +5445,9 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 		memcpy(hdr.isa_icookie, st->st_icookie, COOKIE_SIZE);
 		memcpy(hdr.isa_rcookie, st->st_rcookie, COOKIE_SIZE);
 		if (!out_struct(&hdr, &isakmp_hdr_desc, &reply, &rbody))
+		{
 			impossible();
+		}
 	}
 	/* HASH -- create and note space to be filled later */
 	START_HASH_PAYLOAD(rbody, ISAKMP_NEXT_N);
@@ -5146,22 +5460,32 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 		isan.isan_np = ISAKMP_NEXT_NONE;
 		isan.isan_doi = ISAKMP_DOI_IPSEC;
 		isan.isan_protoid = PROTO_ISAKMP;
-		isan.isan_spisize = COOKIE_SIZE * 2;  
+		isan.isan_spisize = COOKIE_SIZE * 2;
 		isan.isan_type = type;
 		if (!out_struct(&isan, &isakmp_notification_desc, &rbody, &notify_pbs))
+		{
 			return STF_INTERNAL_ERROR;
+		}
 		if (!out_raw(st->st_icookie, COOKIE_SIZE, &notify_pbs, "notify icookie"))
-			return STF_INTERNAL_ERROR;  
+		{
+			return STF_INTERNAL_ERROR;
+		}
 		if (!out_raw(st->st_rcookie, COOKIE_SIZE, &notify_pbs, "notify rcookie"))
-			return STF_INTERNAL_ERROR;  
+		{
+			return STF_INTERNAL_ERROR;
+		}
 		if (data != NULL && len > 0)
+		{
 			if (!out_raw(data, len, &notify_pbs, "notify data"))
-				return STF_INTERNAL_ERROR;    
+			{
+				return STF_INTERNAL_ERROR;
+			}
+		}
 		close_output_pbs(&notify_pbs);
 	}
-			
+
 	{
-		/* finish computing HASH */     
+		/* finish computing HASH */
 		chunk_t msgid_chunk = chunk_from_thing(msgid);
 		chunk_t msg_chunk = { r_hash_start, rbody.cur-r_hash_start };
 		pseudo_random_function_t prf_alg;
@@ -5196,8 +5520,10 @@ static stf_status send_isakmp_notification(struct state *st, u_int16_t type,
 
 		init_phase2_iv(st, &msgid);
 		if (!encrypt_message(&rbody, st))
+		{
 			return STF_INTERNAL_ERROR;
-	
+		}
+
 		/* restore preserved st_iv and st_new_iv */
 		memcpy(st->st_iv, old_iv, old_iv_len);
 		memcpy(st->st_new_iv, new_iv, new_iv_len);
@@ -5240,7 +5566,9 @@ void dpd_outI(struct state *p2st)
 
 	/* If no DPD, then get out of here */
 	if (!st->st_dpd)
+	{
 		return;
+	}
 
 	/* schedule the next periodic DPD event */
 	event_schedule(EVENT_DPD, delay, p2st);
@@ -5328,7 +5656,7 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 	if (n->isan_spisize != COOKIE_SIZE * 2 || pbs_left(pbs) < COOKIE_SIZE * 2)
 	{
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE has invalid SPI length (%d)", n->isan_spisize);
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	if (memcmp(pbs->cur, st->st_icookie, COOKIE_SIZE) != 0)
@@ -5337,7 +5665,7 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 		/* Ignore it, cisco sends odd icookies */
 #else
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE has invalid icookie (broken Cisco?)");
-		return STF_FAIL + INVALID_COOKIE;
+		return STF_FAIL + ISAKMP_INVALID_COOKIE;
 #endif
 	}
 	pbs->cur += COOKIE_SIZE;
@@ -5345,7 +5673,7 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 	if (memcmp(pbs->cur, st->st_rcookie, COOKIE_SIZE) != 0)
 	{
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE has invalid rcookie (broken Cisco?)");
-		return STF_FAIL + INVALID_COOKIE;
+		return STF_FAIL + ISAKMP_INVALID_COOKIE;
 	}
 	pbs->cur += COOKIE_SIZE;
 
@@ -5353,7 +5681,7 @@ dpd_inI_outR(struct state *st, struct isakmp_notification *const n, pb_stream *p
 	{
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE has invalid data length (%d)"
 			, (int) pbs_left(pbs));
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	seqno = ntohl(*(u_int32_t *)pbs->cur);
@@ -5402,7 +5730,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		loglog(RC_LOG_SERIOUS
 			, "DPD: R_U_THERE_ACK has invalid SPI length (%d)"
 			, n->isan_spisize);
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	if (memcmp(pbs->cur, st->st_icookie, COOKIE_SIZE) != 0)
@@ -5411,7 +5739,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		/* Ignore it, cisco sends odd icookies */
 #else
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE_ACK has invalid icookie");
-		return STF_FAIL + INVALID_COOKIE;
+		return STF_FAIL + ISAKMP_INVALID_COOKIE;
 #endif
 	}
 	pbs->cur += COOKIE_SIZE;
@@ -5422,7 +5750,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		/* Ignore it, cisco sends odd icookies */
 #else
 		loglog(RC_LOG_SERIOUS, "DPD: R_U_THERE_ACK has invalid rcookie");
-		return STF_FAIL + INVALID_COOKIE;
+		return STF_FAIL + ISAKMP_INVALID_COOKIE;
 #endif
 	}
 	pbs->cur += COOKIE_SIZE;
@@ -5432,7 +5760,7 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 		loglog(RC_LOG_SERIOUS
 			, " DPD: R_U_THERE_ACK has invalid data length (%d)"
 			, (int) pbs_left(pbs));
-		return STF_FAIL + PAYLOAD_MALFORMED;
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	seqno = ntohl(*(u_int32_t *)pbs->cur);
@@ -5444,8 +5772,9 @@ stf_status dpd_inR(struct state *st, struct isakmp_notification *const n,
 	if (!st->st_dpd_expectseqno && seqno != st->st_dpd_expectseqno)
 	{
 		loglog(RC_LOG_SERIOUS
-			, "DPD: R_U_THERE_ACK has unexpected sequence number");
-		return STF_FAIL + PAYLOAD_MALFORMED;
+			, "DPD: R_U_THERE_ACK has unexpected sequence number %u (expected %u)"
+			, seqno, st->st_dpd_expectseqno);
+		return STF_FAIL + ISAKMP_PAYLOAD_MALFORMED;
 	}
 
 	st->st_dpd_expectseqno = 0;
@@ -5464,7 +5793,7 @@ void
 dpd_timeout(struct state *st)
 {
 	struct state *newest_phase1_st;
-	struct connection *c = st->st_connection;
+	connection_t *c = st->st_connection;
 	int action = st->st_connection->dpd_action;
 	char cname[BUF_LEN];
 
@@ -5499,14 +5828,18 @@ dpd_timeout(struct state *st)
 		 */
 		loglog(RC_LOG_SERIOUS, "DPD: Putting connection \"%s\" into %%trap", c->name);
 		if (c->kind == CK_INSTANCE)
+		{
 			delete_connection(c, TRUE);
+		}
 		break;
 	case DPD_ACTION_CLEAR:
 		/* dpdaction=clear - Wipe the SA & eroute - everything */
 		loglog(RC_LOG_SERIOUS, "DPD: Clearing connection \"%s\"", c->name);
 		unroute_connection(c);
 		if (c->kind == CK_INSTANCE)
+		{
 			delete_connection(c, TRUE);
+		}
 		break;
 	case DPD_ACTION_RESTART:
 		/* dpdaction=restart - Restart connection,
@@ -5519,7 +5852,9 @@ dpd_timeout(struct state *st)
 		strncpy(cname, c->name, BUF_LEN);
 
 		if (c->kind == CK_INSTANCE)
+		{
 			delete_connection(c, TRUE);
+		}
 		initiate_connection(cname, NULL_FD);
 		break;
 	default:
