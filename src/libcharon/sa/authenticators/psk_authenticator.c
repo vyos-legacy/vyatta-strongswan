@@ -45,12 +45,24 @@ struct private_psk_authenticator_t {
 	 * IKE_SA_INIT message data to include in AUTH calculation
 	 */
 	chunk_t ike_sa_init;
+<<<<<<< HEAD
 };
 
 /*
  * Implementation of authenticator_t.build for builder
  */
 static status_t build(private_psk_authenticator_t *this, message_t *message)
+=======
+
+	/**
+	 * Reserved bytes of ID payload
+	 */
+	char reserved[3];
+};
+
+METHOD(authenticator_t, build, status_t,
+	private_psk_authenticator_t *this, message_t *message)
+>>>>>>> upstream/4.5.1
 {
 	identification_t *my_id, *other_id;
 	auth_payload_t *auth_payload;
@@ -70,7 +82,11 @@ static status_t build(private_psk_authenticator_t *this, message_t *message)
 		return NOT_FOUND;
 	}
 	auth_data = keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init,
+<<<<<<< HEAD
 									this->nonce, key->get_key(key), my_id);
+=======
+						this->nonce, key->get_key(key), my_id, this->reserved);
+>>>>>>> upstream/4.5.1
 	key->destroy(key);
 	DBG2(DBG_IKE, "successfully created shared key MAC");
 	auth_payload = auth_payload_create();
@@ -82,10 +98,15 @@ static status_t build(private_psk_authenticator_t *this, message_t *message)
 	return SUCCESS;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of authenticator_t.process for verifier
  */
 static status_t process(private_psk_authenticator_t *this, message_t *message)
+=======
+METHOD(authenticator_t, process, status_t,
+	private_psk_authenticator_t *this, message_t *message)
+>>>>>>> upstream/4.5.1
 {
 	chunk_t auth_data, recv_auth_data;
 	identification_t *my_id, *other_id;
@@ -113,7 +134,11 @@ static status_t process(private_psk_authenticator_t *this, message_t *message)
 		keys_found++;
 
 		auth_data = keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init,
+<<<<<<< HEAD
 									this->nonce, key->get_key(key), other_id);
+=======
+				this->nonce, key->get_key(key), other_id, this->reserved);
+>>>>>>> upstream/4.5.1
 		if (auth_data.len && chunk_equals(auth_data, recv_auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
@@ -141,6 +166,7 @@ static status_t process(private_psk_authenticator_t *this, message_t *message)
 	return SUCCESS;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of authenticator_t.process for builder
  * Implementation of authenticator_t.build for verifier
@@ -154,6 +180,10 @@ static status_t return_failed()
  * Implementation of authenticator_t.destroy.
  */
 static void destroy(private_psk_authenticator_t *this)
+=======
+METHOD(authenticator_t, destroy, void,
+	private_psk_authenticator_t *this)
+>>>>>>> upstream/4.5.1
 {
 	free(this);
 }
@@ -162,6 +192,7 @@ static void destroy(private_psk_authenticator_t *this)
  * Described in header.
  */
 psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
+<<<<<<< HEAD
 									chunk_t received_nonce, chunk_t sent_init)
 {
 	private_psk_authenticator_t *this = malloc_thing(private_psk_authenticator_t);
@@ -174,6 +205,27 @@ psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
 	this->ike_sa = ike_sa;
 	this->ike_sa_init = sent_init;
 	this->nonce = received_nonce;
+=======
+									chunk_t received_nonce, chunk_t sent_init,
+									char reserved[3])
+{
+	private_psk_authenticator_t *this;
+
+	INIT(this,
+		.public = {
+			.authenticator = {
+				.build = _build,
+				.process = (void*)return_failed,
+				.is_mutual = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+		.ike_sa_init = sent_init,
+		.nonce = received_nonce,
+	);
+	memcpy(this->reserved, reserved, sizeof(this->reserved));
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }
@@ -182,6 +234,7 @@ psk_authenticator_t *psk_authenticator_create_builder(ike_sa_t *ike_sa,
  * Described in header.
  */
 psk_authenticator_t *psk_authenticator_create_verifier(ike_sa_t *ike_sa,
+<<<<<<< HEAD
 									chunk_t sent_nonce, chunk_t received_init)
 {
 	private_psk_authenticator_t *this = malloc_thing(private_psk_authenticator_t);
@@ -194,6 +247,27 @@ psk_authenticator_t *psk_authenticator_create_verifier(ike_sa_t *ike_sa,
 	this->ike_sa = ike_sa;
 	this->ike_sa_init = received_init;
 	this->nonce = sent_nonce;
+=======
+									chunk_t sent_nonce, chunk_t received_init,
+									char reserved[3])
+{
+	private_psk_authenticator_t *this;
+
+	INIT(this,
+		.public = {
+			.authenticator = {
+				.build = (void*)return_failed,
+				.process = _process,
+				.is_mutual = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+		.ike_sa_init = received_init,
+		.nonce = sent_nonce,
+	);
+	memcpy(this->reserved, reserved, sizeof(this->reserved));
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

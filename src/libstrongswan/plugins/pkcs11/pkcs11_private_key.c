@@ -401,6 +401,7 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 	};
 	CK_OBJECT_HANDLE object;
 	CK_KEY_TYPE type;
+<<<<<<< HEAD
 	CK_BBOOL reauth;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_KEY_TYPE, &type, sizeof(type)},
@@ -413,18 +414,47 @@ static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
 
 	enumerator = this->lib->create_object_enumerator(this->lib,
 						this->session, tmpl, countof(tmpl), attr, countof(attr));
+=======
+	CK_BBOOL reauth = FALSE;
+	CK_ATTRIBUTE attr[] = {
+		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_MODULUS, NULL, 0},
+		{CKA_PUBLIC_EXPONENT, NULL, 0},
+		{CKA_ALWAYS_AUTHENTICATE, &reauth, sizeof(reauth)},
+	};
+	enumerator_t *enumerator;
+	chunk_t modulus, pubexp;
+	int count = countof(attr);
+
+	/* do not use CKA_ALWAYS_AUTHENTICATE if not supported */
+	if (!(this->lib->get_features(this->lib) & PKCS11_ALWAYS_AUTH_KEYS))
+	{
+		count--;
+	}
+	enumerator = this->lib->create_object_enumerator(this->lib,
+							this->session, tmpl, countof(tmpl), attr, count);
+>>>>>>> upstream/4.5.1
 	if (enumerator->enumerate(enumerator, &object))
 	{
 		switch (type)
 		{
 			case CKK_RSA:
+<<<<<<< HEAD
 				if (attr[2].ulValueLen == -1 || attr[3].ulValueLen == -1)
+=======
+				if (attr[1].ulValueLen == -1 || attr[2].ulValueLen == -1)
+>>>>>>> upstream/4.5.1
 				{
 					DBG1(DBG_CFG, "reading modulus/exponent from PKCS#1 failed");
 					break;
 				}
+<<<<<<< HEAD
 				modulus = chunk_create(attr[2].pValue, attr[2].ulValueLen);
 				pubexp = chunk_create(attr[3].pValue, attr[3].ulValueLen);
+=======
+				modulus = chunk_create(attr[1].pValue, attr[1].ulValueLen);
+				pubexp = chunk_create(attr[2].pValue, attr[2].ulValueLen);
+>>>>>>> upstream/4.5.1
 				this->pubkey = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 									KEY_RSA, BUILD_RSA_MODULUS, modulus,
 									BUILD_RSA_PUB_EXP, pubexp, BUILD_END);

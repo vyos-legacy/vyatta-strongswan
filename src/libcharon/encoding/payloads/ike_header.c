@@ -84,6 +84,14 @@ struct private_ike_header_t {
 	} flags;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * Reserved bits of IKE header
+	 */
+	bool reserved[5];
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Associated Message-ID.
 	 */
 	u_int32_t message_id;
@@ -119,6 +127,7 @@ encoding_rule_t ike_header_encodings[] = {
 	/* 8 Byte SPI, stored in the field initiator_spi */
 	{ IKE_SPI,		offsetof(private_ike_header_t, initiator_spi)	},
 	/* 8 Byte SPI, stored in the field responder_spi */
+<<<<<<< HEAD
 	{ IKE_SPI,		offsetof(private_ike_header_t, responder_spi) 	},
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,		offsetof(private_ike_header_t, next_payload) 	},
@@ -143,6 +152,32 @@ encoding_rule_t ike_header_encodings[] = {
 	{ U_INT_32,		offsetof(private_ike_header_t, message_id) 		},
 	/* 4 Byte length fied, stored in the field length */
 	{ HEADER_LENGTH,	offsetof(private_ike_header_t, length) 			}
+=======
+	{ IKE_SPI,		offsetof(private_ike_header_t, responder_spi)	},
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,		offsetof(private_ike_header_t, next_payload)	},
+	/* 4 Bit major version, stored in the field maj_version */
+	{ U_INT_4,		offsetof(private_ike_header_t, maj_version)		},
+	/* 4 Bit minor version, stored in the field min_version */
+	{ U_INT_4,		offsetof(private_ike_header_t, min_version)		},
+	/* 8 Bit for the exchange type */
+	{ U_INT_8,		offsetof(private_ike_header_t, exchange_type)	},
+	/* 2 Bit reserved bits */
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[0])		},
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[1])		},
+	/* 3 Bit flags, stored in the fields response, version and initiator */
+	{ FLAG,			offsetof(private_ike_header_t, flags.response)	},
+	{ FLAG,			offsetof(private_ike_header_t, flags.version)	},
+	{ FLAG,			offsetof(private_ike_header_t, flags.initiator)	},
+	/* 3 Bit reserved bits */
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[2])		},
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[3])		},
+	{ RESERVED_BIT,	offsetof(private_ike_header_t, reserved[4])		},
+	/* 4 Byte message id, stored in the field message_id */
+	{ U_INT_32,		offsetof(private_ike_header_t, message_id)		},
+	/* 4 Byte length fied, stored in the field length */
+	{ HEADER_LENGTH,offsetof(private_ike_header_t, length)			},
+>>>>>>> upstream/4.5.1
 };
 
 
@@ -163,11 +198,16 @@ encoding_rule_t ike_header_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+<<<<<<< HEAD
 
 /**
  * Implementation of payload_t.verify.
  */
 static status_t verify(private_ike_header_t *this)
+=======
+METHOD(payload_t, verify, status_t,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	if ((this->exchange_type < IKE_SA_INIT) ||
 		((this->exchange_type > INFORMATIONAL)
@@ -179,7 +219,10 @@ static status_t verify(private_ike_header_t *this)
 		/* unsupported exchange type */
 		return FAILED;
 	}
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/4.5.1
 	if (this->initiator_spi == 0
 #ifdef ME
 		/* we allow zero spi for INFORMATIONAL exchanges,
@@ -191,6 +234,7 @@ static status_t verify(private_ike_header_t *this)
 		/* initiator spi not set */
 		return FAILED;
 	}
+<<<<<<< HEAD
 
 	/* verification of version is not done in here */
 
@@ -208,131 +252,263 @@ static void set_next_type(payload_t *this,payload_type_t type)
  * Implementation of ike_header_t.get_initiator_spi.
  */
 static u_int64_t get_initiator_spi(private_ike_header_t *this)
+=======
+	return SUCCESS;
+}
+
+METHOD(payload_t, get_encoding_rules, void,
+	private_ike_header_t *this, encoding_rule_t **rules, size_t *rule_count)
+{
+	*rules = ike_header_encodings;
+	*rule_count = sizeof(ike_header_encodings) / sizeof(encoding_rule_t);
+}
+
+METHOD(payload_t, get_type, payload_type_t,
+	private_ike_header_t *this)
+{
+	return HEADER;
+}
+
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_ike_header_t *this)
+{
+	return this->next_payload;
+}
+
+METHOD(payload_t, set_next_type, void,
+	private_ike_header_t *this, payload_type_t type)
+{
+	this->next_payload = type;
+}
+
+METHOD(payload_t, get_length, size_t,
+	private_ike_header_t *this)
+{
+	return this->length;
+}
+
+METHOD(ike_header_t, get_initiator_spi, u_int64_t,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->initiator_spi;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.set_initiator_spi.
  */
 static void set_initiator_spi(private_ike_header_t *this, u_int64_t initiator_spi)
+=======
+METHOD(ike_header_t, set_initiator_spi, void,
+	private_ike_header_t *this, u_int64_t initiator_spi)
+>>>>>>> upstream/4.5.1
 {
 	this->initiator_spi = initiator_spi;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.get_responder_spi.
  */
 static u_int64_t get_responder_spi(private_ike_header_t *this)
+=======
+METHOD(ike_header_t, get_responder_spi, u_int64_t,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->responder_spi;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.set_responder_spi.
  */
 static void set_responder_spi(private_ike_header_t *this, u_int64_t responder_spi)
+=======
+METHOD(ike_header_t, set_responder_spi, void,
+	private_ike_header_t *this, u_int64_t responder_spi)
+>>>>>>> upstream/4.5.1
 {
 	this->responder_spi = responder_spi;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.get_maj_version.
  */
 static u_int8_t get_maj_version(private_ike_header_t *this)
+=======
+METHOD(ike_header_t, get_maj_version, u_int8_t,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->maj_version;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.get_min_version.
  */
 static u_int8_t get_min_version(private_ike_header_t *this)
+=======
+METHOD(ike_header_t, set_maj_version, void,
+	private_ike_header_t *this, u_int8_t major)
+{
+	this->maj_version = major;
+}
+
+METHOD(ike_header_t, get_min_version, u_int8_t,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->min_version;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.get_response_flag.
  */
 static bool get_response_flag(private_ike_header_t *this)
+=======
+METHOD(ike_header_t, set_min_version, void,
+	private_ike_header_t *this, u_int8_t minor)
+{
+	this->min_version = minor;
+}
+
+METHOD(ike_header_t, get_response_flag, bool,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->flags.response;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.set_response_flag.
  */
 static void set_response_flag(private_ike_header_t *this, bool response)
+=======
+METHOD(ike_header_t, set_response_flag, void,
+	private_ike_header_t *this, bool response)
+>>>>>>> upstream/4.5.1
 {
 	this->flags.response = response;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.get_version_flag.
  */
 static bool get_version_flag(private_ike_header_t *this)
+=======
+METHOD(ike_header_t, get_version_flag, bool,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->flags.version;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.get_initiator_flag.
  */
 static bool get_initiator_flag(private_ike_header_t *this)
+=======
+METHOD(ike_header_t, set_version_flag, void,
+	private_ike_header_t *this, bool version)
+{
+	this->flags.version = version;
+}
+
+METHOD(ike_header_t, get_initiator_flag, bool,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->flags.initiator;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.set_initiator_flag.
  */
 static void set_initiator_flag(private_ike_header_t *this, bool initiator)
+=======
+METHOD(ike_header_t, set_initiator_flag, void,
+	private_ike_header_t *this, bool initiator)
+>>>>>>> upstream/4.5.1
 {
 	this->flags.initiator = initiator;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.get_exchange_type.
  */
 static u_int8_t get_exchange_type(private_ike_header_t *this)
+=======
+METHOD(ike_header_t, get_exchange_type, u_int8_t,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->exchange_type;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.set_exchange_type.
  */
 static void set_exchange_type(private_ike_header_t *this, u_int8_t exchange_type)
+=======
+METHOD(ike_header_t, set_exchange_type, void,
+	private_ike_header_t *this, u_int8_t exchange_type)
+>>>>>>> upstream/4.5.1
 {
 	this->exchange_type = exchange_type;
 }
 
+<<<<<<< HEAD
 /**
  * Implements ike_header_t's get_message_id function.
  * See #ike_header_t.get_message_id  for description.
  */
 static u_int32_t get_message_id(private_ike_header_t *this)
+=======
+METHOD(ike_header_t, get_message_id, u_int32_t,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->message_id;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.set_message_id.
  */
 static void set_message_id(private_ike_header_t *this, u_int32_t message_id)
+=======
+METHOD(ike_header_t, set_message_id, void,
+	private_ike_header_t *this, u_int32_t message_id)
+>>>>>>> upstream/4.5.1
 {
 	this->message_id = message_id;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ike_header_t.destroy and payload_t.destroy.
  */
 static void destroy(ike_header_t *this)
+=======
+METHOD2(payload_t, ike_header_t, destroy, void,
+	private_ike_header_t *this)
+>>>>>>> upstream/4.5.1
 {
 	free(this);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.get_encoding_rules.
  */
@@ -366,11 +542,14 @@ static size_t get_length(payload_t *this)
 	return (((private_ike_header_t*)this)->length);
 }
 
+=======
+>>>>>>> upstream/4.5.1
 /*
  * Described in header.
  */
 ike_header_t *ike_header_create()
 {
+<<<<<<< HEAD
 	private_ike_header_t *this = malloc_thing(private_ike_header_t);
 
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
@@ -412,4 +591,50 @@ ike_header_t *ike_header_create()
 	this->length = IKE_HEADER_LENGTH;
 
 	return (ike_header_t*)this;
+=======
+	private_ike_header_t *this;
+
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.get_initiator_spi = _get_initiator_spi,
+			.set_initiator_spi = _set_initiator_spi,
+			.get_responder_spi = _get_responder_spi,
+			.set_responder_spi = _set_responder_spi,
+			.get_maj_version = _get_maj_version,
+			.set_maj_version = _set_maj_version,
+			.get_min_version = _get_min_version,
+			.set_min_version = _set_min_version,
+			.get_response_flag = _get_response_flag,
+			.set_response_flag = _set_response_flag,
+			.get_version_flag = _get_version_flag,
+			.set_version_flag = _set_version_flag,
+			.get_initiator_flag = _get_initiator_flag,
+			.set_initiator_flag = _set_initiator_flag,
+			.get_exchange_type = _get_exchange_type,
+			.set_exchange_type = _set_exchange_type,
+			.get_message_id = _get_message_id,
+			.set_message_id = _set_message_id,
+			.destroy = _destroy,
+		},
+		.maj_version = IKE_MAJOR_VERSION,
+		.min_version = IKE_MINOR_VERSION,
+		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
+		.flags = {
+			.initiator = TRUE,
+			.version = HIGHER_VERSION_SUPPORTED_FLAG,
+		},
+		.length = IKE_HEADER_LENGTH,
+	);
+
+	return &this->public;
+>>>>>>> upstream/4.5.1
 }

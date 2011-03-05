@@ -202,7 +202,11 @@ struct tls_t {
 	/**
 	 * Check if TLS negotiation completed successfully.
 	 *
+<<<<<<< HEAD
 	 * @return			TRUE if TLS negotation and authentication complete
+=======
+	 * @return			TRUE if TLS negotiation and authentication complete
+>>>>>>> upstream/4.5.1
 	 */
 	bool (*is_complete)(tls_t *this);
 

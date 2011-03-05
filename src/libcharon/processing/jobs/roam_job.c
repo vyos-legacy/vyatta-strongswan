@@ -38,18 +38,28 @@ struct private_roam_job_t {
 	bool address;
 };
 
+<<<<<<< HEAD
 /**
  * Implements job_t.destroy.
  */
 static void destroy(private_roam_job_t *this)
+=======
+METHOD(job_t, destroy, void,
+	private_roam_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	free(this);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of job_t.execute.
  */
 static void execute(private_roam_job_t *this)
+=======
+METHOD(job_t, execute, void,
+	private_roam_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	ike_sa_t *ike_sa;
 	linked_list_t *list;
@@ -94,12 +104,26 @@ static void execute(private_roam_job_t *this)
  */
 roam_job_t *roam_job_create(bool address)
 {
+<<<<<<< HEAD
 	private_roam_job_t *this = malloc_thing(private_roam_job_t);
 
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 
 	this->address = address;
+=======
+	private_roam_job_t *this;
+
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.address = address,
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

@@ -31,10 +31,15 @@ struct private_ldap_plugin_t {
 	ldap_plugin_t public;
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of ldap_plugin_t.destroy
  */
 static void destroy(private_ldap_plugin_t *this)
+=======
+METHOD(plugin_t, destroy, void,
+	private_ldap_plugin_t *this)
+>>>>>>> upstream/4.5.1
 {
 	lib->fetcher->remove_fetcher(lib->fetcher,
 								 (fetcher_constructor_t)ldap_fetcher_create);
@@ -46,9 +51,21 @@ static void destroy(private_ldap_plugin_t *this)
  */
 plugin_t *ldap_plugin_create()
 {
+<<<<<<< HEAD
 	private_ldap_plugin_t *this = malloc_thing(private_ldap_plugin_t);
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+=======
+	private_ldap_plugin_t *this;
+
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
+>>>>>>> upstream/4.5.1
 
 	lib->fetcher->add_fetcher(lib->fetcher,
 						(fetcher_constructor_t)ldap_fetcher_create, "ldap://");

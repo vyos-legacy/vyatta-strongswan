@@ -255,19 +255,32 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 			/* if we have the lower nonce, delete rekeyed SA. If not, delete
 			 * the redundant. */
 			if (memcmp(this_nonce.ptr, other_nonce.ptr,
+<<<<<<< HEAD
 						min(this_nonce.len, other_nonce.len)) < 0)
+=======
+						min(this_nonce.len, other_nonce.len)) > 0)
+>>>>>>> upstream/4.5.1
 			{
 				/* peer should delete this SA. Add a timeout just in case. */
 				job_t *job = (job_t*)delete_ike_sa_job_create(
 						other->new_sa->get_id(other->new_sa), TRUE);
 				lib->scheduler->schedule_job(lib->scheduler, job, 10);
+<<<<<<< HEAD
 				DBG1(DBG_IKE, "IKE_SA rekey collision won, deleting rekeyed IKE_SA");
+=======
+				DBG1(DBG_IKE, "IKE_SA rekey collision won, waiting for delete");
+>>>>>>> upstream/4.5.1
 				charon->ike_sa_manager->checkin(charon->ike_sa_manager, other->new_sa);
 				other->new_sa = NULL;
 			}
 			else
 			{
+<<<<<<< HEAD
 				DBG1(DBG_IKE, "IKE_SA rekey collision lost, deleting redundant IKE_SA");
+=======
+				DBG1(DBG_IKE, "IKE_SA rekey collision lost, "
+					 "deleting redundant IKE_SA");
+>>>>>>> upstream/4.5.1
 				/* apply host for a proper delete */
 				host = this->ike_sa->get_my_host(this->ike_sa);
 				this->new_sa->set_my_host(this->new_sa, host->clone(host));

@@ -18,6 +18,11 @@
 #include <library.h>
 #include "des_crypter.h"
 
+<<<<<<< HEAD
+=======
+static const char *plugin_name = "des";
+
+>>>>>>> upstream/4.5.1
 typedef struct private_des_plugin_t private_des_plugin_t;
 
 /**
@@ -54,11 +59,19 @@ plugin_t *des_plugin_create()
 		},
 	);
 
+<<<<<<< HEAD
 	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
 							 (crypter_constructor_t)des_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
 							 (crypter_constructor_t)des_crypter_create);
 	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB,
+=======
+	lib->crypto->add_crypter(lib->crypto, ENCR_3DES, plugin_name,
+							 (crypter_constructor_t)des_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES, plugin_name,
+							 (crypter_constructor_t)des_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB, plugin_name,
+>>>>>>> upstream/4.5.1
 							 (crypter_constructor_t)des_crypter_create);
 
 	return &this->public.plugin;

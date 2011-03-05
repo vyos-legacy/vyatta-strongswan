@@ -15,11 +15,18 @@
 
 #include "ha_segments.h"
 
+<<<<<<< HEAD
 #include <pthread.h>
 
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 #include <utils/linked_list.h>
+=======
+#include <threading/mutex.h>
+#include <threading/condvar.h>
+#include <utils/linked_list.h>
+#include <threading/thread.h>
+>>>>>>> upstream/4.5.1
 #include <processing/jobs/callback_job.h>
 
 #define DEFAULT_HEARTBEAT_DELAY 1000
@@ -255,6 +262,7 @@ METHOD(listener_t, alert_hook, bool,
  */
 static job_requeue_t watchdog(private_ha_segments_t *this)
 {
+<<<<<<< HEAD
 	int oldstate;
 	bool timeout;
 
@@ -265,6 +273,17 @@ static job_requeue_t watchdog(private_ha_segments_t *this)
 										this->heartbeat_timeout);
 	pthread_setcancelstate(oldstate, NULL);
 	pthread_cleanup_pop(TRUE);
+=======
+	bool timeout, oldstate;
+
+	this->mutex->lock(this->mutex);
+	thread_cleanup_push((void*)this->mutex->unlock, this->mutex);
+	oldstate = thread_cancelability(TRUE);
+	timeout = this->condvar->timed_wait(this->condvar, this->mutex,
+										this->heartbeat_timeout);
+	thread_cancelability(oldstate);
+	thread_cleanup_pop(TRUE);
+>>>>>>> upstream/4.5.1
 	if (timeout)
 	{
 		DBG1(DBG_CFG, "no heartbeat received, taking all segments");

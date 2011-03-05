@@ -452,8 +452,13 @@ static void cache_queue(private_credential_manager_t *this)
  * check a certificate for its lifetime
  */
 static bool check_certificate(private_credential_manager_t *this,
+<<<<<<< HEAD
 							  certificate_t *subject, certificate_t *issuer,
 							  bool online, int pathlen, auth_cfg_t *auth)
+=======
+				certificate_t *subject, certificate_t *issuer, bool online,
+				int pathlen, bool trusted, auth_cfg_t *auth)
+>>>>>>> upstream/4.5.1
 {
 	time_t not_before, not_after;
 	cert_validator_t *validator;
@@ -471,6 +476,7 @@ static bool check_certificate(private_credential_manager_t *this,
 			 &not_before, FALSE, &not_after, FALSE);
 		return FALSE;
 	}
+<<<<<<< HEAD
 	if (issuer->get_type(issuer) == CERT_X509 &&
 		subject->get_type(subject) == CERT_X509)
 	{
@@ -488,12 +494,18 @@ static bool check_certificate(private_credential_manager_t *this,
 			return FALSE;
 		}
 	}
+=======
+>>>>>>> upstream/4.5.1
 
 	enumerator = this->validators->create_enumerator(this->validators);
 	while (enumerator->enumerate(enumerator, &validator))
 	{
 		if (!validator->validate(validator, subject, issuer,
+<<<<<<< HEAD
 								 online, pathlen, auth))
+=======
+								 online, pathlen, trusted, auth))
+>>>>>>> upstream/4.5.1
 		{
 			enumerator->destroy(enumerator);
 			return FALSE;
@@ -551,6 +563,40 @@ static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Get the strength of certificate, add it to auth
+ */
+static void get_key_strength(certificate_t *cert, auth_cfg_t *auth)
+{
+	uintptr_t strength;
+	public_key_t *key;
+	key_type_t type;
+
+	key = cert->get_public_key(cert);
+	if (key)
+	{
+		type = key->get_type(key);
+		strength = key->get_keysize(key);
+		DBG2(DBG_CFG, "  certificate \"%Y\" key: %d bit %N",
+			 cert->get_subject(cert), strength, key_type_names, type);
+		switch (type)
+		{
+			case KEY_RSA:
+				auth->add(auth, AUTH_RULE_RSA_STRENGTH, strength);
+				break;
+			case KEY_ECDSA:
+				auth->add(auth, AUTH_RULE_ECDSA_STRENGTH, strength);
+				break;
+			default:
+				break;
+		}
+		key->destroy(key);
+	}
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * try to verify the trust chain of subject, return TRUE if trusted
  */
 static bool verify_trust_chain(private_credential_manager_t *this,
@@ -562,7 +608,13 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 	int pathlen;
 
 	auth = auth_cfg_create();
+<<<<<<< HEAD
 	current = subject->get_ref(subject);
+=======
+	get_key_strength(subject, auth);
+	current = subject->get_ref(subject);
+	auth->add(auth, AUTH_RULE_SUBJECT_CERT, current->get_ref(current));
+>>>>>>> upstream/4.5.1
 
 	for (pathlen = 0; pathlen <= MAX_TRUST_PATH_LEN; pathlen++)
 	{
@@ -607,13 +659,25 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				break;
 			}
 		}
+<<<<<<< HEAD
 		if (!check_certificate(this, current, issuer, online, pathlen,
 							   current == subject ? auth : NULL))
+=======
+		if (!check_certificate(this, current, issuer, online,
+							   pathlen, trusted, auth))
+>>>>>>> upstream/4.5.1
 		{
 			trusted = FALSE;
 			issuer->destroy(issuer);
 			break;
 		}
+<<<<<<< HEAD
+=======
+		if (issuer)
+		{
+			get_key_strength(issuer, auth);
+		}
+>>>>>>> upstream/4.5.1
 		current->destroy(current);
 		current = issuer;
 		if (trusted)
@@ -637,6 +701,17 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * List find match function for certificates
+ */
+static bool cert_equals(certificate_t *a, certificate_t *b)
+{
+	return a->equals(a, b);
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * enumerator for trusted certificates
  */
 typedef struct {
@@ -656,6 +731,11 @@ typedef struct {
 	certificate_t *pretrusted;
 	/** currently enumerating auth config */
 	auth_cfg_t *auth;
+<<<<<<< HEAD
+=======
+	/** list of failed candidates */
+	linked_list_t *failed;
+>>>>>>> upstream/4.5.1
 } trusted_enumerator_t;
 
 METHOD(enumerator_t, trusted_enumerate, bool,
@@ -683,11 +763,22 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 				verify_trust_chain(this->this, this->pretrusted, this->auth,
 								   TRUE, this->online))
 			{
+<<<<<<< HEAD
 				this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
 								this->pretrusted->get_ref(this->pretrusted));
 				DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
 					 this->pretrusted->get_subject(this->pretrusted));
 				*cert = this->pretrusted;
+=======
+				DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
+					 this->pretrusted->get_subject(this->pretrusted));
+				*cert = this->pretrusted;
+				if (!this->auth->get(this->auth, AUTH_RULE_SUBJECT_CERT))
+				{	/* add cert to auth info, if not returned by trustchain */
+					this->auth->add(this->auth, AUTH_RULE_SUBJECT_CERT,
+									this->pretrusted->get_ref(this->pretrusted));
+				}
+>>>>>>> upstream/4.5.1
 				if (auth)
 				{
 					*auth = this->auth;
@@ -705,6 +796,15 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 			continue;
 		}
 
+<<<<<<< HEAD
+=======
+		if (this->failed->find_first(this->failed, (void*)cert_equals,
+									 NULL, current) == SUCCESS)
+		{	/* check each candidate only once */
+			continue;
+		}
+
+>>>>>>> upstream/4.5.1
 		DBG1(DBG_CFG, "  using certificate \"%Y\"",
 			 current->get_subject(current));
 		if (verify_trust_chain(this->this, current, this->auth, FALSE,
@@ -717,6 +817,10 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 			}
 			return TRUE;
 		}
+<<<<<<< HEAD
+=======
+		this->failed->insert_last(this->failed, current->get_ref(current));
+>>>>>>> upstream/4.5.1
 	}
 	return FALSE;
 }
@@ -727,6 +831,10 @@ METHOD(enumerator_t, trusted_destroy, void,
 	DESTROY_IF(this->pretrusted);
 	DESTROY_IF(this->auth);
 	DESTROY_IF(this->candidates);
+<<<<<<< HEAD
+=======
+	this->failed->destroy_offset(this->failed, offsetof(certificate_t, destroy));
+>>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -745,6 +853,10 @@ METHOD(credential_manager_t, create_trusted_enumerator, enumerator_t*,
 		.type = type,
 		.id = id,
 		.online = online,
+<<<<<<< HEAD
+=======
+		.failed = linked_list_create(),
+>>>>>>> upstream/4.5.1
 	);
 	return &enumerator->public;
 }

@@ -1,3 +1,80 @@
+<<<<<<< HEAD
+=======
+strongswan-4.5.1
+----------------
+
+- Sansar Choinyambuu implemented the RFC 5793 Posture Broker Protocol (BP)
+  compatible with Trusted Network Connect (TNC). The TNCCS 2.0 protocol
+  requires the tnccs_20, tnc_imc and tnc_imv plugins but does not depend
+  on the libtnc library. Any available IMV/IMC pairs conforming to the
+  Trusted Computing Group's TNC-IF-IMV/IMC 1.2 interface specification
+  can be loaded via /etc/tnc_config.
+
+- Re-implemented the TNCCS 1.1 protocol by using the tnc_imc and tnc_imv
+  in place of the external libtnc library.
+
+- The tnccs_dynamic plugin loaded on a TNC server in addition to the
+  tnccs_11 and tnccs_20 plugins, dynamically detects the IF-TNCCS
+  protocol version used by a TNC client and invokes an instance of
+  the corresponding protocol stack.
+
+- IKE and ESP proposals can now be stored in an SQL database using a
+  new proposals table. The start_action field in the child_configs
+  tables allows the automatic starting or routing of connections stored
+  in an SQL database.
+
+- The new certificate_authorities and certificate_distribution_points
+  tables make it possible to store CRL and OCSP Certificate Distribution
+  points in an SQL database.
+
+- The new 'include' statement allows to recursively include other files in
+  strongswan.conf.  Existing sections and values are thereby extended and
+  replaced, respectively.
+
+- Due to the changes in the parser for strongswan.conf, the configuration
+  syntax for the attr plugin has changed.  Previously, it was possible to
+  specify multiple values of a specific attribute type by adding multiple
+  key/value pairs with the same key (e.g. dns) to the plugins.attr section.
+  Because values with the same key now replace previously defined values
+  this is not possible anymore.  As an alternative, multiple values can be
+  specified by separating them with a comma (e.g. dns = 1.2.3.4, 2.3.4.5).
+
+- ipsec listalgs now appends (set in square brackets) to each crypto
+  algorithm listed the plugin that registered the function.
+
+- Traffic Flow Confidentiality padding supported with Linux 2.6.38 can be used
+  by the IKEv2 daemon. The ipsec.conf 'tfc' keyword pads all packets to a given
+  boundary, the special value '%mtu' pads all packets to the path MTU.
+
+- The new af-alg plugin can use various crypto primitives of the Linux Crypto
+  API using the AF_ALG interface introduced with 2.6.38. This removes the need
+  for additional userland implementations of symmetric cipher, hash, hmac and
+  xcbc algorithms.
+
+- The IKEv2 daemon supports the INITIAL_CONTACT notify as initiator and
+  responder. The notify is sent when initiating configurations with a unique
+  policy, set in ipsec.conf via the global 'uniqueids' option.
+
+- The conftest conformance testing framework enables the IKEv2 stack to perform
+  many tests using a distinct tool and configuration frontend. Various hooks
+  can alter reserved bits, flags, add custom notifies and proposals, reorder
+  or drop messages and much more. It is enabled using the --enable-conftest
+  ./configure switch.
+
+- The new libstrongswan constraints plugin provides advanced X.509 constraint
+  checking. In additon to X.509 pathLen constraints, the plugin checks for
+  nameConstraints and certificatePolicies, including policyMappings and
+  policyConstraints. The x509 certificate plugin and the pki tool have been
+  enhanced to support these extensions. The new left/rightcertpolicy ipsec.conf
+  connection keywords take OIDs a peer certificate must have.
+
+- The left/rightauth ipsec.conf keywords accept values with a minimum strength
+  for trustchain public keys in bits, such as rsa-2048 or ecdsa-256.
+
+- The revocation and x509 libstrongswan plugins and the pki tool gained basic
+  support for delta CRLs.
+
+>>>>>>> upstream/4.5.1
 
 strongswan-4.5.0
 ----------------

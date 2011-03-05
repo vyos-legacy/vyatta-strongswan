@@ -131,6 +131,10 @@ static payload_rule_t ike_sa_init_r_rules[] = {
 	{SECURITY_ASSOCIATION,			1,	1,						FALSE,	FALSE},
 	{KEY_EXCHANGE,					1,	1,						FALSE,	FALSE},
 	{NONCE,							1,	1,						FALSE,	FALSE},
+<<<<<<< HEAD
+=======
+	{CERTIFICATE_REQUEST,			1,	1,						FALSE,	FALSE},
+>>>>>>> upstream/4.5.1
 	{VENDOR_ID,						0,	10,						FALSE,	FALSE},
 };
 
@@ -490,6 +494,24 @@ struct private_message_t {
 	bool is_request;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * Higher version supported?
+	 */
+	bool version_flag;
+
+	/**
+	 * Reserved bits in IKE header
+	 */
+	bool reserved[5];
+
+	/**
+	 * Sorting of message disabled?
+	 */
+	bool sort_disabled;
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Message ID of this message.
 	 */
 	u_int32_t message_id;
@@ -647,6 +669,7 @@ METHOD(message_t, get_request, bool,
 	return this->is_request;
 }
 
+<<<<<<< HEAD
 /**
  * Is this message in an encoded form?
  */
@@ -659,6 +682,37 @@ static bool is_encoded(private_message_t *this)
 		return FALSE;
 	}
 	return TRUE;
+=======
+METHOD(message_t, set_version_flag, void,
+	private_message_t *this)
+{
+	this->version_flag = TRUE;
+}
+
+METHOD(message_t, get_reserved_header_bit, bool,
+	private_message_t *this, u_int nr)
+{
+	if (nr < countof(this->reserved))
+	{
+		return this->reserved[nr];
+	}
+	return FALSE;
+}
+
+METHOD(message_t, set_reserved_header_bit, void,
+	private_message_t *this, u_int nr)
+{
+	if (nr < countof(this->reserved))
+	{
+		this->reserved[nr] = TRUE;
+	}
+}
+
+METHOD(message_t, is_encoded, bool,
+	private_message_t *this)
+{
+	return this->packet->get_data(this->packet).ptr != NULL;
+>>>>>>> upstream/4.5.1
 }
 
 METHOD(message_t, add_payload, void,
@@ -732,6 +786,15 @@ METHOD(message_t, create_payload_enumerator, enumerator_t*,
 	return this->payloads->create_enumerator(this->payloads);
 }
 
+<<<<<<< HEAD
+=======
+METHOD(message_t, remove_payload_at, void,
+	private_message_t *this, enumerator_t *enumerator)
+{
+	this->payloads->remove_at(this->payloads, enumerator);
+}
+
+>>>>>>> upstream/4.5.1
 METHOD(message_t, get_payload, payload_t*,
 	private_message_t *this, payload_type_t type)
 {
@@ -1001,6 +1064,15 @@ static encryption_payload_t* wrap_payloads(private_message_t *this)
 	return encryption;
 }
 
+<<<<<<< HEAD
+=======
+METHOD(message_t, disable_sort, void,
+	private_message_t *this)
+{
+	this->sort_disabled = TRUE;
+}
+
+>>>>>>> upstream/4.5.1
 METHOD(message_t, generate, status_t,
 	private_message_t *this, aead_t *aead, packet_t **packet)
 {
@@ -1012,12 +1084,17 @@ METHOD(message_t, generate, status_t,
 	chunk_t chunk;
 	char str[256];
 	u_int32_t *lenpos;
+<<<<<<< HEAD
 
 	if (is_encoded(this))
 	{	/* already generated, return a new packet clone */
 		*packet = this->packet->clone(this->packet);
 		return SUCCESS;
 	}
+=======
+	bool *reserved;
+	int i;
+>>>>>>> upstream/4.5.1
 
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -1039,7 +1116,14 @@ METHOD(message_t, generate, status_t,
 		return NOT_SUPPORTED;
 	}
 
+<<<<<<< HEAD
 	order_payloads(this);
+=======
+	if (!this->sort_disabled)
+	{
+		order_payloads(this);
+	}
+>>>>>>> upstream/4.5.1
 
 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
 
@@ -1053,9 +1137,18 @@ METHOD(message_t, generate, status_t,
 	}
 
 	ike_header = ike_header_create();
+<<<<<<< HEAD
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
 	ike_header->set_message_id(ike_header, this->message_id);
 	ike_header->set_response_flag(ike_header, !this->is_request);
+=======
+	ike_header->set_maj_version(ike_header, this->major_version);
+	ike_header->set_min_version(ike_header, this->minor_version);
+	ike_header->set_exchange_type(ike_header, this->exchange_type);
+	ike_header->set_message_id(ike_header, this->message_id);
+	ike_header->set_response_flag(ike_header, !this->is_request);
+	ike_header->set_version_flag(ike_header, this->version_flag);
+>>>>>>> upstream/4.5.1
 	ike_header->set_initiator_flag(ike_header,
 						this->ike_sa_id->is_initiator(this->ike_sa_id));
 	ike_header->set_initiator_spi(ike_header,
@@ -1063,6 +1156,19 @@ METHOD(message_t, generate, status_t,
 	ike_header->set_responder_spi(ike_header,
 						this->ike_sa_id->get_responder_spi(this->ike_sa_id));
 
+<<<<<<< HEAD
+=======
+	for (i = 0; i < countof(this->reserved); i++)
+	{
+		reserved = payload_get_field(&ike_header->payload_interface,
+									 RESERVED_BIT, i);
+		if (reserved)
+		{
+			*reserved = this->reserved[i];
+		}
+	}
+
+>>>>>>> upstream/4.5.1
 	generator = generator_create();
 
 	/* generate all payloads with proper next type */
@@ -1131,6 +1237,11 @@ METHOD(message_t, parse_header, status_t,
 {
 	ike_header_t *ike_header;
 	status_t status;
+<<<<<<< HEAD
+=======
+	bool *reserved;
+	int i;
+>>>>>>> upstream/4.5.1
 
 	DBG2(DBG_ENC, "parsing header of message");
 
@@ -1165,7 +1276,19 @@ METHOD(message_t, parse_header, status_t,
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(
 												&ike_header->payload_interface);
+<<<<<<< HEAD
 
+=======
+	for (i = 0; i < countof(this->reserved); i++)
+	{
+		reserved = payload_get_field(&ike_header->payload_interface,
+									 RESERVED_BIT, i);
+		if (reserved)
+		{
+			this->reserved[i] = *reserved;
+		}
+	}
+>>>>>>> upstream/4.5.1
 	DBG2(DBG_ENC, "parsed a %N %s", exchange_type_names, this->exchange_type,
 		 this->is_request ? "request" : "response");
 
@@ -1182,6 +1305,34 @@ METHOD(message_t, parse_header, status_t,
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Check if a payload is for a mediation extension connectivity check
+ */
+static bool is_connectivity_check(private_message_t *this, payload_t *payload)
+{
+#ifdef ME
+	if (this->exchange_type == INFORMATIONAL &&
+		payload->get_type(payload) == NOTIFY)
+	{
+		notify_payload_t *notify = (notify_payload_t*)payload;
+
+		switch (notify->get_notify_type(notify))
+		{
+			case ME_CONNECTID:
+			case ME_ENDPOINT:
+			case ME_CONNECTAUTH:
+				return TRUE;
+			default:
+				break;
+		}
+	}
+#endif /* !ME */
+	return FALSE;
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * Decrypt payload from the encryption payload
  */
 static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
@@ -1252,14 +1403,23 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
 			}
 			encryption->destroy(encryption);
 		}
+<<<<<<< HEAD
 		if (type != UNKNOWN_PAYLOAD && !was_encrypted)
+=======
+		if (payload_is_known(type) && !was_encrypted &&
+			!is_connectivity_check(this, payload))
+>>>>>>> upstream/4.5.1
 		{
 			rule = get_payload_rule(this, type);
 			if (!rule || rule->encrypted)
 			{
 				DBG1(DBG_ENC, "payload type %N was not encrypted",
 					 payload_type_names, type);
+<<<<<<< HEAD
 				status = VERIFY_ERROR;
+=======
+				status = FAILED;
+>>>>>>> upstream/4.5.1
 				break;
 			}
 		}
@@ -1274,6 +1434,10 @@ static status_t decrypt_payloads(private_message_t *this, aead_t *aead)
  */
 static status_t verify(private_message_t *this)
 {
+<<<<<<< HEAD
+=======
+	bool complete = FALSE;
+>>>>>>> upstream/4.5.1
 	int i;
 
 	DBG2(DBG_ENC, "verifying message structure");
@@ -1291,6 +1455,7 @@ static status_t verify(private_message_t *this)
 		while (enumerator->enumerate(enumerator, &payload))
 		{
 			payload_type_t type;
+<<<<<<< HEAD
 			unknown_payload_t *unknown;
 
 			type = payload->get_type(payload);
@@ -1307,6 +1472,11 @@ static status_t verify(private_message_t *this)
 				}
 			}
 			else if (type == rule->type)
+=======
+
+			type = payload->get_type(payload);
+			if (type == rule->type)
+>>>>>>> upstream/4.5.1
 			{
 				found++;
 				DBG2(DBG_ENC, "found payload of type %N",
@@ -1323,15 +1493,25 @@ static status_t verify(private_message_t *this)
 		}
 		enumerator->destroy(enumerator);
 
+<<<<<<< HEAD
 		if (found < rule->min_occurence)
+=======
+		if (!complete && found < rule->min_occurence)
+>>>>>>> upstream/4.5.1
 		{
 			DBG1(DBG_ENC, "payload of type %N not occured %d times (%d)",
 				 payload_type_names, rule->type, rule->min_occurence, found);
 			return VERIFY_ERROR;
 		}
+<<<<<<< HEAD
 		if (rule->sufficient)
 		{
 			return SUCCESS;
+=======
+		if (found && rule->sufficient)
+		{
+			complete = TRUE;
+>>>>>>> upstream/4.5.1
 		}
 	}
 	return SUCCESS;
@@ -1360,7 +1540,11 @@ METHOD(message_t, parse_body, status_t,
 		{
 			DBG1(DBG_ENC, "payload type %N could not be parsed",
 				 payload_type_names, type);
+<<<<<<< HEAD
 			return PARSE_ERROR;
+=======
+			return this->exchange_type == IKE_SA_INIT ? PARSE_ERROR : FAILED;
+>>>>>>> upstream/4.5.1
 		}
 
 		DBG2(DBG_ENC, "verifying payload of type %N", payload_type_names, type);
@@ -1370,7 +1554,11 @@ METHOD(message_t, parse_body, status_t,
 			DBG1(DBG_ENC, "%N payload verification failed",
 				 payload_type_names, type);
 			payload->destroy(payload);
+<<<<<<< HEAD
 			return VERIFY_ERROR;
+=======
+			return this->exchange_type == IKE_SA_INIT ? VERIFY_ERROR : FAILED;
+>>>>>>> upstream/4.5.1
 		}
 
 		DBG2(DBG_ENC, "%N payload verified. Adding to payload list",
@@ -1388,6 +1576,7 @@ METHOD(message_t, parse_body, status_t,
 		type = payload->get_next_type(payload);
 	}
 
+<<<<<<< HEAD
 	if (type == ENCRYPTED)
 	{
 		status = decrypt_payloads(this, aead);
@@ -1396,6 +1585,13 @@ METHOD(message_t, parse_body, status_t,
 			DBG1(DBG_ENC, "could not decrypt payloads");
 			return status;
 		}
+=======
+	status = decrypt_payloads(this, aead);
+	if (status != SUCCESS)
+	{
+		DBG1(DBG_ENC, "could not decrypt payloads");
+		return status;
+>>>>>>> upstream/4.5.1
 	}
 
 	status = verify(this);
@@ -1443,14 +1639,29 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_first_payload_type = _get_first_payload_type,
 			.set_request = _set_request,
 			.get_request = _get_request,
+<<<<<<< HEAD
 			.add_payload = _add_payload,
 			.add_notify = _add_notify,
 			.generate = _generate,
+=======
+			.set_version_flag = _set_version_flag,
+			.get_reserved_header_bit = _get_reserved_header_bit,
+			.set_reserved_header_bit = _set_reserved_header_bit,
+			.add_payload = _add_payload,
+			.add_notify = _add_notify,
+			.disable_sort = _disable_sort,
+			.generate = _generate,
+			.is_encoded = _is_encoded,
+>>>>>>> upstream/4.5.1
 			.set_source = _set_source,
 			.get_source = _get_source,
 			.set_destination = _set_destination,
 			.get_destination = _get_destination,
 			.create_payload_enumerator = _create_payload_enumerator,
+<<<<<<< HEAD
+=======
+			.remove_payload_at = _remove_payload_at,
+>>>>>>> upstream/4.5.1
 			.get_payload = _get_payload,
 			.get_notify = _get_notify,
 			.parse_header = _parse_header,
@@ -1459,6 +1670,11 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_packet_data = _get_packet_data,
 			.destroy = _destroy,
 		},
+<<<<<<< HEAD
+=======
+		.major_version = IKE_MAJOR_VERSION,
+		.minor_version = IKE_MINOR_VERSION,
+>>>>>>> upstream/4.5.1
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
 		.is_request = TRUE,
 		.first_payload = NO_PAYLOAD,

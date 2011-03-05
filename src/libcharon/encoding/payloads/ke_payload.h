@@ -47,15 +47,22 @@ struct ke_payload_t {
 	payload_t payload_interface;
 
 	/**
+<<<<<<< HEAD
 	 * Returns the currently set key exchange data of this KE payload.
 	 *
 	 * @warning Returned data are not copied.
 	 *
 	 * @return 		chunk_t pointing to the value
+=======
+	 * Returns the key exchange data of this KE payload.
+	 *
+	 * @return 		chunk_t pointing to internal data
+>>>>>>> upstream/4.5.1
 	 */
 	chunk_t (*get_key_exchange_data) (ke_payload_t *this);
 
 	/**
+<<<<<<< HEAD
 	 * Sets the key exchange data of this KE payload.
 	 *
 	 * Value is getting copied.
@@ -65,6 +72,8 @@ struct ke_payload_t {
 	void (*set_key_exchange_data) (ke_payload_t *this, chunk_t key_exchange_data);
 
 	/**
+=======
+>>>>>>> upstream/4.5.1
 	 * Gets the Diffie-Hellman Group Number of this KE payload.
 	 *
 	 * @return 					DH Group Number of this payload
@@ -72,6 +81,7 @@ struct ke_payload_t {
 	diffie_hellman_group_t (*get_dh_group_number) (ke_payload_t *this);
 
 	/**
+<<<<<<< HEAD
 	 * Sets the Diffie-Hellman Group Number of this KE payload.
 	 *
 	 * @param dh_group_number	DH Group to set
@@ -80,6 +90,8 @@ struct ke_payload_t {
 								 diffie_hellman_group_t dh_group_number);
 
 	/**
+=======
+>>>>>>> upstream/4.5.1
 	 * Destroys an ke_payload_t object.
 	 */
 	void (*destroy) (ke_payload_t *this);

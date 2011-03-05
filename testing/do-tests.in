@@ -343,6 +343,10 @@ do
 	#
 
 	$DIR/scripts/load-testconfig $testname
+<<<<<<< HEAD
+=======
+	unset RADIUSHOSTS
+>>>>>>> upstream/4.5.1
 	source $TESTDIR/test.conf
 
 

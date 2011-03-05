@@ -171,6 +171,10 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->id2 = push_string(msg, conn_end->id2);
 	msg_end->cert = push_string(msg, conn_end->cert);
 	msg_end->cert2 = push_string(msg, conn_end->cert2);
+<<<<<<< HEAD
+=======
+	msg_end->cert_policy = push_string(msg, conn_end->cert_policy);
+>>>>>>> upstream/4.5.1
 	msg_end->ca = push_string(msg, conn_end->ca);
 	msg_end->ca2 = push_string(msg, conn_end->ca2);
 	msg_end->groups = push_string(msg, conn_end->groups);
@@ -266,6 +270,10 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.mark_in.mask = conn->mark_in.mask;
 	msg.add_conn.mark_out.value = conn->mark_out.value;
 	msg.add_conn.mark_out.mask = conn->mark_out.mask;
+<<<<<<< HEAD
+=======
+	msg.add_conn.tfc = conn->tfc;
+>>>>>>> upstream/4.5.1
 
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->left);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->right);

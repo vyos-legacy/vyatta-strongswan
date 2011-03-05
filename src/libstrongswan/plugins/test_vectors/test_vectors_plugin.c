@@ -104,10 +104,15 @@ struct private_test_vectors_plugin_t {
 	test_vectors_plugin_t public;
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of test_vectors_plugin_t.test_vectorstroy
  */
 static void destroy(private_test_vectors_plugin_t *this)
+=======
+METHOD(plugin_t, destroy, void,
+	private_test_vectors_plugin_t *this)
+>>>>>>> upstream/4.5.1
 {
 	free(this);
 }
@@ -117,10 +122,23 @@ static void destroy(private_test_vectors_plugin_t *this)
  */
 plugin_t *test_vectors_plugin_create()
 {
+<<<<<<< HEAD
 	private_test_vectors_plugin_t *this = malloc_thing(private_test_vectors_plugin_t);
 	int i;
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+=======
+	private_test_vectors_plugin_t *this;
+	int i;
+
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
+>>>>>>> upstream/4.5.1
 
 	for (i = 0; i < countof(crypter); i++)
 	{

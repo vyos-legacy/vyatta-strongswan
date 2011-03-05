@@ -57,11 +57,16 @@ struct private_integrity_checker_t {
 	int checksum_count;
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of integrity_checker_t.build_file
  */
 static u_int32_t build_file(private_integrity_checker_t *this, char *file,
 							size_t *len)
+=======
+METHOD(integrity_checker_t, build_file, u_int32_t,
+	private_integrity_checker_t *this, char *file, size_t *len)
+>>>>>>> upstream/4.5.1
 {
 	u_int32_t checksum;
 	chunk_t contents;
@@ -136,11 +141,16 @@ static int callback(struct dl_phdr_info *dlpi, size_t size, Dl_info *dli)
 	return 0;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of integrity_checker_t.build_segment
  */
 static u_int32_t build_segment(private_integrity_checker_t *this, void *sym,
 							   size_t *len)
+=======
+METHOD(integrity_checker_t, build_segment, u_int32_t,
+	private_integrity_checker_t *this, void *sym, size_t *len)
+>>>>>>> upstream/4.5.1
 {
 	chunk_t segment;
 	Dl_info dli;
@@ -180,11 +190,16 @@ static integrity_checksum_t *find_checksum(private_integrity_checker_t *this,
 	return NULL;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of integrity_checker_t.check_file
  */
 static bool check_file(private_integrity_checker_t *this,
 					   char *name, char *file)
+=======
+METHOD(integrity_checker_t, check_file, bool,
+	private_integrity_checker_t *this, char *name, char *file)
+>>>>>>> upstream/4.5.1
 {
 	integrity_checksum_t *cs;
 	u_int32_t sum;
@@ -217,11 +232,16 @@ static bool check_file(private_integrity_checker_t *this,
 	return TRUE;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of integrity_checker_t.check_segment
  */
 static bool check_segment(private_integrity_checker_t *this,
 						  char *name, void *sym)
+=======
+METHOD(integrity_checker_t, check_segment, bool,
+	private_integrity_checker_t *this, char *name, void *sym)
+>>>>>>> upstream/4.5.1
 {
 	integrity_checksum_t *cs;
 	u_int32_t sum;
@@ -254,10 +274,15 @@ static bool check_segment(private_integrity_checker_t *this,
 	return TRUE;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of integrity_checker_t.check
  */
 static bool check(private_integrity_checker_t *this, char *name, void *sym)
+=======
+METHOD(integrity_checker_t, check, bool,
+	private_integrity_checker_t *this, char *name, void *sym)
+>>>>>>> upstream/4.5.1
 {
 	Dl_info dli;
 
@@ -277,10 +302,15 @@ static bool check(private_integrity_checker_t *this, char *name, void *sym)
 	return TRUE;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of integrity_checker_t.destroy.
  */
 static void destroy(private_integrity_checker_t *this)
+=======
+METHOD(integrity_checker_t, destroy, void,
+	private_integrity_checker_t *this)
+>>>>>>> upstream/4.5.1
 {
 	if (this->handle)
 	{
@@ -294,6 +324,7 @@ static void destroy(private_integrity_checker_t *this)
  */
 integrity_checker_t *integrity_checker_create(char *checksum_library)
 {
+<<<<<<< HEAD
 	private_integrity_checker_t *this = malloc_thing(private_integrity_checker_t);
 
 	this->public.check_file = (bool(*)(integrity_checker_t*, char *name, char *file))check_file;
@@ -305,6 +336,21 @@ integrity_checker_t *integrity_checker_create(char *checksum_library)
 
 	this->checksum_count = 0;
 	this->handle = NULL;
+=======
+	private_integrity_checker_t *this;
+
+	INIT(this,
+		.public = {
+			.check_file = _check_file,
+			.build_file = _build_file,
+			.check_segment = _check_segment,
+			.build_segment = _build_segment,
+			.check = _check,
+			.destroy = _destroy,
+		},
+	);
+
+>>>>>>> upstream/4.5.1
 	if (checksum_library)
 	{
 		this->handle = dlopen(checksum_library, RTLD_LAZY);

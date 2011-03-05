@@ -53,7 +53,11 @@ strongswan_CFLAGS := \
 	-DUSE_VSTR \
 	-DROUTING_TABLE=0 \
 	-DROUTING_TABLE_PRIO=220 \
+<<<<<<< HEAD
 	-DVERSION=\"4.5.0\" \
+=======
+	-DVERSION=\"4.5.1\" \
+>>>>>>> upstream/4.5.1
 	-DPLUGINS='"$(strongswan_PLUGINS)"' \
 	-DIPSEC_DIR=\"/system/bin\" \
 	-DIPSEC_PIDDIR=\"/data/misc/vpn\" \

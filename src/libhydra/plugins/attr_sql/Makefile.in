@@ -232,9 +232,13 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+<<<<<<< HEAD
 ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
 ipsecuid = @ipsecuid@
+=======
+ipsecgroup = @ipsecgroup@
+>>>>>>> upstream/4.5.1
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -273,6 +277,11 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+<<<<<<< HEAD
+=======
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
+>>>>>>> upstream/4.5.1
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@

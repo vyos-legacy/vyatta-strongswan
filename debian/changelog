@@ -1,3 +1,9 @@
+strongswan (4.5.0-1ubuntu1) maverick; urgency=low
+
+  * New upstream version
+
+ -- René Mayrhofer <rene@earth>  Sat, 05 Mar 2011 09:27:49 +0100
+
 strongswan (4.5.0-1) unstable; urgency=low
 
   * New upstream version 4.5.0

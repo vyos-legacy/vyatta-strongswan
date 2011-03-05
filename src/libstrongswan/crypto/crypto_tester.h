@@ -143,7 +143,11 @@ struct crypto_tester_t {
 	 */
 	bool (*test_crypter)(crypto_tester_t *this, encryption_algorithm_t alg,
 						 size_t key_size, crypter_constructor_t create,
+<<<<<<< HEAD
 						 u_int *speed);
+=======
+						 u_int *speed, const char *plugin_name);
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * Test an aead algorithm, optionally using a specified key size.
@@ -156,7 +160,11 @@ struct crypto_tester_t {
 	 */
 	bool (*test_aead)(crypto_tester_t *this, encryption_algorithm_t alg,
 						 size_t key_size, aead_constructor_t create,
+<<<<<<< HEAD
 						 u_int *speed);
+=======
+						 u_int *speed, const char *plugin_name);
+>>>>>>> upstream/4.5.1
 	/**
 	 * Test a signer algorithm.
 	 *
@@ -166,7 +174,12 @@ struct crypto_tester_t {
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_signer)(crypto_tester_t *this, integrity_algorithm_t alg,
+<<<<<<< HEAD
 						signer_constructor_t create, u_int *speed);
+=======
+						signer_constructor_t create,
+						u_int *speed, const char *plugin_name);
+>>>>>>> upstream/4.5.1
 	/**
 	 * Test a hasher algorithm.
 	 *
@@ -176,7 +189,12 @@ struct crypto_tester_t {
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_hasher)(crypto_tester_t *this, hash_algorithm_t alg,
+<<<<<<< HEAD
 						hasher_constructor_t create, u_int *speed);
+=======
+						hasher_constructor_t create,
+						u_int *speed, const char *plugin_name);
+>>>>>>> upstream/4.5.1
 	/**
 	 * Test a PRF algorithm.
 	 *
@@ -186,7 +204,12 @@ struct crypto_tester_t {
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_prf)(crypto_tester_t *this, pseudo_random_function_t alg,
+<<<<<<< HEAD
 					 prf_constructor_t create, u_int *speed);
+=======
+					 prf_constructor_t create,
+					 u_int *speed, const char *plugin_name);
+>>>>>>> upstream/4.5.1
 	/**
 	 * Test a RNG implementation.
 	 *
@@ -196,7 +219,12 @@ struct crypto_tester_t {
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_rng)(crypto_tester_t *this, rng_quality_t quality,
+<<<<<<< HEAD
 					 rng_constructor_t create, u_int *speed);
+=======
+					 rng_constructor_t create,
+					 u_int *speed, const char *plugin_name);
+>>>>>>> upstream/4.5.1
 	/**
 	 * Add a test vector to test a crypter.
 	 *

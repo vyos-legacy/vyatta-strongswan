@@ -106,7 +106,12 @@ static void chunk_mod(size_t length, chunk_t chunk, u_int8_t buffer[])
  * 0xcb, 0x0f, 0x6c, 0x55, 0xba, 0xbb, 0x13, 0x78,
  * 0x8e, 0x20, 0xd7, 0x37, 0xa3, 0x27, 0x51, 0x16
  */
+<<<<<<< HEAD
 static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
+=======
+METHOD(prf_t, get_bytes, void,
+	private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
+>>>>>>> upstream/4.5.1
 {
 	int i;
 	u_int8_t xval[this->b];
@@ -139,6 +144,7 @@ static void get_bytes(private_fips_prf_t *this, chunk_t seed, u_int8_t w[])
 	/* 3.3 done already, mod q not used */
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of prf_t.get_block_size.
  */
@@ -150,23 +156,42 @@ static size_t get_block_size(private_fips_prf_t *this)
  * Implementation of prf_t.allocate_bytes.
  */
 static void allocate_bytes(private_fips_prf_t *this, chunk_t seed, chunk_t *chunk)
+=======
+METHOD(prf_t, get_block_size, size_t,
+	private_fips_prf_t *this)
+{
+	return 2 * this->b;
+}
+METHOD(prf_t, allocate_bytes, void,
+	private_fips_prf_t *this, chunk_t seed, chunk_t *chunk)
+>>>>>>> upstream/4.5.1
 {
 	*chunk = chunk_alloc(get_block_size(this));
 	get_bytes(this, seed, chunk->ptr);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of prf_t.get_key_size.
  */
 static size_t get_key_size(private_fips_prf_t *this)
+=======
+METHOD(prf_t, get_key_size, size_t,
+	private_fips_prf_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->b;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of prf_t.set_key.
  */
 static void set_key(private_fips_prf_t *this, chunk_t key)
+=======
+METHOD(prf_t, set_key, void,
+	private_fips_prf_t *this, chunk_t key)
+>>>>>>> upstream/4.5.1
 {
 	/* save key as "key mod 2^b" */
 	chunk_mod(this->b, key, this->key);
@@ -198,10 +223,15 @@ void g_sha1(private_fips_prf_t *this, chunk_t c, u_int8_t res[])
 	this->keyed_prf->get_bytes(this->keyed_prf, c, res);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of prf_t.destroy.
  */
 static void destroy(private_fips_prf_t *this)
+=======
+METHOD(prf_t, destroy, void,
+	private_fips_prf_t *this)
+>>>>>>> upstream/4.5.1
 {
 	this->keyed_prf->destroy(this->keyed_prf);
 	free(this->key);
@@ -213,6 +243,7 @@ static void destroy(private_fips_prf_t *this)
  */
 fips_prf_t *fips_prf_create(pseudo_random_function_t algo)
 {
+<<<<<<< HEAD
 	private_fips_prf_t *this = malloc_thing(private_fips_prf_t);
 
 	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
@@ -221,6 +252,22 @@ fips_prf_t *fips_prf_create(pseudo_random_function_t algo)
 	this->public.prf_interface.get_key_size = (size_t (*) (prf_t*))get_key_size;
 	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
 	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
+=======
+	private_fips_prf_t *this;
+
+	INIT(this,
+		.public = {
+			.prf_interface = {
+				.get_bytes = _get_bytes,
+				.allocate_bytes = _allocate_bytes,
+				.get_block_size = _get_block_size,
+				.get_key_size = _get_key_size,
+				.set_key = _set_key,
+				.destroy = _destroy,
+			},
+		},
+	);
+>>>>>>> upstream/4.5.1
 
 	switch (algo)
 	{

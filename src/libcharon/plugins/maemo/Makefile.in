@@ -224,9 +224,13 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+<<<<<<< HEAD
 ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
 ipsecuid = @ipsecuid@
+=======
+ipsecgroup = @ipsecgroup@
+>>>>>>> upstream/4.5.1
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -265,6 +269,11 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+<<<<<<< HEAD
+=======
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
+>>>>>>> upstream/4.5.1
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -288,7 +297,12 @@ libstrongswan_maemo_la_SOURCES = \
 libstrongswan_maemo_la_LDFLAGS = -module -avoid-version
 libstrongswan_maemo_la_LIBADD = ${maemo_LIBS}
 dbusservice_DATA = org.strongswan.charon.service
+<<<<<<< HEAD
 EXTRA_DIST = $(dbusservice_DATA)
+=======
+EXTRA_DIST = org.strongswan.charon.service.in
+CLEANFILES = $(dbusservice_DATA)
+>>>>>>> upstream/4.5.1
 all: all-am
 
 .SUFFIXES:
@@ -528,6 +542,10 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+<<<<<<< HEAD
+=======
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
+>>>>>>> upstream/4.5.1
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -626,6 +644,12 @@ uninstall-am: uninstall-dbusserviceDATA uninstall-pluginLTLIBRARIES
 	uninstall-pluginLTLIBRARIES
 
 
+<<<<<<< HEAD
+=======
+org.strongswan.charon.service: $(srcdir)/org.strongswan.charon.service.in
+	sed -e 's|[@]LIBEXECDIR[@]|$(libexecdir)|' $< >$@
+
+>>>>>>> upstream/4.5.1
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

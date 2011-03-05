@@ -31,10 +31,15 @@ struct private_sqlite_plugin_t {
 	sqlite_plugin_t public;
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of plugin_t.destroy
  */
 static void destroy(private_sqlite_plugin_t *this)
+=======
+METHOD(plugin_t, destroy, void,
+	private_sqlite_plugin_t *this)
+>>>>>>> upstream/4.5.1
 {
 	lib->db->remove_database(lib->db,
 							 (database_constructor_t)sqlite_database_create);
@@ -46,9 +51,21 @@ static void destroy(private_sqlite_plugin_t *this)
  */
 plugin_t *sqlite_plugin_create()
 {
+<<<<<<< HEAD
 	private_sqlite_plugin_t *this = malloc_thing(private_sqlite_plugin_t);
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+=======
+	private_sqlite_plugin_t *this;
+
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
+>>>>>>> upstream/4.5.1
 
 	lib->db->add_database(lib->db,
 						  (database_constructor_t)sqlite_database_create);

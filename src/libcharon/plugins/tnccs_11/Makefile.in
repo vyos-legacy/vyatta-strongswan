@@ -34,7 +34,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+<<<<<<< HEAD
 @MONOLITHIC_FALSE@am__append_1 = $(top_builddir)/src/libtls/libtls.la
+=======
+>>>>>>> upstream/4.5.1
 subdir = src/libcharon/plugins/tnccs_11
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -75,8 +78,17 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 am__installdirs = "$(DESTDIR)$(plugindir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
+<<<<<<< HEAD
 libstrongswan_tnccs_11_la_DEPENDENCIES = $(am__append_1)
 am_libstrongswan_tnccs_11_la_OBJECTS = tnccs_11_plugin.lo tnccs_11.lo
+=======
+am__DEPENDENCIES_1 =
+libstrongswan_tnccs_11_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am_libstrongswan_tnccs_11_la_OBJECTS = tnccs_11_plugin.lo tnccs_11.lo \
+	tnccs_batch.lo tnccs_msg.lo imc_imv_msg.lo tnccs_error_msg.lo \
+	tnccs_preferred_language_msg.lo tnccs_reason_strings_msg.lo \
+	tnccs_recommendation_msg.lo tnccs_tncs_contact_info_msg.lo
+>>>>>>> upstream/4.5.1
 libstrongswan_tnccs_11_la_OBJECTS =  \
 	$(am_libstrongswan_tnccs_11_la_OBJECTS)
 libstrongswan_tnccs_11_la_LINK = $(LIBTOOL) --tag=CC \
@@ -223,9 +235,13 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+<<<<<<< HEAD
 ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
 ipsecuid = @ipsecuid@
+=======
+ipsecgroup = @ipsecgroup@
+>>>>>>> upstream/4.5.1
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -264,6 +280,11 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+<<<<<<< HEAD
+=======
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
+>>>>>>> upstream/4.5.1
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -275,6 +296,7 @@ urandom_device = @urandom_device@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+<<<<<<< HEAD
 	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls \
 	`xml2-config --cflags`
 
@@ -284,6 +306,24 @@ libstrongswan_tnccs_11_la_LIBADD = -ltnc $(am__append_1)
 @MONOLITHIC_FALSE@plugin_LTLIBRARIES = libstrongswan-tnccs-11.la
 libstrongswan_tnccs_11_la_SOURCES = \
 	tnccs_11_plugin.h tnccs_11_plugin.c tnccs_11.h tnccs_11.c
+=======
+	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls ${xml_CFLAGS}
+
+AM_CFLAGS = -rdynamic
+libstrongswan_tnccs_11_la_LIBADD = ${xml_LIBS}
+@MONOLITHIC_TRUE@noinst_LTLIBRARIES = libstrongswan-tnccs-11.la
+@MONOLITHIC_FALSE@plugin_LTLIBRARIES = libstrongswan-tnccs-11.la
+libstrongswan_tnccs_11_la_SOURCES = \
+	tnccs_11_plugin.h tnccs_11_plugin.c tnccs_11.h tnccs_11.c \
+	batch/tnccs_batch.h batch/tnccs_batch.c \
+	messages/tnccs_msg.h messages/tnccs_msg.c \
+	messages/imc_imv_msg.h messages/imc_imv_msg.c \
+	messages/tnccs_error_msg.h messages/tnccs_error_msg.c \
+	messages/tnccs_preferred_language_msg.h messages/tnccs_preferred_language_msg.c \
+	messages/tnccs_reason_strings_msg.h messages/tnccs_reason_strings_msg.c \
+	messages/tnccs_recommendation_msg.h messages/tnccs_recommendation_msg.c \
+	messages/tnccs_tncs_contact_info_msg.h messages/tnccs_tncs_contact_info_msg.c
+>>>>>>> upstream/4.5.1
 
 libstrongswan_tnccs_11_la_LDFLAGS = -module -avoid-version
 all: all-am
@@ -369,8 +409,21 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+<<<<<<< HEAD
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_11.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_11_plugin.Plo@am__quote@
+=======
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/imc_imv_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_11.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_11_plugin.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_batch.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_error_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_preferred_language_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_reason_strings_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_recommendation_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_tncs_contact_info_msg.Plo@am__quote@
+>>>>>>> upstream/4.5.1
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -393,6 +446,65 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
+<<<<<<< HEAD
+=======
+tnccs_batch.lo: batch/tnccs_batch.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_batch.lo -MD -MP -MF $(DEPDIR)/tnccs_batch.Tpo -c -o tnccs_batch.lo `test -f 'batch/tnccs_batch.c' || echo '$(srcdir)/'`batch/tnccs_batch.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_batch.Tpo $(DEPDIR)/tnccs_batch.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='batch/tnccs_batch.c' object='tnccs_batch.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_batch.lo `test -f 'batch/tnccs_batch.c' || echo '$(srcdir)/'`batch/tnccs_batch.c
+
+tnccs_msg.lo: messages/tnccs_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_msg.lo -MD -MP -MF $(DEPDIR)/tnccs_msg.Tpo -c -o tnccs_msg.lo `test -f 'messages/tnccs_msg.c' || echo '$(srcdir)/'`messages/tnccs_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_msg.Tpo $(DEPDIR)/tnccs_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/tnccs_msg.c' object='tnccs_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_msg.lo `test -f 'messages/tnccs_msg.c' || echo '$(srcdir)/'`messages/tnccs_msg.c
+
+imc_imv_msg.lo: messages/imc_imv_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT imc_imv_msg.lo -MD -MP -MF $(DEPDIR)/imc_imv_msg.Tpo -c -o imc_imv_msg.lo `test -f 'messages/imc_imv_msg.c' || echo '$(srcdir)/'`messages/imc_imv_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/imc_imv_msg.Tpo $(DEPDIR)/imc_imv_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/imc_imv_msg.c' object='imc_imv_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o imc_imv_msg.lo `test -f 'messages/imc_imv_msg.c' || echo '$(srcdir)/'`messages/imc_imv_msg.c
+
+tnccs_error_msg.lo: messages/tnccs_error_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_error_msg.lo -MD -MP -MF $(DEPDIR)/tnccs_error_msg.Tpo -c -o tnccs_error_msg.lo `test -f 'messages/tnccs_error_msg.c' || echo '$(srcdir)/'`messages/tnccs_error_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_error_msg.Tpo $(DEPDIR)/tnccs_error_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/tnccs_error_msg.c' object='tnccs_error_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_error_msg.lo `test -f 'messages/tnccs_error_msg.c' || echo '$(srcdir)/'`messages/tnccs_error_msg.c
+
+tnccs_preferred_language_msg.lo: messages/tnccs_preferred_language_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_preferred_language_msg.lo -MD -MP -MF $(DEPDIR)/tnccs_preferred_language_msg.Tpo -c -o tnccs_preferred_language_msg.lo `test -f 'messages/tnccs_preferred_language_msg.c' || echo '$(srcdir)/'`messages/tnccs_preferred_language_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_preferred_language_msg.Tpo $(DEPDIR)/tnccs_preferred_language_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/tnccs_preferred_language_msg.c' object='tnccs_preferred_language_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_preferred_language_msg.lo `test -f 'messages/tnccs_preferred_language_msg.c' || echo '$(srcdir)/'`messages/tnccs_preferred_language_msg.c
+
+tnccs_reason_strings_msg.lo: messages/tnccs_reason_strings_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_reason_strings_msg.lo -MD -MP -MF $(DEPDIR)/tnccs_reason_strings_msg.Tpo -c -o tnccs_reason_strings_msg.lo `test -f 'messages/tnccs_reason_strings_msg.c' || echo '$(srcdir)/'`messages/tnccs_reason_strings_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_reason_strings_msg.Tpo $(DEPDIR)/tnccs_reason_strings_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/tnccs_reason_strings_msg.c' object='tnccs_reason_strings_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_reason_strings_msg.lo `test -f 'messages/tnccs_reason_strings_msg.c' || echo '$(srcdir)/'`messages/tnccs_reason_strings_msg.c
+
+tnccs_recommendation_msg.lo: messages/tnccs_recommendation_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_recommendation_msg.lo -MD -MP -MF $(DEPDIR)/tnccs_recommendation_msg.Tpo -c -o tnccs_recommendation_msg.lo `test -f 'messages/tnccs_recommendation_msg.c' || echo '$(srcdir)/'`messages/tnccs_recommendation_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_recommendation_msg.Tpo $(DEPDIR)/tnccs_recommendation_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/tnccs_recommendation_msg.c' object='tnccs_recommendation_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_recommendation_msg.lo `test -f 'messages/tnccs_recommendation_msg.c' || echo '$(srcdir)/'`messages/tnccs_recommendation_msg.c
+
+tnccs_tncs_contact_info_msg.lo: messages/tnccs_tncs_contact_info_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_tncs_contact_info_msg.lo -MD -MP -MF $(DEPDIR)/tnccs_tncs_contact_info_msg.Tpo -c -o tnccs_tncs_contact_info_msg.lo `test -f 'messages/tnccs_tncs_contact_info_msg.c' || echo '$(srcdir)/'`messages/tnccs_tncs_contact_info_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_tncs_contact_info_msg.Tpo $(DEPDIR)/tnccs_tncs_contact_info_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/tnccs_tncs_contact_info_msg.c' object='tnccs_tncs_contact_info_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_tncs_contact_info_msg.lo `test -f 'messages/tnccs_tncs_contact_info_msg.c' || echo '$(srcdir)/'`messages/tnccs_tncs_contact_info_msg.c
+
+>>>>>>> upstream/4.5.1
 mostlyclean-libtool:
 	-rm -f *.lo
 

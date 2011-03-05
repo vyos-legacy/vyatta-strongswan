@@ -134,4 +134,16 @@ cert_payload_t *cert_payload_create_from_cert(certificate_t *cert);
  */
 cert_payload_t *cert_payload_create_from_hash_and_url(chunk_t hash, char *url);
 
+<<<<<<< HEAD
+=======
+/**
+ * Creates a custom certificate payload using type and associated data.
+ *
+ * @param type				encoding type of certificate
+ * @param data				associated data (gets owned)
+ * @return					cert_payload_t object
+ */
+cert_payload_t *cert_payload_create_custom(cert_encoding_t type, chunk_t data);
+
+>>>>>>> upstream/4.5.1
 #endif /** CERT_PAYLOAD_H_ @}*/

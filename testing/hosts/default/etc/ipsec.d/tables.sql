@@ -18,9 +18,17 @@ CREATE TABLE child_configs (
   updown TEXT DEFAULT NULL,
   hostaccess INTEGER NOT NULL DEFAULT '0',
   mode INTEGER NOT NULL DEFAULT '2',
+<<<<<<< HEAD
   dpd_action INTEGER NOT NULL DEFAULT '0',
   close_action INTEGER NOT NULL DEFAULT '0',
   ipcomp INTEGER NOT NULL DEFAULT '0'
+=======
+  start_action INTEGER NOT NULL DEFAULT '0',
+  dpd_action INTEGER NOT NULL DEFAULT '0',
+  close_action INTEGER NOT NULL DEFAULT '0',
+  ipcomp INTEGER NOT NULL DEFAULT '0',
+  reqid INTEGER NOT NULL DEFAULT '0'
+>>>>>>> upstream/4.5.1
 );
 DROP INDEX IF EXISTS child_configs_name;
 CREATE INDEX child_configs_name ON child_configs (
@@ -38,6 +46,22 @@ CREATE INDEX child_config_traffic_selector_all ON child_config_traffic_selector 
   child_cfg, traffic_selector
 );
 
+<<<<<<< HEAD
+=======
+DROP TABLE IF EXISTS proposals;
+CREATE TABLE proposals (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  proposal TEXT NOT NULL
+);
+
+DROP TABLE IF EXISTS child_config_proposal;
+CREATE TABLE child_config_proposal (
+  child_cfg INTEGER NOT NULL,
+  prio INTEGER NOT NULL,
+  prop INTEGER NOT NULL
+);
+
+>>>>>>> upstream/4.5.1
 DROP TABLE IF EXISTS ike_configs;
 CREATE TABLE ike_configs (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -47,6 +71,16 @@ CREATE TABLE ike_configs (
   remote TEXT NOT NULL
 );
 
+<<<<<<< HEAD
+=======
+DROP TABLE IF EXISTS ike_config_proposal;
+CREATE TABLE ike_config_proposal (
+  ike_cfg INTEGER NOT NULL,
+  prio INTEGER NOT NULL,
+  prop INTEGER NOT NULL
+);
+
+>>>>>>> upstream/4.5.1
 DROP TABLE IF EXISTS peer_configs;
 CREATE TABLE peer_configs (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -139,6 +173,23 @@ CREATE TABLE shared_secret_identity (
   PRIMARY KEY (shared_secret, identity)
 );
 
+<<<<<<< HEAD
+=======
+DROP TABLE IF EXISTS certificate_authorities;
+CREATE TABLE certificate_authorities (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  certificate INTEGER NOT NULL
+);
+
+DROP TABLE IF EXISTS certificate_distribution_points;
+CREATE TABLE certificate_distribution_points (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  ca INTEGER NOT NULL,
+  type INTEGER NOT NULL,
+  uri TEXT NOT NULL
+);
+
+>>>>>>> upstream/4.5.1
 DROP TABLE IF EXISTS pools;
 CREATE TABLE pools (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,

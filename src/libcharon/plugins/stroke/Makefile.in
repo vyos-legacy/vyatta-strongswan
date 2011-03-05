@@ -77,7 +77,11 @@ LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
 libstrongswan_stroke_la_LIBADD =
 am_libstrongswan_stroke_la_OBJECTS = stroke_plugin.lo stroke_socket.lo \
 	stroke_config.lo stroke_control.lo stroke_cred.lo stroke_ca.lo \
+<<<<<<< HEAD
 	stroke_attribute.lo stroke_list.lo stroke_shared_key.lo
+=======
+	stroke_attribute.lo stroke_list.lo
+>>>>>>> upstream/4.5.1
 libstrongswan_stroke_la_OBJECTS =  \
 	$(am_libstrongswan_stroke_la_OBJECTS)
 libstrongswan_stroke_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -223,9 +227,13 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+<<<<<<< HEAD
 ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
 ipsecuid = @ipsecuid@
+=======
+ipsecgroup = @ipsecgroup@
+>>>>>>> upstream/4.5.1
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -264,6 +272,11 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+<<<<<<< HEAD
+=======
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
+>>>>>>> upstream/4.5.1
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -292,8 +305,12 @@ libstrongswan_stroke_la_SOURCES = \
 	stroke_cred.h stroke_cred.c \
 	stroke_ca.h stroke_ca.c \
 	stroke_attribute.h stroke_attribute.c \
+<<<<<<< HEAD
 	stroke_list.h stroke_list.c \
 	stroke_shared_key.h stroke_shared_key.c
+=======
+	stroke_list.h stroke_list.c
+>>>>>>> upstream/4.5.1
 
 libstrongswan_stroke_la_LDFLAGS = -module -avoid-version
 all: all-am
@@ -386,7 +403,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stroke_cred.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stroke_list.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stroke_plugin.Plo@am__quote@
+<<<<<<< HEAD
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stroke_shared_key.Plo@am__quote@
+=======
+>>>>>>> upstream/4.5.1
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stroke_socket.Plo@am__quote@
 
 .c.o:

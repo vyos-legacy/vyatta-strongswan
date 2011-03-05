@@ -43,19 +43,29 @@ struct private_update_sa_job_t {
 	host_t *new;
 };
 
+<<<<<<< HEAD
 /**
  * Implements job_t.destroy.
  */
 static void destroy(private_update_sa_job_t *this)
+=======
+METHOD(job_t, destroy, void,
+	private_update_sa_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	this->new->destroy(this->new);
 	free(this);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of job_t.execute.
  */
 static void execute(private_update_sa_job_t *this)
+=======
+METHOD(job_t, execute, void,
+	private_update_sa_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	ike_sa_t *ike_sa;
 
@@ -71,7 +81,11 @@ static void execute(private_update_sa_job_t *this)
 		if (ike_sa->has_condition(ike_sa, COND_NAT_THERE) &&
 			!ike_sa->has_condition(ike_sa, COND_NAT_HERE))
 		{
+<<<<<<< HEAD
 			ike_sa->update_hosts(ike_sa, NULL, this->new);
+=======
+			ike_sa->update_hosts(ike_sa, NULL, this->new, FALSE);
+>>>>>>> upstream/4.5.1
 		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
@@ -83,6 +97,7 @@ static void execute(private_update_sa_job_t *this)
  */
 update_sa_job_t *update_sa_job_create(u_int32_t reqid, host_t *new)
 {
+<<<<<<< HEAD
 	private_update_sa_job_t *this = malloc_thing(private_update_sa_job_t);
 
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
@@ -90,6 +105,20 @@ update_sa_job_t *update_sa_job_create(u_int32_t reqid, host_t *new)
 
 	this->reqid = reqid;
 	this->new = new;
+=======
+	private_update_sa_job_t *this;
+
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.reqid = reqid,
+		.new = new,
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

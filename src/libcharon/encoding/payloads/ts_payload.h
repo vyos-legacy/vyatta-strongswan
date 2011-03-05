@@ -19,7 +19,10 @@
  * @{ @ingroup payloads
  */
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/4.5.1
 #ifndef TS_PAYLOAD_H_
 #define TS_PAYLOAD_H_
 
@@ -36,13 +39,20 @@ typedef struct ts_payload_t ts_payload_t;
  */
 #define TS_PAYLOAD_HEADER_LENGTH 8
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/4.5.1
 /**
  * Class representing an IKEv2 TS payload.
  *
  * The TS payload format is described in RFC section 3.13.
  */
 struct ts_payload_t {
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/4.5.1
 	/**
 	 * The payload_t interface.
 	 */
@@ -67,6 +77,7 @@ struct ts_payload_t {
 	void (*set_initiator) (ts_payload_t *this,bool is_initiator);
 
 	/**
+<<<<<<< HEAD
 	 * Adds a traffic_selector_substructure_t object to this object.
 	 *
 	 * @param traffic_selector  traffic_selector_substructure_t object to add
@@ -88,6 +99,8 @@ struct ts_payload_t {
 											ts_payload_t *this, bool forward);
 
 	/**
+=======
+>>>>>>> upstream/4.5.1
 	 * Get a list of nested traffic selectors as traffic_selector_t.
 	 *
 	 * Resulting list and its traffic selectors must be destroyed after usage
@@ -105,19 +118,28 @@ struct ts_payload_t {
 /**
  * Creates an empty ts_payload_t object.
  *
+<<<<<<< HEAD
  * @param is_initiator
  * 						- TRUE if this payload is of type TSi
  * 						- FALSE if this payload is of type TSr
  * @return				ts_payload_t object
+=======
+ * @param is_initiator		TRUE for TSi, FALSE for TSr payload type
+ * @return					ts_payload_t object
+>>>>>>> upstream/4.5.1
  */
 ts_payload_t *ts_payload_create(bool is_initiator);
 
 /**
  * Creates ts_payload with a list of traffic_selector_t
  *
+<<<<<<< HEAD
  * @param is_initiator
  * 							- TRUE if this payload is of type TSi
  * 							- FALSE if this payload is of type TSr
+=======
+ * @param is_initiator		TRUE for TSi, FALSE for TSr payload type
+>>>>>>> upstream/4.5.1
  * @param traffic_selectors	list of traffic selectors to include
  * @return					ts_payload_t object
  */

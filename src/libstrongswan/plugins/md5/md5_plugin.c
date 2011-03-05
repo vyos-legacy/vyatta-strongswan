@@ -18,6 +18,11 @@
 #include <library.h>
 #include "md5_hasher.h"
 
+<<<<<<< HEAD
+=======
+static const char *plugin_name = "md5";
+
+>>>>>>> upstream/4.5.1
 typedef struct private_md5_plugin_t private_md5_plugin_t;
 
 /**
@@ -31,10 +36,15 @@ struct private_md5_plugin_t {
 	md5_plugin_t public;
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of md5_plugin_t.destroy
  */
 static void destroy(private_md5_plugin_t *this)
+=======
+METHOD(plugin_t, destroy, void,
+	private_md5_plugin_t *this)
+>>>>>>> upstream/4.5.1
 {
 	lib->crypto->remove_hasher(lib->crypto,
 							   (hasher_constructor_t)md5_hasher_create);
@@ -46,11 +56,25 @@ static void destroy(private_md5_plugin_t *this)
  */
 plugin_t *md5_plugin_create()
 {
+<<<<<<< HEAD
 	private_md5_plugin_t *this = malloc_thing(private_md5_plugin_t);
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+=======
+	private_md5_plugin_t *this;
+
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
+
+	lib->crypto->add_hasher(lib->crypto, HASH_MD5, plugin_name,
+>>>>>>> upstream/4.5.1
 							(hasher_constructor_t)md5_hasher_create);
 
 	return &this->public.plugin;

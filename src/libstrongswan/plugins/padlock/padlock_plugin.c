@@ -23,6 +23,11 @@
 #include <library.h>
 #include <debug.h>
 
+<<<<<<< HEAD
+=======
+static const char *plugin_name = "padlock";
+
+>>>>>>> upstream/4.5.1
 typedef struct private_padlock_plugin_t private_padlock_plugin_t;
 typedef enum padlock_feature_t padlock_feature_t;
 
@@ -161,21 +166,37 @@ plugin_t *padlock_plugin_create()
 
 	if (this->features & PADLOCK_RNG_ENABLED)
 	{
+<<<<<<< HEAD
 		lib->crypto->add_rng(lib->crypto, RNG_TRUE,
 						(rng_constructor_t)padlock_rng_create);
 		lib->crypto->add_rng(lib->crypto, RNG_STRONG,
 						(rng_constructor_t)padlock_rng_create);
 		lib->crypto->add_rng(lib->crypto, RNG_WEAK,
+=======
+		lib->crypto->add_rng(lib->crypto, RNG_TRUE, plugin_name,
+						(rng_constructor_t)padlock_rng_create);
+		lib->crypto->add_rng(lib->crypto, RNG_STRONG, plugin_name,
+						(rng_constructor_t)padlock_rng_create);
+		lib->crypto->add_rng(lib->crypto, RNG_WEAK, plugin_name,
+>>>>>>> upstream/4.5.1
 						(rng_constructor_t)padlock_rng_create);
 	}
 	if (this->features & PADLOCK_ACE2_ENABLED)
 	{
+<<<<<<< HEAD
 		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+=======
+		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, plugin_name,
+>>>>>>> upstream/4.5.1
 						(crypter_constructor_t)padlock_aes_crypter_create);
 	}
 	if (this->features & PADLOCK_PHE_ENABLED)
 	{
+<<<<<<< HEAD
 		lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+=======
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA1, plugin_name,
+>>>>>>> upstream/4.5.1
 						(hasher_constructor_t)padlock_sha1_hasher_create);
 	}
 	return &this->public.plugin;

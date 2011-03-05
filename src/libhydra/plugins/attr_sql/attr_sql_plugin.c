@@ -43,10 +43,15 @@ struct private_attr_sql_plugin_t {
 
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of plugin_t.destroy
  */
 static void destroy(private_attr_sql_plugin_t *this)
+=======
+METHOD(plugin_t, destroy, void,
+	private_attr_sql_plugin_t *this)
+>>>>>>> upstream/4.5.1
 {
 	hydra->attributes->remove_provider(hydra->attributes, &this->attribute->provider);
 	this->attribute->destroy(this->attribute);
@@ -59,21 +64,41 @@ static void destroy(private_attr_sql_plugin_t *this)
  */
 plugin_t *attr_sql_plugin_create()
 {
+<<<<<<< HEAD
 	char *uri;
 	private_attr_sql_plugin_t *this;
 
 	uri = lib->settings->get_str(lib->settings, "libhydra.plugins.attr-sql.database", NULL);
+=======
+	private_attr_sql_plugin_t *this;
+	char *uri;
+
+	uri = lib->settings->get_str(lib->settings, "libhydra.plugins.attr-sql.database",
+												 NULL);
+>>>>>>> upstream/4.5.1
 	if (!uri)
 	{
 		DBG1(DBG_CFG, "attr-sql plugin: database URI not set");
 		return NULL;
 	}
 
+<<<<<<< HEAD
 	this = malloc_thing(private_attr_sql_plugin_t);
 
 	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
 
 	this->db = lib->db->create(lib->db, uri);
+=======
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+		.db = lib->db->create(lib->db, uri),
+	);
+
+>>>>>>> upstream/4.5.1
 	if (!this->db)
 	{
 		DBG1(DBG_CFG, "attr-sql plugin failed to connect to database");

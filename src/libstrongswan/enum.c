@@ -43,7 +43,11 @@ int enum_from_name(enum_name_t *e, char *name)
 {
 	do
 	{
+<<<<<<< HEAD
 		int i, count = e->last - e->first;
+=======
+		int i, count = e->last - e->first + 1;
+>>>>>>> upstream/4.5.1
 
 		for (i = 0; i < count; i++)
 		{

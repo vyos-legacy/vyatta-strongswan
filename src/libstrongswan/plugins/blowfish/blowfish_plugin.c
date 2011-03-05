@@ -19,6 +19,11 @@
 #include <library.h>
 #include "blowfish_crypter.h"
 
+<<<<<<< HEAD
+=======
+static const char *plugin_name = "blowfish";
+
+>>>>>>> upstream/4.5.1
 typedef struct private_blowfish_plugin_t private_blowfish_plugin_t;
 
 /**
@@ -55,7 +60,11 @@ plugin_t *blowfish_plugin_create()
 		},
 	);
 
+<<<<<<< HEAD
 	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
+=======
+	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH, plugin_name,
+>>>>>>> upstream/4.5.1
 							 (crypter_constructor_t)blowfish_crypter_create);
 
 	return &this->public.plugin;

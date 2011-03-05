@@ -115,12 +115,20 @@ METHOD(listener_t, ike_updown, bool,
 	return TRUE;
 }
 
+<<<<<<< HEAD
 METHOD(listener_t, child_state_change, bool,
 	   private_maemo_service_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	   child_sa_state_t state)
 {
 	/* this call back is only registered during initiation */
 	if (this->ike_sa == ike_sa && state == CHILD_DESTROYING)
+=======
+METHOD(listener_t, ike_state_change, bool,
+	   private_maemo_service_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
+{
+	/* this call back is only registered during initiation */
+	if (this->ike_sa == ike_sa && state == IKE_DESTROYING)
+>>>>>>> upstream/4.5.1
 	{
 		change_status(this, VPN_STATUS_CONNECTION_FAILED);
 		return FALSE;
@@ -138,7 +146,11 @@ METHOD(listener_t, child_updown, bool,
 		{
 			/* disable hooks registered to catch initiation failures */
 			this->public.listener.ike_updown = NULL;
+<<<<<<< HEAD
 			this->public.listener.child_state_change = NULL;
+=======
+			this->public.listener.ike_state_change = NULL;
+>>>>>>> upstream/4.5.1
 			change_status(this, VPN_STATUS_CONNECTED);
 		}
 		else
@@ -347,7 +359,11 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 
 	child_cfg = child_cfg_create(this->current, &lifetime, NULL /* updown */,
 								 TRUE, MODE_TUNNEL, ACTION_NONE, ACTION_NONE,
+<<<<<<< HEAD
 								 FALSE, 0, 0, NULL, NULL);
+=======
+								 ACTION_NONE, FALSE, 0, 0, NULL, NULL, 0);
+>>>>>>> upstream/4.5.1
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
@@ -371,7 +387,11 @@ static gboolean initiate_connection(private_maemo_service_t *this,
 	this->ike_sa = ike_sa;
 	this->status = VPN_STATUS_CONNECTING;
 	this->public.listener.ike_updown = _ike_updown;
+<<<<<<< HEAD
 	this->public.listener.child_state_change = _child_state_change;
+=======
+	this->public.listener.ike_state_change = _ike_state_change;
+>>>>>>> upstream/4.5.1
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 
 	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
@@ -464,7 +484,11 @@ maemo_service_t *maemo_service_create()
 		.public = {
 			.listener = {
 				.ike_updown = _ike_updown,
+<<<<<<< HEAD
 				.child_state_change = _child_state_change,
+=======
+				.ike_state_change = _ike_state_change,
+>>>>>>> upstream/4.5.1
 				.child_updown = _child_updown,
 				.ike_rekey = _ike_rekey,
 			},

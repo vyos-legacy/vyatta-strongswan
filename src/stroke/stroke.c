@@ -197,6 +197,19 @@ static int terminate_connection_srcip(char *start, char *end)
 	return send_stroke_msg(&msg);
 }
 
+<<<<<<< HEAD
+=======
+static int rekey_connection(char *name)
+{
+	stroke_msg_t msg;
+
+	msg.type = STR_REKEY;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.rekey.name = push_string(&msg, name);
+	return send_stroke_msg(&msg);
+}
+
+>>>>>>> upstream/4.5.1
 static int route_connection(char *name)
 {
 	stroke_msg_t msg;
@@ -276,6 +289,11 @@ static int reread(stroke_keyword_t kw)
 static int purge_flags[] = {
 	PURGE_OCSP,
 	PURGE_IKE,
+<<<<<<< HEAD
+=======
+	PURGE_CRLS,
+	PURGE_CERTS,
+>>>>>>> upstream/4.5.1
 };
 
 static int purge(stroke_keyword_t kw)
@@ -373,6 +391,13 @@ static void exit_usage(char *error)
 	printf("    stroke rereadsecrets|rereadcrls|rereadall\n");
 	printf("  Purge ocsp cache entries:\n");
 	printf("    stroke purgeocsp\n");
+<<<<<<< HEAD
+=======
+	printf("  Purge CRL cache entries:\n");
+	printf("    stroke purgecrls\n");
+	printf("  Purge X509 cache entries:\n");
+	printf("    stroke purgecerts\n");
+>>>>>>> upstream/4.5.1
 	printf("  Purge IKE_SAs without a CHILD_SA:\n");
 	printf("    stroke purgeike\n");
 	printf("  Export credentials to the console:\n");
@@ -443,6 +468,16 @@ int main(int argc, char *argv[])
 			}
 			res = terminate_connection_srcip(argv[2], argc > 3 ? argv[3] : NULL);
 			break;
+<<<<<<< HEAD
+=======
+		case STROKE_REKEY:
+			if (argc < 3)
+			{
+				exit_usage("\"rekey\" needs a connection name");
+			}
+			res = rekey_connection(argv[2]);
+			break;
+>>>>>>> upstream/4.5.1
 		case STROKE_ROUTE:
 			if (argc < 3)
 			{
@@ -491,6 +526,11 @@ int main(int argc, char *argv[])
 			res = reread(token->kw);
 			break;
 		case STROKE_PURGE_OCSP:
+<<<<<<< HEAD
+=======
+		case STROKE_PURGE_CRLS:
+		case STROKE_PURGE_CERTS:
+>>>>>>> upstream/4.5.1
 		case STROKE_PURGE_IKE:
 			res = purge(token->kw);
 			break;

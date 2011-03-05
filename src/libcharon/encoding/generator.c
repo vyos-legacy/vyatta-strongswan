@@ -41,6 +41,10 @@
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/configuration_attribute.h>
 #include <encoding/payloads/eap_payload.h>
+<<<<<<< HEAD
+=======
+#include <encoding/payloads/unknown_payload.h>
+>>>>>>> upstream/4.5.1
 
 /**
  * Generating is done in a data buffer.
@@ -89,6 +93,7 @@ struct private_generator_t {
 	 */
 	void *data_struct;
 
+<<<<<<< HEAD
 	/*
 	 * Last payload length position offset in the buffer.
 	 */
@@ -103,6 +108,12 @@ struct private_generator_t {
 	 * Last SPI size.
 	 */
 	u_int8_t last_spi_size;
+=======
+	/**
+	 * Offset of the header length field in the buffer.
+	 */
+	u_int32_t header_length_offset;
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * Attribute format of the last generated transform attribute.
@@ -193,6 +204,7 @@ static void write_bytes_to_buffer(private_generator_t *this, void *bytes,
 }
 
 /**
+<<<<<<< HEAD
  * Writes a specific amount of byte into the buffer at a specific offset.
  */
 static void write_bytes_to_buffer_at_offset(private_generator_t *this,
@@ -220,6 +232,8 @@ static void write_bytes_to_buffer_at_offset(private_generator_t *this,
 }
 
 /**
+=======
+>>>>>>> upstream/4.5.1
  * Generates a U_INT-Field type and writes it to buffer.
  */
 static void generate_u_int_type(private_generator_t *this,
@@ -234,10 +248,19 @@ static void generate_u_int_type(private_generator_t *this,
 			number_of_bits = 4;
 			break;
 		case TS_TYPE:
+<<<<<<< HEAD
+=======
+		case RESERVED_BYTE:
+		case SPI_SIZE:
+>>>>>>> upstream/4.5.1
 		case U_INT_8:
 			number_of_bits = 8;
 			break;
 		case U_INT_16:
+<<<<<<< HEAD
+=======
+		case PAYLOAD_LENGTH:
+>>>>>>> upstream/4.5.1
 		case CONFIGURATION_ATTRIBUTE_LENGTH:
 			number_of_bits = 16;
 			break;
@@ -301,6 +324,11 @@ static void generate_u_int_type(private_generator_t *this,
 			break;
 		}
 		case TS_TYPE:
+<<<<<<< HEAD
+=======
+		case RESERVED_BYTE:
+		case SPI_SIZE:
+>>>>>>> upstream/4.5.1
 		case U_INT_8:
 		{
 			/* 8 bit values are written as they are */
@@ -338,6 +366,10 @@ static void generate_u_int_type(private_generator_t *this,
 
 		}
 		case U_INT_16:
+<<<<<<< HEAD
+=======
+		case PAYLOAD_LENGTH:
+>>>>>>> upstream/4.5.1
 		case CONFIGURATION_ATTRIBUTE_LENGTH:
 		{
 			u_int16_t val = htons(*((u_int16_t*)(this->data_struct + offset)));
@@ -371,6 +403,7 @@ static void generate_u_int_type(private_generator_t *this,
 }
 
 /**
+<<<<<<< HEAD
  * Generate a reserved bit or byte
  */
 static void generate_reserved_field(private_generator_t *this, int bits)
@@ -414,6 +447,8 @@ static void generate_reserved_field(private_generator_t *this, int bits)
 }
 
 /**
+=======
+>>>>>>> upstream/4.5.1
  * Generate a FLAG filed
  */
 static void generate_flag(private_generator_t *this, u_int32_t offset)
@@ -468,7 +503,11 @@ METHOD(generator_t, get_chunk, chunk_t,
 {
 	chunk_t data;
 
+<<<<<<< HEAD
 	*lenpos = (u_int32_t*)(this->buffer + this->header_length_position_offset);
+=======
+	*lenpos = (u_int32_t*)(this->buffer + this->header_length_offset);
+>>>>>>> upstream/4.5.1
 	data = chunk_create(this->buffer, get_length(this));
 	DBG3(DBG_ENC, "generated data of this generator %B", &data);
 	return data;
@@ -484,8 +523,11 @@ METHOD(generator_t, generate_payload, void,
 
 	this->data_struct = payload;
 	payload_type = payload->get_type(payload);
+<<<<<<< HEAD
 	/* spi size has to get reseted */
 	this->last_spi_size = 0;
+=======
+>>>>>>> upstream/4.5.1
 
 	offset_start = this->out_position - this->buffer;
 
@@ -505,6 +547,7 @@ METHOD(generator_t, generate_payload, void,
 			case U_INT_8:
 			case U_INT_16:
 			case U_INT_32:
+<<<<<<< HEAD
 			case IKE_SPI:
 			case TS_TYPE:
 			case ATTRIBUTE_TYPE:
@@ -555,6 +598,27 @@ METHOD(generator_t, generate_payload, void,
 				generate_from_chunk(this, rules[i].offset);
 				break;
 			}
+=======
+			case PAYLOAD_LENGTH:
+			case IKE_SPI:
+			case RESERVED_BYTE:
+			case SPI_SIZE:
+			case TS_TYPE:
+			case ATTRIBUTE_TYPE:
+			case CONFIGURATION_ATTRIBUTE_LENGTH:
+				generate_u_int_type(this, rules[i].type, rules[i].offset);
+				break;
+			case RESERVED_BIT:
+			case FLAG:
+				generate_flag(this, rules[i].offset);
+				break;
+			case HEADER_LENGTH:
+				this->header_length_offset = get_offset(this);
+				generate_u_int_type(this, U_INT_32, rules[i].offset);
+				break;
+			case ADDRESS:
+			case SPI:
+>>>>>>> upstream/4.5.1
 			case KEY_EXCHANGE_DATA:
 			case NOTIFICATION_DATA:
 			case NONCE_DATA:
@@ -566,6 +630,7 @@ METHOD(generator_t, generate_payload, void,
 			case CONFIGURATION_ATTRIBUTE_VALUE:
 			case VID_DATA:
 			case EAP_DATA:
+<<<<<<< HEAD
 			{
 				u_int32_t payload_length_position_offset;
 				u_int16_t length_of_payload;
@@ -756,11 +821,39 @@ METHOD(generator_t, generate_payload, void,
 			}
 			case ATTRIBUTE_FORMAT:
 			{
+=======
+			case ENCRYPTED_DATA:
+			case UNKNOWN_DATA:
+				generate_from_chunk(this, rules[i].offset);
+				break;
+			case PROPOSALS:
+			case TRANSFORMS:
+			case TRANSFORM_ATTRIBUTES:
+			case CONFIGURATION_ATTRIBUTES:
+			case TRAFFIC_SELECTORS:
+			{
+				linked_list_t *proposals;
+				enumerator_t *enumerator;
+				payload_t *proposal;
+
+				proposals = *((linked_list_t **)
+										(this->data_struct + rules[i].offset));
+				enumerator = proposals->create_enumerator(proposals);
+				while (enumerator->enumerate(enumerator, &proposal))
+				{
+					generate_payload(this, proposal);
+				}
+				enumerator->destroy(enumerator);
+				break;
+			}
+			case ATTRIBUTE_FORMAT:
+>>>>>>> upstream/4.5.1
 				generate_flag(this, rules[i].offset);
 				/* Attribute format is a flag which is stored in context*/
 				this->attribute_format =
 							*((bool *)(this->data_struct + rules[i].offset));
 				break;
+<<<<<<< HEAD
 			}
 
 			case ATTRIBUTE_LENGTH_OR_VALUE:
@@ -771,16 +864,33 @@ METHOD(generator_t, generate_payload, void,
 					/* this field hold the length of the attribute */
 					this->attribute_length =
 						*((u_int16_t *)(this->data_struct + rules[i].offset));
+=======
+			case ATTRIBUTE_LENGTH_OR_VALUE:
+				if (this->attribute_format)
+				{
+					generate_u_int_type(this, U_INT_16, rules[i].offset);
+>>>>>>> upstream/4.5.1
 				}
 				else
 				{
 					generate_u_int_type(this, U_INT_16, rules[i].offset);
+<<<<<<< HEAD
 				}
 				break;
 			}
 			case ATTRIBUTE_VALUE:
 			{
 				if (this->attribute_format == FALSE)
+=======
+					/* this field hold the length of the attribute */
+					this->attribute_length =
+						*((u_int16_t *)(this->data_struct + rules[i].offset));
+				}
+				break;
+			case ATTRIBUTE_VALUE:
+			{
+				if (!this->attribute_format)
+>>>>>>> upstream/4.5.1
 				{
 					DBG2(DBG_ENC, "attribute value has not fixed size");
 					/* the attribute value is generated */
@@ -788,6 +898,7 @@ METHOD(generator_t, generate_payload, void,
 				}
 				break;
 			}
+<<<<<<< HEAD
 			case TRAFFIC_SELECTORS:
 			{
 				u_int32_t payload_length_position_offset =
@@ -826,6 +937,8 @@ METHOD(generator_t, generate_payload, void,
 				generate_from_chunk(this, rules[i].offset);
 				break;
 			}
+=======
+>>>>>>> upstream/4.5.1
 			default:
 				DBG1(DBG_ENC, "field type %N is not supported",
 					 encoding_type_names, rules[i].type);

@@ -107,6 +107,13 @@ enum purge_flag_t {
 	PURGE_OCSP =		0x0001,
 	/** purge IKE_SAs without a CHILD_SA */
 	PURGE_IKE =			0x0002,
+<<<<<<< HEAD
+=======
+	/** purge CRL cache entries */
+	PURGE_CRLS =		0x0004,
+	/** purge X509 cache entries */
+	PURGE_CERTS =		0x0008,
+>>>>>>> upstream/4.5.1
 };
 
 typedef enum export_flag_t export_flag_t;
@@ -145,6 +152,10 @@ struct stroke_end_t {
 	char *ca;
 	char *ca2;
 	char *groups;
+<<<<<<< HEAD
+=======
+	char *cert_policy;
+>>>>>>> upstream/4.5.1
 	char *updown;
 	char *address;
 	u_int16_t ikeport;
@@ -183,6 +194,11 @@ struct stroke_msg_t {
 		STR_TERMINATE,
 		/* terminate connection by peers srcip/virtual ip */
 		STR_TERMINATE_SRCIP,
+<<<<<<< HEAD
+=======
+		/* rekey a connection */
+		STR_REKEY,
+>>>>>>> upstream/4.5.1
 		/* show connection status */
 		STR_STATUS,
 		/* show verbose connection status */
@@ -215,7 +231,11 @@ struct stroke_msg_t {
 		/* data for STR_INITIATE, STR_ROUTE, STR_UP, STR_DOWN, ... */
 		struct {
 			char *name;
+<<<<<<< HEAD
 		} initiate, route, unroute, terminate, status, del_conn, del_ca;
+=======
+		} initiate, route, unroute, terminate, rekey, status, del_conn, del_ca;
+>>>>>>> upstream/4.5.1
 
 		/* data for STR_TERMINATE_SRCIP */
 		struct {
@@ -241,6 +261,10 @@ struct stroke_msg_t {
 			int proxy_mode;
 			int install_policy;
 			u_int32_t reqid;
+<<<<<<< HEAD
+=======
+			u_int32_t tfc;
+>>>>>>> upstream/4.5.1
 
 			crl_policy_t crl_policy;
 			int unique;

@@ -80,6 +80,14 @@ struct private_child_cfg_t {
 	ipsec_mode_t mode;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * action to take to start CHILD_SA
+	 */
+	action_t start_action;
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * action to take on DPD
 	 */
 	action_t dpd_action;
@@ -118,6 +126,15 @@ struct private_child_cfg_t {
 	 * Optional mark to install outbound CHILD_SA with
 	 */
 	mark_t mark_out;
+<<<<<<< HEAD
+=======
+
+	/**
+	 * Traffic Flow Confidentiality padding, if enabled
+	 */
+	u_int32_t tfc;
+
+>>>>>>> upstream/4.5.1
 	/**
 	 * set up IPsec transport SA in MIPv6 proxy mode
 	 */
@@ -129,26 +146,41 @@ struct private_child_cfg_t {
 	bool install_policy;
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_name.
  */
 static char *get_name(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_name, char*,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->name;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.add_proposal.
  */
 static void add_proposal(private_child_cfg_t *this, proposal_t *proposal)
+=======
+METHOD(child_cfg_t, add_proposal, void,
+	private_child_cfg_t *this, proposal_t *proposal)
+>>>>>>> upstream/4.5.1
 {
 	this->proposals->insert_last(this->proposals, proposal);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_proposals.
  */
 static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
+=======
+METHOD(child_cfg_t, get_proposals, linked_list_t*,
+	private_child_cfg_t *this, bool strip_dh)
+>>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	proposal_t *current;
@@ -169,12 +201,18 @@ static linked_list_t* get_proposals(private_child_cfg_t *this, bool strip_dh)
 	return proposals;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.select_proposal.
  */
 static proposal_t* select_proposal(private_child_cfg_t*this,
 								   linked_list_t *proposals, bool strip_dh,
 								   bool private)
+=======
+METHOD(child_cfg_t, select_proposal, proposal_t*,
+	private_child_cfg_t*this, linked_list_t *proposals, bool strip_dh,
+	bool private)
+>>>>>>> upstream/4.5.1
 {
 	enumerator_t *stored_enum, *supplied_enum;
 	proposal_t *stored, *supplied, *selected = NULL;
@@ -219,11 +257,16 @@ static proposal_t* select_proposal(private_child_cfg_t*this,
 	return selected;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.add_traffic_selector.
  */
 static void add_traffic_selector(private_child_cfg_t *this, bool local,
 								 traffic_selector_t *ts)
+=======
+METHOD(child_cfg_t, add_traffic_selector, void,
+	private_child_cfg_t *this, bool local, traffic_selector_t *ts)
+>>>>>>> upstream/4.5.1
 {
 	if (local)
 	{
@@ -235,12 +278,17 @@ static void add_traffic_selector(private_child_cfg_t *this, bool local,
 	}
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_traffic_selectors.
  */
 static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool local,
 											linked_list_t *supplied,
 											host_t *host)
+=======
+METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
+	private_child_cfg_t *this, bool local, linked_list_t *supplied,	host_t *host)
+>>>>>>> upstream/4.5.1
 {
 	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
@@ -346,18 +394,28 @@ static linked_list_t* get_traffic_selectors(private_child_cfg_t *this, bool loca
 	return result;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_updown.
  */
 static char* get_updown(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_updown, char*,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->updown;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_hostaccess.
  */
 static bool get_hostaccess(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_hostaccess, bool,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->hostaccess;
 }
@@ -378,10 +436,15 @@ static u_int64_t apply_jitter(u_int64_t rekey, u_int64_t jitter)
 }
 #define APPLY_JITTER(l) l.rekey = apply_jitter(l.rekey, l.jitter)
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_lifetime.
  */
 static lifetime_cfg_t *get_lifetime(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_lifetime, lifetime_cfg_t*,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	lifetime_cfg_t *lft = malloc_thing(lifetime_cfg_t);
 	memcpy(lft, &this->lifetime, sizeof(lifetime_cfg_t));
@@ -391,34 +454,60 @@ static lifetime_cfg_t *get_lifetime(private_child_cfg_t *this)
 	return lft;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_mode.
  */
 static ipsec_mode_t get_mode(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_mode, ipsec_mode_t,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->mode;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_dpd_action.
  */
 static action_t get_dpd_action(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_start_action, action_t,
+	private_child_cfg_t *this)
+{
+	return this->start_action;
+}
+
+METHOD(child_cfg_t, get_dpd_action, action_t,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->dpd_action;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_close_action.
  */
 static action_t get_close_action(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_close_action, action_t,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->close_action;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_dh_group.
  */
 static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_dh_group, diffie_hellman_group_t,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
@@ -436,77 +525,128 @@ static diffie_hellman_group_t get_dh_group(private_child_cfg_t *this)
 	return dh_group;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.use_ipcomp.
  */
 static bool use_ipcomp(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, use_ipcomp, bool,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->use_ipcomp;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_inactivity.
  */
 static u_int32_t get_inactivity(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_inactivity, u_int32_t,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->inactivity;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_reqid.
  */
 static u_int32_t get_reqid(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_reqid, u_int32_t,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->reqid;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_mark.
  */
 static mark_t get_mark(private_child_cfg_t *this, bool inbound)
+=======
+METHOD(child_cfg_t, get_mark, mark_t,
+	private_child_cfg_t *this, bool inbound)
+>>>>>>> upstream/4.5.1
 {
 	return inbound ? this->mark_in : this->mark_out;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.set_mipv6_options.
  */
 static void set_mipv6_options(private_child_cfg_t *this, bool proxy_mode,
 														 bool install_policy)
+=======
+METHOD(child_cfg_t, get_tfc, u_int32_t,
+	private_child_cfg_t *this)
+{
+	return this->tfc;
+}
+
+METHOD(child_cfg_t, set_mipv6_options, void,
+	private_child_cfg_t *this, bool proxy_mode, bool install_policy)
+>>>>>>> upstream/4.5.1
 {
 	this->proxy_mode = proxy_mode;
 	this->install_policy = install_policy;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.use_proxy_mode.
  */
 static bool use_proxy_mode(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, use_proxy_mode, bool,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->proxy_mode;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.install_policy.
  */
 static bool install_policy(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, install_policy, bool,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->install_policy;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of child_cfg_t.get_ref.
  */
 static child_cfg_t* get_ref(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, get_ref, child_cfg_t*,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	ref_get(&this->refcount);
 	return &this->public;
 }
 
+<<<<<<< HEAD
 /**
  * Implements child_cfg_t.destroy.
  */
 static void destroy(private_child_cfg_t *this)
+=======
+METHOD(child_cfg_t, destroy, void,
+	private_child_cfg_t *this)
+>>>>>>> upstream/4.5.1
 {
 	if (ref_put(&this->refcount))
 	{
@@ -527,6 +667,7 @@ static void destroy(private_child_cfg_t *this)
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
+<<<<<<< HEAD
 							  ipsec_mode_t mode, action_t dpd_action,
 							  action_t close_action, bool ipcomp,
 							  u_int32_t inactivity, u_int32_t reqid,
@@ -566,20 +707,78 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->use_ipcomp = ipcomp;
 	this->inactivity = inactivity;
 	this->reqid = reqid;
+=======
+							  ipsec_mode_t mode, action_t start_action,
+							  action_t dpd_action, action_t close_action,
+							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
+							  mark_t *mark_in, mark_t *mark_out, u_int32_t tfc)
+{
+	private_child_cfg_t *this;
+
+	INIT(this,
+		.public = {
+			.get_name = _get_name,
+			.add_traffic_selector = _add_traffic_selector,
+			.get_traffic_selectors = _get_traffic_selectors,
+			.add_proposal = _add_proposal,
+			.get_proposals = _get_proposals,
+			.select_proposal = _select_proposal,
+			.get_updown = _get_updown,
+			.get_hostaccess = _get_hostaccess,
+			.get_mode = _get_mode,
+			.get_start_action = _get_start_action,
+			.get_dpd_action = _get_dpd_action,
+			.get_close_action = _get_close_action,
+			.get_lifetime = _get_lifetime,
+			.get_dh_group = _get_dh_group,
+			.set_mipv6_options = _set_mipv6_options,
+			.use_ipcomp = _use_ipcomp,
+			.get_inactivity = _get_inactivity,
+			.get_reqid = _get_reqid,
+			.get_mark = _get_mark,
+			.get_tfc = _get_tfc,
+			.use_proxy_mode = _use_proxy_mode,
+			.install_policy = _install_policy,
+			.get_ref = _get_ref,
+			.destroy = _destroy,
+		},
+		.name = strdup(name),
+		.updown = strdupnull(updown),
+		.hostaccess = hostaccess,
+		.mode = mode,
+		.start_action = start_action,
+		.dpd_action = dpd_action,
+		.close_action = close_action,
+		.use_ipcomp = ipcomp,
+		.inactivity = inactivity,
+		.reqid = reqid,
+		.proxy_mode = FALSE,
+		.install_policy = TRUE,
+		.refcount = 1,
+		.proposals = linked_list_create(),
+		.my_ts = linked_list_create(),
+		.other_ts = linked_list_create(),
+		.tfc = tfc,
+	);
+>>>>>>> upstream/4.5.1
 
 	if (mark_in)
 	{
 		this->mark_in = *mark_in;
 	}
+<<<<<<< HEAD
 	else
 	{
 		this->mark_in.value = 0;
 		this->mark_in.mask  = 0;
 	}
+=======
+>>>>>>> upstream/4.5.1
 	if (mark_out)
 	{
 		this->mark_out = *mark_out;
 	}
+<<<<<<< HEAD
 	else
 	{
 		this->mark_out.value = 0;
@@ -592,6 +791,8 @@ child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
+=======
+>>>>>>> upstream/4.5.1
 	memcpy(&this->lifetime, lifetime, sizeof(lifetime_cfg_t));
 
 	return &this->public;

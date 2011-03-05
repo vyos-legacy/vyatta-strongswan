@@ -1,7 +1,14 @@
 /*
+<<<<<<< HEAD
  * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
+=======
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
+ * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006 Daniel Roethlisberger
+>>>>>>> upstream/4.5.1
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -186,9 +193,15 @@ typedef struct private_notify_payload_t private_notify_payload_t;
 
 /**
  * Private data of an notify_payload_t object.
+<<<<<<< HEAD
  *
  */
 struct private_notify_payload_t {
+=======
+ */
+struct private_notify_payload_t {
+
+>>>>>>> upstream/4.5.1
 	/**
 	 * Public notify_payload_t interface.
 	 */
@@ -205,6 +218,14 @@ struct private_notify_payload_t {
 	bool critical;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * reserved bits
+	 */
+	bool reserved[7];
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -240,7 +261,10 @@ struct private_notify_payload_t {
  *
  * The defined offsets are the positions in a object of type
  * private_notify_payload_t.
+<<<<<<< HEAD
  *
+=======
+>>>>>>> upstream/4.5.1
  */
 encoding_rule_t notify_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
@@ -248,6 +272,7 @@ encoding_rule_t notify_payload_encodings[] = {
 	/* the critical bit */
 	{ FLAG,				offsetof(private_notify_payload_t, critical)			},
 	/* 7 Bit reserved bits, nowhere stored */
+<<<<<<< HEAD
 	{ RESERVED_BIT,	0														},
 	{ RESERVED_BIT,	0														},
 	{ RESERVED_BIT,	0														},
@@ -255,6 +280,15 @@ encoding_rule_t notify_payload_encodings[] = {
 	{ RESERVED_BIT,	0														},
 	{ RESERVED_BIT,	0														},
 	{ RESERVED_BIT,	0														},
+=======
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[0])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[1])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[2])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[3])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[4])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[5])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[6])			},
+>>>>>>> upstream/4.5.1
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length)		},
 	/* Protocol ID as 8 bit field*/
@@ -262,11 +296,19 @@ encoding_rule_t notify_payload_encodings[] = {
 	/* SPI Size as 8 bit field*/
 	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size)			},
 	/* Notify message type as 16 bit field*/
+<<<<<<< HEAD
 	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)	},
 	/* SPI as variable length field*/
 	{ SPI,				offsetof(private_notify_payload_t, spi)					},
 	/* Key Exchange Data is from variable size */
 	{ NOTIFICATION_DATA,	offsetof(private_notify_payload_t, notification_data)	}
+=======
+	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)			},
+	/* SPI as variable length field*/
+	{ SPI,				offsetof(private_notify_payload_t, spi)					},
+	/* Key Exchange Data is from variable size */
+	{ NOTIFICATION_DATA,offsetof(private_notify_payload_t, notification_data)	}
+>>>>>>> upstream/4.5.1
 };
 
 /*
@@ -287,10 +329,15 @@ encoding_rule_t notify_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.verify.
  */
 static status_t verify(private_notify_payload_t *this)
+=======
+METHOD(payload_t, verify, status_t,
+	private_notify_payload_t *this)
+>>>>>>> upstream/4.5.1
 {
 	bool bad_length = FALSE;
 
@@ -404,6 +451,7 @@ static status_t verify(private_notify_payload_t *this)
 	return SUCCESS;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.get_encoding_rules.
  */
@@ -417,10 +465,22 @@ static void get_encoding_rules(private_notify_payload_t *this, encoding_rule_t *
  * Implementation of payload_t.get_type.
  */
 static payload_type_t get_type(private_notify_payload_t *this)
+=======
+METHOD(payload_t, get_encoding_rules, void,
+	private_notify_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+{
+	*rules = notify_payload_encodings;
+	*rule_count = countof(notify_payload_encodings);
+}
+
+METHOD(payload_t, get_type, payload_type_t,
+	private_notify_payload_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return NOTIFY;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.get_next_type.
  */
@@ -433,6 +493,16 @@ static payload_type_t get_next_type(private_notify_payload_t *this)
  * Implementation of payload_t.set_next_type.
  */
 static void set_next_type(private_notify_payload_t *this,payload_type_t type)
+=======
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_notify_payload_t *this)
+{
+	return this->next_payload;
+}
+
+METHOD(payload_t, set_next_type, void,
+	private_notify_payload_t *this, payload_type_t type)
+>>>>>>> upstream/4.5.1
 {
 	this->next_payload = type;
 }
@@ -443,6 +513,10 @@ static void set_next_type(private_notify_payload_t *this,payload_type_t type)
 static void compute_length (private_notify_payload_t *this)
 {
 	size_t length = NOTIFY_PAYLOAD_HEADER_LENGTH;
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/4.5.1
 	if (this->notification_data.ptr != NULL)
 	{
 		length += this->notification_data.len;
@@ -454,6 +528,7 @@ static void compute_length (private_notify_payload_t *this)
 	this->payload_length = length;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.get_length.
  */
@@ -467,38 +542,68 @@ static size_t get_length(private_notify_payload_t *this)
  * Implementation of notify_payload_t.get_protocol_id.
  */
 static u_int8_t get_protocol_id(private_notify_payload_t *this)
+=======
+METHOD(payload_t, get_length, size_t,
+	private_notify_payload_t *this)
+{
+	return this->payload_length;
+}
+
+METHOD(notify_payload_t, get_protocol_id, u_int8_t,
+	private_notify_payload_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->protocol_id;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of notify_payload_t.set_protocol_id.
  */
 static void set_protocol_id(private_notify_payload_t *this, u_int8_t protocol_id)
+=======
+METHOD(notify_payload_t, set_protocol_id, void,
+	private_notify_payload_t *this, u_int8_t protocol_id)
+>>>>>>> upstream/4.5.1
 {
 	this->protocol_id = protocol_id;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of notify_payload_t.get_notify_type.
  */
 static notify_type_t get_notify_type(private_notify_payload_t *this)
+=======
+METHOD(notify_payload_t, get_notify_type, notify_type_t,
+	private_notify_payload_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->notify_type;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of notify_payload_t.set_notify_type.
  */
 static void set_notify_type(private_notify_payload_t *this, u_int16_t notify_type)
+=======
+METHOD(notify_payload_t, set_notify_type, void,
+	private_notify_payload_t *this, notify_type_t notify_type)
+>>>>>>> upstream/4.5.1
 {
 	this->notify_type = notify_type;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of notify_payload_t.get_spi.
  */
 static u_int32_t get_spi(private_notify_payload_t *this)
+=======
+METHOD(notify_payload_t, get_spi, u_int32_t,
+	private_notify_payload_t *this)
+>>>>>>> upstream/4.5.1
 {
 	switch (this->protocol_id)
 	{
@@ -514,10 +619,15 @@ static u_int32_t get_spi(private_notify_payload_t *this)
 	return 0;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of notify_payload_t.set_spi.
  */
 static void set_spi(private_notify_payload_t *this, u_int32_t spi)
+=======
+METHOD(notify_payload_t, set_spi, void,
+	private_notify_payload_t *this, u_int32_t spi)
+>>>>>>> upstream/4.5.1
 {
 	chunk_free(&this->spi);
 	switch (this->protocol_id)
@@ -534,6 +644,7 @@ static void set_spi(private_notify_payload_t *this, u_int32_t spi)
 	compute_length(this);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of notify_payload_t.get_notification_data.
  */
@@ -565,6 +676,28 @@ static status_t destroy(private_notify_payload_t *this)
 	chunk_free(&this->spi);
 	free(this);
 	return SUCCESS;
+=======
+METHOD(notify_payload_t, get_notification_data, chunk_t,
+	private_notify_payload_t *this)
+{
+	return this->notification_data;
+}
+
+METHOD(notify_payload_t, set_notification_data, void,
+	private_notify_payload_t *this, chunk_t data)
+{
+	free(this->notification_data.ptr);
+	this->notification_data = chunk_clone(data);
+	compute_length(this);
+}
+
+METHOD2(payload_t, notify_payload_t, destroy, void,
+	private_notify_payload_t *this)
+{
+	free(this->notification_data.ptr);
+	free(this->spi.ptr);
+	free(this);
+>>>>>>> upstream/4.5.1
 }
 
 /*
@@ -572,6 +705,7 @@ static status_t destroy(private_notify_payload_t *this)
  */
 notify_payload_t *notify_payload_create()
 {
+<<<<<<< HEAD
 	private_notify_payload_t *this = malloc_thing(private_notify_payload_t);
 
 	/* interface functions */
@@ -606,18 +740,56 @@ notify_payload_t *notify_payload_create()
 	this->notification_data.ptr = NULL;
 	this->notification_data.len = 0;
 
+=======
+	private_notify_payload_t *this;
+
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.get_protocol_id = _get_protocol_id,
+			.set_protocol_id  = _set_protocol_id,
+			.get_notify_type = _get_notify_type,
+			.set_notify_type = _set_notify_type,
+			.get_spi = _get_spi,
+			.set_spi = _set_spi,
+			.get_notification_data = _get_notification_data,
+			.set_notification_data = _set_notification_data,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = NOTIFY_PAYLOAD_HEADER_LENGTH,
+	);
+>>>>>>> upstream/4.5.1
 	return &this->public;
 }
 
 /*
  * Described in header.
  */
+<<<<<<< HEAD
 notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_type_t notify_type)
 {
 	notify_payload_t *notify = notify_payload_create();
 
 	notify->set_notify_type(notify,notify_type);
 	notify->set_protocol_id(notify,protocol_id);
+=======
+notify_payload_t *notify_payload_create_from_protocol_and_type(
+						protocol_id_t protocol_id, notify_type_t notify_type)
+{
+	notify_payload_t *notify = notify_payload_create();
+
+	notify->set_notify_type(notify, notify_type);
+	notify->set_protocol_id(notify, protocol_id);
+>>>>>>> upstream/4.5.1
 
 	return notify;
 }

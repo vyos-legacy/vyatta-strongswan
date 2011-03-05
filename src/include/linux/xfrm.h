@@ -283,6 +283,10 @@ enum xfrm_attr_type_t {
 	XFRMA_KMADDRESS,        /* struct xfrm_user_kmaddress */
 	XFRMA_ALG_AUTH_TRUNC,	/* struct xfrm_algo_auth */
 	XFRMA_MARK,		/* struct xfrm_mark */
+<<<<<<< HEAD
+=======
+	XFRMA_TFCPAD,		/* __u32 */
+>>>>>>> upstream/4.5.1
 	__XFRMA_MAX
 
 #define XFRMA_MAX (__XFRMA_MAX - 1)

@@ -98,6 +98,18 @@ static int read_serial(char *file, char *buf, int buflen)
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Destroy a CDP
+ */
+static void cdp_destroy(x509_cdp_t *this)
+{
+	free(this->uri);
+	free(this);
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * Sign a CRL
  */
 static int sign_crl()
@@ -110,16 +122,30 @@ static int sign_crl()
 	x509_t *x509;
 	hash_algorithm_t digest = HASH_SHA1;
 	char *arg, *cacert = NULL, *cakey = NULL, *lastupdate = NULL, *error = NULL;
+<<<<<<< HEAD
+=======
+	char *basecrl = NULL;
+>>>>>>> upstream/4.5.1
 	char serial[512], crl_serial[8], *keyid = NULL;
 	int serial_len = 0;
 	crl_reason_t reason = CRL_REASON_UNSPECIFIED;
 	time_t thisUpdate, nextUpdate, date = time(NULL);
 	int lifetime = 15;
+<<<<<<< HEAD
 	linked_list_t *list;
 	enumerator_t *enumerator, *lastenum = NULL;
 	chunk_t encoding = chunk_empty;
 
 	list = linked_list_create();
+=======
+	linked_list_t *list, *cdps;
+	enumerator_t *enumerator, *lastenum = NULL;
+	x509_cdp_t *cdp;
+	chunk_t encoding = chunk_empty, baseCrlNumber = chunk_empty;
+
+	list = linked_list_create();
+	cdps = linked_list_create();
+>>>>>>> upstream/4.5.1
 
 	memset(crl_serial, 0, sizeof(crl_serial));
 
@@ -190,6 +216,18 @@ static int sign_crl()
 				reason = CRL_REASON_UNSPECIFIED;
 				continue;
 			}
+<<<<<<< HEAD
+=======
+			case 'b':
+				basecrl = arg;
+				continue;
+			case 'u':
+				INIT(cdp,
+					.uri = strdup(arg),
+				);
+				cdps->insert_last(cdps, cdp);
+				continue;
+>>>>>>> upstream/4.5.1
 			case 'r':
 				if (streq(arg, "key-compromise"))
 				{
@@ -262,9 +300,15 @@ static int sign_crl()
 		goto error;
 	}
 	x509 = (x509_t*)ca;
+<<<<<<< HEAD
 	if (!(x509->get_flags(x509) & X509_CA))
 	{
 		error = "CA certificate misses CA basicConstraint";
+=======
+	if (!(x509->get_flags(x509) & (X509_CA | X509_CRL_SIGN)))
+	{
+		error = "CA certificate misses CA basicConstraint / CRLSign keyUsage";
+>>>>>>> upstream/4.5.1
 		goto error;
 	}
 	public = ca->get_public_key(ca);
@@ -302,6 +346,25 @@ static int sign_crl()
 	thisUpdate = time(NULL);
 	nextUpdate = thisUpdate + lifetime * 24 * 60 * 60;
 
+<<<<<<< HEAD
+=======
+	if (basecrl)
+	{
+		lastcrl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+									 BUILD_FROM_FILE, basecrl, BUILD_END);
+		if (!lastcrl)
+		{
+			error = "loading base CRL failed";
+			goto error;
+		}
+		memcpy(crl_serial, lastcrl->get_serial(lastcrl).ptr,
+			   min(lastcrl->get_serial(lastcrl).len, sizeof(crl_serial)));
+		baseCrlNumber = chunk_clone(lastcrl->get_serial(lastcrl));
+		DESTROY_IF((certificate_t*)lastcrl);
+		lastcrl = NULL;
+	}
+
+>>>>>>> upstream/4.5.1
 	if (lastupdate)
 	{
 		lastcrl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
@@ -315,6 +378,13 @@ static int sign_crl()
 			   min(lastcrl->get_serial(lastcrl).len, sizeof(crl_serial)));
 		lastenum = lastcrl->create_enumerator(lastcrl);
 	}
+<<<<<<< HEAD
+=======
+	else
+	{
+		lastenum = enumerator_create_empty();
+	}
+>>>>>>> upstream/4.5.1
 
 	chunk_increment(chunk_create(crl_serial, sizeof(crl_serial)));
 
@@ -324,11 +394,20 @@ static int sign_crl()
 			BUILD_SIGNING_KEY, private, BUILD_SIGNING_CERT, ca,
 			BUILD_SERIAL, chunk_create(crl_serial, sizeof(crl_serial)),
 			BUILD_NOT_BEFORE_TIME, thisUpdate, BUILD_NOT_AFTER_TIME, nextUpdate,
+<<<<<<< HEAD
 			BUILD_REVOKED_ENUMERATOR, enumerator, BUILD_DIGEST_ALG, digest,
 			lastenum ? BUILD_REVOKED_ENUMERATOR : BUILD_END, lastenum,
 			BUILD_END);
 	enumerator->destroy(enumerator);
 	DESTROY_IF(lastenum);
+=======
+			BUILD_REVOKED_ENUMERATOR, enumerator,
+			BUILD_REVOKED_ENUMERATOR, lastenum, BUILD_DIGEST_ALG, digest,
+			BUILD_CRL_DISTRIBUTION_POINTS, cdps, BUILD_BASE_CRL, baseCrlNumber,
+			BUILD_END);
+	enumerator->destroy(enumerator);
+	lastenum->destroy(lastenum);
+>>>>>>> upstream/4.5.1
 	DESTROY_IF((certificate_t*)lastcrl);
 
 	if (!crl)
@@ -353,7 +432,13 @@ error:
 	DESTROY_IF(ca);
 	DESTROY_IF(crl);
 	free(encoding.ptr);
+<<<<<<< HEAD
 	list->destroy_function(list, (void*)revoked_destroy);
+=======
+	free(baseCrlNumber.ptr);
+	list->destroy_function(list, (void*)revoked_destroy);
+	cdps->destroy_function(cdps, (void*)cdp_destroy);
+>>>>>>> upstream/4.5.1
 	if (error)
 	{
 		fprintf(stderr, "%s\n", error);
@@ -363,6 +448,10 @@ error:
 
 usage:
 	list->destroy_function(list, (void*)revoked_destroy);
+<<<<<<< HEAD
+=======
+	cdps->destroy_function(cdps, (void*)cdp_destroy);
+>>>>>>> upstream/4.5.1
 	return command_usage(error);
 }
 
@@ -375,12 +464,17 @@ static void __attribute__ ((constructor))reg()
 		sign_crl, 'c', "signcrl",
 		"issue a CRL using a CA certificate and key",
 		{"--cacert file --cakey file | --cakeyid hex --lifetime days",
+<<<<<<< HEAD
+=======
+		 "[--lastcrl crl] [--basecrl crl] [--crluri uri ]+",
+>>>>>>> upstream/4.5.1
 		 "[  [--reason key-compromise|ca-compromise|affiliation-changed|",
 		 "             superseded|cessation-of-operation|certificate-hold]",
 		 "   [--date timestamp]",
 		 "    --cert file | --serial hex ]*",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
+<<<<<<< HEAD
 			{"help",	'h', 0, "show usage information"},
 			{"cacert",	'c', 1, "CA certificate file"},
 			{"cakey",	'k', 1, "CA private key file"},
@@ -393,6 +487,22 @@ static void __attribute__ ((constructor))reg()
 			{"date",	'd', 1, "revocation date as unix timestamp, default: now"},
 			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
 			{"outform",	'f', 1, "encoding of generated crl, default: der"},
+=======
+			{"help",		'h', 0, "show usage information"},
+			{"cacert",		'c', 1, "CA certificate file"},
+			{"cakey",		'k', 1, "CA private key file"},
+			{"cakeyid",		'x', 1, "keyid on smartcard of CA private key"},
+			{"lifetime",	'l', 1, "days the CRL gets a nextUpdate, default: 15"},
+			{"lastcrl",		'a', 1, "CRL of lastUpdate to copy revocations from"},
+			{"basecrl",		'b', 1, "base CRL to create a delta CRL for"},
+			{"crluri",		'u', 1, "freshest delta CRL URI to include"},
+			{"cert",		'z', 1, "certificate file to revoke"},
+			{"serial",		's', 1, "hex encoded certificate serial number to revoke"},
+			{"reason",		'r', 1, "reason for certificate revocation"},
+			{"date",		'd', 1, "revocation date as unix timestamp, default: now"},
+			{"digest",		'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",		'f', 1, "encoding of generated crl, default: der"},
+>>>>>>> upstream/4.5.1
 		}
 	});
 }

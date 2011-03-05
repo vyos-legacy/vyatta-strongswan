@@ -1,5 +1,10 @@
 /*
+<<<<<<< HEAD
  * Copyright (C) 2005-2006 Martin Willi
+=======
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
+>>>>>>> upstream/4.5.1
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -26,9 +31,15 @@ typedef struct private_transform_attribute_t private_transform_attribute_t;
 
 /**
  * Private data of an transform_attribute_t object.
+<<<<<<< HEAD
  *
  */
 struct private_transform_attribute_t {
+=======
+ */
+struct private_transform_attribute_t {
+
+>>>>>>> upstream/4.5.1
 	/**
 	 * Public transform_attribute_t interface.
 	 */
@@ -70,7 +81,10 @@ ENUM_END(transform_attribute_type_name, KEY_LENGTH);
  *
  * The defined offsets are the positions in a object of type
  * private_transform_attribute_t.
+<<<<<<< HEAD
  *
+=======
+>>>>>>> upstream/4.5.1
  */
 encoding_rule_t transform_attribute_encodings[] = {
 	/* Flag defining the format of this payload */
@@ -78,7 +92,11 @@ encoding_rule_t transform_attribute_encodings[] = {
 	/* type of the attribute as 15 bit unsigned integer */
 	{ ATTRIBUTE_TYPE,			offsetof(private_transform_attribute_t, attribute_type)				},
 	/* Length or value, depending on the attribute format flag */
+<<<<<<< HEAD
 	{ ATTRIBUTE_LENGTH_OR_VALUE,	offsetof(private_transform_attribute_t, attribute_length_or_value)	},
+=======
+	{ ATTRIBUTE_LENGTH_OR_VALUE,offsetof(private_transform_attribute_t, attribute_length_or_value)	},
+>>>>>>> upstream/4.5.1
 	/* Value of attribute if attribute format flag is zero */
 	{ ATTRIBUTE_VALUE,			offsetof(private_transform_attribute_t, attribute_value) 			}
 };
@@ -95,6 +113,7 @@ encoding_rule_t transform_attribute_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.verify.
  */
@@ -121,10 +140,29 @@ static void get_encoding_rules(private_transform_attribute_t *this, encoding_rul
  * Implementation of payload_t.get_type.
  */
 static payload_type_t get_type(private_transform_attribute_t *this)
+=======
+METHOD(payload_t, verify, status_t,
+	private_transform_attribute_t *this)
+{
+	return SUCCESS;
+}
+
+METHOD(payload_t, get_encoding_rules, void,
+	private_transform_attribute_t *this, encoding_rule_t **rules,
+	size_t *rule_count)
+{
+	*rules = transform_attribute_encodings;
+	*rule_count = countof(transform_attribute_encodings);
+}
+
+METHOD(payload_t, get_type, payload_type_t,
+	private_transform_attribute_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return TRANSFORM_ATTRIBUTE;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.get_next_type.
  */
@@ -173,10 +211,43 @@ static void set_value_chunk(private_transform_attribute_t *this, chunk_t value)
 		this->attribute_value.len = value.len;
 		this->attribute_length_or_value = value.len;
 		/* attribute has not a fixed length */
+=======
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_transform_attribute_t *this)
+{
+	return NO_PAYLOAD;
+}
+
+METHOD(payload_t, set_next_type, void,
+	private_transform_attribute_t *this, payload_type_t type)
+{
+}
+
+METHOD(payload_t, get_length, size_t,
+	private_transform_attribute_t *this)
+{
+	if (this->attribute_format)
+	{
+		return 4;
+	}
+	return this->attribute_length_or_value + 4;
+}
+
+METHOD(transform_attribute_t, set_value_chunk, void,
+	private_transform_attribute_t *this, chunk_t value)
+{
+	chunk_free(&this->attribute_value);
+
+	if (value.len != 2)
+	{
+		this->attribute_value = chunk_clone(value);
+		this->attribute_length_or_value = value.len;
+>>>>>>> upstream/4.5.1
 		this->attribute_format = FALSE;
 	}
 	else
 	{
+<<<<<<< HEAD
 		memcpy(&(this->attribute_length_or_value),value.ptr,value.len);
 	}
 }
@@ -222,27 +293,64 @@ static chunk_t get_value_chunk (private_transform_attribute_t *this)
  * Implementation of transform_attribute_t.get_value.
  */
 static u_int16_t get_value (private_transform_attribute_t *this)
+=======
+		memcpy(&this->attribute_length_or_value, value.ptr, value.len);
+	}
+}
+
+METHOD(transform_attribute_t, set_value, void,
+	private_transform_attribute_t *this, u_int16_t value)
+{
+	chunk_free(&this->attribute_value);
+	this->attribute_length_or_value = value;
+	this->attribute_format = TRUE;
+}
+
+METHOD(transform_attribute_t, get_value_chunk, chunk_t,
+	private_transform_attribute_t *this)
+{
+	if (this->attribute_format)
+	{
+		return chunk_from_thing(this->attribute_length_or_value);
+	}
+	return this->attribute_value;
+}
+
+METHOD(transform_attribute_t, get_value, u_int16_t,
+	private_transform_attribute_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->attribute_length_or_value;
 }
 
+<<<<<<< HEAD
 
 /**
  * Implementation of transform_attribute_t.set_attribute_type.
  */
 static void set_attribute_type (private_transform_attribute_t *this, u_int16_t type)
+=======
+METHOD(transform_attribute_t, set_attribute_type, void,
+	private_transform_attribute_t *this, u_int16_t type)
+>>>>>>> upstream/4.5.1
 {
 	this->attribute_type = type & 0x7FFF;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of transform_attribute_t.get_attribute_type.
  */
 static u_int16_t get_attribute_type (private_transform_attribute_t *this)
+=======
+METHOD(transform_attribute_t, get_attribute_type, u_int16_t,
+	private_transform_attribute_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->attribute_type;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of transform_attribute_t.clone.
  */
@@ -251,6 +359,14 @@ static transform_attribute_t * _clone(private_transform_attribute_t *this)
 	private_transform_attribute_t *new_clone;
 
 	new_clone = (private_transform_attribute_t *) transform_attribute_create();
+=======
+METHOD(transform_attribute_t, clone_, transform_attribute_t*,
+	private_transform_attribute_t *this)
+{
+	private_transform_attribute_t *new_clone;
+
+	new_clone = (private_transform_attribute_t *)transform_attribute_create();
+>>>>>>> upstream/4.5.1
 
 	new_clone->attribute_format = this->attribute_format;
 	new_clone->attribute_type = this->attribute_type;
@@ -258,6 +374,7 @@ static transform_attribute_t * _clone(private_transform_attribute_t *this)
 
 	if (!new_clone->attribute_format)
 	{
+<<<<<<< HEAD
 		new_clone->attribute_value.ptr = clalloc(this->attribute_value.ptr,this->attribute_value.len);
 		new_clone->attribute_value.len = this->attribute_value.len;
 	}
@@ -274,6 +391,17 @@ static void destroy(private_transform_attribute_t *this)
 	{
 		free(this->attribute_value.ptr);
 	}
+=======
+		new_clone->attribute_value = chunk_clone(this->attribute_value);
+	}
+	return &new_clone->public;
+}
+
+METHOD2(payload_t, transform_attribute_t, destroy, void,
+	private_transform_attribute_t *this)
+{
+	free(this->attribute_value.ptr);
+>>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -282,6 +410,7 @@ static void destroy(private_transform_attribute_t *this)
  */
 transform_attribute_t *transform_attribute_create()
 {
+<<<<<<< HEAD
 	private_transform_attribute_t *this = malloc_thing(private_transform_attribute_t);
 
 	/* payload interface */
@@ -311,6 +440,33 @@ transform_attribute_t *transform_attribute_create()
 	this->attribute_value.len = 0;
 
 	return (&(this->public));
+=======
+	private_transform_attribute_t *this;
+
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.set_value_chunk = _set_value_chunk,
+			.set_value = _set_value,
+			.get_value_chunk = _get_value_chunk,
+			.get_value = _get_value,
+			.set_attribute_type = _set_attribute_type,
+			.get_attribute_type = _get_attribute_type,
+			.clone = _clone_,
+			.destroy = _destroy,
+		},
+		.attribute_format = TRUE,
+	);
+	return &this->public;
+>>>>>>> upstream/4.5.1
 }
 
 /*
@@ -319,7 +475,12 @@ transform_attribute_t *transform_attribute_create()
 transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length)
 {
 	transform_attribute_t *attribute = transform_attribute_create();
+<<<<<<< HEAD
 	attribute->set_attribute_type(attribute,KEY_LENGTH);
 	attribute->set_value(attribute,key_length);
+=======
+	attribute->set_attribute_type(attribute, KEY_LENGTH);
+	attribute->set_value(attribute, key_length);
+>>>>>>> upstream/4.5.1
 	return attribute;
 }

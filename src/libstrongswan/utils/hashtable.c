@@ -186,7 +186,11 @@ static void rehash(private_hashtable_t *this)
 	linked_list_t **old_table;
 	u_int row, old_capacity;
 
+<<<<<<< HEAD
 	if (this->capacity < MAX_CAPACITY)
+=======
+	if (this->capacity >= MAX_CAPACITY)
+>>>>>>> upstream/4.5.1
 	{
 		return;
 	}
@@ -249,6 +253,10 @@ METHOD(hashtable_t, put, void*,
 			{
 				old_value = pair->value;
 				pair->value = value;
+<<<<<<< HEAD
+=======
+				pair->key = key;
+>>>>>>> upstream/4.5.1
 				break;
 			}
 		}

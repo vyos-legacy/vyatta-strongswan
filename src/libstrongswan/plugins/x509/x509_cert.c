@@ -117,7 +117,11 @@ struct private_x509_cert_t {
 	linked_list_t *subjectAltNames;
 
 	/**
+<<<<<<< HEAD
 	 * List of crlDistributionPoints as allocated char*
+=======
+	 * List of crlDistributionPoints as x509_cdp_t*
+>>>>>>> upstream/4.5.1
 	 */
 	linked_list_t *crl_uris;
 
@@ -132,6 +136,29 @@ struct private_x509_cert_t {
 	linked_list_t *ipAddrBlocks;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * List of permitted name constraints
+	 */
+	linked_list_t *permitted_names;
+
+	/**
+	 * List of exluced name constraints
+	 */
+	linked_list_t *excluded_names;
+
+	/**
+	 * List of certificatePolicies, as x509_cert_policy_t
+	 */
+	linked_list_t *cert_policies;
+
+	/**
+	 * List of policyMappings, as x509_policy_mapping_t
+	 */
+	linked_list_t *policy_mappings;
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * certificate's embedded public key
 	 */
 	public_key_t *public_key;
@@ -154,7 +181,26 @@ struct private_x509_cert_t {
 	/**
 	 * Path Length Constraint
 	 */
+<<<<<<< HEAD
 	int pathLenConstraint;
+=======
+	u_char pathLenConstraint;
+
+	/**
+	 * requireExplicitPolicy Constraint
+	 */
+	u_char require_explicit;
+
+	/**
+	 * inhibitPolicyMapping Constraint
+	 */
+	u_char inhibit_mapping;
+
+	/**
+	 * inhibitAnyPolicy Constraint
+	 */
+	u_char inhibit_any;
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * x509 constraints and other flags
@@ -187,6 +233,56 @@ static const chunk_t ASN1_subjectAltName_oid = chunk_from_chars(
 );
 
 /**
+<<<<<<< HEAD
+=======
+ * Destroy a CertificateDistributionPoint
+ */
+static void crl_uri_destroy(x509_cdp_t *this)
+{
+	free(this->uri);
+	DESTROY_IF(this->issuer);
+	free(this);
+}
+
+/**
+ * Destroy a CertificatePolicy
+ */
+static void cert_policy_destroy(x509_cert_policy_t *this)
+{
+	free(this->oid.ptr);
+	free(this->cps_uri);
+	free(this->unotice_text);
+	free(this);
+}
+
+/**
+ * Free policy mapping
+ */
+static void policy_mapping_destroy(x509_policy_mapping_t *mapping)
+{
+	free(mapping->issuer.ptr);
+	free(mapping->subject.ptr);
+	free(mapping);
+}
+
+/**
+ * Parse a length constraint from an unwrapped integer
+ */
+static u_int parse_constraint(chunk_t object)
+{
+	switch (object.len)
+	{
+		case 0:
+			return 0;
+		case 1:
+			return (object.ptr[0] & 0x80) ? X509_NO_CONSTRAINT : object.ptr[0];
+		default:
+			return X509_NO_CONSTRAINT;
+	}
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * ASN.1 definition of a basicConstraints extension
  */
 static const asn1Object_t basicConstraintsObjects[] = {
@@ -228,6 +324,7 @@ static void parse_basicConstraints(chunk_t blob, int level0,
 			case BASIC_CONSTRAINTS_PATH_LEN:
 				if (isCA)
 				{
+<<<<<<< HEAD
 					if (object.len == 0)
 					{
 						this->pathLenConstraint = 0;
@@ -237,6 +334,9 @@ static void parse_basicConstraints(chunk_t blob, int level0,
 						this->pathLenConstraint = *object.ptr;
 					}
 					/* we ignore path length constraints > 127 */
+=======
+					this->pathLenConstraint = parse_constraint(object);
+>>>>>>> upstream/4.5.1
 				}
 				break;
 			default:
@@ -574,7 +674,11 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 						}
 						break;
 					default:
+<<<<<<< HEAD
 						/* unkown accessMethod, ignoring */
+=======
+						/* unknown accessMethod, ignoring */
+>>>>>>> upstream/4.5.1
 						break;
 				}
 				break;
@@ -589,6 +693,63 @@ end:
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Extract KeyUsage flags
+ */
+static void parse_keyUsage(chunk_t blob, private_x509_cert_t *this)
+{
+	enum {
+		KU_DIGITAL_SIGNATURE =	0,
+		KU_NON_REPUDIATION =	1,
+		KU_KEY_ENCIPHERMENT =	2,
+		KU_DATA_ENCIPHERMENT =	3,
+		KU_KEY_AGREEMENT =		4,
+		KU_KEY_CERT_SIGN =		5,
+		KU_CRL_SIGN =			6,
+		KU_ENCIPHER_ONLY =		7,
+		KU_DECIPHER_ONLY =		8,
+	};
+
+	if (asn1_unwrap(&blob, &blob) == ASN1_BIT_STRING && blob.len)
+	{
+		int bit, byte, unused = blob.ptr[0];
+
+		blob = chunk_skip(blob, 1);
+		for (byte = 0; byte < blob.len; byte++)
+		{
+			for (bit = 0; bit < 8; bit++)
+			{
+				if (byte == blob.len - 1 && bit > (7 - unused))
+				{
+					break;
+				}
+				if (blob.ptr[byte] & 1 << (7 - bit))
+				{
+					switch (byte * 8 + bit)
+					{
+						case KU_CRL_SIGN:
+							this->flags |= X509_CRL_SIGN;
+							break;
+						case KU_KEY_CERT_SIGN:
+							/* we use the caBasicConstraint, MUST be set */
+						case KU_DIGITAL_SIGNATURE:
+						case KU_NON_REPUDIATION:
+						case KU_KEY_ENCIPHERMENT:
+						case KU_DATA_ENCIPHERMENT:
+						case KU_KEY_AGREEMENT:
+						case KU_ENCIPHER_ONLY:
+						case KU_DECIPHER_ONLY:
+							break;
+					}
+				}
+			}
+		}
+	}
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * ASN.1 definition of a extendedKeyUsage extension
  */
 static const asn1Object_t extendedKeyUsageObjects[] = {
@@ -600,7 +761,11 @@ static const asn1Object_t extendedKeyUsageObjects[] = {
 #define EXT_KEY_USAGE_PURPOSE_ID	1
 
 /**
+<<<<<<< HEAD
  * Extracts extendedKeyUsage OIDs - currently only OCSP_SIGING is returned
+=======
+ * Extracts extendedKeyUsage OIDs
+>>>>>>> upstream/4.5.1
  */
 static void parse_extendedKeyUsage(chunk_t blob, int level0,
 								   private_x509_cert_t *this)
@@ -649,16 +814,72 @@ static const asn1Object_t crlDistributionPointsObjects[] = {
 	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /*  7 */
 	{ 2,     "reasons",				ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_BODY	}, /*  8 */
 	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /*  9 */
+<<<<<<< HEAD
 	{ 2,     "crlIssuer",			ASN1_CONTEXT_C_2,	ASN1_OPT|ASN1_BODY	}, /* 10 */
+=======
+	{ 2,     "crlIssuer",			ASN1_CONTEXT_C_2,	ASN1_OPT|ASN1_OBJ	}, /* 10 */
+>>>>>>> upstream/4.5.1
 	{ 2,     "end opt",				ASN1_EOC,			ASN1_END			}, /* 11 */
 	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /* 12 */
 	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
 };
+<<<<<<< HEAD
 #define CRL_DIST_POINTS_FULLNAME	 3
+=======
+#define CRL_DIST_POINTS				 1
+#define CRL_DIST_POINTS_FULLNAME	 3
+#define CRL_DIST_POINTS_ISSUER		10
+
+/**
+ * Add entry to the list of each pairing of URI and Issuer
+ */
+static void add_cdps(linked_list_t *list, linked_list_t *uris,
+					 linked_list_t *issuers)
+{
+	identification_t *issuer, *id;
+	enumerator_t *enumerator;
+	x509_cdp_t *cdp;
+	char *uri;
+
+	while (uris->remove_last(uris, (void**)&id) == SUCCESS)
+	{
+		if (asprintf(&uri, "%Y", id) > 0)
+		{
+			if (issuers->get_count(issuers))
+			{
+				enumerator = issuers->create_enumerator(issuers);
+				while (enumerator->enumerate(enumerator, &issuer))
+				{
+					INIT(cdp,
+						.uri = strdup(uri),
+						.issuer = issuer->clone(issuer),
+					);
+					list->insert_last(list, cdp);
+				}
+				enumerator->destroy(enumerator);
+				free(uri);
+			}
+			else
+			{
+				INIT(cdp,
+					.uri = uri,
+				);
+				list->insert_last(list, cdp);
+			}
+		}
+		id->destroy(id);
+	}
+	while (issuers->remove_last(issuers, (void**)&id) == SUCCESS)
+	{
+		id->destroy(id);
+	}
+}
+>>>>>>> upstream/4.5.1
 
 /**
  * Extracts one or several crlDistributionPoints into a list
  */
+<<<<<<< HEAD
 static void parse_crlDistributionPoints(chunk_t blob, int level0,
 										private_x509_cert_t *this)
 {
@@ -667,11 +888,24 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 	int objectID;
 	linked_list_t *list = linked_list_create();
 
+=======
+void x509_parse_crlDistributionPoints(chunk_t blob, int level0,
+									  linked_list_t *list)
+{
+	linked_list_t *uris, *issuers;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+
+	uris = linked_list_create();
+	issuers = linked_list_create();
+>>>>>>> upstream/4.5.1
 	parser = asn1_parser_create(crlDistributionPointsObjects, blob);
 	parser->set_top_level(parser, level0);
 
 	while (parser->iterate(parser, &objectID, &object))
 	{
+<<<<<<< HEAD
 		if (objectID == CRL_DIST_POINTS_FULLNAME)
 		{
 			identification_t *id;
@@ -694,6 +928,258 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0,
 	}
 	parser->destroy(parser);
 	list->destroy(list);
+=======
+		switch (objectID)
+		{
+			case CRL_DIST_POINTS:
+				add_cdps(list, uris, issuers);
+				break;
+			case CRL_DIST_POINTS_FULLNAME:
+				x509_parse_generalNames(object, parser->get_level(parser) + 1,
+										TRUE, uris);
+				break;
+			case CRL_DIST_POINTS_ISSUER:
+				x509_parse_generalNames(object, parser->get_level(parser) + 1,
+										TRUE, issuers);
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+
+	add_cdps(list, uris, issuers);
+
+	uris->destroy(uris);
+	issuers->destroy(issuers);
+}
+
+/**
+ * ASN.1 definition of nameConstraints
+ */
+static const asn1Object_t nameConstraintsObjects[] = {
+	{ 0, "nameConstraints",			ASN1_SEQUENCE,		ASN1_LOOP			}, /*  0 */
+	{ 1,   "permittedSubtrees",		ASN1_CONTEXT_C_0,	ASN1_OPT|ASN1_LOOP	}, /*  1 */
+	{ 2,     "generalSubtree",		ASN1_SEQUENCE,		ASN1_BODY			}, /*  2 */
+	{ 1,   "end loop",				ASN1_EOC,			ASN1_END			}, /*  3 */
+	{ 1,   "excludedSubtrees",		ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_LOOP	}, /*  4 */
+	{ 2,     "generalSubtree",		ASN1_SEQUENCE,		ASN1_BODY			}, /*  5 */
+	{ 1,   "end loop",				ASN1_EOC,			ASN1_END			}, /*  6 */
+	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /*  7 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
+};
+#define NAME_CONSTRAINT_PERMITTED 2
+#define NAME_CONSTRAINT_EXCLUDED  5
+
+/**
+ * Parse permitted/excluded nameConstraints
+ */
+static void parse_nameConstraints(chunk_t blob, int level0,
+								  private_x509_cert_t *this)
+{
+	asn1_parser_t *parser;
+	identification_t *id;
+	chunk_t object;
+	int objectID;
+
+	parser = asn1_parser_create(nameConstraintsObjects, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case NAME_CONSTRAINT_PERMITTED:
+				id = parse_generalName(object, parser->get_level(parser) + 1);
+				if (id)
+				{
+					this->permitted_names->insert_last(this->permitted_names, id);
+				}
+				break;
+			case NAME_CONSTRAINT_EXCLUDED:
+				id = parse_generalName(object, parser->get_level(parser) + 1);
+				if (id)
+				{
+					this->excluded_names->insert_last(this->excluded_names, id);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+}
+
+/**
+ * ASN.1 definition of a certificatePolicies extension
+ */
+static const asn1Object_t certificatePoliciesObject[] = {
+	{ 0, "certificatePolicies",		ASN1_SEQUENCE,	ASN1_LOOP			}, /*  0 */
+	{ 1,   "policyInformation",		ASN1_SEQUENCE,	ASN1_NONE			}, /*  1 */
+	{ 2,     "policyId",			ASN1_OID,		ASN1_BODY			}, /*  2 */
+	{ 2,     "qualifier",			ASN1_SEQUENCE,	ASN1_OPT|ASN1_BODY	}, /*  3 */
+	{ 3,       "qualifierInfo",		ASN1_SEQUENCE,	ASN1_NONE			}, /*  4 */
+	{ 4,         "qualifierId",		ASN1_OID,		ASN1_BODY			}, /*  5 */
+	{ 4,         "cPSuri",			ASN1_IA5STRING,	ASN1_OPT|ASN1_BODY	}, /*  6 */
+	{ 4,         "end choice",		ASN1_EOC,		ASN1_END			}, /*  7 */
+	{ 4,         "userNotice",		ASN1_SEQUENCE,	ASN1_OPT|ASN1_NONE	}, /*  8 */
+	{ 5,           "explicitText",	ASN1_EOC,		ASN1_RAW			}, /*  9 */
+	{ 4,         "end choice",		ASN1_EOC,		ASN1_END			}, /* 10 */
+	{ 2,      "end opt",			ASN1_EOC,		ASN1_END			}, /* 12 */
+	{ 0, "end loop",				ASN1_EOC,		ASN1_END			}, /* 13 */
+	{ 0, "exit",					ASN1_EOC,		ASN1_EXIT			}
+};
+#define CERT_POLICY_ID				2
+#define CERT_POLICY_QUALIFIER_ID	5
+#define CERT_POLICY_CPS_URI			6
+#define CERT_POLICY_EXPLICIT_TEXT	9
+
+/**
+ * Parse certificatePolicies
+ */
+static void parse_certificatePolicies(chunk_t blob, int level0,
+									  private_x509_cert_t *this)
+{
+	x509_cert_policy_t *policy = NULL;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID, qualifier = OID_UNKNOWN;
+
+	parser = asn1_parser_create(certificatePoliciesObject, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case CERT_POLICY_ID:
+				INIT(policy,
+					.oid = chunk_clone(object),
+				);
+				this->cert_policies->insert_last(this->cert_policies, policy);
+				break;
+			case CERT_POLICY_QUALIFIER_ID:
+				qualifier = asn1_known_oid(object);
+				break;
+			case CERT_POLICY_CPS_URI:
+				if (policy && !policy->cps_uri && object.len &&
+					qualifier == OID_POLICY_QUALIFIER_CPS &&
+					chunk_printable(object, NULL, 0))
+				{
+					policy->cps_uri = strndup(object.ptr, object.len);
+				}
+				break;
+			case CERT_POLICY_EXPLICIT_TEXT:
+				/* TODO */
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+}
+
+/**
+ * ASN.1 definition of a policyMappings extension
+ */
+static const asn1Object_t policyMappingsObjects[] = {
+	{ 0, "policyMappings",			ASN1_SEQUENCE,	ASN1_LOOP			}, /*  0 */
+	{ 1,   "policyMapping",			ASN1_SEQUENCE,	ASN1_NONE			}, /*  1 */
+	{ 2,     "issuerPolicy",		ASN1_OID,		ASN1_BODY			}, /*  2 */
+	{ 2,     "subjectPolicy",		ASN1_OID,		ASN1_BODY			}, /*  3 */
+	{ 0, "end loop",				ASN1_EOC,		ASN1_END			}, /*  4 */
+	{ 0, "exit",					ASN1_EOC,		ASN1_EXIT			}
+};
+#define POLICY_MAPPING			1
+#define POLICY_MAPPING_ISSUER	2
+#define POLICY_MAPPING_SUBJECT	3
+
+/**
+ * Parse policyMappings
+ */
+static void parse_policyMappings(chunk_t blob, int level0,
+								 private_x509_cert_t *this)
+{
+	x509_policy_mapping_t *map = NULL;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+
+	parser = asn1_parser_create(policyMappingsObjects, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case POLICY_MAPPING:
+				INIT(map);
+				this->policy_mappings->insert_last(this->policy_mappings, map);
+				break;
+			case POLICY_MAPPING_ISSUER:
+				if (map && !map->issuer.len)
+				{
+					map->issuer = chunk_clone(object);
+				}
+				break;
+			case POLICY_MAPPING_SUBJECT:
+				if (map && !map->subject.len)
+				{
+					map->subject = chunk_clone(object);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+}
+
+/**
+ * ASN.1 definition of a policyConstraints extension
+ */
+static const asn1Object_t policyConstraintsObjects[] = {
+	{ 0, "policyConstraints",		ASN1_SEQUENCE,		ASN1_NONE			}, /*  0 */
+	{ 1,   "requireExplicitPolicy",	ASN1_CONTEXT_C_0,	ASN1_OPT|ASN1_NONE	}, /*  1 */
+	{ 2,     "SkipCerts",			ASN1_INTEGER,		ASN1_BODY			}, /*  2 */
+	{ 1,   "end opt",				ASN1_EOC,			ASN1_END			}, /*  3 */
+	{ 1,   "inhibitPolicyMapping",	ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_NONE	}, /*  4 */
+	{ 2,     "SkipCerts",			ASN1_INTEGER,		ASN1_BODY			}, /*  5 */
+	{ 1,   "end opt",				ASN1_EOC,			ASN1_END			}, /*  6 */
+	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
+};
+#define POLICY_CONSTRAINT_EXPLICIT 2
+#define POLICY_CONSTRAINT_INHIBIT  5
+
+/**
+ * Parse policyConstraints
+ */
+static void parse_policyConstraints(chunk_t blob, int level0,
+									private_x509_cert_t *this)
+{
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID;
+
+	parser = asn1_parser_create(policyConstraintsObjects, blob);
+	parser->set_top_level(parser, level0);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case POLICY_CONSTRAINT_EXPLICIT:
+				this->require_explicit = parse_constraint(object);
+				break;
+			case POLICY_CONSTRAINT_INHIBIT:
+				this->inhibit_mapping = parse_constraint(object);
+				break;
+			default:
+				break;
+		}
+	}
+	parser->destroy(parser);
+>>>>>>> upstream/4.5.1
 }
 
 /**
@@ -888,11 +1374,14 @@ static const asn1Object_t certObjects[] = {
 #define X509_OBJ_SIGNATURE						25
 
 /**
+<<<<<<< HEAD
  * forward declaration
  */
 static bool issued_by(private_x509_cert_t *this, certificate_t *issuer);
 
 /**
+=======
+>>>>>>> upstream/4.5.1
  * Parses an X.509v3 certificate
  */
 static bool parse_certificate(private_x509_cert_t *this)
@@ -992,7 +1481,12 @@ static bool parse_certificate(private_x509_cert_t *this)
 						parse_basicConstraints(object, level, this);
 						break;
 					case OID_CRL_DISTRIBUTION_POINTS:
+<<<<<<< HEAD
 						parse_crlDistributionPoints(object, level, this);
+=======
+						x509_parse_crlDistributionPoints(object, level,
+														 this->crl_uris);
+>>>>>>> upstream/4.5.1
 						break;
 					case OID_AUTHORITY_KEY_ID:
 						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
@@ -1002,7 +1496,11 @@ static bool parse_certificate(private_x509_cert_t *this)
 						parse_authorityInfoAccess(object, level, this);
 						break;
 					case OID_KEY_USAGE:
+<<<<<<< HEAD
 						/* TODO parse the flags */
+=======
+						parse_keyUsage(object, this);
+>>>>>>> upstream/4.5.1
 						break;
 					case OID_EXTENDED_KEY_USAGE:
 						parse_extendedKeyUsage(object, level, this);
@@ -1010,6 +1508,29 @@ static bool parse_certificate(private_x509_cert_t *this)
 					case OID_IP_ADDR_BLOCKS:
 						parse_ipAddrBlocks(object, level, this);
 						break;
+<<<<<<< HEAD
+=======
+					case OID_NAME_CONSTRAINTS:
+						parse_nameConstraints(object, level, this);
+						break;
+					case OID_CERTIFICATE_POLICIES:
+						parse_certificatePolicies(object, level, this);
+						break;
+					case OID_POLICY_MAPPINGS:
+						parse_policyMappings(object, level, this);
+						break;
+					case OID_POLICY_CONSTRAINTS:
+						parse_policyConstraints(object, level, this);
+						break;
+					case OID_INHIBIT_ANY_POLICY:
+						if (!asn1_parse_simple_object(&object, ASN1_INTEGER,
+													  level, "inhibitAnyPolicy"))
+						{
+							goto end;
+						}
+						this->inhibit_any = parse_constraint(object);
+						break;
+>>>>>>> upstream/4.5.1
 					case OID_NS_REVOCATION_URL:
 					case OID_NS_CA_REVOCATION_URL:
 					case OID_NS_CA_POLICY_URL:
@@ -1022,9 +1543,15 @@ static bool parse_certificate(private_x509_cert_t *this)
 						break;
 					default:
 						if (critical && lib->settings->get_bool(lib->settings,
+<<<<<<< HEAD
 							"libstrongswan.plugins.x509.enforce_critical", FALSE))
 						{
 							DBG1(DBG_LIB, "critical %s extension not supported",
+=======
+							"libstrongswan.x509.enforce_critical", TRUE))
+						{
+							DBG1(DBG_LIB, "critical '%s' extension not supported",
+>>>>>>> upstream/4.5.1
 								 (extn_oid == OID_UNKNOWN) ? "unknown" :
 								 (char*)oid_names[extn_oid].name);
 							goto end;
@@ -1057,7 +1584,13 @@ end:
 		hasher_t *hasher;
 
 		/* check if the certificate is self-signed */
+<<<<<<< HEAD
 		if (issued_by(this, &this->public.interface.interface))
+=======
+		if (this->public.interface.interface.issued_by(
+											&this->public.interface.interface,
+											&this->public.interface.interface))
+>>>>>>> upstream/4.5.1
 		{
 			this->flags |= X509_SELF_SIGNED;
 		}
@@ -1074,34 +1607,54 @@ end:
 	return success;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.get_type
  */
 static certificate_type_t get_type(private_x509_cert_t *this)
+=======
+METHOD(certificate_t, get_type, certificate_type_t,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return CERT_X509;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.get_subject
  */
 static identification_t* get_subject(private_x509_cert_t *this)
+=======
+METHOD(certificate_t, get_subject, identification_t*,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->subject;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.get_issuer
  */
 static identification_t* get_issuer(private_x509_cert_t *this)
+=======
+METHOD(certificate_t, get_issuer, identification_t*,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->issuer;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.has_subject.
  */
 static id_match_t has_subject(private_x509_cert_t *this, identification_t *subject)
+=======
+METHOD(certificate_t, has_subject, id_match_t,
+	private_x509_cert_t *this, identification_t *subject)
+>>>>>>> upstream/4.5.1
 {
 	identification_t *current;
 	enumerator_t *enumerator;
@@ -1142,19 +1695,29 @@ static id_match_t has_subject(private_x509_cert_t *this, identification_t *subje
 	return best;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.has_issuer.
  */
 static id_match_t has_issuer(private_x509_cert_t *this, identification_t *issuer)
+=======
+METHOD(certificate_t, has_issuer, id_match_t,
+	private_x509_cert_t *this, identification_t *issuer)
+>>>>>>> upstream/4.5.1
 {
 	/* issuerAltNames currently not supported */
 	return this->issuer->matches(this->issuer, issuer);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.issued_by.
  */
 static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
+=======
+METHOD(certificate_t, issued_by, bool,
+	private_x509_cert_t *this, certificate_t *issuer)
+>>>>>>> upstream/4.5.1
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -1201,15 +1764,21 @@ static bool issued_by(private_x509_cert_t *this, certificate_t *issuer)
 	return valid;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.get_public_key
  */
 static public_key_t* get_public_key(private_x509_cert_t *this)
+=======
+METHOD(certificate_t, get_public_key, public_key_t*,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	this->public_key->get_ref(this->public_key);
 	return this->public_key;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.get_ref
  */
@@ -1232,6 +1801,18 @@ static x509_flag_t get_flags(private_x509_cert_t *this)
  */
 static bool get_validity(private_x509_cert_t *this, time_t *when,
 						 time_t *not_before, time_t *not_after)
+=======
+METHOD(certificate_t, get_ref, certificate_t*,
+	private_x509_cert_t *this)
+{
+	ref_get(&this->ref);
+	return &this->public.interface.interface;
+}
+
+METHOD(certificate_t, get_validity, bool,
+	private_x509_cert_t *this, time_t *when, time_t *not_before,
+	time_t *not_after)
+>>>>>>> upstream/4.5.1
 {
 	time_t t = when ? *when : time(NULL);
 
@@ -1246,11 +1827,16 @@ static bool get_validity(private_x509_cert_t *this, time_t *when,
 	return (t >= this->notBefore && t <= this->notAfter);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.get_encoding.
  */
 static bool get_encoding(private_x509_cert_t *this, cred_encoding_type_t type,
 						 chunk_t *encoding)
+=======
+METHOD(certificate_t, get_encoding, bool,
+	private_x509_cert_t *this, cred_encoding_type_t type, chunk_t *encoding)
+>>>>>>> upstream/4.5.1
 {
 	if (type == CERT_ASN1_DER)
 	{
@@ -1261,10 +1847,15 @@ static bool get_encoding(private_x509_cert_t *this, cred_encoding_type_t type,
 						CRED_PART_X509_ASN1_DER, this->encoding, CRED_PART_END);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.equals.
  */
 static bool equals(private_x509_cert_t *this, certificate_t *other)
+=======
+METHOD(certificate_t, equals, bool,
+	private_x509_cert_t *this, certificate_t *other)
+>>>>>>> upstream/4.5.1
 {
 	chunk_t encoding;
 	bool equal;
@@ -1290,18 +1881,34 @@ static bool equals(private_x509_cert_t *this, certificate_t *other)
 	return equal;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of x509_t.get_serial.
  */
 static chunk_t get_serial(private_x509_cert_t *this)
+=======
+METHOD(x509_t, get_flags, x509_flag_t,
+	private_x509_cert_t *this)
+{
+	return this->flags;
+}
+
+METHOD(x509_t, get_serial, chunk_t,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->serialNumber;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of x509_t.get_subjectKeyIdentifier.
  */
 static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this)
+=======
+METHOD(x509_t, get_subjectKeyIdentifier, chunk_t,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	if (this->subjectKeyIdentifier.ptr)
 	{
@@ -1323,14 +1930,20 @@ static chunk_t get_subjectKeyIdentifier(private_x509_cert_t *this)
 	}
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of x509_t.get_authKeyIdentifier.
  */
 static chunk_t get_authKeyIdentifier(private_x509_cert_t *this)
+=======
+METHOD(x509_t, get_authKeyIdentifier, chunk_t,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->authKeyIdentifier;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of x509_t.get_pathLenConstraint.
  */
@@ -1343,46 +1956,125 @@ static int get_pathLenConstraint(private_x509_cert_t *this)
  * Implementation of x509_cert_t.create_subjectAltName_enumerator.
  */
 static enumerator_t* create_subjectAltName_enumerator(private_x509_cert_t *this)
+=======
+METHOD(x509_t, get_constraint, u_int,
+	private_x509_cert_t *this, x509_constraint_t type)
+{
+	switch (type)
+	{
+		case X509_PATH_LEN:
+			return this->pathLenConstraint;
+		case X509_REQUIRE_EXPLICIT_POLICY:
+			return this->require_explicit;
+		case X509_INHIBIT_POLICY_MAPPING:
+			return this->inhibit_mapping;
+		case X509_INHIBIT_ANY_POLICY:
+			return this->inhibit_any;
+		default:
+			return X509_NO_CONSTRAINT;
+	}
+}
+
+METHOD(x509_t, create_subjectAltName_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->subjectAltNames->create_enumerator(this->subjectAltNames);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of x509_cert_t.create_ocsp_uri_enumerator.
  */
 static enumerator_t* create_ocsp_uri_enumerator(private_x509_cert_t *this)
+=======
+METHOD(x509_t, create_ocsp_uri_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->ocsp_uris->create_enumerator(this->ocsp_uris);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of x509_cert_t.create_crl_uri_enumerator.
  */
 static enumerator_t* create_crl_uri_enumerator(private_x509_cert_t *this)
+=======
+METHOD(x509_t, create_crl_uri_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->crl_uris->create_enumerator(this->crl_uris);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of x509_cert_t.create_ipAddrBlock_enumerator.
  */
 static enumerator_t* create_ipAddrBlock_enumerator(private_x509_cert_t *this)
+=======
+METHOD(x509_t, create_ipAddrBlock_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->ipAddrBlocks->create_enumerator(this->ipAddrBlocks);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of certificate_t.destroy.
  */
 static void destroy(private_x509_cert_t *this)
+=======
+METHOD(x509_t, create_name_constraint_enumerator, enumerator_t*,
+	private_x509_cert_t *this, bool perm)
+{
+	if (perm)
+	{
+		return this->permitted_names->create_enumerator(this->permitted_names);
+	}
+	return this->excluded_names->create_enumerator(this->excluded_names);
+}
+
+METHOD(x509_t, create_cert_policy_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
+{
+	return this->cert_policies->create_enumerator(this->cert_policies);
+}
+
+METHOD(x509_t, create_policy_mapping_enumerator, enumerator_t*,
+	private_x509_cert_t *this)
+{
+	return this->policy_mappings->create_enumerator(this->policy_mappings);
+}
+
+METHOD(certificate_t, destroy, void,
+	private_x509_cert_t *this)
+>>>>>>> upstream/4.5.1
 {
 	if (ref_put(&this->ref))
 	{
 		this->subjectAltNames->destroy_offset(this->subjectAltNames,
 									offsetof(identification_t, destroy));
+<<<<<<< HEAD
 		this->crl_uris->destroy_function(this->crl_uris, free);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
 		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks, offsetof(traffic_selector_t, destroy));
+=======
+		this->crl_uris->destroy_function(this->crl_uris, (void*)crl_uri_destroy);
+		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
+		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks,
+										offsetof(traffic_selector_t, destroy));
+		this->permitted_names->destroy_offset(this->permitted_names,
+										offsetof(identification_t, destroy));
+		this->excluded_names->destroy_offset(this->excluded_names,
+										offsetof(identification_t, destroy));
+		this->cert_policies->destroy_function(this->cert_policies,
+											  (void*)cert_policy_destroy);
+		this->policy_mappings->destroy_function(this->policy_mappings,
+											  (void*)policy_mapping_destroy);
+>>>>>>> upstream/4.5.1
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
@@ -1404,6 +2096,7 @@ static void destroy(private_x509_cert_t *this)
  */
 static private_x509_cert_t* create_empty(void)
 {
+<<<<<<< HEAD
 	private_x509_cert_t *this = malloc_thing(private_x509_cert_t);
 
 	this->public.interface.interface.get_type = (certificate_type_t (*) (certificate_t*))get_type;
@@ -1452,15 +2145,102 @@ static private_x509_cert_t* create_empty(void)
 	this->ref = 1;
 	this->parsed = FALSE;
 
+=======
+	private_x509_cert_t *this;
+
+	INIT(this,
+		.public = {
+			.interface = {
+				.interface = {
+					.get_type = _get_type,
+					.get_subject = _get_subject,
+					.get_issuer = _get_issuer,
+					.has_subject = _has_subject,
+					.has_issuer = _has_issuer,
+					.issued_by = _issued_by,
+					.get_public_key = _get_public_key,
+					.get_validity = _get_validity,
+					.get_encoding = _get_encoding,
+					.equals = _equals,
+					.get_ref = _get_ref,
+					.destroy = _destroy,
+				},
+				.get_flags = _get_flags,
+				.get_serial = _get_serial,
+				.get_subjectKeyIdentifier = _get_subjectKeyIdentifier,
+				.get_authKeyIdentifier = _get_authKeyIdentifier,
+				.get_constraint = _get_constraint,
+				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
+				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
+				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,
+				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
+				.create_name_constraint_enumerator = _create_name_constraint_enumerator,
+				.create_cert_policy_enumerator = _create_cert_policy_enumerator,
+				.create_policy_mapping_enumerator = _create_policy_mapping_enumerator,
+			},
+		},
+		.version = 1,
+		.subjectAltNames = linked_list_create(),
+		.crl_uris = linked_list_create(),
+		.ocsp_uris = linked_list_create(),
+		.ipAddrBlocks = linked_list_create(),
+		.permitted_names = linked_list_create(),
+		.excluded_names = linked_list_create(),
+		.cert_policies = linked_list_create(),
+		.policy_mappings = linked_list_create(),
+		.pathLenConstraint = X509_NO_CONSTRAINT,
+		.require_explicit = X509_NO_CONSTRAINT,
+		.inhibit_mapping = X509_NO_CONSTRAINT,
+		.inhibit_any = X509_NO_CONSTRAINT,
+		.ref = 1,
+	);
+>>>>>>> upstream/4.5.1
 	return this;
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Build a generalName from an id
+ */
+chunk_t build_generalName(identification_t *id)
+{
+	int context;
+
+	switch (id->get_type(id))
+	{
+		case ID_RFC822_ADDR:
+			context = ASN1_CONTEXT_S_1;
+			break;
+		case ID_FQDN:
+			context = ASN1_CONTEXT_S_2;
+			break;
+		case ID_DER_ASN1_DN:
+			context = ASN1_CONTEXT_C_4;
+			break;
+		case ID_IPV4_ADDR:
+		case ID_IPV6_ADDR:
+			context = ASN1_CONTEXT_S_7;
+			break;
+		default:
+			DBG1(DBG_LIB, "encoding %N as generalName not supported",
+				 id_type_names, id->get_type(id));
+			return chunk_empty;
+	}
+	return asn1_wrap(context, "c", id->get_encoding(id));
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * Encode a linked list of subjectAltNames
  */
 chunk_t x509_build_subjectAltNames(linked_list_t *list)
 {
+<<<<<<< HEAD
 	chunk_t subjectAltNames = chunk_empty;
+=======
+	chunk_t subjectAltNames = chunk_empty, name;
+>>>>>>> upstream/4.5.1
 	enumerator_t *enumerator;
 	identification_t *id;
 
@@ -1472,6 +2252,7 @@ chunk_t x509_build_subjectAltNames(linked_list_t *list)
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &id))
 	{
+<<<<<<< HEAD
 		int context;
 		chunk_t name;
 
@@ -1495,6 +2276,9 @@ chunk_t x509_build_subjectAltNames(linked_list_t *list)
 				return chunk_empty;
 		}
 		name = asn1_wrap(context, "c", id->get_encoding(id));
+=======
+		name = build_generalName(id);
+>>>>>>> upstream/4.5.1
 		subjectAltNames = chunk_cat("mm", subjectAltNames, name);
 	}
 	enumerator->destroy(enumerator);
@@ -1508,6 +2292,50 @@ chunk_t x509_build_subjectAltNames(linked_list_t *list)
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Encode CRL distribution points extension from a x509_cdp_t list
+ */
+chunk_t x509_build_crlDistributionPoints(linked_list_t *list, int extn)
+{
+	chunk_t crlDistributionPoints = chunk_empty;
+	enumerator_t *enumerator;
+	x509_cdp_t *cdp;
+
+	if (list->get_count(list) == 0)
+	{
+		return chunk_empty;
+	}
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &cdp))
+	{
+		chunk_t distributionPoint, crlIssuer = chunk_empty;
+
+		if (cdp->issuer)
+		{
+			crlIssuer = asn1_wrap(ASN1_CONTEXT_C_2, "m",
+							build_generalName(cdp->issuer));
+		}
+		distributionPoint = asn1_wrap(ASN1_SEQUENCE, "mm",
+					asn1_wrap(ASN1_CONTEXT_C_0, "m",
+						asn1_wrap(ASN1_CONTEXT_C_0, "m",
+							asn1_wrap(ASN1_CONTEXT_S_6, "c",
+								chunk_create(cdp->uri, strlen(cdp->uri))))),
+					crlIssuer);
+		crlDistributionPoints = chunk_cat("mm", crlDistributionPoints,
+										  distributionPoint);
+	}
+	enumerator->destroy(enumerator);
+
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(extn),
+				asn1_wrap(ASN1_OCTET_STRING, "m",
+					asn1_wrap(ASN1_SEQUENCE, "m", crlDistributionPoints)));
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * Generate and sign a new certificate
  */
 static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
@@ -1515,12 +2343,22 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 {
 	chunk_t extensions = chunk_empty, extendedKeyUsage = chunk_empty;
 	chunk_t serverAuth = chunk_empty, clientAuth = chunk_empty;
+<<<<<<< HEAD
 	chunk_t ocspSigning = chunk_empty;
 	chunk_t basicConstraints = chunk_empty;
 	chunk_t keyUsage = chunk_empty;
 	chunk_t subjectAltNames = chunk_empty;
 	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
+=======
+	chunk_t ocspSigning = chunk_empty, certPolicies = chunk_empty;
+	chunk_t basicConstraints = chunk_empty, nameConstraints = chunk_empty;
+	chunk_t keyUsage = chunk_empty, keyUsageBits = chunk_empty;
+	chunk_t subjectAltNames = chunk_empty, policyMappings = chunk_empty;
+	chunk_t subjectKeyIdentifier = chunk_empty, authKeyIdentifier = chunk_empty;
+	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
+	chunk_t policyConstraints = chunk_empty, inhibitAnyPolicy = chunk_empty;
+>>>>>>> upstream/4.5.1
 	identification_t *issuer, *subject;
 	chunk_t key_info;
 	signature_scheme_t scheme;
@@ -1574,6 +2412,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	/* encode subjectAltNames */
 	subjectAltNames = x509_build_subjectAltNames(cert->subjectAltNames);
 
+<<<<<<< HEAD
 	/* encode CRL distribution points extension */
 	enumerator = cert->crl_uris->create_enumerator(cert->crl_uris);
 	while (enumerator->enumerate(enumerator, &uri))
@@ -1597,6 +2436,10 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 					asn1_wrap(ASN1_OCTET_STRING, "m",
 						asn1_wrap(ASN1_SEQUENCE, "m", crlDistributionPoints)));
 	}
+=======
+	crlDistributionPoints = x509_build_crlDistributionPoints(cert->crl_uris,
+												OID_CRL_DISTRIBUTION_POINTS);
+>>>>>>> upstream/4.5.1
 
 	/* encode OCSP URIs in authorityInfoAccess extension */
 	enumerator = cert->ocsp_uris->create_enumerator(cert->ocsp_uris);
@@ -1625,11 +2468,18 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	{
 		chunk_t pathLenConstraint = chunk_empty;
 
+<<<<<<< HEAD
 		if (cert->pathLenConstraint != X509_NO_PATH_LEN_CONSTRAINT)
 		{
 			char pathlen = (char)cert->pathLenConstraint;
 
 			pathLenConstraint = asn1_integer("c", chunk_from_thing(pathlen));
+=======
+		if (cert->pathLenConstraint != X509_NO_CONSTRAINT)
+		{
+			pathLenConstraint = asn1_integer("c",
+									chunk_from_thing(cert->pathLenConstraint));
+>>>>>>> upstream/4.5.1
 		}
 		basicConstraints = asn1_wrap(ASN1_SEQUENCE, "mmm",
 								asn1_build_known_oid(OID_BASIC_CONSTRAINTS),
@@ -1640,6 +2490,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 											asn1_wrap(ASN1_BOOLEAN, "c",
 												chunk_from_chars(0xFF)),
 											pathLenConstraint)));
+<<<<<<< HEAD
 		keyUsage = asn1_wrap(ASN1_SEQUENCE, "mmm",
 								asn1_build_known_oid(OID_KEY_USAGE),
 								asn1_wrap(ASN1_BOOLEAN, "c",
@@ -1647,6 +2498,22 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 								asn1_wrap(ASN1_OCTET_STRING, "m",
 										asn1_wrap(ASN1_BIT_STRING, "c",
 												chunk_from_chars(0x01, 0x06))));
+=======
+		/* set CertificateSign and implicitly CRLsign */
+		keyUsageBits = chunk_from_chars(0x01, 0x06);
+	}
+	else if (cert->flags & X509_CRL_SIGN)
+	{
+		keyUsageBits = chunk_from_chars(0x01, 0x02);
+	}
+	if (keyUsageBits.len)
+	{
+		keyUsage = asn1_wrap(ASN1_SEQUENCE, "mmm",
+						asn1_build_known_oid(OID_KEY_USAGE),
+						asn1_wrap(ASN1_BOOLEAN, "c", chunk_from_chars(0xFF)),
+						asn1_wrap(ASN1_OCTET_STRING, "m",
+							asn1_wrap(ASN1_BIT_STRING, "c", keyUsageBits)));
+>>>>>>> upstream/4.5.1
 	}
 
 	/* add serverAuth extendedKeyUsage flag */
@@ -1675,7 +2542,11 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	}
 
 	/* add subjectKeyIdentifier to CA and OCSP signer certificates */
+<<<<<<< HEAD
 	if (cert->flags & (X509_CA | X509_OCSP_SIGNER))
+=======
+	if (cert->flags & (X509_CA | X509_OCSP_SIGNER | X509_CRL_SIGN))
+>>>>>>> upstream/4.5.1
 	{
 		chunk_t keyid;
 
@@ -1703,6 +2574,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 									asn1_wrap(ASN1_CONTEXT_S_0, "c", keyid))));
 		}
 	}
+<<<<<<< HEAD
 	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
 		crlDistributionPoints.ptr)
 	{
@@ -1712,6 +2584,155 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 							authKeyIdentifier, subjectAltNames,
 							extendedKeyUsage, crlDistributionPoints,
 							authorityInfoAccess));
+=======
+
+	if (cert->permitted_names->get_count(cert->permitted_names) ||
+		cert->excluded_names->get_count(cert->excluded_names))
+	{
+		chunk_t permitted = chunk_empty, excluded = chunk_empty, subtree;
+		identification_t *id;
+
+		enumerator = create_name_constraint_enumerator(cert, TRUE);
+		while (enumerator->enumerate(enumerator, &id))
+		{
+			subtree = asn1_wrap(ASN1_SEQUENCE, "m", build_generalName(id));
+			permitted = chunk_cat("mm", permitted, subtree);
+		}
+		enumerator->destroy(enumerator);
+		if (permitted.ptr)
+		{
+			permitted = asn1_wrap(ASN1_CONTEXT_C_0, "m", permitted);
+		}
+
+		enumerator = create_name_constraint_enumerator(cert, FALSE);
+		while (enumerator->enumerate(enumerator, &id))
+		{
+			subtree = asn1_wrap(ASN1_SEQUENCE, "m", build_generalName(id));
+			excluded = chunk_cat("mm", excluded, subtree);
+		}
+		enumerator->destroy(enumerator);
+		if (excluded.ptr)
+		{
+			excluded = asn1_wrap(ASN1_CONTEXT_C_1, "m", excluded);
+		}
+
+		nameConstraints = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_NAME_CONSTRAINTS),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "mm",
+									permitted, excluded)));
+	}
+
+	if (cert->cert_policies->get_count(cert->cert_policies))
+	{
+		x509_cert_policy_t *policy;
+
+		enumerator = create_cert_policy_enumerator(cert);
+		while (enumerator->enumerate(enumerator, &policy))
+		{
+			chunk_t chunk = chunk_empty, cps = chunk_empty, notice = chunk_empty;
+
+			if (policy->cps_uri)
+			{
+				cps = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_build_known_oid(OID_POLICY_QUALIFIER_CPS),
+						asn1_wrap(ASN1_IA5STRING, "c",
+							chunk_create(policy->cps_uri,
+										 strlen(policy->cps_uri))));
+			}
+			if (policy->unotice_text)
+			{
+				notice = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_POLICY_QUALIFIER_UNOTICE),
+							asn1_wrap(ASN1_SEQUENCE, "m",
+								asn1_wrap(ASN1_VISIBLESTRING, "c",
+									chunk_create(policy->unotice_text,
+										strlen(policy->unotice_text)))));
+			}
+			if (cps.len || notice.len)
+			{
+				chunk = asn1_wrap(ASN1_SEQUENCE, "mm", cps, notice);
+			}
+			chunk = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_OID, "c", policy->oid), chunk);
+			certPolicies = chunk_cat("mm", certPolicies, chunk);
+		}
+		enumerator->destroy(enumerator);
+
+		certPolicies = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_CERTIFICATE_POLICIES),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "m", certPolicies)));
+	}
+
+	if (cert->policy_mappings->get_count(cert->policy_mappings))
+	{
+		x509_policy_mapping_t *mapping;
+
+		enumerator = create_policy_mapping_enumerator(cert);
+		while (enumerator->enumerate(enumerator, &mapping))
+		{
+			chunk_t chunk;
+
+			chunk = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_OID, "c", mapping->issuer),
+						asn1_wrap(ASN1_OID, "c", mapping->subject));
+			policyMappings = chunk_cat("mm", policyMappings, chunk);
+		}
+		enumerator->destroy(enumerator);
+
+		policyMappings = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_build_known_oid(OID_POLICY_MAPPINGS),
+							asn1_wrap(ASN1_OCTET_STRING, "m",
+								asn1_wrap(ASN1_SEQUENCE, "m", policyMappings)));
+	}
+
+	if (cert->inhibit_mapping != X509_NO_CONSTRAINT ||
+		cert->require_explicit != X509_NO_CONSTRAINT)
+	{
+		chunk_t inhibit = chunk_empty, explicit = chunk_empty;
+
+		if (cert->require_explicit != X509_NO_CONSTRAINT)
+		{
+			explicit = asn1_wrap(ASN1_CONTEXT_C_0, "m",
+						asn1_integer("c",
+							chunk_from_thing(cert->require_explicit)));
+		}
+		if (cert->inhibit_mapping != X509_NO_CONSTRAINT)
+		{
+			inhibit = asn1_wrap(ASN1_CONTEXT_C_1, "m",
+						asn1_integer("c",
+							chunk_from_thing(cert->inhibit_mapping)));
+		}
+		policyConstraints = asn1_wrap(ASN1_SEQUENCE, "mmm",
+						asn1_build_known_oid(OID_POLICY_CONSTRAINTS),
+						asn1_wrap(ASN1_BOOLEAN, "c", chunk_from_chars(0xFF)),
+						asn1_wrap(ASN1_OCTET_STRING, "m",
+							asn1_wrap(ASN1_SEQUENCE, "mm",
+								explicit, inhibit)));
+	}
+
+	if (cert->inhibit_any != X509_NO_CONSTRAINT)
+	{
+		inhibitAnyPolicy = asn1_wrap(ASN1_SEQUENCE, "mmm",
+				asn1_build_known_oid(OID_INHIBIT_ANY_POLICY),
+				asn1_wrap(ASN1_BOOLEAN, "c", chunk_from_chars(0xFF)),
+				asn1_wrap(ASN1_OCTET_STRING, "m",
+					asn1_integer("c",
+						chunk_from_thing(cert->inhibit_any))));
+	}
+
+	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
+		crlDistributionPoints.ptr || nameConstraints.ptr)
+	{
+		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
+						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmmmmmm",
+							basicConstraints, keyUsage, subjectKeyIdentifier,
+							authKeyIdentifier, subjectAltNames,
+							extendedKeyUsage, crlDistributionPoints,
+							authorityInfoAccess, nameConstraints, certPolicies,
+							policyMappings, policyConstraints, inhibitAnyPolicy));
+>>>>>>> upstream/4.5.1
 	}
 
 	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
@@ -1794,6 +2815,10 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 	certificate_t *sign_cert = NULL;
 	private_key_t *sign_key = NULL;
 	hash_algorithm_t digest_alg = HASH_SHA1;
+<<<<<<< HEAD
+=======
+	u_int constraint;
+>>>>>>> upstream/4.5.1
 
 	cert = create_empty();
 	while (TRUE)
@@ -1837,6 +2862,7 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 			{
 				enumerator_t *enumerator;
 				linked_list_t *list;
+<<<<<<< HEAD
 				char *uri;
 
 				list = va_arg(args, linked_list_t*);
@@ -1844,6 +2870,19 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				while (enumerator->enumerate(enumerator, &uri))
 				{
 					cert->crl_uris->insert_last(cert->crl_uris, strdup(uri));
+=======
+				x509_cdp_t *in, *cdp;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &in))
+				{
+					INIT(cdp,
+						.uri = strdup(in->uri),
+						.issuer = in->issuer ? in->issuer->clone(in->issuer) : NULL,
+					);
+					cert->crl_uris->insert_last(cert->crl_uris, cdp);
+>>>>>>> upstream/4.5.1
 				}
 				enumerator->destroy(enumerator);
 				continue;
@@ -1864,11 +2903,104 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				continue;
 			}
 			case BUILD_PATHLEN:
+<<<<<<< HEAD
 				cert->pathLenConstraint = va_arg(args, int);
 				if (cert->pathLenConstraint < 0 || cert->pathLenConstraint > 127)
 				{
 					cert->pathLenConstraint = X509_NO_PATH_LEN_CONSTRAINT;
 				}
+=======
+				constraint = va_arg(args, u_int);
+				cert->pathLenConstraint = (constraint < 128) ?
+										   constraint : X509_NO_CONSTRAINT;
+				continue;
+			case BUILD_PERMITTED_NAME_CONSTRAINTS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				identification_t *constraint;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &constraint))
+				{
+					cert->permitted_names->insert_last(cert->permitted_names,
+												constraint->clone(constraint));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_EXCLUDED_NAME_CONSTRAINTS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				identification_t *constraint;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &constraint))
+				{
+					cert->excluded_names->insert_last(cert->excluded_names,
+												constraint->clone(constraint));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_CERTIFICATE_POLICIES:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				x509_cert_policy_t *policy, *in;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &in))
+				{
+					INIT(policy,
+						.oid = chunk_clone(in->oid),
+						.cps_uri = strdupnull(in->cps_uri),
+						.unotice_text = strdupnull(in->unotice_text),
+					);
+					cert->cert_policies->insert_last(cert->cert_policies, policy);
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_POLICY_MAPPINGS:
+			{
+				enumerator_t *enumerator;
+				linked_list_t *list;
+				x509_policy_mapping_t* mapping, *in;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &in))
+				{
+					INIT(mapping,
+						.issuer = chunk_clone(in->issuer),
+						.subject = chunk_clone(in->subject),
+					);
+					cert->policy_mappings->insert_last(cert->policy_mappings,
+													   mapping);
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
+			case BUILD_POLICY_REQUIRE_EXPLICIT:
+				constraint = va_arg(args, u_int);
+				cert->require_explicit = (constraint < 128) ?
+										  constraint : X509_NO_CONSTRAINT;
+				continue;
+			case BUILD_POLICY_INHIBIT_MAPPING:
+				constraint = va_arg(args, u_int);
+				cert->inhibit_mapping = (constraint < 128) ?
+										 constraint : X509_NO_CONSTRAINT;
+				continue;
+			case BUILD_POLICY_INHIBIT_ANY:
+				constraint = va_arg(args, u_int);
+				cert->inhibit_any = (constraint < 128) ?
+									 constraint : X509_NO_CONSTRAINT;
+>>>>>>> upstream/4.5.1
 				continue;
 			case BUILD_NOT_BEFORE_TIME:
 				cert->notBefore = va_arg(args, time_t);

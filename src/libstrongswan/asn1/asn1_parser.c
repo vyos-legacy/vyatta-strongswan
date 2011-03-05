@@ -78,10 +78,15 @@ struct private_asn1_parser_t {
 	chunk_t blobs[ASN1_MAX_LEVEL + 2];
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of asn1_parser_t.iterate
  */
 static bool iterate(private_asn1_parser_t *this, int *objectID, chunk_t *object)
+=======
+METHOD(asn1_parser_t, iterate, bool,
+	private_asn1_parser_t *this, int *objectID, chunk_t *object)
+>>>>>>> upstream/4.5.1
 {
 	chunk_t *blob, *blob1;
 	u_char *start_ptr;
@@ -234,43 +239,68 @@ end:
 	return this->success;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of asn1_parser_t.get_level
  */
 static u_int get_level(private_asn1_parser_t *this)
+=======
+METHOD(asn1_parser_t, get_level, u_int,
+private_asn1_parser_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->level0 + this->objects[this->line].level;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of asn1_parser_t.set_top_level
  */
 static void set_top_level(private_asn1_parser_t *this, u_int level0)
+=======
+METHOD(asn1_parser_t, set_top_level, void,
+	private_asn1_parser_t *this, u_int level0)
+>>>>>>> upstream/4.5.1
 {
 	this->level0 = level0;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of asn1_parser_t.set_flags
  */
 static void set_flags(private_asn1_parser_t *this, bool implicit, bool private)
+=======
+METHOD(asn1_parser_t, set_flags, void,
+	private_asn1_parser_t *this, bool implicit, bool private)
+>>>>>>> upstream/4.5.1
 {
 	this->implicit = implicit;
 	this->private = private;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of asn1_parser_t.success
  */
 static bool success(private_asn1_parser_t *this)
+=======
+METHOD(asn1_parser_t, success, bool,
+	private_asn1_parser_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->success;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of asn1_parser_t.destroy
  */
 static void destroy(private_asn1_parser_t *this)
+=======
+METHOD(asn1_parser_t, destroy, void,
+	private_asn1_parser_t *this)
+>>>>>>> upstream/4.5.1
 {
 	free(this);
 }
@@ -280,6 +310,7 @@ static void destroy(private_asn1_parser_t *this)
  */
 asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, chunk_t blob)
 {
+<<<<<<< HEAD
 	private_asn1_parser_t *this = malloc_thing(private_asn1_parser_t);
 
 	memset(this, '\0', sizeof(private_asn1_parser_t));
@@ -294,6 +325,24 @@ asn1_parser_t* asn1_parser_create(asn1Object_t const *objects, chunk_t blob)
 	this->public.set_flags = (void (*)(asn1_parser_t*, bool, bool))set_flags;
 	this->public.success = (bool (*)(asn1_parser_t*))success;
 	this->public.destroy = (void (*)(asn1_parser_t*))destroy;
+=======
+	private_asn1_parser_t *this;
+
+	INIT(this,
+		.public = {
+			.iterate = _iterate,
+			.get_level = _get_level,
+			.set_top_level = _set_top_level,
+			.set_flags = _set_flags,
+			.success = _success,
+			.destroy = _destroy,
+		},
+		.objects = objects,
+		.blobs[0] = blob,
+		.line = -1,
+		.success = TRUE,
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

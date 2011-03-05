@@ -132,10 +132,18 @@ static void log_(private_backtrace_t *this, FILE *file, bool detailed)
 /**
  * Implementation of backtrace_t.contains_function
  */
+<<<<<<< HEAD
 static bool contains_function(private_backtrace_t *this, char *function)
 {
 #ifdef HAVE_DLADDR
 	int i;
+=======
+static bool contains_function(private_backtrace_t *this,
+							  char *function[], int count)
+{
+#ifdef HAVE_DLADDR
+	int i, j;
+>>>>>>> upstream/4.5.1
 
 	for (i = 0; i< this->frame_count; i++)
 	{
@@ -143,9 +151,18 @@ static bool contains_function(private_backtrace_t *this, char *function)
 
 		if (dladdr(this->frames[i], &info) && info.dli_sname)
 		{
+<<<<<<< HEAD
 			if (streq(info.dli_sname, function))
 			{
 				return TRUE;
+=======
+			for (j = 0; j < count; j++)
+			{
+				if (streq(info.dli_sname, function[j]))
+				{
+					return TRUE;
+				}
+>>>>>>> upstream/4.5.1
 			}
 		}
 	}
@@ -179,7 +196,11 @@ backtrace_t *backtrace_create(int skip)
 	this->frame_count = frame_count;
 
 	this->public.log = (void(*)(backtrace_t*,FILE*,bool))log_;
+<<<<<<< HEAD
 	this->public.contains_function = (bool(*)(backtrace_t*, char *function))contains_function;
+=======
+	this->public.contains_function = (bool(*)(backtrace_t*, char *function[], int count))contains_function;
+>>>>>>> upstream/4.5.1
 	this->public.destroy = (void(*)(backtrace_t*))destroy;
 
 	return &this->public;

@@ -40,12 +40,17 @@ typedef struct id_payload_t id_payload_t;
  * The ID payload format is described in RFC section 3.5.
  */
 struct id_payload_t {
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/4.5.1
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
+<<<<<<< HEAD
 	 * Set the ID type.
 	 *
 	 * @param type			Type of ID
@@ -91,6 +96,10 @@ struct id_payload_t {
 	 *
 	 * Returned object has to get destroyed by the caller.
 	 *
+=======
+	 * Creates an identification object of this id payload.
+	 *
+>>>>>>> upstream/4.5.1
 	 * @return				identification_t object
 	 */
 	identification_t *(*get_identification) (id_payload_t *this);

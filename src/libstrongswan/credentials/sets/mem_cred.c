@@ -1,4 +1,9 @@
 /*
+<<<<<<< HEAD
+=======
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperwsil
+>>>>>>> upstream/4.5.1
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -54,6 +59,14 @@ struct private_mem_cred_t {
 	 * List of shared keys, as shared_entry_t
 	 */
 	linked_list_t *shared;
+<<<<<<< HEAD
+=======
+
+	/**
+	 * List of CDPs, as cdp_t
+	 */
+	linked_list_t *cdps;
+>>>>>>> upstream/4.5.1
 };
 
 /**
@@ -144,6 +157,7 @@ static bool certificate_equals(certificate_t *item, certificate_t *cert)
 	return item->equals(item, cert);
 }
 
+<<<<<<< HEAD
 METHOD(mem_cred_t, add_cert, void,
 	private_mem_cred_t *this, bool trusted, certificate_t *cert)
 {
@@ -159,6 +173,106 @@ METHOD(mem_cred_t, add_cert, void,
 	}
 	cert->destroy(cert);
 	this->lock->unlock(this->lock);
+=======
+/**
+ * Add a certificate the the cache. Returns a reference to "cert" or a
+ * previously cached certificate that equals "cert".
+ */
+static certificate_t *add_cert_internal(private_mem_cred_t *this, bool trusted,
+										certificate_t *cert)
+{
+	certificate_t *cached;
+	this->lock->write_lock(this->lock);
+	if (this->untrusted->find_first(this->untrusted,
+									(linked_list_match_t)certificate_equals,
+									(void**)&cached, cert) == SUCCESS)
+	{
+		cert->destroy(cert);
+		cert = cached->get_ref(cached);
+	}
+	else
+	{
+		if (trusted)
+		{
+			this->trusted->insert_first(this->trusted, cert->get_ref(cert));
+		}
+		this->untrusted->insert_first(this->untrusted, cert->get_ref(cert));
+	}
+	this->lock->unlock(this->lock);
+	return cert;
+}
+
+METHOD(mem_cred_t, add_cert, void,
+	private_mem_cred_t *this, bool trusted, certificate_t *cert)
+{
+	certificate_t *cached = add_cert_internal(this, trusted, cert);
+	cached->destroy(cached);
+}
+
+METHOD(mem_cred_t, add_cert_ref, certificate_t*,
+	private_mem_cred_t *this, bool trusted, certificate_t *cert)
+{
+	return add_cert_internal(this, trusted, cert);
+}
+
+METHOD(mem_cred_t, add_crl, bool,
+	private_mem_cred_t *this, crl_t *crl)
+{
+	certificate_t *current, *cert = &crl->certificate;
+	enumerator_t *enumerator;
+	bool new = TRUE;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->untrusted->create_enumerator(this->untrusted);
+	while (enumerator->enumerate(enumerator, (void**)&current))
+	{
+		if (current->get_type(current) == CERT_X509_CRL)
+		{
+			bool found = FALSE;
+			crl_t *crl_c = (crl_t*)current;
+			chunk_t authkey = crl->get_authKeyIdentifier(crl);
+			chunk_t authkey_c = crl_c->get_authKeyIdentifier(crl_c);
+
+			/* compare authorityKeyIdentifiers if available */
+			if (chunk_equals(authkey, authkey_c))
+			{
+				found = TRUE;
+			}
+			else
+			{
+				identification_t *issuer = cert->get_issuer(cert);
+				identification_t *issuer_c = current->get_issuer(current);
+
+				/* otherwise compare issuer distinguished names */
+				if (issuer->equals(issuer, issuer_c))
+				{
+					found = TRUE;
+				}
+			}
+			if (found)
+			{
+				new = crl_is_newer(crl, crl_c);
+				if (new)
+				{
+					this->untrusted->remove_at(this->untrusted, enumerator);
+				}
+				else
+				{
+					cert->destroy(cert);
+				}
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (new)
+	{
+		this->untrusted->insert_first(this->untrusted, cert);
+	}
+	this->lock->unlock(this->lock);
+	return new;
+>>>>>>> upstream/4.5.1
 }
 
 /**
@@ -218,7 +332,11 @@ METHOD(mem_cred_t, add_key, void,
 	private_mem_cred_t *this, private_key_t *key)
 {
 	this->lock->write_lock(this->lock);
+<<<<<<< HEAD
 	this->keys->insert_last(this->keys, key);
+=======
+	this->keys->insert_first(this->keys, key);
+>>>>>>> upstream/4.5.1
 	this->lock->unlock(this->lock);
 }
 
@@ -342,6 +460,7 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 						(void*)shared_filter, data, (void*)shared_data_destroy);
 }
 
+<<<<<<< HEAD
 METHOD(mem_cred_t, add_shared, void,
 	private_mem_cred_t *this, shared_key_t *shared, ...)
 {
@@ -354,20 +473,148 @@ METHOD(mem_cred_t, add_shared, void,
 		.owners = linked_list_create(),
 	);
 
+=======
+METHOD(mem_cred_t, add_shared_list, void,
+	private_mem_cred_t *this, shared_key_t *shared, linked_list_t* owners)
+{
+	shared_entry_t *entry;
+
+	INIT(entry,
+		.shared = shared,
+		.owners = owners,
+	);
+
+	this->lock->write_lock(this->lock);
+	this->shared->insert_first(this->shared, entry);
+	this->lock->unlock(this->lock);
+}
+
+METHOD(mem_cred_t, add_shared, void,
+	private_mem_cred_t *this, shared_key_t *shared, ...)
+{
+	identification_t *id;
+	linked_list_t *owners = linked_list_create();
+	va_list args;
+
+>>>>>>> upstream/4.5.1
 	va_start(args, shared);
 	do
 	{
 		id = va_arg(args, identification_t*);
 		if (id)
 		{
+<<<<<<< HEAD
 			entry->owners->insert_last(entry->owners, id);
+=======
+			owners->insert_first(owners, id);
+>>>>>>> upstream/4.5.1
 		}
 	}
 	while (id);
 	va_end(args);
 
+<<<<<<< HEAD
 	this->lock->write_lock(this->lock);
 	this->shared->insert_last(this->shared, entry);
+=======
+	add_shared_list(this, shared, owners);
+}
+
+/**
+ * Certificate distribution point
+ */
+typedef struct {
+	certificate_type_t type;
+	identification_t *id;
+	char *uri;
+} cdp_t;
+
+/**
+ * Destroy a CDP entry
+ */
+static void cdp_destroy(cdp_t *this)
+{
+	this->id->destroy(this->id);
+	free(this->uri);
+	free(this);
+}
+
+METHOD(mem_cred_t, add_cdp, void,
+	private_mem_cred_t *this, certificate_type_t type,
+	identification_t *id, char *uri)
+{
+	cdp_t *cdp;
+
+	INIT(cdp,
+		.type = type,
+		.id = id->clone(id),
+		.uri = strdup(uri),
+	);
+	this->lock->write_lock(this->lock);
+	this->cdps->insert_last(this->cdps, cdp);
+	this->lock->unlock(this->lock);
+}
+
+/**
+ * CDP enumerator data
+ */
+typedef struct {
+	certificate_type_t type;
+	identification_t *id;
+	rwlock_t *lock;
+} cdp_data_t;
+
+/**
+ * Clean up CDP enumerator data
+ */
+static void cdp_data_destroy(cdp_data_t *data)
+{
+	data->lock->unlock(data->lock);
+	free(data);
+}
+
+/**
+ * CDP enumerator filter
+ */
+static bool cdp_filter(cdp_data_t *data, cdp_t **cdp, char **uri)
+{
+	if (data->type != CERT_ANY && data->type != (*cdp)->type)
+	{
+		return FALSE;
+	}
+	if (data->id && !(*cdp)->id->matches((*cdp)->id, data->id))
+	{
+		return FALSE;
+	}
+	*uri = (*cdp)->uri;
+	return TRUE;
+}
+
+METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
+	private_mem_cred_t *this, certificate_type_t type, identification_t *id)
+{
+	cdp_data_t *data;
+
+	INIT(data,
+		.type = type,
+		.id = id,
+		.lock = this->lock,
+	);
+	this->lock->read_lock(this->lock);
+	return enumerator_create_filter(this->cdps->create_enumerator(this->cdps),
+							(void*)cdp_filter, data, (void*)cdp_data_destroy);
+
+}
+
+METHOD(mem_cred_t, clear_secrets, void,
+	private_mem_cred_t *this)
+{
+	this->lock->write_lock(this->lock);
+	this->keys->destroy_offset(this->keys, offsetof(private_key_t, destroy));
+	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
+	this->keys = linked_list_create();
+	this->shared = linked_list_create();
+>>>>>>> upstream/4.5.1
 	this->lock->unlock(this->lock);
 }
 
@@ -379,6 +626,7 @@ METHOD(mem_cred_t, clear_, void,
 								  offsetof(certificate_t, destroy));
 	this->untrusted->destroy_offset(this->untrusted,
 									offsetof(certificate_t, destroy));
+<<<<<<< HEAD
 	this->keys->destroy_offset(this->keys, offsetof(private_key_t, destroy));
 	this->shared->destroy_function(this->shared, (void*)shared_entry_destroy);
 	this->trusted = linked_list_create();
@@ -386,6 +634,15 @@ METHOD(mem_cred_t, clear_, void,
 	this->keys = linked_list_create();
 	this->shared = linked_list_create();
 	this->lock->unlock(this->lock);
+=======
+	this->cdps->destroy_function(this->cdps, (void*)cdp_destroy);
+	this->trusted = linked_list_create();
+	this->untrusted = linked_list_create();
+	this->cdps = linked_list_create();
+	this->lock->unlock(this->lock);
+
+	clear_secrets(this);
+>>>>>>> upstream/4.5.1
 }
 
 METHOD(mem_cred_t, destroy, void,
@@ -396,6 +653,10 @@ METHOD(mem_cred_t, destroy, void,
 	this->untrusted->destroy(this->untrusted);
 	this->keys->destroy(this->keys);
 	this->shared->destroy(this->shared);
+<<<<<<< HEAD
+=======
+	this->cdps->destroy(this->cdps);
+>>>>>>> upstream/4.5.1
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -413,6 +674,7 @@ mem_cred_t *mem_cred_create()
 				.create_shared_enumerator = _create_shared_enumerator,
 				.create_private_enumerator = _create_private_enumerator,
 				.create_cert_enumerator = _create_cert_enumerator,
+<<<<<<< HEAD
 				.create_cdp_enumerator  = (void*)return_null,
 				.cache_cert = (void*)nop,
 			},
@@ -420,12 +682,30 @@ mem_cred_t *mem_cred_create()
 			.add_key = _add_key,
 			.add_shared = _add_shared,
 			.clear = _clear_,
+=======
+				.create_cdp_enumerator  = _create_cdp_enumerator,
+				.cache_cert = (void*)nop,
+			},
+			.add_cert = _add_cert,
+			.add_cert_ref = _add_cert_ref,
+			.add_crl = _add_crl,
+			.add_key = _add_key,
+			.add_shared = _add_shared,
+			.add_shared_list = _add_shared_list,
+			.add_cdp = _add_cdp,
+			.clear = _clear_,
+			.clear_secrets = _clear_secrets,
+>>>>>>> upstream/4.5.1
 			.destroy = _destroy,
 		},
 		.trusted = linked_list_create(),
 		.untrusted = linked_list_create(),
 		.keys = linked_list_create(),
 		.shared = linked_list_create(),
+<<<<<<< HEAD
+=======
+		.cdps = linked_list_create(),
+>>>>>>> upstream/4.5.1
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 

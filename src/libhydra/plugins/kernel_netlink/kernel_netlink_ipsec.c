@@ -58,8 +58,13 @@
 #endif /*IPV6_XFRM_POLICY*/
 
 /** default priority of installed policies */
+<<<<<<< HEAD
 #define PRIO_LOW 3000
 #define PRIO_HIGH 2000
+=======
+#define PRIO_LOW 1024
+#define PRIO_HIGH 512
+>>>>>>> upstream/4.5.1
 
 /**
  * map the limit for bytes and packets to XFRM_INF per default
@@ -866,7 +871,11 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, host_t *src, host_t *dst,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
+<<<<<<< HEAD
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
+=======
+	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
+>>>>>>> upstream/4.5.1
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
 	u_int16_t cpi, bool encap, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
@@ -882,7 +891,11 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	if (ipcomp != IPCOMP_NONE && cpi != 0)
 	{
 		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
+<<<<<<< HEAD
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark,
+=======
+		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark, tfc,
+>>>>>>> upstream/4.5.1
 			   &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
 			   mode, ipcomp, 0, FALSE, inbound, NULL, NULL);
 		ipcomp = IPCOMP_NONE;
@@ -920,6 +933,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			sa->flags |= XFRM_STATE_AF_UNSPEC;
 			break;
 		case MODE_BEET:
+<<<<<<< HEAD
+=======
+		case MODE_TRANSPORT:
+>>>>>>> upstream/4.5.1
 			if(src_ts && dst_ts)
 			{
 				sa->sel = ts2selector(src_ts, dst_ts);
@@ -1153,6 +1170,27 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
+<<<<<<< HEAD
+=======
+	if (tfc)
+	{
+		u_int32_t *tfcpad;
+
+		rthdr->rta_type = XFRMA_TFCPAD;
+		rthdr->rta_len = RTA_LENGTH(sizeof(u_int32_t));
+
+		hdr->nlmsg_len += rthdr->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+
+		tfcpad = (u_int32_t*)RTA_DATA(rthdr);
+		*tfcpad = tfc;
+		rthdr = XFRM_RTA_NEXT(rthdr);
+	}
+
+>>>>>>> upstream/4.5.1
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		if (mark.value)
@@ -1687,11 +1725,24 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy_info = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
 	policy_info->sel = policy->sel;
 	policy_info->dir = policy->direction;
+<<<<<<< HEAD
 	/* calculate priority based on source selector size, small size = high prio */
 	policy_info->priority = routed ? PRIO_LOW : PRIO_HIGH;
 	policy_info->priority -= policy->sel.prefixlen_s * 10;
 	policy_info->priority -= policy->sel.proto ? 2 : 0;
 	policy_info->priority -= policy->sel.sport_mask ? 1 : 0;
+=======
+
+	/* calculate priority based on selector size, small size = high prio */
+	policy_info->priority = routed ? PRIO_LOW : PRIO_HIGH;
+	policy_info->priority -= policy->sel.prefixlen_s;
+	policy_info->priority -= policy->sel.prefixlen_d;
+	policy_info->priority <<= 2; /* make some room for the two flags */
+	policy_info->priority += policy->sel.sport_mask ||
+							 policy->sel.dport_mask ? 0 : 2;
+	policy_info->priority += policy->sel.proto ? 0 : 1;
+
+>>>>>>> upstream/4.5.1
 	policy_info->action = type != POLICY_DROP ? XFRM_POLICY_ALLOW
 											  : XFRM_POLICY_BLOCK;
 	policy_info->share = XFRM_SHARE_ANY;
@@ -1813,6 +1864,11 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 			if (route->if_name)
 			{
+<<<<<<< HEAD
+=======
+				DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
+					 src_ts, route->gateway, route->src_ip, route->if_name);
+>>>>>>> upstream/4.5.1
 				switch (hydra->kernel_interface->add_route(
 									hydra->kernel_interface, route->dst_net,
 									route->prefixlen, route->gateway,

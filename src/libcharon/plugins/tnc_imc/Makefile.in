@@ -74,8 +74,14 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 am__installdirs = "$(DESTDIR)$(plugindir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
+<<<<<<< HEAD
 libstrongswan_tnc_imc_la_DEPENDENCIES =
 am_libstrongswan_tnc_imc_la_OBJECTS = tnc_imc_plugin.lo
+=======
+libstrongswan_tnc_imc_la_LIBADD =
+am_libstrongswan_tnc_imc_la_OBJECTS = tnc_imc_plugin.lo tnc_imc.lo \
+	tnc_imc_manager.lo tnc_imc_bind_function.lo
+>>>>>>> upstream/4.5.1
 libstrongswan_tnc_imc_la_OBJECTS =  \
 	$(am_libstrongswan_tnc_imc_la_OBJECTS)
 libstrongswan_tnc_imc_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -221,9 +227,13 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+<<<<<<< HEAD
 ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
 ipsecuid = @ipsecuid@
+=======
+ipsecgroup = @ipsecgroup@
+>>>>>>> upstream/4.5.1
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -262,6 +272,11 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+<<<<<<< HEAD
+=======
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
+>>>>>>> upstream/4.5.1
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -273,6 +288,7 @@ urandom_device = @urandom_device@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
+<<<<<<< HEAD
 	-I$(top_srcdir)/src/libcharon `xml2-config --cflags`
 
 AM_CFLAGS = -rdynamic
@@ -281,6 +297,16 @@ libstrongswan_tnc_imc_la_LIBADD = -ltnc
 @MONOLITHIC_FALSE@plugin_LTLIBRARIES = libstrongswan-tnc-imc.la
 libstrongswan_tnc_imc_la_SOURCES = \
 	tnc_imc_plugin.h tnc_imc_plugin.c
+=======
+	-I$(top_srcdir)/src/libcharon
+
+AM_CFLAGS = -rdynamic
+@MONOLITHIC_TRUE@noinst_LTLIBRARIES = libstrongswan-tnc-imc.la
+@MONOLITHIC_FALSE@plugin_LTLIBRARIES = libstrongswan-tnc-imc.la
+libstrongswan_tnc_imc_la_SOURCES = \
+	tnc_imc_plugin.h tnc_imc_plugin.c tnc_imc.h tnc_imc.c \
+	tnc_imc_manager.h tnc_imc_manager.c tnc_imc_bind_function.c
+>>>>>>> upstream/4.5.1
 
 libstrongswan_tnc_imc_la_LDFLAGS = -module -avoid-version
 all: all-am
@@ -366,6 +392,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+<<<<<<< HEAD
+=======
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imc_bind_function.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imc_manager.Plo@am__quote@
+>>>>>>> upstream/4.5.1
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imc_plugin.Plo@am__quote@
 
 .c.o:

@@ -1,5 +1,10 @@
 /*
+<<<<<<< HEAD
  * Copyright (C) 2005-2006 Martin Willi
+=======
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
+>>>>>>> upstream/4.5.1
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -25,9 +30,15 @@ typedef struct private_ts_payload_t private_ts_payload_t;
 
 /**
  * Private data of an ts_payload_t object.
+<<<<<<< HEAD
  *
  */
 struct private_ts_payload_t {
+=======
+ */
+struct private_ts_payload_t {
+
+>>>>>>> upstream/4.5.1
 	/**
 	 * Public ts_payload_t interface.
 	 */
@@ -49,6 +60,19 @@ struct private_ts_payload_t {
 	bool critical;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * reserved bits
+	 */
+	bool reserved_bit[7];
+
+	/**
+	 * reserved bytes
+	 */
+	bool reserved_byte[3];
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -56,12 +80,20 @@ struct private_ts_payload_t {
 	/**
 	 * Number of traffic selectors
 	 */
+<<<<<<< HEAD
 	u_int8_t number_of_traffic_selectors;
+=======
+	u_int8_t ts_num;
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * Contains the traffic selectors of type traffic_selector_substructure_t.
 	 */
+<<<<<<< HEAD
 	linked_list_t *traffic_selectors;
+=======
+	linked_list_t *substrs;
+>>>>>>> upstream/4.5.1
 };
 
 /**
@@ -69,6 +101,7 @@ struct private_ts_payload_t {
  *
  * The defined offsets are the positions in a object of type
  * private_ts_payload_t.
+<<<<<<< HEAD
  *
  */
 encoding_rule_t ts_payload_encodings[] = {
@@ -94,6 +127,32 @@ encoding_rule_t ts_payload_encodings[] = {
 	{ RESERVED_BYTE,	0 															},
 	/* some ts data bytes, length is defined in PAYLOAD_LENGTH */
 	{ TRAFFIC_SELECTORS,	offsetof(private_ts_payload_t, traffic_selectors)		}
+=======
+ */
+encoding_rule_t ts_payload_encodings[] = {
+	/* 1 Byte next payload type, stored in the field next_payload */
+	{ U_INT_8,			offsetof(private_ts_payload_t, next_payload)	},
+	/* the critical bit */
+	{ FLAG,				offsetof(private_ts_payload_t, critical)		},
+	/* 7 Bit reserved bits */
+	{ RESERVED_BIT,		offsetof(private_ts_payload_t, reserved_bit[0])	},
+	{ RESERVED_BIT,		offsetof(private_ts_payload_t, reserved_bit[1])	},
+	{ RESERVED_BIT,		offsetof(private_ts_payload_t, reserved_bit[2])	},
+	{ RESERVED_BIT,		offsetof(private_ts_payload_t, reserved_bit[3])	},
+	{ RESERVED_BIT,		offsetof(private_ts_payload_t, reserved_bit[4])	},
+	{ RESERVED_BIT,		offsetof(private_ts_payload_t, reserved_bit[5])	},
+	{ RESERVED_BIT,		offsetof(private_ts_payload_t, reserved_bit[6])	},
+	/* Length of the whole payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_ts_payload_t, payload_length)	},
+	/* 1 Byte TS type*/
+	{ U_INT_8,			offsetof(private_ts_payload_t, ts_num)			},
+	/* 3 reserved bytes */
+	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[0])},
+	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[1])},
+	{ RESERVED_BYTE,	offsetof(private_ts_payload_t, reserved_byte[2])},
+	/* some ts data bytes, length is defined in PAYLOAD_LENGTH */
+	{ TRAFFIC_SELECTORS,offsetof(private_ts_payload_t, substrs)			}
+>>>>>>> upstream/4.5.1
 };
 
 /*
@@ -110,6 +169,7 @@ encoding_rule_t ts_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.verify.
  */
@@ -129,16 +189,38 @@ static status_t verify(private_ts_payload_t *this)
 	while(iterator->iterate(iterator, (void**)&current_traffic_selector))
 	{
 		status = current_traffic_selector->verify(current_traffic_selector);
+=======
+METHOD(payload_t, verify, status_t,
+	private_ts_payload_t *this)
+{
+	enumerator_t *enumerator;
+	payload_t *substr;
+	status_t status = SUCCESS;
+
+	if (this->ts_num != this->substrs->get_count(this->substrs))
+	{
+		return FAILED;
+	}
+	enumerator = this->substrs->create_enumerator(this->substrs);
+	while (enumerator->enumerate(enumerator, &substr))
+	{
+		status = substr->verify(substr);
+>>>>>>> upstream/4.5.1
 		if (status != SUCCESS)
 		{
 			break;
 		}
 	}
+<<<<<<< HEAD
 	iterator->destroy(iterator);
+=======
+	enumerator->destroy(enumerator);
+>>>>>>> upstream/4.5.1
 
 	return status;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ts_payload_t.get_encoding_rules.
  */
@@ -152,11 +234,23 @@ static void get_encoding_rules(private_ts_payload_t *this, encoding_rule_t **rul
  * Implementation of payload_t.get_type.
  */
 static payload_type_t get_payload_type(private_ts_payload_t *this)
+=======
+METHOD(payload_t, get_encoding_rules, void,
+	private_ts_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+{
+	*rules = ts_payload_encodings;
+	*rule_count = countof(ts_payload_encodings);
+}
+
+METHOD(payload_t, get_type, payload_type_t,
+	private_ts_payload_t *this)
+>>>>>>> upstream/4.5.1
 {
 	if (this->is_initiator)
 	{
 		return TRAFFIC_SELECTOR_INITIATOR;
 	}
+<<<<<<< HEAD
 	else
 	{
 		return TRAFFIC_SELECTOR_RESPONDER;
@@ -175,6 +269,19 @@ static payload_type_t get_next_type(private_ts_payload_t *this)
  * Implementation of payload_t.set_next_type.
  */
 static void set_next_type(private_ts_payload_t *this,payload_type_t type)
+=======
+	return TRAFFIC_SELECTOR_RESPONDER;
+}
+
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_ts_payload_t *this)
+{
+	return this->next_payload;
+}
+
+METHOD(payload_t, set_next_type, void,
+	private_ts_payload_t *this,payload_type_t type)
+>>>>>>> upstream/4.5.1
 {
 	this->next_payload = type;
 }
@@ -182,6 +289,7 @@ static void set_next_type(private_ts_payload_t *this,payload_type_t type)
 /**
  * recompute the length of the payload.
  */
+<<<<<<< HEAD
 static void compute_length (private_ts_payload_t *this)
 {
 	iterator_t *iterator;
@@ -222,10 +330,43 @@ static bool get_initiator (private_ts_payload_t *this)
  * Implementation of ts_payload_t.set_initiator.
  */
 static void set_initiator (private_ts_payload_t *this,bool is_initiator)
+=======
+static void compute_length(private_ts_payload_t *this)
+{
+	enumerator_t *enumerator;
+	payload_t *subst;
+
+	this->payload_length = TS_PAYLOAD_HEADER_LENGTH;
+	this->ts_num = 0;
+	enumerator = this->substrs->create_enumerator(this->substrs);
+	while (enumerator->enumerate(enumerator, &subst))
+	{
+		this->payload_length += subst->get_length(subst);
+		this->ts_num++;
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(payload_t, get_length, size_t,
+	private_ts_payload_t *this)
+{
+	return this->payload_length;
+}
+
+METHOD(ts_payload_t, get_initiator, bool,
+	private_ts_payload_t *this)
+{
+	return this->is_initiator;
+}
+
+METHOD(ts_payload_t, set_initiator, void,
+	private_ts_payload_t *this,bool is_initiator)
+>>>>>>> upstream/4.5.1
 {
 	this->is_initiator = is_initiator;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of ts_payload_t.add_traffic_selector_substructure.
  */
@@ -271,6 +412,32 @@ static void destroy(private_ts_payload_t *this)
 {
 	this->traffic_selectors->destroy_offset(this->traffic_selectors,
 											offsetof(payload_t, destroy));
+=======
+METHOD(ts_payload_t, get_traffic_selectors, linked_list_t*,
+	private_ts_payload_t *this)
+{
+	traffic_selector_t *ts;
+	enumerator_t *enumerator;
+	traffic_selector_substructure_t *subst;
+	linked_list_t *list;
+
+	list = linked_list_create();
+	enumerator = this->substrs->create_enumerator(this->substrs);
+	while (enumerator->enumerate(enumerator, &subst))
+	{
+		ts = subst->get_traffic_selector(subst);
+		list->insert_last(list, ts);
+	}
+	enumerator->destroy(enumerator);
+
+	return list;
+}
+
+METHOD2(payload_t, ts_payload_t, destroy, void,
+	private_ts_payload_t *this)
+{
+	this->substrs->destroy_offset(this->substrs, offsetof(payload_t, destroy));
+>>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -279,6 +446,7 @@ static void destroy(private_ts_payload_t *this)
  */
 ts_payload_t *ts_payload_create(bool is_initiator)
 {
+<<<<<<< HEAD
 	private_ts_payload_t *this = malloc_thing(private_ts_payload_t);
 
 	/* interface functions */
@@ -307,20 +475,56 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 	this->traffic_selectors = linked_list_create();
 
 	return &(this->public);
+=======
+	private_ts_payload_t *this;
+
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.get_initiator = _get_initiator,
+			.set_initiator = _set_initiator,
+			.get_traffic_selectors = _get_traffic_selectors,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = TS_PAYLOAD_HEADER_LENGTH,
+		.is_initiator = is_initiator,
+		.substrs = linked_list_create(),
+	);
+	return &this->public;
+>>>>>>> upstream/4.5.1
 }
 
 /*
  * Described in header
  */
+<<<<<<< HEAD
 ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, linked_list_t *traffic_selectors)
 {
 	iterator_t *iterator;
 	traffic_selector_t *ts;
 	traffic_selector_substructure_t *ts_substructure;
+=======
+ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator,
+											linked_list_t *traffic_selectors)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	traffic_selector_substructure_t *subst;
+>>>>>>> upstream/4.5.1
 	private_ts_payload_t *this;
 
 	this = (private_ts_payload_t*)ts_payload_create(is_initiator);
 
+<<<<<<< HEAD
 	iterator = traffic_selectors->create_iterator(traffic_selectors, TRUE);
 	while (iterator->iterate(iterator, (void**)&ts))
 	{
@@ -332,3 +536,16 @@ ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, linked
 	return &(this->public);
 }
 
+=======
+	enumerator = traffic_selectors->create_enumerator(traffic_selectors);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		subst = traffic_selector_substructure_create_from_traffic_selector(ts);
+		this->substrs->insert_last(this->substrs, subst);
+	}
+	enumerator->destroy(enumerator);
+	compute_length(this);
+
+	return &this->public;
+}
+>>>>>>> upstream/4.5.1

@@ -559,13 +559,21 @@ METHOD(child_sa_t, alloc_cpi, u_int16_t,
 
 METHOD(child_sa_t, install, status_t,
 	   private_child_sa_t *this, chunk_t encr, chunk_t integ, u_int32_t spi,
+<<<<<<< HEAD
 	   u_int16_t cpi, bool inbound, linked_list_t *my_ts,
+=======
+	   u_int16_t cpi, bool inbound, bool tfcv3, linked_list_t *my_ts,
+>>>>>>> upstream/4.5.1
 	   linked_list_t *other_ts)
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
 	traffic_selector_t *src_ts = NULL, *dst_ts = NULL;
 	time_t now;
 	lifetime_cfg_t *lifetime;
+<<<<<<< HEAD
+=======
+	u_int32_t tfc = 0;
+>>>>>>> upstream/4.5.1
 	host_t *src, *dst;
 	status_t status;
 	bool update = FALSE;
@@ -590,6 +598,14 @@ METHOD(child_sa_t, install, status_t,
 		dst = this->other_addr;
 		this->other_spi = spi;
 		this->other_cpi = cpi;
+<<<<<<< HEAD
+=======
+
+		if (tfcv3)
+		{
+			tfc = this->config->get_tfc(this->config);
+		}
+>>>>>>> upstream/4.5.1
 	}
 
 	DBG2(DBG_CHD, "adding %s %N SA", inbound ? "inbound" : "outbound",
@@ -620,7 +636,11 @@ METHOD(child_sa_t, install, status_t,
 		lifetime->time.rekey = 0;
 	}
 
+<<<<<<< HEAD
 	if (this->mode == MODE_BEET)
+=======
+	if (this->mode == MODE_BEET || this->mode == MODE_TRANSPORT)
+>>>>>>> upstream/4.5.1
 	{
 		/* BEET requires the bound address from the traffic selectors.
 		 * TODO: We add just the first traffic selector for now, as the
@@ -639,7 +659,11 @@ METHOD(child_sa_t, install, status_t,
 
 	status = hydra->kernel_interface->add_sa(hydra->kernel_interface,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
+<<<<<<< HEAD
 				inbound ? this->mark_in : this->mark_out,
+=======
+				inbound ? this->mark_in : this->mark_out, tfc,
+>>>>>>> upstream/4.5.1
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
 				this->ipcomp, cpi, this->encap, update, src_ts, dst_ts);
 

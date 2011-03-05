@@ -120,7 +120,11 @@ static char *getenv_cb(void *null, const char *key)
 	private_request_t *this = (private_request_t*)thread_this->get(thread_this);
 
 	value = FCGX_GetParam(key, this->req.envp);
+<<<<<<< HEAD
 	return value ? strdup(value) : NULL;
+=======
+	return strdupnull(value);
+>>>>>>> upstream/4.5.1
 }
 
 /**
@@ -204,6 +208,17 @@ static char* get_query_data(private_request_t *this, char *name)
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Implementation of request_t.get_env_var.
+ */
+static char* get_env_var(private_request_t *this, char *name)
+{
+	return FCGX_GetParam(name, this->req.envp);
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * Implementation of request_t.read_data.
  */
 static int read_data(private_request_t *this, char *buf, int len)
@@ -415,6 +430,10 @@ request_t *request_create(int fd, bool debug)
 	this->public.add_cookie = (void(*)(request_t*, char *name, char *value))add_cookie;
 	this->public.get_cookie = (char*(*)(request_t*,char*))get_cookie;
 	this->public.get_query_data = (char*(*)(request_t*, char *name))get_query_data;
+<<<<<<< HEAD
+=======
+	this->public.get_env_var = (char*(*)(request_t*, char *name))get_env_var;
+>>>>>>> upstream/4.5.1
 	this->public.read_data = (int(*)(request_t*, char*, int))read_data;
 	this->public.session_closed = (bool(*)(request_t*))session_closed;
 	this->public.close_session = (void(*)(request_t*))close_session;

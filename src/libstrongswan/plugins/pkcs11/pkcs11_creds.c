@@ -55,6 +55,7 @@ struct private_pkcs11_creds_t {
  * Find certificates, optionally trusted
  */
 static void find_certificates(private_pkcs11_creds_t *this,
+<<<<<<< HEAD
 							  CK_SESSION_HANDLE session, CK_BBOOL trusted)
 {
 	CK_OBJECT_CLASS class = CKO_CERTIFICATE;
@@ -63,11 +64,25 @@ static void find_certificates(private_pkcs11_creds_t *this,
 		{CKA_CLASS, &class, sizeof(class)},
 		{CKA_CERTIFICATE_TYPE, &type, sizeof(type)},
 		{CKA_TRUSTED, &trusted, sizeof(trusted)},
+=======
+							  CK_SESSION_HANDLE session)
+{
+	CK_OBJECT_CLASS class = CKO_CERTIFICATE;
+	CK_CERTIFICATE_TYPE type = CKC_X_509;
+	CK_BBOOL trusted = TRUE;
+	CK_ATTRIBUTE tmpl[] = {
+		{CKA_CLASS, &class, sizeof(class)},
+		{CKA_CERTIFICATE_TYPE, &type, sizeof(type)},
+>>>>>>> upstream/4.5.1
 	};
 	CK_OBJECT_HANDLE object;
 	CK_ATTRIBUTE attr[] = {
 		{CKA_VALUE, NULL, 0},
 		{CKA_LABEL, NULL, 0},
+<<<<<<< HEAD
+=======
+		{CKA_TRUSTED, &trusted, sizeof(trusted)}
+>>>>>>> upstream/4.5.1
 	};
 	enumerator_t *enumerator;
 	linked_list_t *raw;
@@ -75,11 +90,27 @@ static void find_certificates(private_pkcs11_creds_t *this,
 	struct {
 		chunk_t value;
 		chunk_t label;
+<<<<<<< HEAD
 	} *entry;
 
 	raw = linked_list_create();
 	enumerator = this->lib->create_object_enumerator(this->lib,
 							session, tmpl, countof(tmpl), attr, countof(attr));
+=======
+		bool trusted;
+	} *entry;
+	int count = countof(attr);
+
+	/* store result in a temporary list, avoid recursive operation */
+	raw = linked_list_create();
+	/* do not use trusted argument if not supported */
+	if (!(this->lib->get_features(this->lib) & PKCS11_TRUSTED_CERTS))
+	{
+		count--;
+	}
+	enumerator = this->lib->create_object_enumerator(this->lib,
+									session, tmpl, countof(tmpl), attr, count);
+>>>>>>> upstream/4.5.1
 	while (enumerator->enumerate(enumerator, &object))
 	{
 		entry = malloc(sizeof(*entry));
@@ -87,6 +118,10 @@ static void find_certificates(private_pkcs11_creds_t *this,
 							chunk_create(attr[0].pValue, attr[0].ulValueLen));
 		entry->label = chunk_clone(
 							chunk_create(attr[1].pValue, attr[1].ulValueLen));
+<<<<<<< HEAD
+=======
+		entry->trusted = trusted;
+>>>>>>> upstream/4.5.1
 		raw->insert_last(raw, entry);
 	}
 	enumerator->destroy(enumerator);
@@ -99,10 +134,17 @@ static void find_certificates(private_pkcs11_creds_t *this,
 		if (cert)
 		{
 			DBG1(DBG_CFG, "    loaded %strusted cert '%.*s'",
+<<<<<<< HEAD
 				 trusted ? "" : "un", entry->label.len, entry->label.ptr);
 			/* trusted certificates are also returned as untrusted */
 			this->untrusted->insert_last(this->untrusted, cert);
 			if (trusted)
+=======
+				 entry->trusted ? "" : "un", entry->label.len, entry->label.ptr);
+			/* trusted certificates are also returned as untrusted */
+			this->untrusted->insert_last(this->untrusted, cert);
+			if (entry->trusted)
+>>>>>>> upstream/4.5.1
 			{
 				this->trusted->insert_last(this->trusted, cert->get_ref(cert));
 			}
@@ -135,8 +177,12 @@ static bool load_certificates(private_pkcs11_creds_t *this)
 		return FALSE;
 	}
 
+<<<<<<< HEAD
 	find_certificates(this, session, CK_TRUE);
 	find_certificates(this, session, CK_FALSE);
+=======
+	find_certificates(this, session);
+>>>>>>> upstream/4.5.1
 
 	this->lib->f->C_CloseSession(session);
 	return TRUE;

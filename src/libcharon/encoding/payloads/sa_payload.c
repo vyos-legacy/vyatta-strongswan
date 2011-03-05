@@ -46,6 +46,14 @@ struct private_sa_payload_t {
 	bool critical;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * Reserved bits
+	 */
+	bool reserved[7];
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -68,6 +76,7 @@ encoding_rule_t sa_payload_encodings[] = {
 	/* the critical bit */
 	{ FLAG,				offsetof(private_sa_payload_t, critical)			},
 	/* 7 Bit reserved bits, nowhere stored */
+<<<<<<< HEAD
 	{ RESERVED_BIT,		0													},
 	{ RESERVED_BIT,		0													},
 	{ RESERVED_BIT,		0													},
@@ -75,6 +84,15 @@ encoding_rule_t sa_payload_encodings[] = {
 	{ RESERVED_BIT,		0													},
 	{ RESERVED_BIT,		0													},
 	{ RESERVED_BIT,		0													},
+=======
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[0])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[1])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[2])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[3])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[4])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[5])			},
+	{ RESERVED_BIT,		offsetof(private_sa_payload_t, reserved[6])			},
+>>>>>>> upstream/4.5.1
 	/* Length of the whole SA payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_sa_payload_t, payload_length)		},
 	/* Proposals are stored in a proposal substructure,
@@ -185,7 +203,10 @@ static void compute_length(private_sa_payload_t *this)
 METHOD(payload_t, get_length, size_t,
 	private_sa_payload_t *this)
 {
+<<<<<<< HEAD
 	compute_length(this);
+=======
+>>>>>>> upstream/4.5.1
 	return this->payload_length;
 }
 
@@ -258,6 +279,15 @@ METHOD(sa_payload_t, get_proposals, linked_list_t*,
 	return list;
 }
 
+<<<<<<< HEAD
+=======
+METHOD(sa_payload_t, create_substructure_enumerator, enumerator_t*,
+	private_sa_payload_t *this)
+{
+	return this->proposals->create_enumerator(this->proposals);
+}
+
+>>>>>>> upstream/4.5.1
 METHOD2(payload_t, sa_payload_t, destroy, void,
 	private_sa_payload_t *this)
 {
@@ -286,6 +316,10 @@ sa_payload_t *sa_payload_create()
 			},
 			.add_proposal = _add_proposal,
 			.get_proposals = _get_proposals,
+<<<<<<< HEAD
+=======
+			.create_substructure_enumerator = _create_substructure_enumerator,
+>>>>>>> upstream/4.5.1
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,

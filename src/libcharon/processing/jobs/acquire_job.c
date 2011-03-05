@@ -45,20 +45,30 @@ struct private_acquire_job_t {
 	traffic_selector_t *dst_ts;
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of job_t.destroy.
  */
 static void destroy(private_acquire_job_t *this)
+=======
+METHOD(job_t, destroy, void,
+	private_acquire_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	DESTROY_IF(this->src_ts);
 	DESTROY_IF(this->dst_ts);
 	free(this);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of job_t.execute.
  */
 static void execute(private_acquire_job_t *this)
+=======
+METHOD(job_t, execute, void,
+	private_acquire_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	charon->traps->acquire(charon->traps, this->reqid,
 						   this->src_ts, this->dst_ts);
@@ -72,6 +82,7 @@ acquire_job_t *acquire_job_create(u_int32_t reqid,
 								  traffic_selector_t *src_ts,
 								  traffic_selector_t *dst_ts)
 {
+<<<<<<< HEAD
 	private_acquire_job_t *this = malloc_thing(private_acquire_job_t);
 
 	this->public.job_interface.execute = (void (*) (job_t *)) execute;
@@ -80,6 +91,21 @@ acquire_job_t *acquire_job_create(u_int32_t reqid,
 	this->reqid = reqid;
 	this->src_ts = src_ts;
 	this->dst_ts = dst_ts;
+=======
+	private_acquire_job_t *this;
+
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.reqid = reqid,
+		.src_ts = src_ts,
+		.dst_ts = dst_ts,
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

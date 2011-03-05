@@ -43,6 +43,14 @@ struct private_eap_payload_t {
 	bool critical;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * Reserved bits
+	 */
+	bool reserved[7];
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -66,6 +74,7 @@ static encoding_rule_t eap_payload_encodings[] = {
 	/* the critical bit */
 	{ FLAG,				offsetof(private_eap_payload_t, critical) 		},
 	/* 7 Bit reserved bits, nowhere stored */
+<<<<<<< HEAD
 	{ RESERVED_BIT,	0 													},
 	{ RESERVED_BIT,	0 													},
 	{ RESERVED_BIT,	0 													},
@@ -73,6 +82,15 @@ static encoding_rule_t eap_payload_encodings[] = {
 	{ RESERVED_BIT,	0 													},
 	{ RESERVED_BIT,	0 													},
 	{ RESERVED_BIT,	0 													},
+=======
+	{ RESERVED_BIT,		offsetof(private_eap_payload_t, reserved[0])	},
+	{ RESERVED_BIT,		offsetof(private_eap_payload_t, reserved[1])	},
+	{ RESERVED_BIT,		offsetof(private_eap_payload_t, reserved[2])	},
+	{ RESERVED_BIT,		offsetof(private_eap_payload_t, reserved[3])	},
+	{ RESERVED_BIT,		offsetof(private_eap_payload_t, reserved[4])	},
+	{ RESERVED_BIT,		offsetof(private_eap_payload_t, reserved[5])	},
+	{ RESERVED_BIT,		offsetof(private_eap_payload_t, reserved[6])	},
+>>>>>>> upstream/4.5.1
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_eap_payload_t, payload_length)	},
 	/* chunt to data, starting at "code" */

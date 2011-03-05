@@ -235,7 +235,11 @@ METHOD(android_creds_t, set_username_password, void,
 	DESTROY_IF(this->user);
 	this->user = id->clone(id);
 	free(this->pass);
+<<<<<<< HEAD
 	this->pass = password ? strdup(password) : NULL;
+=======
+	this->pass = strdupnull(password);
+>>>>>>> upstream/4.5.1
 	this->lock->unlock(this->lock);
 }
 

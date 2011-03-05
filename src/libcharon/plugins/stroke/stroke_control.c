@@ -17,6 +17,11 @@
 
 #include <daemon.h>
 #include <processing/jobs/delete_ike_sa_job.h>
+<<<<<<< HEAD
+=======
+#include <processing/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/rekey_child_sa_job.h>
+>>>>>>> upstream/4.5.1
 
 typedef struct private_stroke_control_t private_stroke_control_t;
 
@@ -90,10 +95,15 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 	return found;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_control_t.initiate.
  */
 static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+=======
+METHOD(stroke_control_t, initiate, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+>>>>>>> upstream/4.5.1
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -137,6 +147,7 @@ static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *ou
 }
 
 /**
+<<<<<<< HEAD
  * Implementation of stroke_control_t.terminate.
  */
 static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
@@ -152,16 +163,34 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	uintptr_t del;
 
 	string = msg->terminate.name;
+=======
+ * Parse a terminate/rekey specifier
+ */
+static bool parse_specifier(char *string, u_int32_t *id,
+							char **name, bool *child, bool *all)
+{
+	int len;
+	char *pos = NULL;
+
+	*id = 0;
+	*name = NULL;
+	*all = FALSE;
+>>>>>>> upstream/4.5.1
 
 	len = strlen(string);
 	if (len < 1)
 	{
+<<<<<<< HEAD
 		DBG1(DBG_CFG, "error parsing string");
 		return;
+=======
+		return FALSE;
+>>>>>>> upstream/4.5.1
 	}
 	switch (string[len-1])
 	{
 		case '}':
+<<<<<<< HEAD
 			child = TRUE;
 			pos = strchr(string, '{');
 			break;
@@ -176,18 +205,39 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	}
 
 	if (name)
+=======
+			*child = TRUE;
+			pos = strchr(string, '{');
+			break;
+		case ']':
+			*child = FALSE;
+			pos = strchr(string, '[');
+			break;
+		default:
+			*name = string;
+			*child = FALSE;
+			break;
+	}
+
+	if (*name)
+>>>>>>> upstream/4.5.1
 	{
 		/* is a single name */
 	}
 	else if (pos == string + len - 2)
 	{	/* is name[] or name{} */
 		string[len-2] = '\0';
+<<<<<<< HEAD
 		name = string;
+=======
+		*name = string;
+>>>>>>> upstream/4.5.1
 	}
 	else
 	{
 		if (!pos)
 		{
+<<<<<<< HEAD
 			DBG1(DBG_CFG, "error parsing string");
 			return;
 		}
@@ -207,6 +257,45 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 			}
 		}
 	}
+=======
+			return FALSE;
+		}
+		if (*(pos + 1) == '*')
+		{	/* is name[*] */
+			*all = TRUE;
+			*pos = '\0';
+			*name = string;
+		}
+		else
+		{	/* is name[123] or name{23} */
+			*id = atoi(pos + 1);
+			if (*id == 0)
+			{
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
+}
+
+METHOD(stroke_control_t, terminate, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	char *name;
+	u_int32_t id;
+	bool child, all;
+	ike_sa_t *ike_sa;
+	enumerator_t *enumerator;
+	linked_list_t *ike_list, *child_list;
+	stroke_log_info_t info;
+	uintptr_t del;
+
+	if (!parse_specifier(msg->terminate.name, &id, &name, &child, &all))
+	{
+		DBG1(DBG_CFG, "error parsing specifier string");
+		return;
+	}
+>>>>>>> upstream/4.5.1
 
 	info.out = out;
 	info.level = msg->output_verbosity;
@@ -293,11 +382,76 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	child_list->destroy(child_list);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_control_t.terminate_srcip.
  */
 static void terminate_srcip(private_stroke_control_t *this,
 							stroke_msg_t *msg, FILE *out)
+=======
+METHOD(stroke_control_t, rekey, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	char *name;
+	u_int32_t id;
+	bool child, all, finished = FALSE;
+	ike_sa_t *ike_sa;
+	enumerator_t *enumerator;
+
+	if (!parse_specifier(msg->terminate.name, &id, &name, &child, &all))
+	{
+		DBG1(DBG_CFG, "error parsing specifier string");
+		return;
+	}
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		child_sa_t *child_sa;
+		iterator_t *children;
+
+		if (child)
+		{
+			children = ike_sa->create_child_sa_iterator(ike_sa);
+			while (children->iterate(children, (void**)&child_sa))
+			{
+				if ((name && streq(name, child_sa->get_name(child_sa))) ||
+					(id && id == child_sa->get_reqid(child_sa)))
+				{
+					lib->processor->queue_job(lib->processor,
+						(job_t*)rekey_child_sa_job_create(
+								child_sa->get_reqid(child_sa),
+								child_sa->get_protocol(child_sa),
+								child_sa->get_spi(child_sa, TRUE)));
+					if (!all)
+					{
+						finished = TRUE;
+						break;
+					}
+				}
+			}
+			children->destroy(children);
+		}
+		else if ((name && streq(name, ike_sa->get_name(ike_sa))) ||
+				 (id && id == ike_sa->get_unique_id(ike_sa)))
+		{
+			lib->processor->queue_job(lib->processor,
+				(job_t*)rekey_ike_sa_job_create(ike_sa->get_id(ike_sa), FALSE));
+			if (!all)
+			{
+				finished = TRUE;
+			}
+		}
+		if (finished)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(stroke_control_t, terminate_srcip, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+>>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -362,10 +516,15 @@ static void terminate_srcip(private_stroke_control_t *this,
 	DESTROY_IF(end);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_control_t.purge_ike
  */
 static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+=======
+METHOD(stroke_control_t, purge_ike, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+>>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	iterator_t *iterator;
@@ -402,10 +561,15 @@ static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	list->destroy(list);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_control_t.route.
  */
 static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+=======
+METHOD(stroke_control_t, route, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+>>>>>>> upstream/4.5.1
 {
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -443,10 +607,15 @@ static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 	child_cfg->destroy(child_cfg);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_control_t.unroute.
  */
 static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+=======
+METHOD(stroke_control_t, unroute, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+>>>>>>> upstream/4.5.1
 {
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
@@ -468,10 +637,15 @@ static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out
 	fprintf(out, "configuration '%s' not found\n", msg->unroute.name);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_control_t.destroy
  */
 static void destroy(private_stroke_control_t *this)
+=======
+METHOD(stroke_control_t, destroy, void,
+	private_stroke_control_t *this)
+>>>>>>> upstream/4.5.1
 {
 	free(this);
 }
@@ -481,6 +655,7 @@ static void destroy(private_stroke_control_t *this)
  */
 stroke_control_t *stroke_control_create()
 {
+<<<<<<< HEAD
 	private_stroke_control_t *this = malloc_thing(private_stroke_control_t);
 
 	this->public.initiate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))initiate;
@@ -490,6 +665,22 @@ stroke_control_t *stroke_control_create()
 	this->public.route = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))route;
 	this->public.unroute = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))unroute;
 	this->public.destroy = (void(*)(stroke_control_t*))destroy;
+=======
+	private_stroke_control_t *this;
+
+	INIT(this,
+		.public = {
+			.initiate = _initiate,
+			.terminate = _terminate,
+			.terminate_srcip = _terminate_srcip,
+			.rekey = _rekey,
+			.purge_ike = _purge_ike,
+			.route = _route,
+			.unroute = _unroute,
+			.destroy = _destroy,
+		},
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

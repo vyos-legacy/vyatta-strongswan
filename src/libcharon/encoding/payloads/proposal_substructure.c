@@ -47,6 +47,14 @@ struct private_proposal_substructure_t {
 	u_int8_t  next_payload;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * reserved byte
+	 */
+	u_int8_t reserved;
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Length of this payload.
 	 */
 	u_int16_t proposal_length;
@@ -91,8 +99,13 @@ struct private_proposal_substructure_t {
 encoding_rule_t proposal_substructure_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload)		},
+<<<<<<< HEAD
 	/* Reserved Byte is skipped */
 	{ RESERVED_BYTE,	0															},
+=======
+	/* 1 Reserved Byte */
+	{ RESERVED_BYTE,	offsetof(private_proposal_substructure_t, reserved)			},
+>>>>>>> upstream/4.5.1
 	/* Length of the whole proposal substructure payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_proposal_substructure_t, proposal_length)	},
 	/* proposal number is a number of 8 bit */
@@ -213,6 +226,7 @@ METHOD(payload_t, set_next_type, void,
  */
 static void compute_length(private_proposal_substructure_t *this)
 {
+<<<<<<< HEAD
 	iterator_t *iterator;
 	payload_t *current_transform;
 	size_t transforms_count = 0;
@@ -229,12 +243,29 @@ static void compute_length(private_proposal_substructure_t *this)
 	length += this->spi.len;
 	this->transforms_count = transforms_count;
 	this->proposal_length = length;
+=======
+	enumerator_t *enumerator;
+	payload_t *transform;
+
+	this->transforms_count = 0;
+	this->proposal_length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH + this->spi.len;
+	enumerator = this->transforms->create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &transform))
+	{
+		this->proposal_length += transform->get_length(transform);
+		this->transforms_count++;
+	}
+	enumerator->destroy(enumerator);
+>>>>>>> upstream/4.5.1
 }
 
 METHOD(payload_t, get_length, size_t,
 	private_proposal_substructure_t *this)
 {
+<<<<<<< HEAD
 	compute_length(this);
+=======
+>>>>>>> upstream/4.5.1
 	return this->proposal_length;
 }
 
@@ -342,6 +373,7 @@ METHOD(proposal_substructure_t, get_proposal, proposal_t*,
 	return proposal;
 }
 
+<<<<<<< HEAD
 METHOD(proposal_substructure_t, clone_, proposal_substructure_t*,
 	private_proposal_substructure_t *this)
 {
@@ -368,6 +400,12 @@ METHOD(proposal_substructure_t, clone_, proposal_substructure_t*,
 	enumerator->destroy(enumerator);
 
 	return &clone->public;
+=======
+METHOD(proposal_substructure_t, create_substructure_enumerator, enumerator_t*,
+	private_proposal_substructure_t *this)
+{
+	return this->transforms->create_enumerator(this->transforms);
+>>>>>>> upstream/4.5.1
 }
 
 METHOD2(payload_t, proposal_substructure_t, destroy, void,
@@ -403,12 +441,22 @@ proposal_substructure_t *proposal_substructure_create()
 			.get_protocol_id = _get_protocol_id,
 			.set_is_last_proposal = _set_is_last_proposal,
 			.get_proposal = _get_proposal,
+<<<<<<< HEAD
 			.set_spi = _set_spi,
 			.get_spi = _get_spi,
 			.clone = _clone_,
 			.destroy = _destroy,
 		},
 		.next_payload = NO_PAYLOAD,
+=======
+			.create_substructure_enumerator = _create_substructure_enumerator,
+			.set_spi = _set_spi,
+			.get_spi = _get_spi,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.proposal_length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH,
+>>>>>>> upstream/4.5.1
 		.transforms = linked_list_create(),
 	);
 
@@ -500,6 +548,10 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(
 	}
 	this->proposal_number = proposal->get_number(proposal);
 	this->protocol_id = proposal->get_protocol(proposal);
+<<<<<<< HEAD
+=======
+	compute_length(this);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

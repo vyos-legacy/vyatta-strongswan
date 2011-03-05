@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
+<<<<<<< HEAD
 #include <syslog.h>
 #include <time.h>
 #include <errno.h>
@@ -27,6 +28,16 @@
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
 #endif /* HAVE_SYS_CAPABILITY_H */
+=======
+#include <time.h>
+
+#ifdef CAPABILITIES
+# ifdef HAVE_SYS_CAPABILITY_H
+#  include <sys/capability.h>
+# elif defined(CAPABILITIES_NATIVE)
+#  include <linux/capability.h>
+# endif /* CAPABILITIES_NATIVE */
+>>>>>>> upstream/4.5.1
 #endif /* CAPABILITIES */
 
 #include "daemon.h"
@@ -34,10 +45,14 @@
 #include <library.h>
 #include <config/proposal.h>
 #include <kernel/kernel_handler.h>
+<<<<<<< HEAD
 
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
 #define LOG_AUTHPRIV LOG_AUTH
 #endif
+=======
+#include <processing/jobs/start_action_job.h>
+>>>>>>> upstream/4.5.1
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -62,7 +77,11 @@ struct private_daemon_t {
 	cap_t caps;
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
+<<<<<<< HEAD
 	struct __user_cap_data_struct caps;
+=======
+	struct __user_cap_data_struct caps[2];
+>>>>>>> upstream/4.5.1
 #endif /* CAPABILITIES_NATIVE */
 
 };
@@ -147,9 +166,22 @@ METHOD(daemon_t, keep_cap, void,
 	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
+<<<<<<< HEAD
 	this->caps.effective |= 1 << cap;
 	this->caps.permitted |= 1 << cap;
 	this->caps.inheritable |= 1 << cap;
+=======
+	int i = 0;
+
+	if (cap >= 32)
+	{
+		i++;
+		cap -= 32;
+	}
+	this->caps[i].effective |= 1 << cap;
+	this->caps[i].permitted |= 1 << cap;
+	this->caps[i].inheritable |= 1 << cap;
+>>>>>>> upstream/4.5.1
 #endif /* CAPABILITIES_NATIVE */
 }
 
@@ -164,9 +196,21 @@ METHOD(daemon_t, drop_capabilities, bool,
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
 	struct __user_cap_header_struct header = {
+<<<<<<< HEAD
 		.version = _LINUX_CAPABILITY_VERSION,
 	};
 	if (capset(&header, &this->caps) != 0)
+=======
+#if defined(_LINUX_CAPABILITY_VERSION_3)
+		.version = _LINUX_CAPABILITY_VERSION_3,
+#elif defined(_LINUX_CAPABILITY_VERSION_2)
+		.version = _LINUX_CAPABILITY_VERSION_2,
+#else
+		.version = _LINUX_CAPABILITY_VERSION_1,
+#endif
+	};
+	if (capset(&header, this->caps) != 0)
+>>>>>>> upstream/4.5.1
 	{
 		return FALSE;
 	}
@@ -202,6 +246,7 @@ static void print_plugins()
 	DBG1(DBG_DMN, "loaded plugins: %s", buf);
 }
 
+<<<<<<< HEAD
 /**
  * Initialize logging
  */
@@ -351,6 +396,11 @@ METHOD(daemon_t, initialize, bool,
 
 	initialize_loggers(this, !syslog, levels);
 
+=======
+METHOD(daemon_t, initialize, bool,
+	private_daemon_t *this)
+{
+>>>>>>> upstream/4.5.1
 	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
 	if (lib->integrity)
@@ -362,6 +412,7 @@ METHOD(daemon_t, initialize, bool,
 		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
 	}
 
+<<<<<<< HEAD
 	/* load secrets, ca certificates and crls */
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
@@ -372,6 +423,8 @@ METHOD(daemon_t, initialize, bool,
 	this->public.traps = trap_manager_create();
 	this->kernel_handler = kernel_handler_create();
 
+=======
+>>>>>>> upstream/4.5.1
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, NULL,
 			lib->settings->get_str(lib->settings, "charon.load", PLUGINS)))
@@ -393,6 +446,12 @@ METHOD(daemon_t, initialize, bool,
 		return FALSE;
 	}
 
+<<<<<<< HEAD
+=======
+	/* Queue start_action job */
+	lib->processor->queue_job(lib->processor, (job_t*)start_action_job_create());
+
+>>>>>>> upstream/4.5.1
 #ifdef ME
 	this->public.connect_manager = connect_manager_create();
 	if (this->public.connect_manager == NULL)
@@ -418,10 +477,26 @@ private_daemon_t *daemon_create()
 			.drop_capabilities = _drop_capabilities,
 			.initialize = _initialize,
 			.start = _start,
+<<<<<<< HEAD
+=======
+			.bus = bus_create(),
+>>>>>>> upstream/4.5.1
 			.file_loggers = linked_list_create(),
 			.sys_loggers = linked_list_create(),
 		},
 	);
+<<<<<<< HEAD
+=======
+	charon = &this->public;
+	this->public.controller = controller_create();
+	this->public.eap = eap_manager_create();
+	this->public.sim = sim_manager_create();
+	this->public.tnccs = tnccs_manager_create();
+	this->public.backends = backend_manager_create();
+	this->public.socket = socket_manager_create();
+	this->public.traps = trap_manager_create();
+	this->kernel_handler = kernel_handler_create();
+>>>>>>> upstream/4.5.1
 
 #ifdef CAPABILITIES
 #ifdef CAPABILITIES_LIBCAP
@@ -442,7 +517,10 @@ private_daemon_t *daemon_create()
  */
 void libcharon_deinit()
 {
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/4.5.1
 	destroy((private_daemon_t*)charon);
 	charon = NULL;
 }
@@ -455,7 +533,17 @@ bool libcharon_init()
 	private_daemon_t *this;
 
 	this = daemon_create();
+<<<<<<< HEAD
 	charon = &this->public;
+=======
+
+	/* for uncritical pseudo random numbers */
+	srandom(time(NULL) + getpid());
+
+	/* set up hook to log dbg message in library via charons message bus */
+	dbg_old = dbg;
+	dbg = dbg_bus;
+>>>>>>> upstream/4.5.1
 
 	lib->printf_hook->add_handler(lib->printf_hook, 'P',
 								  proposal_printf_hook,

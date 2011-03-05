@@ -201,7 +201,11 @@ int command_usage(char *error)
 		}
 		for (i = 0; cmds[active].options[i].name; i++)
 		{
+<<<<<<< HEAD
 			fprintf(out, "        --%-8s (-%c)  %s\n",
+=======
+			fprintf(out, "        --%-15s (-%c)  %s\n",
+>>>>>>> upstream/4.5.1
 					cmds[active].options[i].name, cmds[active].options[i].op,
 					cmds[active].options[i].desc);
 		}

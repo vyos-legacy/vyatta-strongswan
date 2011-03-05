@@ -32,14 +32,25 @@ typedef struct child_cfg_t child_cfg_t;
 #include <kernel/kernel_ipsec.h>
 
 /**
+<<<<<<< HEAD
  * Action to take when DPD detected/connection gets closed by peer.
+=======
+ * Action to take when connection is loaded, DPD is detected or
+ * connection gets closed by peer.
+>>>>>>> upstream/4.5.1
  */
 enum action_t {
 	/** No action */
 	ACTION_NONE,
+<<<<<<< HEAD
 	/** Route config to reestablish on demand */
 	ACTION_ROUTE,
 	/** Restart config immediately */
+=======
+	/** Route config to establish or reestablish on demand */
+	ACTION_ROUTE,
+	/** Start or restart config immediately */
+>>>>>>> upstream/4.5.1
 	ACTION_RESTART,
 };
 
@@ -169,6 +180,16 @@ struct child_cfg_t {
 	ipsec_mode_t (*get_mode) (child_cfg_t *this);
 
 	/**
+<<<<<<< HEAD
+=======
+	 * Action to take to start CHILD_SA.
+	 *
+	 * @return				start action
+	 */
+	action_t (*get_start_action) (child_cfg_t *this);
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Action to take on DPD.
 	 *
 	 * @return				DPD action
@@ -220,6 +241,16 @@ struct child_cfg_t {
 	mark_t (*get_mark)(child_cfg_t *this, bool inbound);
 
 	/**
+<<<<<<< HEAD
+=======
+	 * Get the TFC padding value to use for CHILD_SA.
+	 *
+	 * @return				TFC padding, 0 to disable, -1 for MTU
+	 */
+	u_int32_t (*get_tfc)(child_cfg_t *this);
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Sets two options needed for Mobile IPv6 interoperability
 	 *
 	 * @param proxy_mode	use IPsec transport proxy mode (default FALSE)
@@ -276,6 +307,10 @@ struct child_cfg_t {
  * @param updown			updown script to execute on up/down event
  * @param hostaccess		TRUE to allow access to the local host
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
+<<<<<<< HEAD
+=======
+ * @param start_action		start action
+>>>>>>> upstream/4.5.1
  * @param dpd_action		DPD action
  * @param close_action		close action
  * @param ipcomp			use IPComp, if peer supports it
@@ -283,13 +318,24 @@ struct child_cfg_t {
  * @param reqid				specific reqid to use for CHILD_SA, 0 for auto assign
  * @param mark_in			optional inbound mark (can be NULL)
  * @param mark_out			optional outbound mark (can be NULL)
+<<<<<<< HEAD
+=======
+ * @param tfc				TFC padding size, 0 to disable, -1 to pad to PMTU
+>>>>>>> upstream/4.5.1
  * @return					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
+<<<<<<< HEAD
 							  ipsec_mode_t mode, action_t dpd_action,
 							  action_t close_action, bool ipcomp,
 							  u_int32_t inactivity, u_int32_t reqid,
 							  mark_t *mark_in, mark_t *mark_out);
+=======
+							  ipsec_mode_t mode, action_t start_action,
+							  action_t dpd_action, action_t close_action,
+							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
+							  mark_t *mark_in, mark_t *mark_out, u_int32_t tfc);
+>>>>>>> upstream/4.5.1
 
 #endif /** CHILD_CFG_H_ @}*/

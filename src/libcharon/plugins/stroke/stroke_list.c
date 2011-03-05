@@ -388,10 +388,15 @@ static void log_auth_cfgs(FILE *out, peer_cfg_t *peer_cfg, bool local)
 	enumerator->destroy(enumerator);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_list_t.status.
  */
 static void status(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all)
+=======
+METHOD(stroke_list_t, status, void,
+	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out, bool all)
+>>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator, *children;
 	ike_cfg_t *ike_cfg;
@@ -756,7 +761,11 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			enumerator_t *enumerator;
 			identification_t *altName;
 			bool first_altName = TRUE;
+<<<<<<< HEAD
 			int pathlen;
+=======
+			u_int pathlen;
+>>>>>>> upstream/4.5.1
 			chunk_t serial, authkey;
 			time_t notBefore, notAfter;
 			public_key_t *public;
@@ -836,10 +845,17 @@ static void stroke_list_certs(linked_list_t *list, char *label,
 			}
 
 			/* list optional pathLenConstraint */
+<<<<<<< HEAD
 			pathlen = x509->get_pathLenConstraint(x509);
 			if (pathlen != X509_NO_PATH_LEN_CONSTRAINT)
 			{
 				fprintf(out, "  pathlen:   %d\n", pathlen);
+=======
+			pathlen = x509->get_constraint(x509, X509_PATH_LEN);
+			if (pathlen != X509_NO_CONSTRAINT)
+			{
+				fprintf(out, "  pathlen:   %u\n", pathlen);
+>>>>>>> upstream/4.5.1
 			}
 
 			/* list optional ipAddrBlocks */
@@ -979,6 +995,13 @@ static void stroke_list_crls(linked_list_t *list, bool utc, FILE *out)
 		{
 			fprintf(out, "  serial:    %#B\n", &chunk);
 		}
+<<<<<<< HEAD
+=======
+		if (crl->is_delta_crl(crl, &chunk))
+		{
+			fprintf(out, "  delta for: %#B\n", &chunk);
+		}
+>>>>>>> upstream/4.5.1
 
 		/* count the number of revoked certificates */
 		{
@@ -1060,6 +1083,28 @@ static void stroke_list_ocsp(linked_list_t* list, bool utc, FILE *out)
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * Print the name of an algorithm plus the name of the plugin that registered it
+ */
+static void print_alg(FILE *out, int *len, enum_name_t *alg_names, int alg_type,
+					  const char *plugin_name)
+{
+	char alg_name[BUF_LEN];
+	int alg_name_len;
+	
+	alg_name_len = sprintf(alg_name, " %N[%s]", alg_names, alg_type, plugin_name);
+	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
+	{
+		fprintf(out, "\n             ");
+		*len = 13;	
+	}
+	fprintf(out, "%s", alg_name);
+	*len += alg_name_len;
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * List of registered cryptographical algorithms
  */
 static void list_algs(FILE *out)
@@ -1070,6 +1115,7 @@ static void list_algs(FILE *out)
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
 	diffie_hellman_group_t group;
+<<<<<<< HEAD
 
 	fprintf(out, "\n");
 	fprintf(out, "List of registered IKEv2 Algorithms:\n");
@@ -1113,15 +1159,82 @@ static void list_algs(FILE *out)
 	while (enumerator->enumerate(enumerator, &group))
 	{
 		fprintf(out, "%N ", diffie_hellman_group_names, group);
+=======
+	rng_quality_t quality;
+	const char *plugin_name;
+	int len;
+
+	fprintf(out, "\n");
+	fprintf(out, "List of registered IKEv2 Algorithms:\n");
+	fprintf(out, "\n  encryption:");
+	len = 13;
+	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
+	{
+		print_alg(out, &len, encryption_algorithm_names, encryption, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  integrity: ");
+	len = 13;
+	enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
+	{
+		print_alg(out, &len, integrity_algorithm_names, integrity, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  aead:      ");
+	len = 13;
+	enumerator = lib->crypto->create_aead_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
+	{
+		print_alg(out, &len, encryption_algorithm_names, encryption, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  hasher:    ");
+	len = 13;
+	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &hash, &plugin_name))
+	{
+		print_alg(out, &len, hash_algorithm_names, hash, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  prf:       ");
+	len = 13;
+	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
+	{
+		print_alg(out, &len, pseudo_random_function_names, prf, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  dh-group:  ");
+	len = 13;
+	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &group, &plugin_name))
+	{
+		print_alg(out, &len, diffie_hellman_group_names, group, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  random-gen:");
+	len = 13;
+	enumerator = lib->crypto->create_rng_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &quality, &plugin_name))
+	{
+		print_alg(out, &len, rng_quality_names, quality, plugin_name);
+>>>>>>> upstream/4.5.1
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n");
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_list_t.list.
  */
 static void list(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
+=======
+METHOD(stroke_list_t, list, void,
+	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
+>>>>>>> upstream/4.5.1
 {
 	linked_list_t *cert_list = NULL;
 
@@ -1224,10 +1337,15 @@ static void pool_leases(private_stroke_list_t *this, FILE *out, char *pool,
 	}
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_list_t.leases
  */
 static void leases(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
+=======
+METHOD(stroke_list_t, leases, void,
+	private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
+>>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	u_int size, offline, online;
@@ -1264,10 +1382,15 @@ static void leases(private_stroke_list_t *this, stroke_msg_t *msg, FILE *out)
 	DESTROY_IF(address);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of stroke_list_t.destroy
  */
 static void destroy(private_stroke_list_t *this)
+=======
+METHOD(stroke_list_t, destroy, void,
+	private_stroke_list_t *this)
+>>>>>>> upstream/4.5.1
 {
 	free(this);
 }
@@ -1277,6 +1400,7 @@ static void destroy(private_stroke_list_t *this)
  */
 stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 {
+<<<<<<< HEAD
 	private_stroke_list_t *this = malloc_thing(private_stroke_list_t);
 
 	this->public.list = (void(*)(stroke_list_t*, stroke_msg_t *msg, FILE *out))list;
@@ -1286,6 +1410,21 @@ stroke_list_t *stroke_list_create(stroke_attribute_t *attribute)
 
 	this->uptime = time_monotonic(NULL);
 	this->attribute = attribute;
+=======
+	private_stroke_list_t *this;
+
+	INIT(this,
+		.public = {
+
+			.list = _list,
+			.status = _status,
+			.leases = _leases,
+			.destroy = _destroy,
+		},
+		.uptime = time_monotonic(NULL),
+		.attribute = attribute,
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

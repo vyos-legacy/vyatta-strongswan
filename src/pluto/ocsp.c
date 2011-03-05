@@ -1045,8 +1045,13 @@ static bool valid_ocsp_response(response_t *res)
 		)
 
 		/* check path length constraint */
+<<<<<<< HEAD
 		pathlen_constraint = x509->get_pathLenConstraint(x509);
 		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
+=======
+		pathlen_constraint = x509->get_constraint(x509, X509_PATH_LEN);
+		if (pathlen_constraint != X509_NO_CONSTRAINT &&
+>>>>>>> upstream/4.5.1
 			pathlen > pathlen_constraint)
 		{
 			plog("path length of %d violates constraint of %d",

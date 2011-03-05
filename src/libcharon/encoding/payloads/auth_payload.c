@@ -1,5 +1,10 @@
 /*
+<<<<<<< HEAD
  * Copyright (C) 2005-2006 Martin Willi
+=======
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
+>>>>>>> upstream/4.5.1
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -18,7 +23,10 @@
 
 #include <encoding/payloads/encodings.h>
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/4.5.1
 typedef struct private_auth_payload_t private_auth_payload_t;
 
 /**
@@ -43,6 +51,19 @@ struct private_auth_payload_t {
 	bool critical;
 
 	/**
+<<<<<<< HEAD
+=======
+	 * Reserved bits
+	 */
+	bool reserved_bit[7];
+
+	/**
+	 * Reserved bytes
+	 */
+	u_int8_t reserved_byte[3];
+
+	/**
+>>>>>>> upstream/4.5.1
 	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
@@ -66,6 +87,7 @@ struct private_auth_payload_t {
  */
 encoding_rule_t auth_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
+<<<<<<< HEAD
 	{ U_INT_8,			offsetof(private_auth_payload_t, next_payload) 	},
 	/* the critical bit */
 	{ FLAG,				offsetof(private_auth_payload_t, critical) 		},
@@ -87,6 +109,29 @@ encoding_rule_t auth_payload_encodings[] = {
 	{ RESERVED_BYTE,	0 												},
 	/* some auth data bytes, length is defined in PAYLOAD_LENGTH */
 	{ AUTH_DATA,		offsetof(private_auth_payload_t, auth_data) 	}
+=======
+	{ U_INT_8,			offsetof(private_auth_payload_t, next_payload)		},
+	/* the critical bit */
+	{ FLAG,				offsetof(private_auth_payload_t, critical)			},
+	/* 7 Bit reserved bits */
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[0])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[1])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[2])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[3])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[4])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[5])	},
+	{ RESERVED_BIT,		offsetof(private_auth_payload_t, reserved_bit[6])	},
+	/* Length of the whole payload*/
+	{ PAYLOAD_LENGTH,	offsetof(private_auth_payload_t, payload_length)	},
+	/* 1 Byte AUTH type*/
+	{ U_INT_8,			offsetof(private_auth_payload_t, auth_method)		},
+	/* 3 reserved bytes */
+	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[0])	},
+	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[1])	},
+	{ RESERVED_BYTE,	offsetof(private_auth_payload_t, reserved_byte[2])	},
+	/* some auth data bytes, length is defined in PAYLOAD_LENGTH */
+	{ AUTH_DATA,		offsetof(private_auth_payload_t, auth_data)	}
+>>>>>>> upstream/4.5.1
 };
 
 /*
@@ -103,6 +148,7 @@ encoding_rule_t auth_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.verify.
  */
@@ -131,10 +177,28 @@ static void get_encoding_rules(private_auth_payload_t *this, encoding_rule_t **r
  * Implementation of payload_t.get_type.
  */
 static payload_type_t get_payload_type(private_auth_payload_t *this)
+=======
+METHOD(payload_t, verify, status_t,
+	private_auth_payload_t *this)
+{
+	return SUCCESS;
+}
+
+METHOD(payload_t, get_encoding_rules, void,
+	private_auth_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+{
+	*rules = auth_payload_encodings;
+	*rule_count = countof(auth_payload_encodings);
+}
+
+METHOD(payload_t, get_type, payload_type_t,
+	private_auth_payload_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return AUTHENTICATION;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.get_next_type.
  */
@@ -147,26 +211,47 @@ static payload_type_t get_next_type(private_auth_payload_t *this)
  * Implementation of payload_t.set_next_type.
  */
 static void set_next_type(private_auth_payload_t *this,payload_type_t type)
+=======
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_auth_payload_t *this)
+{
+	return this->next_payload;
+}
+
+METHOD(payload_t, set_next_type, void,
+	private_auth_payload_t *this, payload_type_t type)
+>>>>>>> upstream/4.5.1
 {
 	this->next_payload = type;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_auth_payload_t *this)
+=======
+METHOD(payload_t, get_length, size_t,
+	private_auth_payload_t *this)
+>>>>>>> upstream/4.5.1
 {
 	return this->payload_length;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of auth_payload_t.set_auth_method.
  */
 static void set_auth_method (private_auth_payload_t *this, auth_method_t method)
+=======
+METHOD(auth_payload_t, set_auth_method, void,
+	private_auth_payload_t *this, auth_method_t method)
+>>>>>>> upstream/4.5.1
 {
 	this->auth_method = method;
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of auth_payload_t.get_auth_method.
  */
@@ -222,6 +307,32 @@ static void destroy(private_auth_payload_t *this)
 		chunk_free(&(this->auth_data));
 	}
 
+=======
+METHOD(auth_payload_t, get_auth_method, auth_method_t,
+	private_auth_payload_t *this)
+{
+	return this->auth_method;
+}
+
+METHOD(auth_payload_t, set_data, void,
+	private_auth_payload_t *this, chunk_t data)
+{
+	free(this->auth_data.ptr);
+	this->auth_data = chunk_clone(data);
+	this->payload_length = AUTH_PAYLOAD_HEADER_LENGTH + this->auth_data.len;
+}
+
+METHOD(auth_payload_t, get_data, chunk_t,
+	private_auth_payload_t *this)
+{
+	return this->auth_data;
+}
+
+METHOD2(payload_t, auth_payload_t, destroy, void,
+	private_auth_payload_t *this)
+{
+	free(this->auth_data.ptr);
+>>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -230,6 +341,7 @@ static void destroy(private_auth_payload_t *this)
  */
 auth_payload_t *auth_payload_create()
 {
+<<<<<<< HEAD
 	private_auth_payload_t *this = malloc_thing(private_auth_payload_t);
 
 	/* interface functions */
@@ -256,4 +368,29 @@ auth_payload_t *auth_payload_create()
 	this->auth_data = chunk_empty;
 
 	return (&(this->public));
+=======
+	private_auth_payload_t *this;
+
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.set_auth_method = _set_auth_method,
+			.get_auth_method = _get_auth_method,
+			.set_data = _set_data,
+			.get_data = _get_data,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = AUTH_PAYLOAD_HEADER_LENGTH,
+	);
+	return &this->public;
+>>>>>>> upstream/4.5.1
 }

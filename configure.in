@@ -16,7 +16,11 @@ dnl ===========================
 dnl  initialize & set some vars
 dnl ===========================
 
+<<<<<<< HEAD
 AC_INIT(strongSwan,4.5.0)
+=======
+AC_INIT(strongSwan,4.5.1)
+>>>>>>> upstream/4.5.1
 AM_INIT_AUTOMAKE(tar-ustar)
 AC_CONFIG_MACRO_DIR([m4/config])
 PKG_PROG_PKG_CONFIG
@@ -66,6 +70,10 @@ AC_ARG_WITH(
 m4_include(m4/macros/enable-disable.m4)
 
 ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
+<<<<<<< HEAD
+=======
+ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
+>>>>>>> upstream/4.5.1
 ARG_ENABL_SET([ldap],           [enable LDAP fetching plugin to fetch files via libldap. Requires openLDAP.])
 ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
 ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
@@ -79,6 +87,10 @@ ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementa
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
 ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
 ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
+<<<<<<< HEAD
+=======
+ARG_DISBL_SET([constraints],    [disable advanced X509 constraint checking plugin.])
+>>>>>>> upstream/4.5.1
 ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
 ARG_DISBL_SET([pkcs1],          [disable PKCS1 key decoding plugin.])
 ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
@@ -86,6 +98,10 @@ ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
 ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
 ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
+<<<<<<< HEAD
+=======
+ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
+>>>>>>> upstream/4.5.1
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
 ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
 ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
@@ -119,6 +135,10 @@ ARG_ENABL_SET([tnc-imc],        [enable TNC IMC module.])
 ARG_ENABL_SET([tnc-imv],        [enable TNC IMV module.])
 ARG_ENABL_SET([tnccs-11],       [enable TNCCS 1.1 protocol module.])
 ARG_ENABL_SET([tnccs-20],       [enable TNCCS 2.0 protocol module.])
+<<<<<<< HEAD
+=======
+ARG_ENABL_SET([tnccs-dynamic],  [enable dynamic TNCCS protocol discovery module.])
+>>>>>>> upstream/4.5.1
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
@@ -142,6 +162,10 @@ ARG_DISBL_SET([threads],        [disable the use of threads in pluto. Charon alw
 ARG_DISBL_SET([charon],         [disable the IKEv2 keying daemon charon.])
 ARG_DISBL_SET([tools],          [disable additional utilities (openac, scepclient and pki).])
 ARG_DISBL_SET([scripts],        [disable additional utilities (found in directory scripts).])
+<<<<<<< HEAD
+=======
+ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
+>>>>>>> upstream/4.5.1
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
 ARG_DISBL_SET([attr],           [disable strongswan.conf based configuration attribute plugin.])
 ARG_ENABL_SET([attr-sql],       [enable SQL based configuration attribute plugin.])
@@ -201,6 +225,7 @@ else
 	AC_MSG_RESULT([not found])
 fi
 
+<<<<<<< HEAD
 dnl translate user/group to numercial ids
 AC_MSG_CHECKING([for uid of user "$ipsecuser"])
 ipsecuid=`id -u $ipsecuser 2>/dev/null`
@@ -219,6 +244,8 @@ else
 	AC_MSG_ERROR([not found])
 fi
 
+=======
+>>>>>>> upstream/4.5.1
 dnl =========================
 dnl  dependency calculation
 dnl =========================
@@ -247,7 +274,11 @@ if test x$fips_prf = xtrue; then
 	fi
 fi
 
+<<<<<<< HEAD
 if test x$smp = xtrue; then
+=======
+if test x$smp = xtrue -o x$tnccs_11 = xtrue; then
+>>>>>>> upstream/4.5.1
 	xml=true
 fi
 
@@ -513,6 +544,15 @@ if test x$curl = xtrue; then
 	AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([CURL header curl/curl.h not found!])])
 fi
 
+<<<<<<< HEAD
+=======
+if test x$soup = xtrue; then
+	PKG_CHECK_MODULES(soup, [libsoup-2.4])
+	AC_SUBST(soup_CFLAGS)
+	AC_SUBST(soup_LIBS)
+fi
+
+>>>>>>> upstream/4.5.1
 if test x$xml = xtrue; then
 	PKG_CHECK_MODULES(xml, [libxml-2.0])
 	AC_SUBST(xml_CFLAGS)
@@ -607,10 +647,13 @@ if test x$gcrypt = xtrue; then
 	)
 fi
 
+<<<<<<< HEAD
 if test x$tnccs_11 = xtrue -o x$tnc_imc = xtrue -o x$tnc_imv = xtrue; then
 	AC_CHECK_HEADER([libtnc.h],,[AC_MSG_ERROR([libtnc header libtnc.h not found!])])
 fi
 
+=======
+>>>>>>> upstream/4.5.1
 if test x$uci = xtrue; then
 	AC_HAVE_LIBRARY([uci],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
@@ -708,8 +751,14 @@ h_plugins=
 s_plugins=
 
 ADD_PLUGIN([test-vectors],         [s libcharon pluto openac scepclient pki])
+<<<<<<< HEAD
 ADD_PLUGIN([curl],                 [s libcharon pluto scepclient])
 ADD_PLUGIN([ldap],                 [s libcharon pluto scepclient])
+=======
+ADD_PLUGIN([curl],                 [s libcharon pluto scepclient scripts])
+ADD_PLUGIN([soup],                 [s libcharon pluto scripts])
+ADD_PLUGIN([ldap],                 [s libcharon pluto scepclient scripts])
+>>>>>>> upstream/4.5.1
 ADD_PLUGIN([mysql],                [s libcharon pluto pool manager medsrv])
 ADD_PLUGIN([sqlite],               [s libcharon pluto pool manager medsrv])
 ADD_PLUGIN([aes],                  [s libcharon pluto openac scepclient pki scripts])
@@ -722,6 +771,10 @@ ADD_PLUGIN([md5],                  [s libcharon pluto openac scepclient pki])
 ADD_PLUGIN([random],               [s libcharon pluto openac scepclient pki scripts medsrv])
 ADD_PLUGIN([x509],                 [s libcharon pluto openac scepclient pki scripts])
 ADD_PLUGIN([revocation],           [s libcharon])
+<<<<<<< HEAD
+=======
+ADD_PLUGIN([constraints],          [s libcharon])
+>>>>>>> upstream/4.5.1
 ADD_PLUGIN([pubkey],               [s libcharon])
 ADD_PLUGIN([pkcs1],                [s libcharon pluto openac scepclient pki scripts manager medsrv])
 ADD_PLUGIN([pgp],                  [s libcharon pluto])
@@ -739,15 +792,26 @@ ADD_PLUGIN([hmac],                 [s libcharon pluto scripts])
 ADD_PLUGIN([ctr],                  [s libcharon scripts])
 ADD_PLUGIN([ccm],                  [s libcharon scripts])
 ADD_PLUGIN([gcm],                  [s libcharon scripts])
+<<<<<<< HEAD
 ADD_PLUGIN([xauth],                [p pluto])
 ADD_PLUGIN([attr],                 [h libcharon pluto])
 ADD_PLUGIN([attr-sql],             [h libcharon pluto])
+=======
+ADD_PLUGIN([af-alg],               [s libcharon pluto openac scepclient pki scripts medsrv])
+ADD_PLUGIN([xauth],                [p pluto])
+ADD_PLUGIN([attr],                 [h libcharon pluto])
+ADD_PLUGIN([attr-sql],             [h libcharon pluto])
+ADD_PLUGIN([load-tester],          [c libcharon])
+>>>>>>> upstream/4.5.1
 ADD_PLUGIN([kernel-pfkey],         [h libcharon pluto])
 ADD_PLUGIN([kernel-pfroute],       [h libcharon pluto])
 ADD_PLUGIN([kernel-klips],         [h libcharon pluto])
 ADD_PLUGIN([kernel-netlink],       [h libcharon pluto])
 ADD_PLUGIN([resolve],              [h libcharon pluto])
+<<<<<<< HEAD
 ADD_PLUGIN([load-tester],          [c libcharon])
+=======
+>>>>>>> upstream/4.5.1
 ADD_PLUGIN([socket-default],       [c libcharon])
 ADD_PLUGIN([socket-raw],           [c libcharon])
 ADD_PLUGIN([socket-dynamic],       [c libcharon])
@@ -771,10 +835,18 @@ ADD_PLUGIN([eap-radius],           [c libcharon])
 ADD_PLUGIN([eap-tls],              [c libcharon])
 ADD_PLUGIN([eap-ttls],             [c libcharon])
 ADD_PLUGIN([eap-tnc],              [c libcharon])
+<<<<<<< HEAD
 ADD_PLUGIN([tnc-imc],              [c libcharon])
 ADD_PLUGIN([tnc-imv],              [c libcharon])
 ADD_PLUGIN([tnccs-11],             [c libcharon])
 ADD_PLUGIN([tnccs-20],             [c libcharon])
+=======
+ADD_PLUGIN([tnccs-20],             [c libcharon])
+ADD_PLUGIN([tnccs-11],             [c libcharon])
+ADD_PLUGIN([tnccs-dynamic],        [c libcharon])
+ADD_PLUGIN([tnc-imc],              [c libcharon])
+ADD_PLUGIN([tnc-imv],              [c libcharon])
+>>>>>>> upstream/4.5.1
 ADD_PLUGIN([medsrv],               [c libcharon])
 ADD_PLUGIN([medcli],               [c libcharon])
 ADD_PLUGIN([nm],                   [c libcharon])
@@ -810,6 +882,10 @@ dnl libstrongswan plugins
 dnl =====================
 AM_CONDITIONAL(USE_TEST_VECTORS, test x$test_vectors = xtrue)
 AM_CONDITIONAL(USE_CURL, test x$curl = xtrue)
+<<<<<<< HEAD
+=======
+AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
+>>>>>>> upstream/4.5.1
 AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
 AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
 AM_CONDITIONAL(USE_DES, test x$des = xtrue)
@@ -823,6 +899,10 @@ AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RANDOM, test x$random = xtrue)
 AM_CONDITIONAL(USE_X509, test x$x509 = xtrue)
 AM_CONDITIONAL(USE_REVOCATION, test x$revocation = xtrue)
+<<<<<<< HEAD
+=======
+AM_CONDITIONAL(USE_CONSTRAINTS, test x$constraints = xtrue)
+>>>>>>> upstream/4.5.1
 AM_CONDITIONAL(USE_PUBKEY, test x$pubkey = xtrue)
 AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
 AM_CONDITIONAL(USE_PGP, test x$pgp = xtrue)
@@ -840,6 +920,10 @@ AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
 AM_CONDITIONAL(USE_CTR, test x$ctr = xtrue)
 AM_CONDITIONAL(USE_CCM, test x$ccm = xtrue)
 AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
+<<<<<<< HEAD
+=======
+AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
+>>>>>>> upstream/4.5.1
 
 dnl charon plugins
 dnl ==============
@@ -877,6 +961,10 @@ AM_CONDITIONAL(USE_TNC_IMC, test x$tnc_imc = xtrue)
 AM_CONDITIONAL(USE_TNC_IMV, test x$tnc_imv = xtrue)
 AM_CONDITIONAL(USE_TNCCS_11, test x$tnccs_11 = xtrue)
 AM_CONDITIONAL(USE_TNCCS_20, test x$tnccs_20 = xtrue)
+<<<<<<< HEAD
+=======
+AM_CONDITIONAL(USE_TNCCS_DYNAMIC, test x$tnccs_dynamic = xtrue)
+>>>>>>> upstream/4.5.1
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_RAW, test x$socket_raw = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
@@ -917,9 +1005,18 @@ AM_CONDITIONAL(USE_THREADS, test x$threads = xtrue)
 AM_CONDITIONAL(USE_CHARON, test x$charon = xtrue)
 AM_CONDITIONAL(USE_TOOLS, test x$tools = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
+<<<<<<< HEAD
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue)
 AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
+=======
+AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
+AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pluto = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
+AM_CONDITIONAL(USE_LIBHYDRA, test x$charon = xtrue -o x$pluto = xtrue)
+AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue)
+AM_CONDITIONAL(USE_FILE_CONFIG, test x$pluto = xtrue -o x$stroke = xtrue)
+AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$pluto = xtrue -o x$stroke = xtrue -o x$tools = xtrue -o x$conftest = xtrue)
+>>>>>>> upstream/4.5.1
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
 AM_CONDITIONAL(USE_VSTR, test x$vstr = xtrue)
 AM_CONDITIONAL(USE_SIMAKA, test x$simaka = xtrue)
@@ -965,12 +1062,20 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/xcbc/Makefile
 	src/libstrongswan/plugins/x509/Makefile
 	src/libstrongswan/plugins/revocation/Makefile
+<<<<<<< HEAD
+=======
+	src/libstrongswan/plugins/constraints/Makefile
+>>>>>>> upstream/4.5.1
 	src/libstrongswan/plugins/pubkey/Makefile
 	src/libstrongswan/plugins/pkcs1/Makefile
 	src/libstrongswan/plugins/pgp/Makefile
 	src/libstrongswan/plugins/dnskey/Makefile
 	src/libstrongswan/plugins/pem/Makefile
 	src/libstrongswan/plugins/curl/Makefile
+<<<<<<< HEAD
+=======
+	src/libstrongswan/plugins/soup/Makefile
+>>>>>>> upstream/4.5.1
 	src/libstrongswan/plugins/ldap/Makefile
 	src/libstrongswan/plugins/mysql/Makefile
 	src/libstrongswan/plugins/sqlite/Makefile
@@ -982,6 +1087,10 @@ AC_OUTPUT(
 	src/libstrongswan/plugins/ctr/Makefile
 	src/libstrongswan/plugins/ccm/Makefile
 	src/libstrongswan/plugins/gcm/Makefile
+<<<<<<< HEAD
+=======
+	src/libstrongswan/plugins/af_alg/Makefile
+>>>>>>> upstream/4.5.1
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libhydra/Makefile
 	src/libhydra/plugins/attr/Makefile
@@ -1018,6 +1127,10 @@ AC_OUTPUT(
 	src/libcharon/plugins/tnc_imv/Makefile
 	src/libcharon/plugins/tnccs_11/Makefile
 	src/libcharon/plugins/tnccs_20/Makefile
+<<<<<<< HEAD
+=======
+	src/libcharon/plugins/tnccs_dynamic/Makefile
+>>>>>>> upstream/4.5.1
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_raw/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
@@ -1053,6 +1166,10 @@ AC_OUTPUT(
 	src/manager/Makefile
 	src/medsrv/Makefile
 	src/checksum/Makefile
+<<<<<<< HEAD
+=======
+	src/conftest/Makefile
+>>>>>>> upstream/4.5.1
 	scripts/Makefile
 	testing/Makefile
 )

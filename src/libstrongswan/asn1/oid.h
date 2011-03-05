@@ -49,8 +49,16 @@ extern const oid_t oid_names[];
 #define OID_DELTA_CRL_INDICATOR				48
 #define OID_NAME_CONSTRAINTS				51
 #define OID_CRL_DISTRIBUTION_POINTS			52
+<<<<<<< HEAD
 #define OID_ANY_POLICY						54
 #define OID_AUTHORITY_KEY_ID				56
+=======
+#define OID_CERTIFICATE_POLICIES			53
+#define OID_ANY_POLICY						54
+#define OID_POLICY_MAPPINGS					55
+#define OID_AUTHORITY_KEY_ID				56
+#define OID_POLICY_CONSTRAINTS				57
+>>>>>>> upstream/4.5.1
 #define OID_EXTENDED_KEY_USAGE				58
 #define OID_FRESHEST_CRL					60
 #define OID_INHIBIT_ANY_POLICY				61
@@ -117,6 +125,7 @@ extern const oid_t oid_names[];
 #define OID_ECDSA_WITH_SHA384				159
 #define OID_ECDSA_WITH_SHA512				160
 #define OID_USER_PRINCIPAL_NAME				175
+<<<<<<< HEAD
 #define OID_TCGID							182
 #define OID_AUTHORITY_INFO_ACCESS			187
 #define OID_IP_ADDR_BLOCKS					189
@@ -204,5 +213,97 @@ extern const oid_t oid_names[];
 #define OID_PKI_TRANS_ID					353
 
 #define OID_MAX								356
+=======
+#define OID_STRONGSWAN						178
+#define OID_TCGID							185
+#define OID_AUTHORITY_INFO_ACCESS			190
+#define OID_IP_ADDR_BLOCKS					192
+#define OID_POLICY_QUALIFIER_CPS			194
+#define OID_POLICY_QUALIFIER_UNOTICE		195
+#define OID_SERVER_AUTH						197
+#define OID_CLIENT_AUTH						198
+#define OID_OCSP_SIGNING					205
+#define OID_XMPP_ADDR						207
+#define OID_AUTHENTICATION_INFO				209
+#define OID_ACCESS_IDENTITY					210
+#define OID_CHARGING_IDENTITY				211
+#define OID_GROUP							212
+#define OID_OCSP							215
+#define OID_BASIC							216
+#define OID_NONCE							217
+#define OID_CRL								218
+#define OID_RESPONSE						219
+#define OID_NO_CHECK						220
+#define OID_ARCHIVE_CUTOFF					221
+#define OID_SERVICE_LOCATOR					222
+#define OID_CA_ISSUERS						223
+#define OID_DES_CBC							229
+#define OID_SHA1							230
+#define OID_SHA1_WITH_RSA_OIW				231
+#define OID_ECGDSA_PUBKEY					250
+#define OID_ECGDSA_SIG_WITH_RIPEMD160		253
+#define OID_ECGDSA_SIG_WITH_SHA1			254
+#define OID_ECGDSA_SIG_WITH_SHA224			255
+#define OID_ECGDSA_SIG_WITH_SHA256			256
+#define OID_ECGDSA_SIG_WITH_SHA384			257
+#define OID_ECGDSA_SIG_WITH_SHA512			258
+#define OID_SECT163K1						281
+#define OID_SECT163R1						282
+#define OID_SECT239K1						283
+#define OID_SECT113R1						284
+#define OID_SECT113R2						285
+#define OID_SECT112R1						286
+#define OID_SECT112R2						287
+#define OID_SECT160R1						288
+#define OID_SECT160K1						289
+#define OID_SECT256K1						290
+#define OID_SECT163R2						291
+#define OID_SECT283K1						292
+#define OID_SECT283R1						293
+#define OID_SECT131R1						294
+#define OID_SECT131R2						295
+#define OID_SECT193R1						296
+#define OID_SECT193R2						297
+#define OID_SECT233K1						298
+#define OID_SECT233R1						299
+#define OID_SECT128R1						300
+#define OID_SECT128R2						301
+#define OID_SECT160R2						302
+#define OID_SECT192K1						303
+#define OID_SECT224K1						304
+#define OID_SECT224R1						305
+#define OID_SECT384R1						306
+#define OID_SECT521R1						307
+#define OID_SECT409K1						308
+#define OID_SECT409R1						309
+#define OID_SECT571K1						310
+#define OID_SECT571R1						311
+#define OID_AES128_CBC						320
+#define OID_AES128_GCM						321
+#define OID_AES128_CCM						322
+#define OID_AES192_CBC						323
+#define OID_AES192_GCM						324
+#define OID_AES192_CCM						325
+#define OID_AES256_CBC						326
+#define OID_AES256_GCM						327
+#define OID_AES256_CCM						328
+#define OID_SHA256							330
+#define OID_SHA384							331
+#define OID_SHA512							332
+#define OID_SHA224							333
+#define OID_NS_REVOCATION_URL				339
+#define OID_NS_CA_REVOCATION_URL			340
+#define OID_NS_CA_POLICY_URL				341
+#define OID_NS_COMMENT						342
+#define OID_EMPLOYEE_NUMBER					345
+#define OID_PKI_MESSAGE_TYPE				351
+#define OID_PKI_STATUS						352
+#define OID_PKI_FAIL_INFO					353
+#define OID_PKI_SENDER_NONCE				354
+#define OID_PKI_RECIPIENT_NONCE				355
+#define OID_PKI_TRANS_ID					356
+
+#define OID_MAX								359
+>>>>>>> upstream/4.5.1
 
 #endif /* OID_H_ */

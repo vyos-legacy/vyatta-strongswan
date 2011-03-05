@@ -247,6 +247,17 @@ bool return_false()
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * returns FAILED
+ */
+status_t return_failed()
+{
+	return FAILED;
+}
+
+/**
+>>>>>>> upstream/4.5.1
  * nop operation
  */
 void nop()

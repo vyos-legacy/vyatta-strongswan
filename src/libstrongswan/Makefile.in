@@ -44,6 +44,7 @@ host_triplet = @host@
 @USE_INTEGRITY_TEST_TRUE@    integrity_checker.c integrity_checker.h
 
 @USE_VSTR_TRUE@am__append_6 = -lvstr
+<<<<<<< HEAD
 @USE_AES_TRUE@am__append_7 = plugins/aes
 @MONOLITHIC_TRUE@@USE_AES_TRUE@am__append_8 = plugins/aes/libstrongswan-aes.la
 @USE_DES_TRUE@am__append_9 = plugins/des
@@ -108,6 +109,78 @@ host_triplet = @host@
 @MONOLITHIC_TRUE@@USE_GCM_TRUE@am__append_68 = plugins/gcm/libstrongswan-gcm.la
 @USE_TEST_VECTORS_TRUE@am__append_69 = plugins/test_vectors
 @MONOLITHIC_TRUE@@USE_TEST_VECTORS_TRUE@am__append_70 = plugins/test_vectors/libstrongswan-test-vectors.la
+=======
+@USE_AF_ALG_TRUE@am__append_7 = plugins/af_alg
+@MONOLITHIC_TRUE@@USE_AF_ALG_TRUE@am__append_8 = plugins/af_alg/libstrongswan-af-alg.la
+@USE_AES_TRUE@am__append_9 = plugins/aes
+@MONOLITHIC_TRUE@@USE_AES_TRUE@am__append_10 = plugins/aes/libstrongswan-aes.la
+@USE_DES_TRUE@am__append_11 = plugins/des
+@MONOLITHIC_TRUE@@USE_DES_TRUE@am__append_12 = plugins/des/libstrongswan-des.la
+@USE_BLOWFISH_TRUE@am__append_13 = plugins/blowfish
+@MONOLITHIC_TRUE@@USE_BLOWFISH_TRUE@am__append_14 = plugins/blowfish/libstrongswan-blowfish.la
+@USE_MD4_TRUE@am__append_15 = plugins/md4
+@MONOLITHIC_TRUE@@USE_MD4_TRUE@am__append_16 = plugins/md4/libstrongswan-md4.la
+@USE_MD5_TRUE@am__append_17 = plugins/md5
+@MONOLITHIC_TRUE@@USE_MD5_TRUE@am__append_18 = plugins/md5/libstrongswan-md5.la
+@USE_SHA1_TRUE@am__append_19 = plugins/sha1
+@MONOLITHIC_TRUE@@USE_SHA1_TRUE@am__append_20 = plugins/sha1/libstrongswan-sha1.la
+@USE_SHA2_TRUE@am__append_21 = plugins/sha2
+@MONOLITHIC_TRUE@@USE_SHA2_TRUE@am__append_22 = plugins/sha2/libstrongswan-sha2.la
+@USE_GMP_TRUE@am__append_23 = plugins/gmp
+@MONOLITHIC_TRUE@@USE_GMP_TRUE@am__append_24 = plugins/gmp/libstrongswan-gmp.la
+@USE_RANDOM_TRUE@am__append_25 = plugins/random
+@MONOLITHIC_TRUE@@USE_RANDOM_TRUE@am__append_26 = plugins/random/libstrongswan-random.la
+@USE_HMAC_TRUE@am__append_27 = plugins/hmac
+@MONOLITHIC_TRUE@@USE_HMAC_TRUE@am__append_28 = plugins/hmac/libstrongswan-hmac.la
+@USE_XCBC_TRUE@am__append_29 = plugins/xcbc
+@MONOLITHIC_TRUE@@USE_XCBC_TRUE@am__append_30 = plugins/xcbc/libstrongswan-xcbc.la
+@USE_X509_TRUE@am__append_31 = plugins/x509
+@MONOLITHIC_TRUE@@USE_X509_TRUE@am__append_32 = plugins/x509/libstrongswan-x509.la
+@USE_REVOCATION_TRUE@am__append_33 = plugins/revocation
+@MONOLITHIC_TRUE@@USE_REVOCATION_TRUE@am__append_34 = plugins/revocation/libstrongswan-revocation.la
+@USE_CONSTRAINTS_TRUE@am__append_35 = plugins/constraints
+@MONOLITHIC_TRUE@@USE_CONSTRAINTS_TRUE@am__append_36 = plugins/constraints/libstrongswan-constraints.la
+@USE_PUBKEY_TRUE@am__append_37 = plugins/pubkey
+@MONOLITHIC_TRUE@@USE_PUBKEY_TRUE@am__append_38 = plugins/pubkey/libstrongswan-pubkey.la
+@USE_PKCS1_TRUE@am__append_39 = plugins/pkcs1
+@MONOLITHIC_TRUE@@USE_PKCS1_TRUE@am__append_40 = plugins/pkcs1/libstrongswan-pkcs1.la
+@USE_PGP_TRUE@am__append_41 = plugins/pgp
+@MONOLITHIC_TRUE@@USE_PGP_TRUE@am__append_42 = plugins/pgp/libstrongswan-pgp.la
+@USE_DNSKEY_TRUE@am__append_43 = plugins/dnskey
+@MONOLITHIC_TRUE@@USE_DNSKEY_TRUE@am__append_44 = plugins/dnskey/libstrongswan-dnskey.la
+@USE_PEM_TRUE@am__append_45 = plugins/pem
+@MONOLITHIC_TRUE@@USE_PEM_TRUE@am__append_46 = plugins/pem/libstrongswan-pem.la
+@USE_CURL_TRUE@am__append_47 = plugins/curl
+@MONOLITHIC_TRUE@@USE_CURL_TRUE@am__append_48 = plugins/curl/libstrongswan-curl.la
+@USE_SOUP_TRUE@am__append_49 = plugins/soup
+@MONOLITHIC_TRUE@@USE_SOUP_TRUE@am__append_50 = plugins/soup/libstrongswan-soup.la
+@USE_LDAP_TRUE@am__append_51 = plugins/ldap
+@MONOLITHIC_TRUE@@USE_LDAP_TRUE@am__append_52 = plugins/ldap/libstrongswan-ldap.la
+@USE_MYSQL_TRUE@am__append_53 = plugins/mysql
+@MONOLITHIC_TRUE@@USE_MYSQL_TRUE@am__append_54 = plugins/mysql/libstrongswan-mysql.la
+@USE_SQLITE_TRUE@am__append_55 = plugins/sqlite
+@MONOLITHIC_TRUE@@USE_SQLITE_TRUE@am__append_56 = plugins/sqlite/libstrongswan-sqlite.la
+@USE_PADLOCK_TRUE@am__append_57 = plugins/padlock
+@MONOLITHIC_TRUE@@USE_PADLOCK_TRUE@am__append_58 = plugins/padlock/libstrongswan-padlock.la
+@USE_OPENSSL_TRUE@am__append_59 = plugins/openssl
+@MONOLITHIC_TRUE@@USE_OPENSSL_TRUE@am__append_60 = plugins/openssl/libstrongswan-openssl.la
+@USE_GCRYPT_TRUE@am__append_61 = plugins/gcrypt
+@MONOLITHIC_TRUE@@USE_GCRYPT_TRUE@am__append_62 = plugins/gcrypt/libstrongswan-gcrypt.la
+@USE_FIPS_PRF_TRUE@am__append_63 = plugins/fips_prf
+@MONOLITHIC_TRUE@@USE_FIPS_PRF_TRUE@am__append_64 = plugins/fips_prf/libstrongswan-fips-prf.la
+@USE_AGENT_TRUE@am__append_65 = plugins/agent
+@MONOLITHIC_TRUE@@USE_AGENT_TRUE@am__append_66 = plugins/agent/libstrongswan-agent.la
+@USE_PKCS11_TRUE@am__append_67 = plugins/pkcs11
+@MONOLITHIC_TRUE@@USE_PKCS11_TRUE@am__append_68 = plugins/pkcs11/libstrongswan-pkcs11.la
+@USE_CTR_TRUE@am__append_69 = plugins/ctr
+@MONOLITHIC_TRUE@@USE_CTR_TRUE@am__append_70 = plugins/ctr/libstrongswan-ctr.la
+@USE_CCM_TRUE@am__append_71 = plugins/ccm
+@MONOLITHIC_TRUE@@USE_CCM_TRUE@am__append_72 = plugins/ccm/libstrongswan-ccm.la
+@USE_GCM_TRUE@am__append_73 = plugins/gcm
+@MONOLITHIC_TRUE@@USE_GCM_TRUE@am__append_74 = plugins/gcm/libstrongswan-gcm.la
+@USE_TEST_VECTORS_TRUE@am__append_75 = plugins/test_vectors
+@MONOLITHIC_TRUE@@USE_TEST_VECTORS_TRUE@am__append_76 = plugins/test_vectors/libstrongswan-test-vectors.la
+>>>>>>> upstream/4.5.1
 subdir = src/libstrongswan
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -162,7 +235,12 @@ libstrongswan_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__append_48) $(am__append_50) $(am__append_52) \
 	$(am__append_54) $(am__append_56) $(am__append_58) \
 	$(am__append_60) $(am__append_62) $(am__append_64) \
+<<<<<<< HEAD
 	$(am__append_66) $(am__append_68) $(am__append_70)
+=======
+	$(am__append_66) $(am__append_68) $(am__append_70) \
+	$(am__append_72) $(am__append_74) $(am__append_76)
+>>>>>>> upstream/4.5.1
 am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 	chunk.h debug.c debug.h enum.c enum.h settings.h settings.c \
 	printf_hook.c printf_hook.h asn1/asn1.c asn1/asn1.h \
@@ -187,8 +265,12 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 	credentials/keys/shared_key.h \
 	credentials/certificates/certificate.c \
 	credentials/certificates/certificate.h \
+<<<<<<< HEAD
 	credentials/certificates/x509.h \
 	credentials/certificates/x509.c credentials/certificates/ac.h \
+=======
+	credentials/certificates/x509.h credentials/certificates/ac.h \
+>>>>>>> upstream/4.5.1
 	credentials/certificates/crl.h credentials/certificates/crl.c \
 	credentials/certificates/pkcs10.h \
 	credentials/certificates/ocsp_request.h \
@@ -238,7 +320,11 @@ am_libstrongswan_la_OBJECTS = library.lo chunk.lo debug.lo enum.lo \
 	crypto_tester.lo diffie_hellman.lo aead.lo transform.lo \
 	credential_factory.lo builder.lo cred_encoding.lo \
 	private_key.lo public_key.lo shared_key.lo certificate.lo \
+<<<<<<< HEAD
 	x509.lo crl.lo ocsp_response.lo ietf_attributes.lo \
+=======
+	crl.lo ocsp_response.lo ietf_attributes.lo \
+>>>>>>> upstream/4.5.1
 	credential_manager.lo auth_cfg_wrapper.lo \
 	ocsp_response_wrapper.lo cert_cache.lo mem_cred.lo \
 	callback_cred.lo auth_cfg.lo database_factory.lo \
@@ -278,6 +364,7 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir
 ETAGS = etags
 CTAGS = ctags
+<<<<<<< HEAD
 DIST_SUBDIRS = . plugins/aes plugins/des plugins/blowfish plugins/md4 \
 	plugins/md5 plugins/sha1 plugins/sha2 plugins/gmp \
 	plugins/random plugins/hmac plugins/xcbc plugins/x509 \
@@ -286,6 +373,18 @@ DIST_SUBDIRS = . plugins/aes plugins/des plugins/blowfish plugins/md4 \
 	plugins/mysql plugins/sqlite plugins/padlock plugins/openssl \
 	plugins/gcrypt plugins/fips_prf plugins/agent plugins/pkcs11 \
 	plugins/ctr plugins/ccm plugins/gcm plugins/test_vectors
+=======
+DIST_SUBDIRS = . plugins/af_alg plugins/aes plugins/des \
+	plugins/blowfish plugins/md4 plugins/md5 plugins/sha1 \
+	plugins/sha2 plugins/gmp plugins/random plugins/hmac \
+	plugins/xcbc plugins/x509 plugins/revocation \
+	plugins/constraints plugins/pubkey plugins/pkcs1 plugins/pgp \
+	plugins/dnskey plugins/pem plugins/curl plugins/soup \
+	plugins/ldap plugins/mysql plugins/sqlite plugins/padlock \
+	plugins/openssl plugins/gcrypt plugins/fips_prf plugins/agent \
+	plugins/pkcs11 plugins/ctr plugins/ccm plugins/gcm \
+	plugins/test_vectors
+>>>>>>> upstream/4.5.1
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -431,9 +530,13 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+<<<<<<< HEAD
 ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
 ipsecuid = @ipsecuid@
+=======
+ipsecgroup = @ipsecgroup@
+>>>>>>> upstream/4.5.1
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -472,6 +575,11 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+<<<<<<< HEAD
+=======
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
+>>>>>>> upstream/4.5.1
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -507,8 +615,12 @@ libstrongswan_la_SOURCES = library.c library.h chunk.c chunk.h debug.c \
 	credentials/keys/shared_key.h \
 	credentials/certificates/certificate.c \
 	credentials/certificates/certificate.h \
+<<<<<<< HEAD
 	credentials/certificates/x509.h \
 	credentials/certificates/x509.c credentials/certificates/ac.h \
+=======
+	credentials/certificates/x509.h credentials/certificates/ac.h \
+>>>>>>> upstream/4.5.1
 	credentials/certificates/crl.h credentials/certificates/crl.c \
 	credentials/certificates/pkcs10.h \
 	credentials/certificates/ocsp_request.h \
@@ -559,7 +671,12 @@ libstrongswan_la_LIBADD = $(PTHREADLIB) $(DLLIB) $(BTLIB) $(SOCKLIB) \
 	$(am__append_48) $(am__append_50) $(am__append_52) \
 	$(am__append_54) $(am__append_56) $(am__append_58) \
 	$(am__append_60) $(am__append_62) $(am__append_64) \
+<<<<<<< HEAD
 	$(am__append_66) $(am__append_68) $(am__append_70)
+=======
+	$(am__append_66) $(am__append_68) $(am__append_70) \
+	$(am__append_72) $(am__append_74) $(am__append_76)
+>>>>>>> upstream/4.5.1
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DPLUGINDIR=\"${plugindir}\" \
 	-DSTRONGSWAN_CONF=\"${strongswan_conf}\" $(am__append_1) \
@@ -592,7 +709,13 @@ $(srcdir)/crypto/proposal/proposal_keywords.c
 @MONOLITHIC_FALSE@	$(am__append_55) $(am__append_57) \
 @MONOLITHIC_FALSE@	$(am__append_59) $(am__append_61) \
 @MONOLITHIC_FALSE@	$(am__append_63) $(am__append_65) \
+<<<<<<< HEAD
 @MONOLITHIC_FALSE@	$(am__append_67) $(am__append_69)
+=======
+@MONOLITHIC_FALSE@	$(am__append_67) $(am__append_69) \
+@MONOLITHIC_FALSE@	$(am__append_71) $(am__append_73) \
+@MONOLITHIC_FALSE@	$(am__append_75)
+>>>>>>> upstream/4.5.1
 
 # build plugins with their own Makefile
 #######################################
@@ -611,7 +734,13 @@ $(srcdir)/crypto/proposal/proposal_keywords.c
 @MONOLITHIC_TRUE@	$(am__append_55) $(am__append_57) \
 @MONOLITHIC_TRUE@	$(am__append_59) $(am__append_61) \
 @MONOLITHIC_TRUE@	$(am__append_63) $(am__append_65) \
+<<<<<<< HEAD
 @MONOLITHIC_TRUE@	$(am__append_67) $(am__append_69)
+=======
+@MONOLITHIC_TRUE@	$(am__append_67) $(am__append_69) \
+@MONOLITHIC_TRUE@	$(am__append_71) $(am__append_73) \
+@MONOLITHIC_TRUE@	$(am__append_75)
+>>>>>>> upstream/4.5.1
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -749,7 +878,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/traffic_selector.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transform.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/utils.Plo@am__quote@
+<<<<<<< HEAD
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/x509.Plo@am__quote@
+=======
+>>>>>>> upstream/4.5.1
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -933,6 +1065,7 @@ certificate.lo: credentials/certificates/certificate.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o certificate.lo `test -f 'credentials/certificates/certificate.c' || echo '$(srcdir)/'`credentials/certificates/certificate.c
 
+<<<<<<< HEAD
 x509.lo: credentials/certificates/x509.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT x509.lo -MD -MP -MF $(DEPDIR)/x509.Tpo -c -o x509.lo `test -f 'credentials/certificates/x509.c' || echo '$(srcdir)/'`credentials/certificates/x509.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/x509.Tpo $(DEPDIR)/x509.Plo
@@ -940,6 +1073,8 @@ x509.lo: credentials/certificates/x509.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o x509.lo `test -f 'credentials/certificates/x509.c' || echo '$(srcdir)/'`credentials/certificates/x509.c
 
+=======
+>>>>>>> upstream/4.5.1
 crl.lo: credentials/certificates/crl.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crl.lo -MD -MP -MF $(DEPDIR)/crl.Tpo -c -o crl.lo `test -f 'credentials/certificates/crl.c' || echo '$(srcdir)/'`credentials/certificates/crl.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/crl.Tpo $(DEPDIR)/crl.Plo

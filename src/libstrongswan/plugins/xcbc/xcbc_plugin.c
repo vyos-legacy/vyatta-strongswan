@@ -19,6 +19,11 @@
 #include "xcbc_signer.h"
 #include "xcbc_prf.h"
 
+<<<<<<< HEAD
+=======
+static const char *plugin_name = "xcbc";
+
+>>>>>>> upstream/4.5.1
 typedef struct private_xcbc_plugin_t private_xcbc_plugin_t;
 
 /**
@@ -48,6 +53,10 @@ METHOD(plugin_t, destroy, void,
 plugin_t *xcbc_plugin_create()
 {
 	private_xcbc_plugin_t *this;
+<<<<<<< HEAD
+=======
+	crypter_t *crypter;
+>>>>>>> upstream/4.5.1
 
 	INIT(this,
 		.public = {
@@ -57,6 +66,7 @@ plugin_t *xcbc_plugin_create()
 		},
 	);
 
+<<<<<<< HEAD
 	lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC,
 					(prf_constructor_t)xcbc_prf_create);
 	lib->crypto->add_prf(lib->crypto, PRF_CAMELLIA128_XCBC,
@@ -66,6 +76,26 @@ plugin_t *xcbc_plugin_create()
 	lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96,
 					(signer_constructor_t)xcbc_signer_create);
 
+=======
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 16);
+	if (crypter)
+	{
+		crypter->destroy(crypter);
+		lib->crypto->add_prf(lib->crypto, PRF_AES128_XCBC, plugin_name,
+						(prf_constructor_t)xcbc_prf_create);
+		lib->crypto->add_signer(lib->crypto, AUTH_AES_XCBC_96, plugin_name,
+						(signer_constructor_t)xcbc_signer_create);
+	}
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_CAMELLIA_CBC, 16);
+	if (crypter)
+	{
+		crypter->destroy(crypter);
+		lib->crypto->add_prf(lib->crypto, PRF_CAMELLIA128_XCBC, plugin_name,
+						(prf_constructor_t)xcbc_prf_create);
+		lib->crypto->add_signer(lib->crypto, AUTH_CAMELLIA_XCBC_96, plugin_name,
+						(signer_constructor_t)xcbc_signer_create);
+	}
+>>>>>>> upstream/4.5.1
 	return &this->public.plugin;
 }
 

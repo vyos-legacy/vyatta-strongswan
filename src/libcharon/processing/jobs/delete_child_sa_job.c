@@ -46,18 +46,28 @@ struct private_delete_child_sa_job_t {
 	u_int32_t spi;
 };
 
+<<<<<<< HEAD
 /**
  * Implementation of job_t.destroy.
  */
 static void destroy(private_delete_child_sa_job_t *this)
+=======
+METHOD(job_t, destroy, void,
+	private_delete_child_sa_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	free(this);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of job_t.execute.
  */
 static void execute(private_delete_child_sa_job_t *this)
+=======
+METHOD(job_t, execute, void,
+	private_delete_child_sa_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	ike_sa_t *ike_sa;
 
@@ -84,6 +94,7 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
 												  protocol_id_t protocol,
 												  u_int32_t spi)
 {
+<<<<<<< HEAD
 	private_delete_child_sa_job_t *this = malloc_thing(private_delete_child_sa_job_t);
 
 	/* interface functions */
@@ -94,6 +105,21 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
 	this->reqid = reqid;
 	this->protocol = protocol;
 	this->spi = spi;
+=======
+	private_delete_child_sa_job_t *this;
+
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.reqid = reqid,
+		.protocol = protocol,
+		.spi = spi,
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

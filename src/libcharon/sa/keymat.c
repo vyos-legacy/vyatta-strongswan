@@ -214,7 +214,11 @@ static bool derive_ike_traditional(private_keymat_t *this, u_int16_t enc_alg,
 	{
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
 			 transform_type_names, ENCRYPTION_ALGORITHM,
+<<<<<<< HEAD
 			 encryption_algorithm_names, enc_alg, key_size);
+=======
+			 encryption_algorithm_names, enc_alg, enc_size);
+>>>>>>> upstream/4.5.1
 		signer_i->destroy(signer_i);
 		signer_r->destroy(signer_r);
 		return FALSE;
@@ -540,7 +544,11 @@ METHOD(keymat_t, get_aead, aead_t*,
 
 METHOD(keymat_t, get_auth_octets, chunk_t,
 	private_keymat_t *this, bool verify, chunk_t ike_sa_init,
+<<<<<<< HEAD
 	chunk_t nonce, identification_t *id)
+=======
+	chunk_t nonce, identification_t *id, char reserved[3])
+>>>>>>> upstream/4.5.1
 {
 	chunk_t chunk, idx, octets;
 	chunk_t skp;
@@ -548,8 +556,13 @@ METHOD(keymat_t, get_auth_octets, chunk_t,
 	skp = verify ? this->skp_verify : this->skp_build;
 
 	chunk = chunk_alloca(4);
+<<<<<<< HEAD
 	memset(chunk.ptr, 0, chunk.len);
 	chunk.ptr[0] = id->get_type(id);
+=======
+	chunk.ptr[0] = id->get_type(id);
+	memcpy(chunk.ptr + 1, reserved, 3);
+>>>>>>> upstream/4.5.1
 	idx = chunk_cata("cc", chunk, id->get_encoding(id));
 
 	DBG3(DBG_IKE, "IDx' %B", &idx);
@@ -570,7 +583,11 @@ METHOD(keymat_t, get_auth_octets, chunk_t,
 
 METHOD(keymat_t, get_psk_sig, chunk_t,
 	private_keymat_t *this, bool verify, chunk_t ike_sa_init,
+<<<<<<< HEAD
 	chunk_t nonce, chunk_t secret, identification_t *id)
+=======
+	chunk_t nonce, chunk_t secret, identification_t *id, char reserved[3])
+>>>>>>> upstream/4.5.1
 {
 	chunk_t key_pad, key, sig, octets;
 
@@ -578,7 +595,11 @@ METHOD(keymat_t, get_psk_sig, chunk_t,
 	{	/* EAP uses SK_p if no MSK has been established */
 		secret = verify ? this->skp_verify : this->skp_build;
 	}
+<<<<<<< HEAD
 	octets = get_auth_octets(this, verify, ike_sa_init, nonce, id);
+=======
+	octets = get_auth_octets(this, verify, ike_sa_init, nonce, id, reserved);
+>>>>>>> upstream/4.5.1
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
 	key_pad = chunk_create(IKEV2_KEY_PAD, IKEV2_KEY_PAD_LENGTH);
 	this->prf->set_key(this->prf, secret);

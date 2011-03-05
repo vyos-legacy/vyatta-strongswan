@@ -29,7 +29,11 @@
 /**
  * Maximum number of options in a command (+1)
  */
+<<<<<<< HEAD
 #define MAX_OPTIONS 20
+=======
+#define MAX_OPTIONS 32
+>>>>>>> upstream/4.5.1
 
 /**
  * Maximum number of usage summary lines (+1)

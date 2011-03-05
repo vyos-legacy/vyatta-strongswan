@@ -137,7 +137,11 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle IKEv2-Header like a payload.
 	 */
+<<<<<<< HEAD
 	HEADER = 140,
+=======
+	HEADER = 256,
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space.
@@ -145,7 +149,11 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a proposal substructure like a payload.
 	 */
+<<<<<<< HEAD
 	PROPOSAL_SUBSTRUCTURE = 141,
+=======
+	PROPOSAL_SUBSTRUCTURE = 257,
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * TRANSFORM_SUBSTRUCTURE has a value of PRIVATE USE space.
@@ -153,7 +161,11 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform substructure like a payload.
 	 */
+<<<<<<< HEAD
 	TRANSFORM_SUBSTRUCTURE = 142,
+=======
+	TRANSFORM_SUBSTRUCTURE = 258,
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * TRANSFORM_ATTRIBUTE has a value of PRIVATE USE space.
@@ -161,7 +173,11 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform attribute like a payload.
 	 */
+<<<<<<< HEAD
 	TRANSFORM_ATTRIBUTE = 143,
+=======
+	TRANSFORM_ATTRIBUTE = 259,
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * TRAFFIC_SELECTOR_SUBSTRUCTURE has a value of PRIVATE USE space.
@@ -169,7 +185,11 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform selector like a payload.
 	 */
+<<<<<<< HEAD
 	TRAFFIC_SELECTOR_SUBSTRUCTURE = 144,
+=======
+	TRAFFIC_SELECTOR_SUBSTRUCTURE = 260,
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * CONFIGURATION_ATTRIBUTE has a value of PRIVATE USE space.
@@ -177,6 +197,7 @@ enum payload_type_t{
 	 * This payload type is not sent over wire and just
 	 * used internally to handle a transform attribute like a payload.
 	 */
+<<<<<<< HEAD
 	CONFIGURATION_ATTRIBUTE = 145,
 
 	/**
@@ -189,6 +210,11 @@ enum payload_type_t{
 };
 
 
+=======
+	CONFIGURATION_ATTRIBUTE = 261,
+};
+
+>>>>>>> upstream/4.5.1
 /**
  * enum names for payload_type_t.
  */
@@ -269,4 +295,25 @@ struct payload_t {
  */
 payload_t *payload_create(payload_type_t type);
 
+<<<<<<< HEAD
+=======
+/**
+ * Check if a specific payload is implemented, or handled as unknown payload.
+ *
+ * @param type		type of the payload to check
+ * @return			FALSE if payload type handled as unknown payload
+ */
+bool payload_is_known(payload_type_t type);
+
+/**
+ * Get the value field in a payload using encoding rules.
+ *
+ * @param payload	payload to look up a field
+ * @param type		encoding rule type to look up
+ * @param skip		number rules of type to skip, 0 to get first
+ * @return			type specific value pointer, NULL if not found
+ */
+void* payload_get_field(payload_t *payload, encoding_type_t type, u_int skip);
+
+>>>>>>> upstream/4.5.1
 #endif /** PAYLOAD_H_ @}*/

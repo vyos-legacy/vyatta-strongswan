@@ -61,11 +61,16 @@ struct private_options_t {
 	char *buffers[MAX_USES];
 };
 
+<<<<<<< HEAD
 /**
  * Defined in header
  */
 bool from(private_options_t *this, char *filename, int *argcp, char **argvp[],
 		  int optind)
+=======
+METHOD(options_t, from, bool,
+	private_options_t *this, char *filename, int *argcp, char **argvp[], int optind)
+>>>>>>> upstream/4.5.1
 {
 	int newargc;
 	int next;			/* place for next argument */
@@ -182,10 +187,15 @@ bool from(private_options_t *this, char *filename, int *argcp, char **argvp[],
 	return good;
 }
 
+<<<<<<< HEAD
 /**
  * Defined in header
  */
 void destroy(private_options_t *this)
+=======
+METHOD(options_t, destroy, void,
+	private_options_t *this)
+>>>>>>> upstream/4.5.1
 {
 	while (this->nuses >= 0)
 	{
@@ -200,6 +210,7 @@ void destroy(private_options_t *this)
  */
 options_t *options_create(void)
 {
+<<<<<<< HEAD
 	private_options_t *this = malloc_thing(private_options_t);
 
 	/* initialize */
@@ -211,6 +222,18 @@ options_t *options_create(void)
 	/* public functions */
 	this->public.from = (bool (*) (options_t*,char*,int*,char***,int))from;
 	this->public.destroy = (void (*) (options_t*))destroy;
+=======
+	private_options_t *this;
+
+	INIT(this,
+		.public = {
+			.from = _from,
+			.destroy = _destroy,
+
+		},
+		.nuses = -1,
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

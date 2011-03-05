@@ -40,19 +40,29 @@ struct private_retransmit_job_t {
 	ike_sa_id_t *ike_sa_id;
 };
 
+<<<<<<< HEAD
 /**
  * Implements job_t.destroy.
  */
 static void destroy(private_retransmit_job_t *this)
+=======
+METHOD(job_t, destroy, void,
+	private_retransmit_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
 }
 
+<<<<<<< HEAD
 /**
  * Implementation of job_t.execute.
  */
 static void execute(private_retransmit_job_t *this)
+=======
+METHOD(job_t, execute, void,
+	private_retransmit_job_t *this)
+>>>>>>> upstream/4.5.1
 {
 	ike_sa_t *ike_sa;
 
@@ -79,6 +89,7 @@ static void execute(private_retransmit_job_t *this)
  */
 retransmit_job_t *retransmit_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa_id)
 {
+<<<<<<< HEAD
 	private_retransmit_job_t *this = malloc_thing(private_retransmit_job_t);
 
 	/* interface functions */
@@ -88,6 +99,20 @@ retransmit_job_t *retransmit_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa
 	/* private variables */
 	this->message_id = message_id;
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+=======
+	private_retransmit_job_t *this;
+
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.message_id = message_id,
+		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
+	);
+>>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

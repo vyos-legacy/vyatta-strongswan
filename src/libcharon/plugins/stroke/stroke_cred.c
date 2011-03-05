@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (C) 2008 Tobias Brunner
+=======
+ * Copyright (C) 2008-2010 Tobias Brunner
+>>>>>>> upstream/4.5.1
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -25,7 +29,10 @@
 #include <unistd.h>
 
 #include "stroke_cred.h"
+<<<<<<< HEAD
 #include "stroke_shared_key.h"
+=======
+>>>>>>> upstream/4.5.1
 
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/crl.h>
@@ -64,6 +71,7 @@ struct private_stroke_cred_t {
 	stroke_cred_t public;
 
 	/**
+<<<<<<< HEAD
 	 * list of trusted peer/signer/CA certificates (certificate_t)
 	 */
 	linked_list_t *certs;
@@ -82,6 +90,11 @@ struct private_stroke_cred_t {
 	 * read-write lock to lists
 	 */
 	rwlock_t *lock;
+=======
+	 * credentials
+	 */
+	mem_cred_t *creds;
+>>>>>>> upstream/4.5.1
 
 	/**
 	 * cache CRLs to disk?
@@ -90,6 +103,7 @@ struct private_stroke_cred_t {
 };
 
 /**
+<<<<<<< HEAD
  * data to pass to various filters
  */
 typedef struct {
@@ -321,6 +335,8 @@ static certificate_t* add_cert(private_stroke_cred_t *this, certificate_t *cert)
 }
 
 /**
+=======
+>>>>>>> upstream/4.5.1
  * Implementation of stroke_cred_t.load_ca.
  */
 static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
@@ -352,12 +368,17 @@ static certificate_t* load_ca(private_stroke_cred_t *this, char *filename)
 			cert->destroy(cert);
 			return NULL;
 		}
+<<<<<<< HEAD
 		return (certificate_t*)add_cert(this, cert);
+=======
+		return this->creds->add_cert_ref(this->creds, TRUE, cert);
+>>>>>>> upstream/4.5.1
 	}
 	return NULL;
 }
 
 /**
+<<<<<<< HEAD
  * Add X.509 CRL to chain
  */
 static bool add_crl(private_stroke_cred_t *this, crl_t* crl)
@@ -431,6 +452,8 @@ static bool add_ac(private_stroke_cred_t *this, ac_t* ac)
 }
 
 /**
+=======
+>>>>>>> upstream/4.5.1
  * Implementation of stroke_cred_t.load_peer.
  */
 static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
@@ -453,10 +476,17 @@ static certificate_t* load_peer(private_stroke_cred_t *this, char *filename)
 							  BUILD_END);
 	if (cert)
 	{
+<<<<<<< HEAD
 		cert = add_cert(this, cert);
 		DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
 					  cert->get_subject(cert), filename);
 		return cert->get_ref(cert);
+=======
+		cert = this->creds->add_cert_ref(this->creds, TRUE, cert);
+		DBG1(DBG_CFG, "  loaded certificate \"%Y\" from '%s'",
+					  cert->get_subject(cert), filename);
+		return cert;
+>>>>>>> upstream/4.5.1
 	}
 	DBG1(DBG_CFG, "  loading certificate from '%s' failed", filename);
 	return NULL;
@@ -511,8 +541,13 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 						}
 						else
 						{
+<<<<<<< HEAD
 							DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" from '%s'",
 										  cert->get_subject(cert), file);
+=======
+							DBG1(DBG_CFG, "  loaded ca certificate \"%Y\" "
+								 "from '%s'", cert->get_subject(cert), file);
+>>>>>>> upstream/4.5.1
 						}
 					}
 					else
@@ -540,7 +575,11 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 				}
 				if (cert)
 				{
+<<<<<<< HEAD
 					add_cert(this, cert);
+=======
+					this->creds->add_cert(this->creds, TRUE, cert);
+>>>>>>> upstream/4.5.1
 				}
 				break;
 			case CERT_X509_CRL:
@@ -550,7 +589,11 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 										  BUILD_END);
 				if (cert)
 				{
+<<<<<<< HEAD
 					add_crl(this, (crl_t*)cert);
+=======
+					this->creds->add_crl(this->creds, (crl_t*)cert);
+>>>>>>> upstream/4.5.1
 					DBG1(DBG_CFG, "  loaded crl from '%s'",  file);
 				}
 				else
@@ -565,7 +608,11 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 										  BUILD_END);
 				if (cert)
 				{
+<<<<<<< HEAD
 					add_ac(this, (ac_t*)cert);
+=======
+					this->creds->add_cert(this->creds, FALSE, cert);
+>>>>>>> upstream/4.5.1
 					DBG1(DBG_CFG, "  loaded attribute certificate from '%s'",
 								  file);
 				}
@@ -593,7 +640,11 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 		crl_t *crl = (crl_t*)cert;
 
 		cert->get_ref(cert);
+<<<<<<< HEAD
 		if (add_crl(this, crl))
+=======
+		if (this->creds->add_crl(this->creds, crl))
+>>>>>>> upstream/4.5.1
 		{
 			char buf[BUF_LEN];
 			chunk_t chunk, hex;
@@ -914,7 +965,10 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	}
 
 	/* unlock: smartcard needs the pin and potentially calls public set */
+<<<<<<< HEAD
 	this->lock->unlock(this->lock);
+=======
+>>>>>>> upstream/4.5.1
 	switch (format)
 	{
 		case SC_FORMAT_SLOT_MODULE_KEYID:
@@ -936,7 +990,10 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 							BUILD_PKCS11_KEYID, chunk, BUILD_END);
 			break;
 	}
+<<<<<<< HEAD
 	this->lock->write_lock(this->lock);
+=======
+>>>>>>> upstream/4.5.1
 	if (mem)
 	{
 		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
@@ -951,7 +1008,11 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	if (key)
 	{
 		DBG1(DBG_CFG, "  loaded private key from %.*s", sc.len, sc.ptr);
+<<<<<<< HEAD
 		this->private->insert_last(this->private, key);
+=======
+		this->creds->add_key(this->creds, key);
+>>>>>>> upstream/4.5.1
 	}
 	return TRUE;
 }
@@ -1022,11 +1083,16 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		cb = callback_cred_create_shared((void*)passphrase_cb, &pp_data);
 		lib->credmgr->add_local_set(lib->credmgr, &cb->set);
 
+<<<<<<< HEAD
 		/* unlock, as the builder might ask for a secret */
 		this->lock->unlock(this->lock);
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
 								 BUILD_FROM_FILE, path, BUILD_END);
 		this->lock->write_lock(this->lock);
+=======
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+>>>>>>> upstream/4.5.1
 
 		lib->credmgr->remove_local_set(lib->credmgr, &cb->set);
 		cb->destroy(cb);
@@ -1042,11 +1108,16 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		mem->add_shared(mem, shared, NULL);
 		lib->credmgr->add_local_set(lib->credmgr, &mem->set);
 
+<<<<<<< HEAD
 		/* unlock, as the builder might ask for a secret */
 		this->lock->unlock(this->lock);
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
 								 BUILD_FROM_FILE, path, BUILD_END);
 		this->lock->write_lock(this->lock);
+=======
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, key_type,
+								 BUILD_FROM_FILE, path, BUILD_END);
+>>>>>>> upstream/4.5.1
 
 		lib->credmgr->remove_local_set(lib->credmgr, &mem->set);
 		mem->destroy(mem);
@@ -1055,7 +1126,11 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	{
 		DBG1(DBG_CFG, "  loaded %N private key from '%s'",
 			 key_type_names, key->get_type(key), path);
+<<<<<<< HEAD
 		this->private->insert_last(this->private, key);
+=======
+		this->creds->add_key(this->creds, key);
+>>>>>>> upstream/4.5.1
 	}
 	else
 	{
@@ -1070,7 +1145,12 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
 						shared_key_type_t type, chunk_t ids)
 {
+<<<<<<< HEAD
 	stroke_shared_key_t *shared_key;
+=======
+	shared_key_t *shared_key;
+	linked_list_t *owners;
+>>>>>>> upstream/4.5.1
 	chunk_t secret = chunk_empty;
 	bool any = TRUE;
 
@@ -1080,12 +1160,20 @@ static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		DBG1(DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
 		return FALSE;
 	}
+<<<<<<< HEAD
 	shared_key = stroke_shared_key_create(type, secret);
+=======
+	shared_key = shared_key_create(type, secret);
+>>>>>>> upstream/4.5.1
 	DBG1(DBG_CFG, "  loaded %N secret for %s", shared_key_type_names, type,
 		 ids.len > 0 ? (char*)ids.ptr : "%any");
 	DBG4(DBG_CFG, "  secret: %#B", &secret);
 
+<<<<<<< HEAD
 	this->shared->insert_last(this->shared, shared_key);
+=======
+	owners = linked_list_create();
+>>>>>>> upstream/4.5.1
 	while (ids.len > 0)
 	{
 		chunk_t id;
@@ -1111,14 +1199,25 @@ static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
 			continue;
 		}
 
+<<<<<<< HEAD
 		shared_key->add_owner(shared_key, peer_id);
+=======
+		owners->insert_last(owners, peer_id);
+>>>>>>> upstream/4.5.1
 		any = FALSE;
 	}
 	if (any)
 	{
+<<<<<<< HEAD
 		shared_key->add_owner(shared_key,
 					identification_create_from_encoding(ID_ANY, chunk_empty));
 	}
+=======
+		owners->insert_last(owners,
+					identification_create_from_encoding(ID_ANY, chunk_empty));
+	}
+	this->creds->add_shared_list(this->creds, shared_key, owners);
+>>>>>>> upstream/4.5.1
 	return TRUE;
 }
 
@@ -1130,8 +1229,11 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 {
 	int line_nr = 0, fd;
 	chunk_t src, line;
+<<<<<<< HEAD
 	private_key_t *private;
 	shared_key_t *shared;
+=======
+>>>>>>> upstream/4.5.1
 	struct stat sb;
 	void *addr;
 
@@ -1160,6 +1262,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 	src = chunk_create(addr, sb.st_size);
 
 	if (level == 0)
+<<<<<<< HEAD
 	{
 		this->lock->write_lock(this->lock);
 
@@ -1174,6 +1277,10 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 		{
 			private->destroy(private);
 		}
+=======
+	{	/* flush secrets on non-recursive invocation */
+		this->creds->clear_secrets(this->creds);
+>>>>>>> upstream/4.5.1
 	}
 
 	while (fetchline(&src, &line))
@@ -1234,7 +1341,10 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			if (glob(pattern, GLOB_ERR, NULL, &buf) != 0)
 			{
 				DBG1(DBG_CFG, "expanding file expression '%s' failed", pattern);
+<<<<<<< HEAD
 				globfree(&buf);
+=======
+>>>>>>> upstream/4.5.1
 			}
 			else
 			{
@@ -1302,10 +1412,13 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 			break;
 		}
 	}
+<<<<<<< HEAD
 	if (level == 0)
 	{
 		this->lock->unlock(this->lock);
 	}
+=======
+>>>>>>> upstream/4.5.1
 	munmap(addr, sb.st_size);
 	close(fd);
 }
@@ -1384,10 +1497,15 @@ static void reread(private_stroke_cred_t *this, stroke_msg_t *msg, FILE *prompt)
  */
 static void destroy(private_stroke_cred_t *this)
 {
+<<<<<<< HEAD
 	this->certs->destroy_offset(this->certs, offsetof(certificate_t, destroy));
 	this->shared->destroy_offset(this->shared, offsetof(shared_key_t, destroy));
 	this->private->destroy_offset(this->private, offsetof(private_key_t, destroy));
 	this->lock->destroy(this->lock);
+=======
+	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
+	this->creds->destroy(this->creds);
+>>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -1398,9 +1516,15 @@ stroke_cred_t *stroke_cred_create()
 {
 	private_stroke_cred_t *this = malloc_thing(private_stroke_cred_t);
 
+<<<<<<< HEAD
 	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
 	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
 	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
+=======
+	this->public.set.create_private_enumerator = (void*)return_null;
+	this->public.set.create_cert_enumerator = (void*)return_null;
+	this->public.set.create_shared_enumerator = (void*)return_null;
+>>>>>>> upstream/4.5.1
 	this->public.set.create_cdp_enumerator = (void*)return_null;
 	this->public.set.cache_cert = (void*)cache_cert;
 	this->public.reread = (void(*)(stroke_cred_t*, stroke_msg_t *msg, FILE*))reread;
@@ -1409,10 +1533,15 @@ stroke_cred_t *stroke_cred_create()
 	this->public.cachecrl = (void(*)(stroke_cred_t*, bool enabled))cachecrl;
 	this->public.destroy = (void(*)(stroke_cred_t*))destroy;
 
+<<<<<<< HEAD
 	this->certs = linked_list_create();
 	this->shared = linked_list_create();
 	this->private = linked_list_create();
 	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+=======
+	this->creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
+>>>>>>> upstream/4.5.1
 
 	load_certs(this);
 	load_secrets(this, SECRETS_FILE, 0, NULL);

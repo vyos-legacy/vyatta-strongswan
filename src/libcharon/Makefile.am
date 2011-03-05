@@ -53,6 +53,10 @@ processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
 processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
+<<<<<<< HEAD
+=======
+processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
+>>>>>>> upstream/4.5.1
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
@@ -87,8 +91,17 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
+<<<<<<< HEAD
 tnccs/tnccs.c tnccs/tnccs.h \
 tnccs/tnccs_manager.h tnccs/tnccs_manager.c
+=======
+tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+tnc/imc/imc.h tnc/imc/imc_manager.h \
+tnc/imv/imv.h tnc/imv/imv_manager.h \
+tnc/imv/imv_recommendations.c tnc/imv/imv_recommendations.h \
+tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
+tnc/tnccs/tnccs_manager.c tnc/tnccs/tnccs_manager.h
+>>>>>>> upstream/4.5.1
 
 daemon.lo :		$(top_builddir)/config.status
 
@@ -317,14 +330,22 @@ endif
 if USE_TNC_IMC
   SUBDIRS += plugins/tnc_imc
 if MONOLITHIC
+<<<<<<< HEAD
   libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc_imc.la
+=======
+  libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc-imc.la
+>>>>>>> upstream/4.5.1
 endif
 endif
 
 if USE_TNC_IMV
   SUBDIRS += plugins/tnc_imv
 if MONOLITHIC
+<<<<<<< HEAD
   libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc_imv.la
+=======
+  libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc-imv.la
+>>>>>>> upstream/4.5.1
 endif
 endif
 
@@ -342,6 +363,16 @@ if MONOLITHIC
 endif
 endif
 
+<<<<<<< HEAD
+=======
+if USE_TNCCS_DYNAMIC
+  SUBDIRS += plugins/tnccs_dynamic
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
+endif
+endif
+
+>>>>>>> upstream/4.5.1
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
 if MONOLITHIC

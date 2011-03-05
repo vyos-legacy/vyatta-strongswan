@@ -60,6 +60,64 @@ An example file in this format might look like this:
 .PP
 Indentation is optional, you may use tabs or spaces.
 
+<<<<<<< HEAD
+=======
+.SH INCLUDING FILES
+Using the
+.B include
+statement it is possible to include other files into strongswan.conf, e.g.
+.PP
+.EX
+	include /some/path/*.conf
+.EE
+.PP
+If the file name is not an absolute path, it is considered to be relative
+to the directory of the file containing the include statement. The file name
+may include shell wildcards (see
+.IR sh (1)).
+Also, such inclusions can be nested.
+.PP
+Sections loaded from included files
+.I extend
+previously loaded sections; already existing values are
+.IR replaced .
+It is important to note that settings are added relative to the section the
+include statement is in.
+.PP
+As an example, the following three files result in the same final
+config as the one given above:
+.PP
+.EX
+	a = b
+	section-one {
+		somevalue = before include
+		include include.conf
+	}
+	include other.conf
+
+include.conf:
+	# settings loaded from this file are added to section-one
+	# the following replaces the previous value
+	somevalue = asdf
+	subsection {
+		othervalue = yyy
+	}
+	yetanother = zz
+
+other.conf:
+	# this extends section-one and subsection
+	section-one {
+		subsection {
+			# this replaces the previous value
+			othervalue = xxx
+		}
+	}
+	section-two {
+		x = 12
+	}
+.EE
+
+>>>>>>> upstream/4.5.1
 .SH READING VALUES
 Values are accessed using a dot-separated section list and a key.
 With reference to the example above, accessing
@@ -405,6 +463,12 @@ Check daemon, libstrongswan and plugin integrity at startup
 .TP
 .BR libstrongswan.leak_detective.detailed " [yes]"
 Includes source file names and line numbers in leak detective output
+<<<<<<< HEAD
+=======
+.TP
+.BR libstrongswan.x509.enforce_critical " [yes]"
+Discard certificates with unsupported or unknown critical extensions
+>>>>>>> upstream/4.5.1
 .SS libstrongswan.plugins subsection
 .TP
 .BR libstrongswan.plugins.attr-sql.database
@@ -420,6 +484,7 @@ Use faster random numbers in gcrypt; for testing only, produces weak keys!
 ENGINE ID to use in the OpenSSL plugin
 .TP
 .BR libstrongswan.plugins.pkcs11.modules
+<<<<<<< HEAD
 
 .TP
 .BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
@@ -427,6 +492,10 @@ ENGINE ID to use in the OpenSSL plugin
 .TP
 .BR libstrongswan.plugins.x509.enforce_critical " [no]"
 Discard certificates with unsupported or unknown critical extensions
+=======
+.TP
+.BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
+>>>>>>> upstream/4.5.1
 .SS libtls section
 .TP
 .BR libtls.cipher

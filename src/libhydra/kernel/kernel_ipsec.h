@@ -204,6 +204,10 @@ struct kernel_ipsec_t {
 	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @param reqid			unique ID for this SA
 	 * @param mark			mark for this SA
+<<<<<<< HEAD
+=======
+	 * @param tfc			Traffic Flow Confidentiality padding for this SA
+>>>>>>> upstream/4.5.1
 	 * @param lifetime		lifetime_cfg_t for this SA
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
 	 * @param enc_key		key to use for encryption
@@ -221,7 +225,11 @@ struct kernel_ipsec_t {
 	status_t (*add_sa) (kernel_ipsec_t *this,
 						host_t *src, host_t *dst, u_int32_t spi,
 						u_int8_t protocol, u_int32_t reqid,
+<<<<<<< HEAD
 						mark_t mark, lifetime_cfg_t *lifetime,
+=======
+						mark_t mark, u_int32_t tfc, lifetime_cfg_t *lifetime,
+>>>>>>> upstream/4.5.1
 						u_int16_t enc_alg, chunk_t enc_key,
 						u_int16_t int_alg, chunk_t int_key,
 						ipsec_mode_t mode, u_int16_t ipcomp, u_int16_t cpi,

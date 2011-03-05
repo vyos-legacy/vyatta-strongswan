@@ -39,8 +39,12 @@ ipsec_PROGRAMS = starter$(EXEEXT)
 @USE_CHARON_TRUE@am__append_2 = -DSTART_CHARON
 @USE_LOAD_WARNING_TRUE@am__append_3 = -DLOAD_WARNING
 subdir = src/starter
+<<<<<<< HEAD
 DIST_COMMON = README $(dist_man_MANS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
+=======
+DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
+>>>>>>> upstream/4.5.1
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
 	$(top_srcdir)/m4/config/ltoptions.m4 \
@@ -56,7 +60,11 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+<<<<<<< HEAD
 am__installdirs = "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(man8dir)"
+=======
+am__installdirs = "$(DESTDIR)$(ipsecdir)"
+>>>>>>> upstream/4.5.1
 PROGRAMS = $(ipsec_PROGRAMS)
 am_starter_OBJECTS = y.tab.$(OBJEXT) netkey.$(OBJEXT) \
 	starterwhack.$(OBJEXT) starterstroke.$(OBJEXT) \
@@ -85,6 +93,7 @@ LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(starter_SOURCES)
 DIST_SOURCES = $(starter_SOURCES)
+<<<<<<< HEAD
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -109,6 +118,8 @@ am__base_list = \
 man8dir = $(mandir)/man8
 NROFF = nroff
 MANS = $(dist_man_MANS)
+=======
+>>>>>>> upstream/4.5.1
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -231,9 +242,13 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
+<<<<<<< HEAD
 ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
 ipsecuid = @ipsecuid@
+=======
+ipsecgroup = @ipsecgroup@
+>>>>>>> upstream/4.5.1
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -272,6 +287,11 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+<<<<<<< HEAD
+=======
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
+>>>>>>> upstream/4.5.1
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -304,7 +324,10 @@ AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" \
 	$(am__append_2) $(am__append_3)
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
+<<<<<<< HEAD
 dist_man_MANS = starter.8
+=======
+>>>>>>> upstream/4.5.1
 MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 PLUTODIR = $(top_srcdir)/src/pluto
 SCEPCLIENTDIR = $(top_srcdir)/src/scepclient
@@ -438,6 +461,7 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
+<<<<<<< HEAD
 install-man8: $(dist_man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man8dir)" || $(MKDIR_P) "$(DESTDIR)$(man8dir)"
@@ -476,6 +500,8 @@ uninstall-man8:
 	test -z "$$files" || { \
 	  echo " ( cd '$(DESTDIR)$(man8dir)' && rm -f" $$files ")"; \
 	  cd "$(DESTDIR)$(man8dir)" && rm -f $$files; }
+=======
+>>>>>>> upstream/4.5.1
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -530,6 +556,7 @@ distclean-tags:
 	-rm -f TAGS ID GTAGS GRTAGS GSYMS GPATH tags
 
 distdir: $(DISTFILES)
+<<<<<<< HEAD
 	@list='$(MANS)'; if test -n "$$list"; then \
 	  list=`for p in $$list; do \
 	    if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
@@ -543,6 +570,8 @@ distdir: $(DISTFILES)
 	    exit 1; \
 	  else :; fi; \
 	else :; fi
+=======
+>>>>>>> upstream/4.5.1
 	@srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
 	list='$(DISTFILES)'; \
@@ -574,9 +603,15 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
+<<<<<<< HEAD
 all-am: Makefile $(PROGRAMS) $(MANS)
 installdirs:
 	for dir in "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(man8dir)"; do \
+=======
+all-am: Makefile $(PROGRAMS)
+installdirs:
+	for dir in "$(DESTDIR)$(ipsecdir)"; do \
+>>>>>>> upstream/4.5.1
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -628,7 +663,11 @@ info: info-am
 
 info-am:
 
+<<<<<<< HEAD
 install-data-am: install-ipsecPROGRAMS install-man
+=======
+install-data-am: install-ipsecPROGRAMS
+>>>>>>> upstream/4.5.1
 
 install-dvi: install-dvi-am
 
@@ -644,7 +683,11 @@ install-info: install-info-am
 
 install-info-am:
 
+<<<<<<< HEAD
 install-man: install-man8
+=======
+install-man:
+>>>>>>> upstream/4.5.1
 
 install-pdf: install-pdf-am
 
@@ -674,9 +717,13 @@ ps: ps-am
 
 ps-am:
 
+<<<<<<< HEAD
 uninstall-am: uninstall-ipsecPROGRAMS uninstall-man
 
 uninstall-man: uninstall-man8
+=======
+uninstall-am: uninstall-ipsecPROGRAMS
+>>>>>>> upstream/4.5.1
 
 .MAKE: install-am install-strip
 
@@ -687,6 +734,7 @@ uninstall-man: uninstall-man8
 	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-exec-local \
 	install-html install-html-am install-info install-info-am \
+<<<<<<< HEAD
 	install-ipsecPROGRAMS install-man install-man8 install-pdf \
 	install-pdf-am install-ps install-ps-am install-strip \
 	installcheck installcheck-am installdirs maintainer-clean \
@@ -694,6 +742,14 @@ uninstall-man: uninstall-man8
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-ipsecPROGRAMS \
 	uninstall-man uninstall-man8
+=======
+	install-ipsecPROGRAMS install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags uninstall uninstall-am uninstall-ipsecPROGRAMS
+>>>>>>> upstream/4.5.1
 
 
 lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h y.tab.h
@@ -712,6 +768,7 @@ defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $(PLUTODIR)/defs.c
 
 install-exec-local :
+<<<<<<< HEAD
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts" || true
@@ -722,6 +779,18 @@ install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
 		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
+=======
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/certs" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/certs" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/acerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/acerts" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/aacerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/aacerts" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/crls" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/crls" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
+		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
+>>>>>>> upstream/4.5.1
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

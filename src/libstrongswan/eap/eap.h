@@ -82,7 +82,11 @@ extern enum_name_t *eap_type_short_names;
  * Lookup the EAP method type from a string.
  *
  * @param name		EAP method name (such as "md5", "aka")
+<<<<<<< HEAD
  * @return			method type, 0 if unkown
+=======
+ * @return			method type, 0 if unknown
+>>>>>>> upstream/4.5.1
  */
 eap_type_t eap_type_from_string(char *name);
 
