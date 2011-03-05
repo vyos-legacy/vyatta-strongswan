@@ -57,7 +57,7 @@
 #define streq(x,y) (strcmp(x, y) == 0)
 
 /**
- * Macro compares two strings for equality
+ * Macro compares two strings for equality, length limited
  */
 #define strneq(x,y,len) (strncmp(x, y, len) == 0)
 
@@ -65,6 +65,16 @@
  * Macro compares two strings for equality ignoring case
  */
 #define strcaseeq(x,y) (strcasecmp(x, y) == 0)
+
+/**
+ * Macro compares two strings for equality ignoring case, length limited
+ */
+#define strncaseeq(x,y,len) (strncasecmp(x, y, len) == 0)
+
+/**
+ * NULL-safe strdup variant
+ */
+#define strdupnull(x) ({ char *_x = x; _x ? strdup(_x) : NULL; })
 
 /**
  * Macro compares two binary blobs for equality
@@ -380,6 +390,11 @@ bool return_true();
  * returns FALSE
  */
 bool return_false();
+
+/**
+ * returns FAILED
+ */
+status_t return_failed();
 
 /**
  * Write a 16-bit host order value in network order to an unaligned address.

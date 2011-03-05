@@ -72,7 +72,7 @@ static struct ike_alg *ike_alg_find(u_int algo_type, u_int algo_id,
 /**
  * "raw" ike_alg list adding function
  */
-int ike_alg_add(struct ike_alg* a)
+int ike_alg_add(struct ike_alg* a, const char *plugin_name)
 {
 	if (a->algo_type > IKE_ALG_MAX)
 	{
@@ -96,6 +96,7 @@ int ike_alg_add(struct ike_alg* a)
 			e = *ep;
 		}
 		*ep = a;
+		a->plugin_name = plugin_name;
 		a->algo_next = e;
 		return 0;
 	}
@@ -304,63 +305,71 @@ fail:
 }
 
 /**
+ * Print the name of an algorithm plus the name of the plugin that registered it
+ */
+static void print_alg(char *buf, int *len, enum_names *alg_names, int alg_type,
+					  const char *plugin_name)
+{
+	char alg_name[BUF_LEN];
+	int alg_name_len;
+	
+	alg_name_len = sprintf(alg_name, " %s[%s]", enum_name(alg_names, alg_type),
+						   plugin_name);
+	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
+	{
+		whack_log(RC_COMMENT, "%s", buf);
+		*len = sprintf(buf, "             ");
+	}
+	sprintf(buf + *len, "%s", alg_name);
+	*len += alg_name_len;
+}
+
+/**
  * Show registered IKE algorithms
  */
 void ike_alg_list(void)
 {
+	rng_quality_t quality;
+	enumerator_t *enumerator;
+	const char *plugin_name;
 	char buf[BUF_LEN];
-	char *pos;
-	int n, len;
+	int len;
 	struct ike_alg *a;
 
 	whack_log(RC_COMMENT, " ");
 	whack_log(RC_COMMENT, "List of registered IKEv1 Algorithms:");
 	whack_log(RC_COMMENT, " ");
 
-	pos = buf;
-	*pos = '\0';
-	len = BUF_LEN;
+	len = sprintf(buf, "  encryption:");
 	for (a = ike_alg_base[IKE_ALG_ENCRYPT]; a != NULL; a = a->algo_next)
 	{
-	    n = snprintf(pos, len, " %s", enum_name(&oakley_enc_names, a->algo_id));
-		pos += n;
-		len -= n;
-		if (len <= 0)
-		{
-			break;
-		}
+	    print_alg(buf, &len, &oakley_enc_names, a->algo_id, a->plugin_name);
 	}
-	whack_log(RC_COMMENT, "  encryption:%s", buf);
+	whack_log(RC_COMMENT, "%s", buf);
 
-	pos = buf;
-	*pos = '\0';
-	len = BUF_LEN;
+	len = sprintf(buf, "  integrity: ");
 	for (a = ike_alg_base[IKE_ALG_HASH]; a != NULL; a = a->algo_next)
 	{
-	    n = snprintf(pos, len, " %s", enum_name(&oakley_hash_names, a->algo_id));
-		pos += n;
-		len -= n;
-		if (len <= 0)
-		{
-			break;
-		}
+	    print_alg(buf, &len, &oakley_hash_names, a->algo_id, a->plugin_name);
 	}
-	whack_log(RC_COMMENT, "  integrity: %s", buf);
+	whack_log(RC_COMMENT, "%s", buf);
 
-	pos = buf;
-	*pos = '\0';
-	len = BUF_LEN;
+	len = sprintf(buf, "  dh-group:  ");
 	for (a = ike_alg_base[IKE_ALG_DH_GROUP]; a != NULL; a = a->algo_next)
 	{
-	    n = snprintf(pos, len, " %s", enum_name(&oakley_group_names, a->algo_id));
-		pos += n;
-		len -= n;
-		if (len <= 0)
-		{
-			break;
-		}
+	    print_alg(buf, &len, &oakley_group_names, a->algo_id, a->plugin_name);
 	}
-	whack_log(RC_COMMENT, "  dh-group:  %s", buf);
+	whack_log(RC_COMMENT, "%s", buf);
+
+	len = sprintf(buf, "  random-gen:");
+	enumerator = lib->crypto->create_rng_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &quality, &plugin_name))
+	{
+	    len += sprintf(buf + len, " %N[%s]", rng_quality_names, quality,
+											 plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	whack_log(RC_COMMENT, "%s", buf);
 }
 
 /**

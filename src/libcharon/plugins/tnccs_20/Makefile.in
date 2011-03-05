@@ -34,7 +34,6 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@MONOLITHIC_FALSE@am__append_1 = $(top_builddir)/src/libtls/libtls.la
 subdir = src/libcharon/plugins/tnccs_20
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -75,8 +74,14 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 am__installdirs = "$(DESTDIR)$(plugindir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
-libstrongswan_tnccs_20_la_DEPENDENCIES = $(am__append_1)
-am_libstrongswan_tnccs_20_la_OBJECTS = tnccs_20_plugin.lo tnccs_20.lo
+@MONOLITHIC_FALSE@libstrongswan_tnccs_20_la_DEPENDENCIES =  \
+@MONOLITHIC_FALSE@	$(top_builddir)/src/libtls/libtls.la
+am_libstrongswan_tnccs_20_la_OBJECTS = tnccs_20_plugin.lo tnccs_20.lo \
+	pb_tnc_batch.lo pb_tnc_msg.lo pb_experimental_msg.lo \
+	pb_pa_msg.lo pb_assessment_result_msg.lo \
+	pb_access_recommendation_msg.lo pb_error_msg.lo \
+	pb_language_preference_msg.lo pb_reason_string_msg.lo \
+	pb_remediation_parameters_msg.lo pb_tnc_state_machine.lo
 libstrongswan_tnccs_20_la_OBJECTS =  \
 	$(am_libstrongswan_tnccs_20_la_OBJECTS)
 libstrongswan_tnccs_20_la_LINK = $(LIBTOOL) --tag=CC \
@@ -223,9 +228,7 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -264,6 +267,8 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -275,15 +280,25 @@ urandom_device = @urandom_device@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls \
-	`xml2-config --cflags`
+	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls
 
 AM_CFLAGS = -rdynamic
-libstrongswan_tnccs_20_la_LIBADD = -ltnc $(am__append_1)
 @MONOLITHIC_TRUE@noinst_LTLIBRARIES = libstrongswan-tnccs-20.la
 @MONOLITHIC_FALSE@plugin_LTLIBRARIES = libstrongswan-tnccs-20.la
+@MONOLITHIC_FALSE@libstrongswan_tnccs_20_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
 libstrongswan_tnccs_20_la_SOURCES = \
-	tnccs_20_plugin.h tnccs_20_plugin.c tnccs_20.h tnccs_20.c
+	tnccs_20_plugin.h tnccs_20_plugin.c tnccs_20.h tnccs_20.c \
+	batch/pb_tnc_batch.h batch/pb_tnc_batch.c \
+	messages/pb_tnc_msg.h messages/pb_tnc_msg.c \
+	messages/pb_experimental_msg.h messages/pb_experimental_msg.c \
+	messages/pb_pa_msg.h messages/pb_pa_msg.c \
+	messages/pb_assessment_result_msg.h messages/pb_assessment_result_msg.c \
+	messages/pb_access_recommendation_msg.h messages/pb_access_recommendation_msg.c \
+	messages/pb_error_msg.h messages/pb_error_msg.c \
+	messages/pb_language_preference_msg.h messages/pb_language_preference_msg.c \
+	messages/pb_reason_string_msg.h messages/pb_reason_string_msg.c \
+	messages/pb_remediation_parameters_msg.h messages/pb_remediation_parameters_msg.c \
+	state_machine/pb_tnc_state_machine.h state_machine/pb_tnc_state_machine.c
 
 libstrongswan_tnccs_20_la_LDFLAGS = -module -avoid-version
 all: all-am
@@ -369,6 +384,17 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_access_recommendation_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_assessment_result_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_error_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_experimental_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_language_preference_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_pa_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_reason_string_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_remediation_parameters_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_tnc_batch.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_tnc_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pb_tnc_state_machine.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_20.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_20_plugin.Plo@am__quote@
 
@@ -392,6 +418,83 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+pb_tnc_batch.lo: batch/pb_tnc_batch.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_tnc_batch.lo -MD -MP -MF $(DEPDIR)/pb_tnc_batch.Tpo -c -o pb_tnc_batch.lo `test -f 'batch/pb_tnc_batch.c' || echo '$(srcdir)/'`batch/pb_tnc_batch.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_tnc_batch.Tpo $(DEPDIR)/pb_tnc_batch.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='batch/pb_tnc_batch.c' object='pb_tnc_batch.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_tnc_batch.lo `test -f 'batch/pb_tnc_batch.c' || echo '$(srcdir)/'`batch/pb_tnc_batch.c
+
+pb_tnc_msg.lo: messages/pb_tnc_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_tnc_msg.lo -MD -MP -MF $(DEPDIR)/pb_tnc_msg.Tpo -c -o pb_tnc_msg.lo `test -f 'messages/pb_tnc_msg.c' || echo '$(srcdir)/'`messages/pb_tnc_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_tnc_msg.Tpo $(DEPDIR)/pb_tnc_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_tnc_msg.c' object='pb_tnc_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_tnc_msg.lo `test -f 'messages/pb_tnc_msg.c' || echo '$(srcdir)/'`messages/pb_tnc_msg.c
+
+pb_experimental_msg.lo: messages/pb_experimental_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_experimental_msg.lo -MD -MP -MF $(DEPDIR)/pb_experimental_msg.Tpo -c -o pb_experimental_msg.lo `test -f 'messages/pb_experimental_msg.c' || echo '$(srcdir)/'`messages/pb_experimental_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_experimental_msg.Tpo $(DEPDIR)/pb_experimental_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_experimental_msg.c' object='pb_experimental_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_experimental_msg.lo `test -f 'messages/pb_experimental_msg.c' || echo '$(srcdir)/'`messages/pb_experimental_msg.c
+
+pb_pa_msg.lo: messages/pb_pa_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_pa_msg.lo -MD -MP -MF $(DEPDIR)/pb_pa_msg.Tpo -c -o pb_pa_msg.lo `test -f 'messages/pb_pa_msg.c' || echo '$(srcdir)/'`messages/pb_pa_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_pa_msg.Tpo $(DEPDIR)/pb_pa_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_pa_msg.c' object='pb_pa_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_pa_msg.lo `test -f 'messages/pb_pa_msg.c' || echo '$(srcdir)/'`messages/pb_pa_msg.c
+
+pb_assessment_result_msg.lo: messages/pb_assessment_result_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_assessment_result_msg.lo -MD -MP -MF $(DEPDIR)/pb_assessment_result_msg.Tpo -c -o pb_assessment_result_msg.lo `test -f 'messages/pb_assessment_result_msg.c' || echo '$(srcdir)/'`messages/pb_assessment_result_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_assessment_result_msg.Tpo $(DEPDIR)/pb_assessment_result_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_assessment_result_msg.c' object='pb_assessment_result_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_assessment_result_msg.lo `test -f 'messages/pb_assessment_result_msg.c' || echo '$(srcdir)/'`messages/pb_assessment_result_msg.c
+
+pb_access_recommendation_msg.lo: messages/pb_access_recommendation_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_access_recommendation_msg.lo -MD -MP -MF $(DEPDIR)/pb_access_recommendation_msg.Tpo -c -o pb_access_recommendation_msg.lo `test -f 'messages/pb_access_recommendation_msg.c' || echo '$(srcdir)/'`messages/pb_access_recommendation_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_access_recommendation_msg.Tpo $(DEPDIR)/pb_access_recommendation_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_access_recommendation_msg.c' object='pb_access_recommendation_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_access_recommendation_msg.lo `test -f 'messages/pb_access_recommendation_msg.c' || echo '$(srcdir)/'`messages/pb_access_recommendation_msg.c
+
+pb_error_msg.lo: messages/pb_error_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_error_msg.lo -MD -MP -MF $(DEPDIR)/pb_error_msg.Tpo -c -o pb_error_msg.lo `test -f 'messages/pb_error_msg.c' || echo '$(srcdir)/'`messages/pb_error_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_error_msg.Tpo $(DEPDIR)/pb_error_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_error_msg.c' object='pb_error_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_error_msg.lo `test -f 'messages/pb_error_msg.c' || echo '$(srcdir)/'`messages/pb_error_msg.c
+
+pb_language_preference_msg.lo: messages/pb_language_preference_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_language_preference_msg.lo -MD -MP -MF $(DEPDIR)/pb_language_preference_msg.Tpo -c -o pb_language_preference_msg.lo `test -f 'messages/pb_language_preference_msg.c' || echo '$(srcdir)/'`messages/pb_language_preference_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_language_preference_msg.Tpo $(DEPDIR)/pb_language_preference_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_language_preference_msg.c' object='pb_language_preference_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_language_preference_msg.lo `test -f 'messages/pb_language_preference_msg.c' || echo '$(srcdir)/'`messages/pb_language_preference_msg.c
+
+pb_reason_string_msg.lo: messages/pb_reason_string_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_reason_string_msg.lo -MD -MP -MF $(DEPDIR)/pb_reason_string_msg.Tpo -c -o pb_reason_string_msg.lo `test -f 'messages/pb_reason_string_msg.c' || echo '$(srcdir)/'`messages/pb_reason_string_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_reason_string_msg.Tpo $(DEPDIR)/pb_reason_string_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_reason_string_msg.c' object='pb_reason_string_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_reason_string_msg.lo `test -f 'messages/pb_reason_string_msg.c' || echo '$(srcdir)/'`messages/pb_reason_string_msg.c
+
+pb_remediation_parameters_msg.lo: messages/pb_remediation_parameters_msg.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_remediation_parameters_msg.lo -MD -MP -MF $(DEPDIR)/pb_remediation_parameters_msg.Tpo -c -o pb_remediation_parameters_msg.lo `test -f 'messages/pb_remediation_parameters_msg.c' || echo '$(srcdir)/'`messages/pb_remediation_parameters_msg.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_remediation_parameters_msg.Tpo $(DEPDIR)/pb_remediation_parameters_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='messages/pb_remediation_parameters_msg.c' object='pb_remediation_parameters_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_remediation_parameters_msg.lo `test -f 'messages/pb_remediation_parameters_msg.c' || echo '$(srcdir)/'`messages/pb_remediation_parameters_msg.c
+
+pb_tnc_state_machine.lo: state_machine/pb_tnc_state_machine.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT pb_tnc_state_machine.lo -MD -MP -MF $(DEPDIR)/pb_tnc_state_machine.Tpo -c -o pb_tnc_state_machine.lo `test -f 'state_machine/pb_tnc_state_machine.c' || echo '$(srcdir)/'`state_machine/pb_tnc_state_machine.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/pb_tnc_state_machine.Tpo $(DEPDIR)/pb_tnc_state_machine.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='state_machine/pb_tnc_state_machine.c' object='pb_tnc_state_machine.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o pb_tnc_state_machine.lo `test -f 'state_machine/pb_tnc_state_machine.c' || echo '$(srcdir)/'`state_machine/pb_tnc_state_machine.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

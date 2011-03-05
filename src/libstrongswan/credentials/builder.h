@@ -87,16 +87,32 @@ enum builder_part_t {
 	BUILD_CA_CERT,
 	/** a certificate, certificate_t* */
 	BUILD_CERT,
-	/** CRL distribution point URIs, linked_list_t* containing char* */
+	/** CRL distribution point URIs, x509_cdp_t* */
 	BUILD_CRL_DISTRIBUTION_POINTS,
 	/** OCSP AuthorityInfoAccess locations, linked_list_t* containing char* */
 	BUILD_OCSP_ACCESS_LOCATIONS,
 	/** certificate path length constraint */
 	BUILD_PATHLEN,
+	/** permitted X509 name constraints, linked_list_t* of identification_t* */
+	BUILD_PERMITTED_NAME_CONSTRAINTS,
+	/** excluded X509 name constraints, linked_list_t* of identification_t* */
+	BUILD_EXCLUDED_NAME_CONSTRAINTS,
+	/** certificatePolicy OIDs, linked_list_t* of x509_cert_policy_t* */
+	BUILD_CERTIFICATE_POLICIES,
+	/** policyMapping OIDs, linked_list_t* of x509_policy_mapping_t* */
+	BUILD_POLICY_MAPPINGS,
+	/** requireExplicitPolicy constraint, int */
+	BUILD_POLICY_REQUIRE_EXPLICIT,
+	/** inhibitPolicyMapping constraint, int */
+	BUILD_POLICY_INHIBIT_MAPPING,
+	/** inhibitAnyPolicy constraint, int */
+	BUILD_POLICY_INHIBIT_ANY,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */
 	BUILD_REVOKED_ENUMERATOR,
+	/** Base CRL serial for a delta CRL, chunk_t, */
+	BUILD_BASE_CRL,
 	/** PKCS#10 challenge password */
 	BUILD_CHALLENGE_PWD,
 	/** friendly name of a PKCS#11 module, null terminated char* */

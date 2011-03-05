@@ -465,7 +465,6 @@ METHOD(task_manager_t, initiate, status_t,
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
 
-	charon->bus->message(charon->bus, message, FALSE);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->initiating.packet);
 	if (status != SUCCESS)
@@ -654,7 +653,6 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	/* message complete, send it */
 	DESTROY_IF(this->responding.packet);
 	this->responding.packet = NULL;
-	charon->bus->message(charon->bus, message, FALSE);
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->responding.packet);
 	message->destroy(message);
@@ -882,8 +880,12 @@ static status_t process_request(private_task_manager_t *this,
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
-	u_int32_t mid = msg->get_message_id(msg);
-	host_t *me = msg->get_destination(msg), *other = msg->get_source(msg);
+	host_t *me, *other;
+	u_int32_t mid;
+
+	mid = msg->get_message_id(msg);
+	me = msg->get_destination(msg);
+	other = msg->get_source(msg);
 
 	if (msg->get_request(msg))
 	{
@@ -895,10 +897,14 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* only do host updates based on verified messages */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 				{	/* with MOBIKE, we do no implicit updates */
-					this->ike_sa->update_hosts(this->ike_sa, me, other);
+					this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
 				}
 			}
 			charon->bus->message(charon->bus, msg, TRUE);
+			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
+			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
+				return SUCCESS;
+			}
 			if (process_request(this, msg) != SUCCESS)
 			{
 				flush(this);
@@ -909,15 +915,15 @@ METHOD(task_manager_t, process_message, status_t,
 		else if ((mid == this->responding.mid - 1) && this->responding.packet)
 		{
 			packet_t *clone;
-			host_t *me, *other;
+			host_t *host;
 
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 				 "retransmitting response", mid);
 			clone = this->responding.packet->clone(this->responding.packet);
-			me = msg->get_destination(msg);
-			other = msg->get_source(msg);
-			clone->set_source(clone, me->clone(me));
-			clone->set_destination(clone, other->clone(other));
+			host = msg->get_destination(msg);
+			clone->set_source(clone, host->clone(host));
+			host = msg->get_source(msg);
+			clone->set_destination(clone, host->clone(host));
 			charon->sender->send(charon->sender, clone);
 		}
 		else
@@ -936,10 +942,14 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* only do host updates based on verified messages */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 				{	/* with MOBIKE, we do no implicit updates */
-					this->ike_sa->update_hosts(this->ike_sa, me, other);
+					this->ike_sa->update_hosts(this->ike_sa, me, other, FALSE);
 				}
 			}
 			charon->bus->message(charon->bus, msg, TRUE);
+			if (msg->get_exchange_type(msg) == EXCHANGE_TYPE_UNDEFINED)
+			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
+				return SUCCESS;
+			}
 			if (process_response(this, msg) != SUCCESS)
 			{
 				flush(this);
@@ -1000,6 +1010,19 @@ METHOD(task_manager_t, busy, bool,
 	private_task_manager_t *this)
 {
 	return (this->active_tasks->get_count(this->active_tasks) > 0);
+}
+
+METHOD(task_manager_t, incr_mid, void,
+	private_task_manager_t *this, bool initiate)
+{
+	if (initiate)
+	{
+		this->initiating.mid++;
+	}
+	else
+	{
+		this->responding.mid++;
+	}
 }
 
 METHOD(task_manager_t, reset, void,
@@ -1085,6 +1108,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 			.queue_task = _queue_task,
 			.initiate = _initiate,
 			.retransmit = _retransmit,
+			.incr_mid = _incr_mid,
 			.reset = _reset,
 			.adopt_tasks = _adopt_tasks,
 			.busy = _busy,

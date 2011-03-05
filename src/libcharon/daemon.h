@@ -149,7 +149,9 @@ typedef struct daemon_t daemon_t;
 #include <config/backend_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
-#include <tnccs/tnccs_manager.h>
+#include <tnc/imc/imc_manager.h>
+#include <tnc/imv/imv_manager.h>
+#include <tnc/tnccs/tnccs_manager.h>
 
 #ifdef ME
 #include <sa/connect_manager.h>
@@ -237,6 +239,16 @@ struct daemon_t {
 	sim_manager_t *sim;
 
 	/**
+	 * TNC IMC manager controlling Integrity Measurement Collectors
+	 */
+	imc_manager_t *imcs;
+
+	/**
+	 * TNC IMV manager controlling Integrity Measurement Verifiers
+	 */
+	imv_manager_t *imvs;
+
+	/**
 	 * TNCCS manager to maintain registered TNCCS protocols
 	 */
 	tnccs_manager_t *tnccs;
@@ -286,7 +298,7 @@ struct daemon_t {
 	/**
 	 * Initialize the daemon.
 	 */
-	bool (*initialize)(daemon_t *this, bool syslog, level_t levels[]);
+	bool (*initialize)(daemon_t *this);
 
 	/**
 	 * Starts the daemon, i.e. spawns the threads of the thread pool.
@@ -304,6 +316,9 @@ extern daemon_t *charon;
 
 /**
  * Initialize libcharon and create the "charon" instance of daemon_t.
+ *
+ * This function initializes the bus, listeners can be registered before
+ * calling initialize().
  *
  * @return		FALSE if integrity check failed
  */

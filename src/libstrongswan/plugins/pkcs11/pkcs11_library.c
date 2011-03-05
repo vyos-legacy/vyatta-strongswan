@@ -466,12 +466,23 @@ struct private_pkcs11_library_t {
 	 * Name as passed to the constructor
 	 */
 	char *name;
+
+	/**
+	 * Supported feature set
+	 */
+	pkcs11_feature_t features;
 };
 
 METHOD(pkcs11_library_t, get_name, char*,
 	private_pkcs11_library_t *this)
 {
 	return this->name;
+}
+
+METHOD(pkcs11_library_t, get_features, pkcs11_feature_t,
+	private_pkcs11_library_t *this)
+{
+	return this->features;
 }
 
 /**
@@ -766,18 +777,44 @@ static CK_RV UnlockMutex(CK_VOID_PTR data)
 }
 
 /**
+ * Check if the library has at least a given cryptoki version
+ */
+static bool has_version(CK_INFO *info, int major, int minor)
+{
+	return info->cryptokiVersion.major > major ||
+			(info->cryptokiVersion.major == major &&
+			 info->cryptokiVersion.minor >= minor);
+}
+
+/**
+ * Check for optional PKCS#11 library functionality
+ */
+static void check_features(private_pkcs11_library_t *this, CK_INFO *info)
+{
+	if (has_version(info, 2, 20))
+	{
+		this->features |= PKCS11_TRUSTED_CERTS;
+		this->features |= PKCS11_ALWAYS_AUTH_KEYS;
+	}
+}
+
+/**
  * Initialize a PKCS#11 library
  */
-static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
+static bool initialize(private_pkcs11_library_t *this, char *name, char *file,
+					   bool os_locking)
 {
 	CK_C_GetFunctionList pC_GetFunctionList;
 	CK_INFO info;
 	CK_RV rv;
-	CK_C_INITIALIZE_ARGS args = {
+	static CK_C_INITIALIZE_ARGS args = {
 		.CreateMutex = CreateMutex,
 		.DestroyMutex = DestroyMutex,
 		.LockMutex = LockMutex,
 		.UnlockMutex = UnlockMutex,
+	};
+	static CK_C_INITIALIZE_ARGS args_os = {
+		.flags = CKF_OS_LOCKING_OK,
 	};
 
 	pC_GetFunctionList = dlsym(this->handle, "C_GetFunctionList");
@@ -793,13 +830,18 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 			 name, ck_rv_names, rv);
 		return FALSE;
 	}
-
-	rv = this->public.f->C_Initialize(&args);
-	if (rv == CKR_CANT_LOCK)
-	{	/* try OS locking */
-		memset(&args, 0, sizeof(args));
-		args.flags = CKF_OS_LOCKING_OK;
+	if (os_locking)
+	{
+		rv = CKR_CANT_LOCK;
+	}
+	else
+	{
 		rv = this->public.f->C_Initialize(&args);
+	}
+	if (rv == CKR_CANT_LOCK)
+	{	/* fallback to OS locking */
+		os_locking = TRUE;
+		rv = this->public.f->C_Initialize(&args_os);
 	}
 	if (rv != CKR_OK)
 	{
@@ -826,23 +868,26 @@ static bool initialize(private_pkcs11_library_t *this, char *name, char *file)
 	DBG1(DBG_CFG, "  %s: %s v%d.%d",
 		 info.manufacturerID, info.libraryDescription,
 		 info.libraryVersion.major, info.libraryVersion.minor);
-	if (args.flags & CKF_OS_LOCKING_OK)
+	if (os_locking)
 	{
 		DBG1(DBG_CFG, "  uses OS locking functions");
 	}
+
+	check_features(this, &info);
 	return TRUE;
 }
 
 /**
  * See header
  */
-pkcs11_library_t *pkcs11_library_create(char *name, char *file)
+pkcs11_library_t *pkcs11_library_create(char *name, char *file, bool os_locking)
 {
 	private_pkcs11_library_t *this;
 
 	INIT(this,
 		.public = {
 			.get_name = _get_name,
+			.get_features = _get_features,
 			.create_object_enumerator = _create_object_enumerator,
 			.create_mechanism_enumerator = _create_mechanism_enumerator,
 			.destroy = _destroy,
@@ -858,7 +903,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file)
 		return NULL;
 	}
 
-	if (!initialize(this, name, file))
+	if (!initialize(this, name, file, os_locking))
 	{
 		dlclose(this->handle);
 		free(this);

@@ -99,8 +99,8 @@
 #endif
 
 /** default priority of installed policies */
-#define PRIO_LOW 3000
-#define PRIO_HIGH 2000
+#define PRIO_LOW 1024
+#define PRIO_HIGH 512
 
 #ifdef __APPLE__
 /** from xnu/bsd/net/pfkeyv2.h */
@@ -1206,7 +1206,7 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst, u_int32_t spi,
-	u_int8_t protocol, u_int32_t reqid, mark_t mark,
+	u_int8_t protocol, u_int32_t reqid, mark_t mark, u_int32_t tfc,
 	lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode,
 	u_int16_t ipcomp, u_int16_t cpi, bool encap, bool inbound,
@@ -1651,11 +1651,14 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	pol->sadb_x_policy_dir = dir2kernel(direction);
 	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
 #ifdef HAVE_STRUCT_SADB_X_POLICY_SADB_X_POLICY_PRIORITY
-	/* calculate priority based on source selector size, small size = high prio */
+	/* calculate priority based on selector size, small size = high prio */
 	pol->sadb_x_policy_priority = routed ? PRIO_LOW : PRIO_HIGH;
-	pol->sadb_x_policy_priority -= policy->src.mask * 10;
-	pol->sadb_x_policy_priority -= policy->src.proto != IPSEC_PROTO_ANY ? 2 : 0;
-	pol->sadb_x_policy_priority -= policy->src.net->get_port(policy->src.net) ? 1 : 0;
+	pol->sadb_x_policy_priority -= policy->src.mask;
+	pol->sadb_x_policy_priority -= policy->dst.mask;
+	pol->sadb_x_policy_priority <<= 2; /* make some room for the flags */
+	pol->sadb_x_policy_priority += policy->src.net->get_port(policy->src.net) ||
+								   policy->dst.net->get_port(policy->dst.net) ? 0 : 2;
+	pol->sadb_x_policy_priority += policy->src.proto != IPSEC_PROTO_ANY ? 0 : 1;
 #endif
 
 	/* one or more sadb_x_ipsecrequest extensions are added to the sadb_x_policy extension */

@@ -30,8 +30,7 @@ credentials/keys/private_key.c credentials/keys/private_key.h \
 credentials/keys/public_key.c credentials/keys/public_key.h \
 credentials/keys/shared_key.c credentials/keys/shared_key.h \
 credentials/certificates/certificate.c credentials/certificates/certificate.h \
-credentials/certificates/x509.h credentials/certificates/x509.c \
-credentials/certificates/ac.h \
+credentials/certificates/x509.h credentials/certificates/ac.h \
 credentials/certificates/crl.h credentials/certificates/crl.c \
 credentials/certificates/pkcs10.h \
 credentials/certificates/ocsp_request.h \
@@ -136,6 +135,13 @@ else
 SUBDIRS = .
 endif
 
+if USE_AF_ALG
+  SUBDIRS += plugins/af_alg
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/af_alg/libstrongswan-af-alg.la
+endif
+endif
+
 if USE_AES
   SUBDIRS += plugins/aes
 if MONOLITHIC
@@ -227,6 +233,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_CONSTRAINTS
+  SUBDIRS += plugins/constraints
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/constraints/libstrongswan-constraints.la
+endif
+endif
+
 if USE_PUBKEY
   SUBDIRS += plugins/pubkey
 if MONOLITHIC
@@ -266,6 +279,13 @@ if USE_CURL
   SUBDIRS += plugins/curl
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/curl/libstrongswan-curl.la
+endif
+endif
+
+if USE_SOUP
+  SUBDIRS += plugins/soup
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/soup/libstrongswan-soup.la
 endif
 endif
 

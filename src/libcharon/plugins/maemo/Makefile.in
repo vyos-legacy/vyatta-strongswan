@@ -224,9 +224,7 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -265,6 +263,8 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -288,7 +288,8 @@ libstrongswan_maemo_la_SOURCES = \
 libstrongswan_maemo_la_LDFLAGS = -module -avoid-version
 libstrongswan_maemo_la_LIBADD = ${maemo_LIBS}
 dbusservice_DATA = org.strongswan.charon.service
-EXTRA_DIST = $(dbusservice_DATA)
+EXTRA_DIST = org.strongswan.charon.service.in
+CLEANFILES = $(dbusservice_DATA)
 all: all-am
 
 .SUFFIXES:
@@ -528,6 +529,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -625,6 +627,9 @@ uninstall-am: uninstall-dbusserviceDATA uninstall-pluginLTLIBRARIES
 	tags uninstall uninstall-am uninstall-dbusserviceDATA \
 	uninstall-pluginLTLIBRARIES
 
+
+org.strongswan.charon.service: $(srcdir)/org.strongswan.charon.service.in
+	sed -e 's|[@]LIBEXECDIR[@]|$(libexecdir)|' $< >$@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

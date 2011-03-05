@@ -52,9 +52,6 @@ struct ike_sa_manager_t {
 	/**
 	 * Create and check out a new IKE_SA.
 	 *
-	 * @note If initiator equals FALSE, the returned IKE_SA is not registered
-	 * in the manager.
-	 *
 	 * @param initiator			TRUE for initiator, FALSE otherwise
 	 * @returns 				created and checked out IKE_SA
 	 */
@@ -109,10 +106,23 @@ struct ike_sa_manager_t {
 	 * deadlocks occur otherwise.
 	 *
 	 * @param ike_sa			ike_sa to check
+	 * @param force_replace		replace existing SAs, regardless of unique policy
 	 * @return					TRUE, if the given IKE_SA has duplicates and
 	 * 							should be deleted
 	 */
-	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa);
+	bool (*check_uniqueness)(ike_sa_manager_t *this, ike_sa_t *ike_sa,
+							 bool force_replace);
+
+	/**
+	 * Check if we already have a connected IKE_SA between two identities.
+	 *
+	 * @param me				own identity
+	 * @param other				remote identity
+	 * @param family			address family to include in uniqueness check
+	 * @return					TRUE if we have a connected IKE_SA
+	 */
+	bool (*has_contact)(ike_sa_manager_t *this, identification_t *me,
+						identification_t *other, int family);
 
 	/**
 	 * Check out an IKE_SA a unique ID.

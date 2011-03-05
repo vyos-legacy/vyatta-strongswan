@@ -239,6 +239,7 @@ static const token_info_t token_info[] =
 	{ ARG_MISC, 0, NULL  /* KW_MARK */                                             },
 	{ ARG_MISC, 0, NULL  /* KW_MARK_IN */                                          },
 	{ ARG_MISC, 0, NULL  /* KW_MARK_OUT */                                         },
+	{ ARG_MISC, 0, NULL  /* KW_TFC */                                              },
 
 	/* ca section keywords */
 	{ ARG_STR,  offsetof(starter_ca_t, name), NULL                                 },
@@ -272,6 +273,7 @@ static const token_info_t token_info[] =
 	{ ARG_STR,  offsetof(starter_end_t, rsakey), NULL                              },
 	{ ARG_STR,  offsetof(starter_end_t, cert), NULL                                },
 	{ ARG_STR,  offsetof(starter_end_t, cert2), NULL                               },
+	{ ARG_STR,  offsetof(starter_end_t, cert_policy), NULL                         },
 	{ ARG_ENUM, offsetof(starter_end_t, sendcert), LST_sendcert                    },
 	{ ARG_STR,  offsetof(starter_end_t, ca), NULL                                  },
 	{ ARG_STR,  offsetof(starter_end_t, ca2), NULL                                 },

@@ -19,6 +19,8 @@
 #include "sha1_hasher.h"
 #include "sha1_prf.h"
 
+static const char *plugin_name = "sha1";
+
 typedef struct private_sha1_plugin_t private_sha1_plugin_t;
 
 /**
@@ -32,10 +34,8 @@ struct private_sha1_plugin_t {
 	sha1_plugin_t public;
 };
 
-/**
- * Implementation of sha1_plugin_t.destroy
- */
-static void destroy(private_sha1_plugin_t *this)
+METHOD(plugin_t, destroy, void,
+	private_sha1_plugin_t *this)
 {
 	lib->crypto->remove_hasher(lib->crypto,
 							   (hasher_constructor_t)sha1_hasher_create);
@@ -49,13 +49,19 @@ static void destroy(private_sha1_plugin_t *this)
  */
 plugin_t *sha1_plugin_create()
 {
-	private_sha1_plugin_t *this = malloc_thing(private_sha1_plugin_t);
+	private_sha1_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.destroy = _destroy,
+			},
+		},
+	);
 
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA1, plugin_name,
 							(hasher_constructor_t)sha1_hasher_create);
-	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1,
+	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1, plugin_name,
 							(prf_constructor_t)sha1_prf_create);
 
 	return &this->public.plugin;

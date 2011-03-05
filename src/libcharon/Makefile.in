@@ -96,35 +96,37 @@ host_triplet = @host@
 @MONOLITHIC_TRUE@@USE_EAP_TNC_TRUE@am__append_51 = plugins/eap_tnc/libstrongswan-eap-tnc.la
 @MONOLITHIC_TRUE@@USE_TLS_TRUE@am__append_52 = $(top_builddir)/src/libtls/libtls.la
 @USE_TNC_IMC_TRUE@am__append_53 = plugins/tnc_imc
-@MONOLITHIC_TRUE@@USE_TNC_IMC_TRUE@am__append_54 = plugins/tnc_imc/libstrongswan-tnc_imc.la
+@MONOLITHIC_TRUE@@USE_TNC_IMC_TRUE@am__append_54 = plugins/tnc_imc/libstrongswan-tnc-imc.la
 @USE_TNC_IMV_TRUE@am__append_55 = plugins/tnc_imv
-@MONOLITHIC_TRUE@@USE_TNC_IMV_TRUE@am__append_56 = plugins/tnc_imv/libstrongswan-tnc_imv.la
+@MONOLITHIC_TRUE@@USE_TNC_IMV_TRUE@am__append_56 = plugins/tnc_imv/libstrongswan-tnc-imv.la
 @USE_TNCCS_11_TRUE@am__append_57 = plugins/tnccs_11
 @MONOLITHIC_TRUE@@USE_TNCCS_11_TRUE@am__append_58 = plugins/tnccs_11/libstrongswan-tnccs-11.la
 @USE_TNCCS_20_TRUE@am__append_59 = plugins/tnccs_20
 @MONOLITHIC_TRUE@@USE_TNCCS_20_TRUE@am__append_60 = plugins/tnccs_20/libstrongswan-tnccs-20.la
-@USE_MEDSRV_TRUE@am__append_61 = plugins/medsrv
-@MONOLITHIC_TRUE@@USE_MEDSRV_TRUE@am__append_62 = plugins/medsrv/libstrongswan-medsrv.la
-@USE_MEDCLI_TRUE@am__append_63 = plugins/medcli
-@MONOLITHIC_TRUE@@USE_MEDCLI_TRUE@am__append_64 = plugins/medcli/libstrongswan-medcli.la
-@USE_NM_TRUE@am__append_65 = plugins/nm
-@MONOLITHIC_TRUE@@USE_NM_TRUE@am__append_66 = plugins/nm/libstrongswan-nm.la
-@USE_DHCP_TRUE@am__append_67 = plugins/dhcp
-@MONOLITHIC_TRUE@@USE_DHCP_TRUE@am__append_68 = plugins/dhcp/libstrongswan-dhcp.la
-@USE_ANDROID_TRUE@am__append_69 = plugins/android
-@MONOLITHIC_TRUE@@USE_ANDROID_TRUE@am__append_70 = plugins/android/libstrongswan-android.la
-@USE_MAEMO_TRUE@am__append_71 = plugins/maemo
-@MONOLITHIC_TRUE@@USE_MAEMO_TRUE@am__append_72 = plugins/maemo/libstrongswan-maemo.la
-@USE_HA_TRUE@am__append_73 = plugins/ha
-@MONOLITHIC_TRUE@@USE_HA_TRUE@am__append_74 = plugins/ha/libstrongswan-ha.la
-@USE_LED_TRUE@am__append_75 = plugins/led
-@MONOLITHIC_TRUE@@USE_LED_TRUE@am__append_76 = plugins/led/libstrongswan-led.la
-@USE_UCI_TRUE@am__append_77 = plugins/uci
-@MONOLITHIC_TRUE@@USE_UCI_TRUE@am__append_78 = plugins/uci/libstrongswan-uci.la
-@USE_ADDRBLOCK_TRUE@am__append_79 = plugins/addrblock
-@MONOLITHIC_TRUE@@USE_ADDRBLOCK_TRUE@am__append_80 = plugins/uci/libstrongswan-addrblock.la
-@USE_UNIT_TESTS_TRUE@am__append_81 = plugins/unit_tester
-@MONOLITHIC_TRUE@@USE_UNIT_TESTS_TRUE@am__append_82 = plugins/unit_tester/libstrongswan-unit-tester.la
+@USE_TNCCS_DYNAMIC_TRUE@am__append_61 = plugins/tnccs_dynamic
+@MONOLITHIC_TRUE@@USE_TNCCS_DYNAMIC_TRUE@am__append_62 = plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
+@USE_MEDSRV_TRUE@am__append_63 = plugins/medsrv
+@MONOLITHIC_TRUE@@USE_MEDSRV_TRUE@am__append_64 = plugins/medsrv/libstrongswan-medsrv.la
+@USE_MEDCLI_TRUE@am__append_65 = plugins/medcli
+@MONOLITHIC_TRUE@@USE_MEDCLI_TRUE@am__append_66 = plugins/medcli/libstrongswan-medcli.la
+@USE_NM_TRUE@am__append_67 = plugins/nm
+@MONOLITHIC_TRUE@@USE_NM_TRUE@am__append_68 = plugins/nm/libstrongswan-nm.la
+@USE_DHCP_TRUE@am__append_69 = plugins/dhcp
+@MONOLITHIC_TRUE@@USE_DHCP_TRUE@am__append_70 = plugins/dhcp/libstrongswan-dhcp.la
+@USE_ANDROID_TRUE@am__append_71 = plugins/android
+@MONOLITHIC_TRUE@@USE_ANDROID_TRUE@am__append_72 = plugins/android/libstrongswan-android.la
+@USE_MAEMO_TRUE@am__append_73 = plugins/maemo
+@MONOLITHIC_TRUE@@USE_MAEMO_TRUE@am__append_74 = plugins/maemo/libstrongswan-maemo.la
+@USE_HA_TRUE@am__append_75 = plugins/ha
+@MONOLITHIC_TRUE@@USE_HA_TRUE@am__append_76 = plugins/ha/libstrongswan-ha.la
+@USE_LED_TRUE@am__append_77 = plugins/led
+@MONOLITHIC_TRUE@@USE_LED_TRUE@am__append_78 = plugins/led/libstrongswan-led.la
+@USE_UCI_TRUE@am__append_79 = plugins/uci
+@MONOLITHIC_TRUE@@USE_UCI_TRUE@am__append_80 = plugins/uci/libstrongswan-uci.la
+@USE_ADDRBLOCK_TRUE@am__append_81 = plugins/addrblock
+@MONOLITHIC_TRUE@@USE_ADDRBLOCK_TRUE@am__append_82 = plugins/uci/libstrongswan-addrblock.la
+@USE_UNIT_TESTS_TRUE@am__append_83 = plugins/unit_tester
+@MONOLITHIC_TRUE@@USE_UNIT_TESTS_TRUE@am__append_84 = plugins/unit_tester/libstrongswan-unit-tester.la
 subdir = src/libcharon
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -181,7 +183,8 @@ libcharon_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__append_60) $(am__append_62) $(am__append_64) \
 	$(am__append_66) $(am__append_68) $(am__append_70) \
 	$(am__append_72) $(am__append_74) $(am__append_76) \
-	$(am__append_78) $(am__append_80) $(am__append_82)
+	$(am__append_78) $(am__append_80) $(am__append_82) \
+	$(am__append_84)
 am__libcharon_la_SOURCES_DIST = bus/bus.c bus/bus.h \
 	bus/listeners/listener.h bus/listeners/file_logger.c \
 	bus/listeners/file_logger.h bus/listeners/sys_logger.c \
@@ -251,8 +254,9 @@ am__libcharon_la_SOURCES_DIST = bus/bus.c bus/bus.h \
 	processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 	processing/jobs/send_keepalive_job.c \
 	processing/jobs/send_keepalive_job.h \
-	processing/jobs/roam_job.c processing/jobs/roam_job.h \
-	processing/jobs/update_sa_job.c \
+	processing/jobs/start_action_job.c \
+	processing/jobs/start_action_job.h processing/jobs/roam_job.c \
+	processing/jobs/roam_job.h processing/jobs/update_sa_job.c \
 	processing/jobs/update_sa_job.h \
 	processing/jobs/inactivity_job.c \
 	processing/jobs/inactivity_job.h \
@@ -288,8 +292,12 @@ am__libcharon_la_SOURCES_DIST = bus/bus.c bus/bus.h \
 	sa/tasks/ike_reauth.h sa/tasks/ike_auth_lifetime.c \
 	sa/tasks/ike_auth_lifetime.h sa/tasks/ike_vendor.c \
 	sa/tasks/ike_vendor.h sa/tasks/task.c sa/tasks/task.h \
-	tnccs/tnccs.c tnccs/tnccs.h tnccs/tnccs_manager.h \
-	tnccs/tnccs_manager.c encoding/payloads/endpoint_notify.c \
+	tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+	tnc/imc/imc.h tnc/imc/imc_manager.h tnc/imv/imv.h \
+	tnc/imv/imv_manager.h tnc/imv/imv_recommendations.c \
+	tnc/imv/imv_recommendations.h tnc/tnccs/tnccs.c \
+	tnc/tnccs/tnccs.h tnc/tnccs/tnccs_manager.c \
+	tnc/tnccs/tnccs_manager.h encoding/payloads/endpoint_notify.c \
 	encoding/payloads/endpoint_notify.h \
 	processing/jobs/initiate_mediation_job.c \
 	processing/jobs/initiate_mediation_job.h \
@@ -315,16 +323,17 @@ am_libcharon_la_OBJECTS = bus.lo file_logger.lo sys_logger.lo \
 	acquire_job.lo delete_child_sa_job.lo delete_ike_sa_job.lo \
 	migrate_job.lo process_message_job.lo rekey_child_sa_job.lo \
 	rekey_ike_sa_job.lo retransmit_job.lo send_dpd_job.lo \
-	send_keepalive_job.lo roam_job.lo update_sa_job.lo \
-	inactivity_job.lo authenticator.lo eap_authenticator.lo \
-	eap_method.lo eap_manager.lo sim_manager.lo \
-	psk_authenticator.lo pubkey_authenticator.lo child_sa.lo \
-	ike_sa.lo ike_sa_id.lo ike_sa_manager.lo task_manager.lo \
-	keymat.lo trap_manager.lo child_create.lo child_delete.lo \
-	child_rekey.lo ike_auth.lo ike_cert_pre.lo ike_cert_post.lo \
-	ike_config.lo ike_delete.lo ike_dpd.lo ike_init.lo ike_natd.lo \
-	ike_mobike.lo ike_rekey.lo ike_reauth.lo ike_auth_lifetime.lo \
-	ike_vendor.lo task.lo tnccs.lo tnccs_manager.lo \
+	send_keepalive_job.lo start_action_job.lo roam_job.lo \
+	update_sa_job.lo inactivity_job.lo authenticator.lo \
+	eap_authenticator.lo eap_method.lo eap_manager.lo \
+	sim_manager.lo psk_authenticator.lo pubkey_authenticator.lo \
+	child_sa.lo ike_sa.lo ike_sa_id.lo ike_sa_manager.lo \
+	task_manager.lo keymat.lo trap_manager.lo child_create.lo \
+	child_delete.lo child_rekey.lo ike_auth.lo ike_cert_pre.lo \
+	ike_cert_post.lo ike_config.lo ike_delete.lo ike_dpd.lo \
+	ike_init.lo ike_natd.lo ike_mobike.lo ike_rekey.lo \
+	ike_reauth.lo ike_auth_lifetime.lo ike_vendor.lo task.lo \
+	tncifimv.lo imv_recommendations.lo tnccs.lo tnccs_manager.lo \
 	$(am__objects_1)
 libcharon_la_OBJECTS = $(am_libcharon_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -366,9 +375,9 @@ DIST_SUBDIRS = . plugins/load_tester plugins/socket_default \
 	plugins/eap_mschapv2 plugins/eap_radius plugins/eap_tls \
 	plugins/eap_ttls plugins/eap_tnc plugins/tnc_imc \
 	plugins/tnc_imv plugins/tnccs_11 plugins/tnccs_20 \
-	plugins/medsrv plugins/medcli plugins/nm plugins/dhcp \
-	plugins/android plugins/maemo plugins/ha plugins/led \
-	plugins/uci plugins/addrblock plugins/unit_tester
+	plugins/tnccs_dynamic plugins/medsrv plugins/medcli plugins/nm \
+	plugins/dhcp plugins/android plugins/maemo plugins/ha \
+	plugins/led plugins/uci plugins/addrblock plugins/unit_tester
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -514,9 +523,7 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -555,6 +562,8 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -635,8 +644,9 @@ libcharon_la_SOURCES = bus/bus.c bus/bus.h bus/listeners/listener.h \
 	processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 	processing/jobs/send_keepalive_job.c \
 	processing/jobs/send_keepalive_job.h \
-	processing/jobs/roam_job.c processing/jobs/roam_job.h \
-	processing/jobs/update_sa_job.c \
+	processing/jobs/start_action_job.c \
+	processing/jobs/start_action_job.h processing/jobs/roam_job.c \
+	processing/jobs/roam_job.h processing/jobs/update_sa_job.c \
 	processing/jobs/update_sa_job.h \
 	processing/jobs/inactivity_job.c \
 	processing/jobs/inactivity_job.h \
@@ -672,8 +682,12 @@ libcharon_la_SOURCES = bus/bus.c bus/bus.h bus/listeners/listener.h \
 	sa/tasks/ike_reauth.h sa/tasks/ike_auth_lifetime.c \
 	sa/tasks/ike_auth_lifetime.h sa/tasks/ike_vendor.c \
 	sa/tasks/ike_vendor.h sa/tasks/task.c sa/tasks/task.h \
-	tnccs/tnccs.c tnccs/tnccs.h tnccs/tnccs_manager.h \
-	tnccs/tnccs_manager.c $(am__append_1)
+	tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+	tnc/imc/imc.h tnc/imc/imc_manager.h tnc/imv/imv.h \
+	tnc/imv/imv_manager.h tnc/imv/imv_recommendations.c \
+	tnc/imv/imv_recommendations.h tnc/tnccs/tnccs.c \
+	tnc/tnccs/tnccs.h tnc/tnccs/tnccs_manager.c \
+	tnc/tnccs/tnccs_manager.h $(am__append_1)
 INCLUDES = \
 	-I${linux_headers} \
 	-I$(top_srcdir)/src/libstrongswan \
@@ -699,7 +713,8 @@ libcharon_la_LIBADD = -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB) \
 	$(am__append_60) $(am__append_62) $(am__append_64) \
 	$(am__append_66) $(am__append_68) $(am__append_70) \
 	$(am__append_72) $(am__append_74) $(am__append_76) \
-	$(am__append_78) $(am__append_80) $(am__append_82)
+	$(am__append_78) $(am__append_80) $(am__append_82) \
+	$(am__append_84)
 EXTRA_DIST = Android.mk
 @MONOLITHIC_FALSE@SUBDIRS = . $(am__append_3) $(am__append_5) \
 @MONOLITHIC_FALSE@	$(am__append_7) $(am__append_9) \
@@ -720,7 +735,7 @@ EXTRA_DIST = Android.mk
 @MONOLITHIC_FALSE@	$(am__append_69) $(am__append_71) \
 @MONOLITHIC_FALSE@	$(am__append_73) $(am__append_75) \
 @MONOLITHIC_FALSE@	$(am__append_77) $(am__append_79) \
-@MONOLITHIC_FALSE@	$(am__append_81)
+@MONOLITHIC_FALSE@	$(am__append_81) $(am__append_83)
 
 # build optional plugins
 ########################
@@ -743,7 +758,7 @@ EXTRA_DIST = Android.mk
 @MONOLITHIC_TRUE@	$(am__append_69) $(am__append_71) \
 @MONOLITHIC_TRUE@	$(am__append_73) $(am__append_75) \
 @MONOLITHIC_TRUE@	$(am__append_77) $(am__append_79) \
-@MONOLITHIC_TRUE@	$(am__append_81)
+@MONOLITHIC_TRUE@	$(am__append_81) $(am__append_83)
 all: all-recursive
 
 .SUFFIXES:
@@ -867,6 +882,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_sa_id.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_sa_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_vendor.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/imv_recommendations.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inactivity_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/initiate_mediation_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ke_payload.Plo@am__quote@
@@ -898,11 +914,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sender.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sim_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket_manager.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/start_action_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sys_logger.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/task.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/task_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_manager.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tncifimv.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/traffic_selector_substructure.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transform_attribute.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transform_substructure.Plo@am__quote@
@@ -1283,6 +1301,13 @@ send_keepalive_job.lo: processing/jobs/send_keepalive_job.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o send_keepalive_job.lo `test -f 'processing/jobs/send_keepalive_job.c' || echo '$(srcdir)/'`processing/jobs/send_keepalive_job.c
 
+start_action_job.lo: processing/jobs/start_action_job.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT start_action_job.lo -MD -MP -MF $(DEPDIR)/start_action_job.Tpo -c -o start_action_job.lo `test -f 'processing/jobs/start_action_job.c' || echo '$(srcdir)/'`processing/jobs/start_action_job.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/start_action_job.Tpo $(DEPDIR)/start_action_job.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='processing/jobs/start_action_job.c' object='start_action_job.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o start_action_job.lo `test -f 'processing/jobs/start_action_job.c' || echo '$(srcdir)/'`processing/jobs/start_action_job.c
+
 roam_job.lo: processing/jobs/roam_job.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT roam_job.lo -MD -MP -MF $(DEPDIR)/roam_job.Tpo -c -o roam_job.lo `test -f 'processing/jobs/roam_job.c' || echo '$(srcdir)/'`processing/jobs/roam_job.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/roam_job.Tpo $(DEPDIR)/roam_job.Plo
@@ -1521,19 +1546,33 @@ task.lo: sa/tasks/task.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o task.lo `test -f 'sa/tasks/task.c' || echo '$(srcdir)/'`sa/tasks/task.c
 
-tnccs.lo: tnccs/tnccs.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs.lo -MD -MP -MF $(DEPDIR)/tnccs.Tpo -c -o tnccs.lo `test -f 'tnccs/tnccs.c' || echo '$(srcdir)/'`tnccs/tnccs.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs.Tpo $(DEPDIR)/tnccs.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnccs/tnccs.c' object='tnccs.lo' libtool=yes @AMDEPBACKSLASH@
+tncifimv.lo: tnc/tncifimv.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tncifimv.lo -MD -MP -MF $(DEPDIR)/tncifimv.Tpo -c -o tncifimv.lo `test -f 'tnc/tncifimv.c' || echo '$(srcdir)/'`tnc/tncifimv.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tncifimv.Tpo $(DEPDIR)/tncifimv.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnc/tncifimv.c' object='tncifimv.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs.lo `test -f 'tnccs/tnccs.c' || echo '$(srcdir)/'`tnccs/tnccs.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tncifimv.lo `test -f 'tnc/tncifimv.c' || echo '$(srcdir)/'`tnc/tncifimv.c
 
-tnccs_manager.lo: tnccs/tnccs_manager.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_manager.lo -MD -MP -MF $(DEPDIR)/tnccs_manager.Tpo -c -o tnccs_manager.lo `test -f 'tnccs/tnccs_manager.c' || echo '$(srcdir)/'`tnccs/tnccs_manager.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_manager.Tpo $(DEPDIR)/tnccs_manager.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnccs/tnccs_manager.c' object='tnccs_manager.lo' libtool=yes @AMDEPBACKSLASH@
+imv_recommendations.lo: tnc/imv/imv_recommendations.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT imv_recommendations.lo -MD -MP -MF $(DEPDIR)/imv_recommendations.Tpo -c -o imv_recommendations.lo `test -f 'tnc/imv/imv_recommendations.c' || echo '$(srcdir)/'`tnc/imv/imv_recommendations.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/imv_recommendations.Tpo $(DEPDIR)/imv_recommendations.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnc/imv/imv_recommendations.c' object='imv_recommendations.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_manager.lo `test -f 'tnccs/tnccs_manager.c' || echo '$(srcdir)/'`tnccs/tnccs_manager.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o imv_recommendations.lo `test -f 'tnc/imv/imv_recommendations.c' || echo '$(srcdir)/'`tnc/imv/imv_recommendations.c
+
+tnccs.lo: tnc/tnccs/tnccs.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs.lo -MD -MP -MF $(DEPDIR)/tnccs.Tpo -c -o tnccs.lo `test -f 'tnc/tnccs/tnccs.c' || echo '$(srcdir)/'`tnc/tnccs/tnccs.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs.Tpo $(DEPDIR)/tnccs.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnc/tnccs/tnccs.c' object='tnccs.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs.lo `test -f 'tnc/tnccs/tnccs.c' || echo '$(srcdir)/'`tnc/tnccs/tnccs.c
+
+tnccs_manager.lo: tnc/tnccs/tnccs_manager.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_manager.lo -MD -MP -MF $(DEPDIR)/tnccs_manager.Tpo -c -o tnccs_manager.lo `test -f 'tnc/tnccs/tnccs_manager.c' || echo '$(srcdir)/'`tnc/tnccs/tnccs_manager.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_manager.Tpo $(DEPDIR)/tnccs_manager.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnc/tnccs/tnccs_manager.c' object='tnccs_manager.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_manager.lo `test -f 'tnc/tnccs/tnccs_manager.c' || echo '$(srcdir)/'`tnc/tnccs/tnccs_manager.c
 
 endpoint_notify.lo: encoding/payloads/endpoint_notify.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT endpoint_notify.lo -MD -MP -MF $(DEPDIR)/endpoint_notify.Tpo -c -o endpoint_notify.lo `test -f 'encoding/payloads/endpoint_notify.c' || echo '$(srcdir)/'`encoding/payloads/endpoint_notify.c

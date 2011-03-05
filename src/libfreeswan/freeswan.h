@@ -158,11 +158,6 @@ err_t ttodatav(const char *src, size_t srclen, int base,
 
 size_t datatot(const char *src, size_t srclen, int format, char *buf,
 								size_t buflen);
-size_t keyblobtoid(const unsigned char *src, size_t srclen, char *dst,
-								size_t dstlen);
-size_t splitkeytoid(const unsigned char *e, size_t elen, const unsigned char *m,
-					size_t mlen, char *dst, size_t dstlen);
-#define	KEYID_BUF		10	/* up to 9 text digits plus NUL */
 err_t ttoprotoport(char *src, size_t src_len, u_int8_t *proto, u_int16_t *port,
 							bool *has_port_wildcard);
 
@@ -205,12 +200,6 @@ int portof(const ip_address *src);
 void setportof(int port, ip_address *dst);
 struct sockaddr *sockaddrof(ip_address *src);
 size_t sockaddrlenof(const ip_address *src);
-
-/* PRNG */
-void prng_init(struct prng *prng, const unsigned char *key, size_t keylen);
-void prng_bytes(struct prng *prng, unsigned char *dst, size_t dstlen);
-unsigned long prng_count(struct prng *prng);
-void prng_final(struct prng *prng);
 
 /* odds and ends */
 const char **ipsec_copyright_notice(void);
@@ -293,24 +282,6 @@ rangetoa(
 	size_t dstlen
 );
 #define	RANGETOA_BUF	34	/* large enough for worst case result */
-
-/* data types for SA conversion functions */
-
-/* SAs */
-const char *			/* NULL for success, else string literal */
-atosa(
-	const char *src,
-	size_t srclen,		/* 0 means strlen(src) */
-	struct sa_id *sa
-);
-size_t				/* space needed for full conversion */
-satoa(
-	struct sa_id sa,
-	int format,		/* character; 0 means default */
-	char *dst,
-	size_t dstlen
-);
-#define	SATOA_BUF	(3+ULTOA_BUF+ADDRTOA_BUF)
 
 /* generic data, e.g. keys */
 const char *			/* NULL for success, else string literal */

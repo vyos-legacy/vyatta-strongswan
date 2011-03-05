@@ -76,6 +76,7 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 			{
 				certreq_payload_t *certreq = (certreq_payload_t*)payload;
 				enumerator_t *enumerator;
+				u_int unknown = 0;
 				chunk_t keyid;
 
 				this->ike_sa->set_condition(this->ike_sa, COND_CERTREQ_SEEN, TRUE);
@@ -103,12 +104,18 @@ static void process_certreqs(private_ike_cert_pre_t *this, message_t *message)
 					}
 					else
 					{
-						DBG1(DBG_IKE, "received cert request for unknown ca "
+						DBG2(DBG_IKE, "received cert request for unknown ca "
 									  "with keyid %Y", id);
+						unknown++;
 					}
 					id->destroy(id);
 				}
 				enumerator->destroy(enumerator);
+				if (unknown)
+				{
+					DBG1(DBG_IKE, "received %u cert requests for an unknown ca",
+						 unknown);
+				}
 				break;
 			}
 			case NOTIFY:
@@ -253,11 +260,19 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 					}
 					break;
 				}
+				case ENC_CRL:
+					cert = cert_payload->get_cert(cert_payload);
+					if (cert)
+					{
+						DBG1(DBG_IKE, "received CRL \"%Y\"",
+							 cert->get_subject(cert));
+						auth->add(auth, AUTH_HELPER_REVOCATION_CERT, cert);
+					}
+					break;
 				case ENC_PKCS7_WRAPPED_X509:
 				case ENC_PGP:
 				case ENC_DNS_SIGNED_KEY:
 				case ENC_KERBEROS_TOKEN:
-				case ENC_CRL:
 				case ENC_ARL:
 				case ENC_SPKI:
 				case ENC_X509_ATTRIBUTE:

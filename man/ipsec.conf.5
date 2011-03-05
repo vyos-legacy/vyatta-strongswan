@@ -1,4 +1,4 @@
-.TH IPSEC.CONF 5 "2010-10-19" "4.5.0rc2" "strongSwan"
+.TH IPSEC.CONF 5 "2010-10-19" "4.5.1" "strongSwan"
 .SH NAME
 ipsec.conf \- IPsec configuration and connections
 .SH DESCRIPTION
@@ -544,8 +544,13 @@ for public key authentication (RSA/ECDSA),
 .B psk
 for pre-shared key authentication and
 .B eap
-to (require the) use of the Extensible Authentication Protocol. In the case
-of
+to (require the) use of the Extensible Authentication Protocol.
+To require a trustchain public key strength for the remote side, specify the
+key type followed by the strength in bits (for example
+.BR rsa-2048
+or
+.BR ecdsa-256 ).
+For
 .B eap,
 an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
@@ -589,7 +594,7 @@ sets
 to the distinguished name of the certificate's subject and
 .B leftca
 to the distinguished name of the certificate's issuer.
-The left participant's ID can be overriden by specifying a
+The left participant's ID can be overridden by specifying a
 .B leftid
 value which must be certified by the certificate, though.
 .TP
@@ -597,6 +602,10 @@ value which must be certified by the certificate, though.
 Same as
 .B leftcert,
 but for the second authentication round (IKEv2 only).
+.TP
+.BR leftcertpolicy " = <OIDs>"
+Comma separated list of certificate policy OIDs the peers certificate must have.
+OIDs are specified using the numerical dotted representation (IKEv2 only).
 .TP
 .BR leftfirewall " = yes | " no
 whether the left participant is doing forwarding-firewalling
@@ -952,6 +961,13 @@ synonym for
 .TP
 .BR reqid " = <number>"
 sets the reqid for a given connection to a pre-configured fixed value.
+.TP
+.BR tfc " = <value>"
+number of bytes to pad ESP payload data to. Traffic Flow Confidentiality
+is currently supported in IKEv2 and applies to outgoing packets only. The
+special value
+.BR %mtu
+fills up ESP packets with padding to have the size of the MTU.
 .TP
 .BR type " = " tunnel " | transport | transport_proxy | passthrough | drop"
 the type of the connection; currently the accepted values

@@ -90,6 +90,12 @@ enum auth_rule_t {
 	 * The group membership constraint is fulfilled if the subject is member of
 	 * one group defined in the constraints. */
 	AUTH_RULE_GROUP,
+	/** required RSA public key strength, u_int in bits */
+	AUTH_RULE_RSA_STRENGTH,
+	/** required ECDSA public key strength, u_int in bits */
+	AUTH_RULE_ECDSA_STRENGTH,
+	/** certificatePolicy constraint, numerical OID as char* */
+	AUTH_RULE_CERT_POLICY,
 
 	/** intermediate certificate, certificate_t* */
 	AUTH_HELPER_IM_CERT,
@@ -99,6 +105,8 @@ enum auth_rule_t {
 	AUTH_HELPER_IM_HASH_URL,
 	/** Hash and URL of a end-entity certificate, char* */
 	AUTH_HELPER_SUBJECT_HASH_URL,
+	/** revocation certificate (CRL, OCSP), certificate_t* */
+	AUTH_HELPER_REVOCATION_CERT,
 };
 
 /**

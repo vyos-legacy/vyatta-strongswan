@@ -74,8 +74,10 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 am__installdirs = "$(DESTDIR)$(plugindir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
-libstrongswan_tnc_imv_la_DEPENDENCIES =
-am_libstrongswan_tnc_imv_la_OBJECTS = tnc_imv_plugin.lo
+libstrongswan_tnc_imv_la_LIBADD =
+am_libstrongswan_tnc_imv_la_OBJECTS = tnc_imv_plugin.lo tnc_imv.lo \
+	tnc_imv_manager.lo tnc_imv_bind_function.lo \
+	tnc_imv_recommendations.lo
 libstrongswan_tnc_imv_la_OBJECTS =  \
 	$(am_libstrongswan_tnc_imv_la_OBJECTS)
 libstrongswan_tnc_imv_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -221,9 +223,7 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -262,6 +262,8 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -273,14 +275,15 @@ urandom_device = @urandom_device@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-	-I$(top_srcdir)/src/libcharon `xml2-config --cflags`
+	-I$(top_srcdir)/src/libcharon
 
 AM_CFLAGS = -rdynamic
-libstrongswan_tnc_imv_la_LIBADD = -ltnc
 @MONOLITHIC_TRUE@noinst_LTLIBRARIES = libstrongswan-tnc-imv.la
 @MONOLITHIC_FALSE@plugin_LTLIBRARIES = libstrongswan-tnc-imv.la
 libstrongswan_tnc_imv_la_SOURCES = \
-	tnc_imv_plugin.h tnc_imv_plugin.c
+	tnc_imv_plugin.h tnc_imv_plugin.c tnc_imv.h tnc_imv.c \
+	tnc_imv_manager.h tnc_imv_manager.c tnc_imv_bind_function.c \
+	tnc_imv_recommendations.h tnc_imv_recommendations.c
 
 libstrongswan_tnc_imv_la_LDFLAGS = -module -avoid-version
 all: all-am
@@ -366,7 +369,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imv.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imv_bind_function.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imv_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imv_plugin.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnc_imv_recommendations.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

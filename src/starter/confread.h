@@ -64,6 +64,7 @@ struct starter_end {
 		char            *ca;
 		char            *ca2;
 		char            *groups;
+		char            *cert_policy;
 		char            *iface;
 		ip_address      addr;
 		u_int           ikeport;
@@ -125,6 +126,7 @@ struct starter_conn {
 		u_int32_t       reqid;
 		mark_t          mark_in;
 		mark_t          mark_out;
+		u_int32_t       tfc;
 		sa_family_t     addr_family;
 		sa_family_t     tunnel_addr_family;
 		bool            install_policy;

@@ -20,6 +20,26 @@
 #include <utils/linked_list.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
+#include <asn1/asn1.h>
+
+/**
+ * Free cert policy with OID
+ */
+static void destroy_cert_policy(x509_cert_policy_t *policy)
+{
+	free(policy->oid.ptr);
+	free(policy);
+}
+
+/**
+ * Free policy mapping
+ */
+static void destroy_policy_mapping(x509_policy_mapping_t *mapping)
+{
+	free(mapping->issuer.ptr);
+	free(mapping->subject.ptr);
+	free(mapping);
+}
 
 /**
  * Create a self signed certificate.
@@ -34,17 +54,23 @@ static int self()
 	public_key_t *public = NULL;
 	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
-	linked_list_t *san, *ocsp;
+	linked_list_t *san, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
-	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
+	int pathlen = X509_NO_CONSTRAINT, inhibit_any = X509_NO_CONSTRAINT;
+	int inhibit_mapping = X509_NO_CONSTRAINT, require_explicit = X509_NO_CONSTRAINT;
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
+	x509_cert_policy_t *policy = NULL;
 	char *arg;
 
 	san = linked_list_create();
 	ocsp = linked_list_create();
+	permitted = linked_list_create();
+	excluded = linked_list_create();
+	policies = linked_list_create();
+	mappings = linked_list_create();
 
 	while (TRUE)
 	{
@@ -104,6 +130,79 @@ static int self()
 			case 'p':
 				pathlen = atoi(arg);
 				continue;
+			case 'n':
+				permitted->insert_last(permitted,
+									   identification_create_from_string(arg));
+				continue;
+			case 'N':
+				excluded->insert_last(excluded,
+									  identification_create_from_string(arg));
+				continue;
+			case 'P':
+			{
+				chunk_t oid;
+
+				oid = asn1_oid_from_string(arg);
+				if (!oid.len)
+				{
+					error = "--cert-policy OID invalid";
+					goto usage;
+				}
+				INIT(policy,
+					.oid = oid,
+				);
+				policies->insert_last(policies, policy);
+				continue;
+			}
+			case 'C':
+				if (!policy)
+				{
+					error = "--cps-uri must follow a --cert-policy";
+					goto usage;
+				}
+				policy->cps_uri = arg;
+				continue;
+			case 'U':
+				if (!policy)
+				{
+					error = "--user-notice must follow a --cert-policy";
+					goto usage;
+				}
+				policy->unotice_text = arg;
+				continue;
+			case 'M':
+			{
+				char *pos = strchr(arg, ':');
+				x509_policy_mapping_t *mapping;
+				chunk_t subject_oid, issuer_oid;
+
+				if (pos)
+				{
+					*pos++ = '\0';
+					issuer_oid = asn1_oid_from_string(arg);
+					subject_oid = asn1_oid_from_string(pos);
+				}
+				if (!pos || !issuer_oid.len || !subject_oid.len)
+				{
+					error = "--policy-map OIDs invalid";
+					goto usage;
+				}
+				INIT(mapping,
+					.issuer = issuer_oid,
+					.subject = subject_oid,
+				);
+				mappings->insert_last(mappings, mapping);
+				continue;
+			}
+			case 'E':
+				require_explicit = atoi(arg);
+				continue;
+			case 'H':
+				inhibit_mapping = atoi(arg);
+				continue;
+			case 'A':
+				inhibit_any = atoi(arg);
+				continue;
 			case 'e':
 				if (streq(arg, "serverAuth"))
 				{
@@ -113,6 +212,10 @@ static int self()
 				{
 					flags |= X509_CLIENT_AUTH;
 				}
+				else if (streq(arg, "crlSign"))
+				{
+					flags |= X509_CRL_SIGN;
+				}
 				else if (streq(arg, "ocspSigning"))
 				{
 					flags |= X509_OCSP_SIGNER;
@@ -121,7 +224,8 @@ static int self()
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
-					return command_usage("invalid output format");
+					error = "invalid output format";
+					goto usage;
 				}
 				continue;
 			case 'o':
@@ -206,7 +310,15 @@ static int self()
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 						BUILD_DIGEST_ALG, digest, BUILD_X509_FLAG, flags,
 						BUILD_PATHLEN, pathlen, BUILD_SUBJECT_ALTNAMES, san,
-						BUILD_OCSP_ACCESS_LOCATIONS, ocsp, BUILD_END);
+						BUILD_OCSP_ACCESS_LOCATIONS, ocsp,
+						BUILD_PERMITTED_NAME_CONSTRAINTS, permitted,
+						BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded,
+						BUILD_CERTIFICATE_POLICIES, policies,
+						BUILD_POLICY_MAPPINGS, mappings,
+						BUILD_POLICY_REQUIRE_EXPLICIT, require_explicit,
+						BUILD_POLICY_INHIBIT_MAPPING, inhibit_mapping,
+						BUILD_POLICY_INHIBIT_ANY, inhibit_any,
+						BUILD_END);
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -229,6 +341,10 @@ end:
 	DESTROY_IF(public);
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
+	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
+	policies->destroy_function(policies, (void*)destroy_cert_policy);
+	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
 	ocsp->destroy(ocsp);
 	free(encoding.ptr);
 	free(serial.ptr);
@@ -242,6 +358,10 @@ end:
 
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
+	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
+	policies->destroy_function(policies, (void*)destroy_cert_policy);
+	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
 	ocsp->destroy(ocsp);
 	return command_usage(error);
 }
@@ -257,23 +377,36 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file | --keyid hex] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
-		 "[--flag serverAuth|clientAuth|ocspSigning]+",
+		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
+		 "[--nc-permitted name] [--nc-excluded name]",
+		 "[--cert-policy oid [--cps-uri uri] [--user-notice text] ]+",
+		 "[--policy-map issuer-oid:subject-oid]",
+		 "[--policy-explicit len] [--policy-inhibit len] [--policy-any len]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
 		{
-			{"help",	'h', 0, "show usage information"},
-			{"in",		'i', 1, "private key input file, default: stdin"},
-			{"keyid",	'x', 1, "keyid on smartcard of private key"},
-			{"type",	't', 1, "type of input key, default: rsa"},
-			{"dn",		'd', 1, "subject and issuer distinguished name"},
-			{"san",		'a', 1, "subjectAltName to include in certificate"},
-			{"lifetime",'l', 1, "days the certificate is valid, default: 1095"},
-			{"serial",	's', 1, "serial number in hex, default: random"},
-			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
-			{"pathlen",	'p', 1, "set path length constraint"},
-			{"flag",	'e', 1, "include extendedKeyUsage flag"},
-			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
-			{"outform",	'f', 1, "encoding of generated cert, default: der"},
+			{"help",			'h', 0, "show usage information"},
+			{"in",				'i', 1, "private key input file, default: stdin"},
+			{"keyid",			'x', 1, "keyid on smartcard of private key"},
+			{"type",			't', 1, "type of input key, default: rsa"},
+			{"dn",				'd', 1, "subject and issuer distinguished name"},
+			{"san",				'a', 1, "subjectAltName to include in certificate"},
+			{"lifetime",		'l', 1, "days the certificate is valid, default: 1095"},
+			{"serial",			's', 1, "serial number in hex, default: random"},
+			{"ca",				'b', 0, "include CA basicConstraint, default: no"},
+			{"pathlen",			'p', 1, "set path length constraint"},
+			{"nc-permitted",	'n', 1, "add permitted NameConstraint"},
+			{"nc-excluded",		'N', 1, "add excluded NameConstraint"},
+			{"cert-policy",		'P', 1, "certificatePolicy OID to include"},
+			{"cps-uri",			'C', 1, "Certification Practice statement URI for certificatePolicy"},
+			{"user-notice",		'U', 1, "user notice for certificatePolicy"},
+			{"policy-mapping",	'M', 1, "policyMapping from issuer to subject OID"},
+			{"policy-explicit",	'E', 1, "requireExplicitPolicy constraint"},
+			{"policy-inhibit",	'H', 1, "inhibitPolicyMapping constraint"},
+			{"policy-any",		'A', 1, "inhibitAnyPolicy constraint"},
+			{"flag",			'e', 1, "include extendedKeyUsage flag"},
+			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
+			{"digest",			'g', 1, "digest for signature creation, default: sha1"},
+			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});
 }

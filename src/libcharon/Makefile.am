@@ -53,6 +53,7 @@ processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
 processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
+processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
@@ -87,8 +88,12 @@ sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
 sa/tasks/task.c sa/tasks/task.h \
-tnccs/tnccs.c tnccs/tnccs.h \
-tnccs/tnccs_manager.h tnccs/tnccs_manager.c
+tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+tnc/imc/imc.h tnc/imc/imc_manager.h \
+tnc/imv/imv.h tnc/imv/imv_manager.h \
+tnc/imv/imv_recommendations.c tnc/imv/imv_recommendations.h \
+tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
+tnc/tnccs/tnccs_manager.c tnc/tnccs/tnccs_manager.h
 
 daemon.lo :		$(top_builddir)/config.status
 
@@ -317,14 +322,14 @@ endif
 if USE_TNC_IMC
   SUBDIRS += plugins/tnc_imc
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc_imc.la
+  libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc-imc.la
 endif
 endif
 
 if USE_TNC_IMV
   SUBDIRS += plugins/tnc_imv
 if MONOLITHIC
-  libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc_imv.la
+  libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc-imv.la
 endif
 endif
 
@@ -339,6 +344,13 @@ if USE_TNCCS_20
   SUBDIRS += plugins/tnccs_20
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/tnccs_20/libstrongswan-tnccs-20.la
+endif
+endif
+
+if USE_TNCCS_DYNAMIC
+  SUBDIRS += plugins/tnccs_dynamic
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
 endif
 endif
 

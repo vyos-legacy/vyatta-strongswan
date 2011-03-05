@@ -37,17 +37,20 @@ host_triplet = @host@
 @USE_LIBHYDRA_TRUE@am__append_2 = libhydra
 @USE_SIMAKA_TRUE@am__append_3 = libsimaka
 @USE_TLS_TRUE@am__append_4 = libtls
-@USE_FILE_CONFIG_TRUE@am__append_5 = libfreeswan starter ipsec _copyright
-@USE_PLUTO_TRUE@am__append_6 = pluto whack
-@USE_CHARON_TRUE@am__append_7 = libcharon charon
-@USE_STROKE_TRUE@am__append_8 = stroke
-@USE_UPDOWN_TRUE@am__append_9 = _updown _updown_espmark
-@USE_TOOLS_TRUE@am__append_10 = libfreeswan openac scepclient pki
-@USE_DUMM_TRUE@am__append_11 = dumm
-@USE_FAST_TRUE@am__append_12 = libfast
-@USE_MANAGER_TRUE@am__append_13 = manager
-@USE_MEDSRV_TRUE@am__append_14 = medsrv
-@USE_INTEGRITY_TEST_TRUE@am__append_15 = checksum
+@USE_LIBCHARON_TRUE@am__append_5 = libcharon
+@USE_FILE_CONFIG_TRUE@am__append_6 = libfreeswan starter
+@USE_IPSEC_SCRIPT_TRUE@am__append_7 = ipsec _copyright
+@USE_PLUTO_TRUE@am__append_8 = pluto whack
+@USE_CHARON_TRUE@am__append_9 = charon
+@USE_STROKE_TRUE@am__append_10 = stroke
+@USE_UPDOWN_TRUE@am__append_11 = _updown _updown_espmark
+@USE_TOOLS_TRUE@am__append_12 = libfreeswan openac scepclient pki
+@USE_CONFTEST_TRUE@am__append_13 = conftest
+@USE_DUMM_TRUE@am__append_14 = dumm
+@USE_FAST_TRUE@am__append_15 = libfast
+@USE_MANAGER_TRUE@am__append_16 = manager
+@USE_MEDSRV_TRUE@am__append_17 = medsrv
+@USE_INTEGRITY_TEST_TRUE@am__append_18 = checksum
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -82,9 +85,9 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = . include libstrongswan libhydra libsimaka libtls \
-	libfreeswan starter ipsec _copyright pluto whack libcharon \
+	libcharon libfreeswan starter ipsec _copyright pluto whack \
 	charon stroke _updown _updown_espmark openac scepclient pki \
-	dumm libfast manager medsrv checksum
+	conftest dumm libfast manager medsrv checksum
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -230,9 +233,7 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -271,6 +272,8 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
@@ -285,7 +288,8 @@ SUBDIRS = . include $(am__append_1) $(am__append_2) $(am__append_3) \
 	$(am__append_4) $(am__append_5) $(am__append_6) \
 	$(am__append_7) $(am__append_8) $(am__append_9) \
 	$(am__append_10) $(am__append_11) $(am__append_12) \
-	$(am__append_13) $(am__append_14) $(am__append_15)
+	$(am__append_13) $(am__append_14) $(am__append_15) \
+	$(am__append_16) $(am__append_17) $(am__append_18)
 EXTRA_DIST = strongswan.conf
 all: all-recursive
 
@@ -636,7 +640,7 @@ uninstall-am:
 
 install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)"
-		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true
+		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

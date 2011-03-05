@@ -151,6 +151,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->ca);
 	pop_string(msg, &end->ca2);
 	pop_string(msg, &end->groups);
+	pop_string(msg, &end->cert_policy);
 	pop_string(msg, &end->updown);
 
 	DBG2(DBG_CFG, "  %s=%s", label, end->address);
@@ -243,6 +244,17 @@ static void stroke_terminate_srcip(private_stroke_socket_t *this,
 		 msg->terminate_srcip.start, msg->terminate_srcip.end);
 
 	this->control->terminate_srcip(this->control, msg, out);
+}
+
+/**
+ * rekey a connection by name/id
+ */
+static void stroke_rekey(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out)
+{
+	pop_string(msg, &msg->terminate.name);
+	DBG1(DBG_CFG, "received stroke: rekey '%s'", msg->rekey.name);
+
+	this->control->rekey(this->control, msg, out);
 }
 
 /**
@@ -347,6 +359,14 @@ static void stroke_purge(private_stroke_socket_t *this,
 	if (msg->purge.flags & PURGE_OCSP)
 	{
 		lib->credmgr->flush_cache(lib->credmgr, CERT_X509_OCSP_RESPONSE);
+	}
+	if (msg->purge.flags & PURGE_CRLS)
+	{
+		lib->credmgr->flush_cache(lib->credmgr, CERT_X509_CRL);
+	}
+	if (msg->purge.flags & PURGE_CERTS)
+	{
+		lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
 	}
 	if (msg->purge.flags & PURGE_IKE)
 	{
@@ -509,6 +529,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 			break;
 		case STR_TERMINATE_SRCIP:
 			stroke_terminate_srcip(this, msg, out);
+			break;
+		case STR_REKEY:
+			stroke_rekey(this, msg, out);
 			break;
 		case STR_STATUS:
 			stroke_status(this, msg, out, FALSE);
