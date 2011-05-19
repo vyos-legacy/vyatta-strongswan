@@ -20,8 +20,6 @@
 #include <utils/linked_list.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
-<<<<<<< HEAD
-=======
 #include <asn1/asn1.h>
 
 /**
@@ -42,7 +40,6 @@ static void destroy_policy_mapping(x509_policy_mapping_t *mapping)
 	free(mapping->subject.ptr);
 	free(mapping);
 }
->>>>>>> upstream/4.5.1
 
 /**
  * Create a self signed certificate.
@@ -57,35 +54,23 @@ static int self()
 	public_key_t *public = NULL;
 	char *file = NULL, *dn = NULL, *hex = NULL, *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
-<<<<<<< HEAD
-	linked_list_t *san, *ocsp;
-	int lifetime = 1095;
-	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
-=======
 	linked_list_t *san, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
 	int pathlen = X509_NO_CONSTRAINT, inhibit_any = X509_NO_CONSTRAINT;
 	int inhibit_mapping = X509_NO_CONSTRAINT, require_explicit = X509_NO_CONSTRAINT;
->>>>>>> upstream/4.5.1
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
-<<<<<<< HEAD
-=======
 	x509_cert_policy_t *policy = NULL;
->>>>>>> upstream/4.5.1
 	char *arg;
 
 	san = linked_list_create();
 	ocsp = linked_list_create();
-<<<<<<< HEAD
-=======
 	permitted = linked_list_create();
 	excluded = linked_list_create();
 	policies = linked_list_create();
 	mappings = linked_list_create();
->>>>>>> upstream/4.5.1
 
 	while (TRUE)
 	{
@@ -145,8 +130,6 @@ static int self()
 			case 'p':
 				pathlen = atoi(arg);
 				continue;
-<<<<<<< HEAD
-=======
 			case 'n':
 				permitted->insert_last(permitted,
 									   identification_create_from_string(arg));
@@ -220,7 +203,6 @@ static int self()
 			case 'A':
 				inhibit_any = atoi(arg);
 				continue;
->>>>>>> upstream/4.5.1
 			case 'e':
 				if (streq(arg, "serverAuth"))
 				{
@@ -230,13 +212,10 @@ static int self()
 				{
 					flags |= X509_CLIENT_AUTH;
 				}
-<<<<<<< HEAD
-=======
 				else if (streq(arg, "crlSign"))
 				{
 					flags |= X509_CRL_SIGN;
 				}
->>>>>>> upstream/4.5.1
 				else if (streq(arg, "ocspSigning"))
 				{
 					flags |= X509_OCSP_SIGNER;
@@ -245,12 +224,8 @@ static int self()
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
-<<<<<<< HEAD
-					return command_usage("invalid output format");
-=======
 					error = "invalid output format";
 					goto usage;
->>>>>>> upstream/4.5.1
 				}
 				continue;
 			case 'o':
@@ -335,9 +310,6 @@ static int self()
 						BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 						BUILD_DIGEST_ALG, digest, BUILD_X509_FLAG, flags,
 						BUILD_PATHLEN, pathlen, BUILD_SUBJECT_ALTNAMES, san,
-<<<<<<< HEAD
-						BUILD_OCSP_ACCESS_LOCATIONS, ocsp, BUILD_END);
-=======
 						BUILD_OCSP_ACCESS_LOCATIONS, ocsp,
 						BUILD_PERMITTED_NAME_CONSTRAINTS, permitted,
 						BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded,
@@ -347,7 +319,6 @@ static int self()
 						BUILD_POLICY_INHIBIT_MAPPING, inhibit_mapping,
 						BUILD_POLICY_INHIBIT_ANY, inhibit_any,
 						BUILD_END);
->>>>>>> upstream/4.5.1
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -370,13 +341,10 @@ end:
 	DESTROY_IF(public);
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
-<<<<<<< HEAD
-=======
 	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	policies->destroy_function(policies, (void*)destroy_cert_policy);
 	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
->>>>>>> upstream/4.5.1
 	ocsp->destroy(ocsp);
 	free(encoding.ptr);
 	free(serial.ptr);
@@ -390,13 +358,10 @@ end:
 
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
-<<<<<<< HEAD
-=======
 	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	policies->destroy_function(policies, (void*)destroy_cert_policy);
 	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
->>>>>>> upstream/4.5.1
 	ocsp->destroy(ocsp);
 	return command_usage(error);
 }
@@ -412,25 +377,6 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file | --keyid hex] [--type rsa|ecdsa]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
-<<<<<<< HEAD
-		 "[--flag serverAuth|clientAuth|ocspSigning]+",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
-		{
-			{"help",	'h', 0, "show usage information"},
-			{"in",		'i', 1, "private key input file, default: stdin"},
-			{"keyid",	'x', 1, "keyid on smartcard of private key"},
-			{"type",	't', 1, "type of input key, default: rsa"},
-			{"dn",		'd', 1, "subject and issuer distinguished name"},
-			{"san",		'a', 1, "subjectAltName to include in certificate"},
-			{"lifetime",'l', 1, "days the certificate is valid, default: 1095"},
-			{"serial",	's', 1, "serial number in hex, default: random"},
-			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
-			{"pathlen",	'p', 1, "set path length constraint"},
-			{"flag",	'e', 1, "include extendedKeyUsage flag"},
-			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
-			{"outform",	'f', 1, "encoding of generated cert, default: der"},
-=======
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
 		 "[--nc-permitted name] [--nc-excluded name]",
 		 "[--cert-policy oid [--cps-uri uri] [--user-notice text] ]+",
@@ -461,7 +407,6 @@ static void __attribute__ ((constructor))reg()
 			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",			'g', 1, "digest for signature creation, default: sha1"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
->>>>>>> upstream/4.5.1
 		}
 	});
 }

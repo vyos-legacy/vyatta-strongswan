@@ -26,11 +26,6 @@
 #include "pkcs11_public_key.h"
 #include "pkcs11_hasher.h"
 
-<<<<<<< HEAD
-=======
-static const char *plugin_name = "pkcs11";
-
->>>>>>> upstream/4.5.1
 typedef struct private_pkcs11_plugin_t private_pkcs11_plugin_t;
 
 /**
@@ -106,6 +101,12 @@ static void token_event_cb(private_pkcs11_plugin_t *this, pkcs11_library_t *p11,
 	}
 }
 
+METHOD(plugin_t, get_name, char*,
+	private_pkcs11_plugin_t *this)
+{
+	return "pkcs11";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_pkcs11_plugin_t *this)
 {
@@ -139,6 +140,8 @@ plugin_t *pkcs11_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
 		},
@@ -151,31 +154,17 @@ plugin_t *pkcs11_plugin_create()
 	if (lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.use_hasher", FALSE))
 	{
-<<<<<<< HEAD
-		lib->crypto->add_hasher(lib->crypto, HASH_MD2,
+		lib->crypto->add_hasher(lib->crypto, HASH_MD2, get_name(this),
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+		lib->crypto->add_hasher(lib->crypto, HASH_MD5, get_name(this),
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA1, get_name(this),
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA256, get_name(this),
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA384, get_name(this),
 					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
-=======
-		lib->crypto->add_hasher(lib->crypto, HASH_MD2, plugin_name,
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_MD5, plugin_name,
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA1, plugin_name,
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA256, plugin_name,
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA384, plugin_name,
-					(hasher_constructor_t)pkcs11_hasher_create);
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA512, plugin_name,
->>>>>>> upstream/4.5.1
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA512, get_name(this),
 					(hasher_constructor_t)pkcs11_hasher_create);
 	}
 

@@ -64,17 +64,6 @@ struct private_eap_ttls_peer_t {
 	eap_ttls_avp_t *avp;
 };
 
-/**
- * EAP packet format
- */
-typedef struct __attribute__((packed)) {
-	u_int8_t code;
-	u_int8_t identifier;
-	u_int16_t length;
-	u_int8_t type;
-	u_int8_t data;
-} eap_packet_t;
-
 #define MAX_RADIUS_ATTRIBUTE_SIZE	253
 
 METHOD(tls_application_t, process, status_t,
@@ -174,17 +163,30 @@ METHOD(tls_application_t, process, status_t,
 		return FAILED;
 	}
 
+	/* yet another phase2 authentication? */
+	if (this->method)
+	{
+		type = this->method->get_type(this->method, &vendor);
+
+		if (type != received_type || vendor != received_vendor)
+		{
+			this->method->destroy(this->method);
+			this->method = NULL;
+		}
+	}
+
 	if (this->method == NULL)
 	{
 		if (received_vendor)
 		{
-			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d",
-				 received_type, received_vendor);
+			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d "
+						  "(id 0x%02X)", received_type, received_vendor,
+						   in->get_identifier(in));
 		}
 		else
 		{
-			DBG1(DBG_IKE, "server requested %N authentication",
-				 eap_type_names, received_type);
+			DBG1(DBG_IKE, "server requested %N authentication (id 0x%02X)",
+				 eap_type_names, received_type, in->get_identifier(in));
 		}
 		this->method = charon->eap->create_instance(charon->eap,
 									received_type, received_vendor,
@@ -196,19 +198,8 @@ METHOD(tls_application_t, process, status_t,
 			in->destroy(in);
 			return NEED_MORE;
 		}
-<<<<<<< HEAD
-=======
+		type = this->method->get_type(this->method, &vendor);
 		this->start_phase2 = FALSE;
->>>>>>> upstream/4.5.1
-	}
-
-	type = this->method->get_type(this->method, &vendor);
-
-	if (type != received_type || vendor != received_vendor)
-	{
-		DBG1(DBG_IKE, "received invalid EAP request");
-		in->destroy(in);
-		return FAILED;
 	}
 
 	status = this->method->process(this->method, in, &this->out);
@@ -219,13 +210,8 @@ METHOD(tls_application_t, process, status_t,
 		case SUCCESS:
 			this->method->destroy(this->method);
 			this->method = NULL;
-			return NEED_MORE;
+			/* fall through to NEED_MORE */
 		case NEED_MORE:
-			if (type != EAP_TNC)
-			{
-				this->method->destroy(this->method);
-				this->method = NULL;
-			}
 			return NEED_MORE;
 		case FAILED:
 		default:

@@ -189,11 +189,11 @@ static char* get_string(private_ietf_attributes_t *this)
 
 					if (oid == OID_UNKNOWN)
 					{
-						written = snprintf(pos, len, "0x#B", &attr->value);
+						written = snprintf(pos, len, "0x%#B", &attr->value);
 					}
 					else
 					{
-						written = snprintf(pos, len, "%s", oid_names[oid]);
+						written = snprintf(pos, len, "%s", oid_names[oid].name);
 					}
 					break;
 				}
@@ -331,7 +331,7 @@ static bool matches(private_ietf_attributes_t *this, private_ietf_attributes_t *
 	/* look for at least one common attribute */
 	while (TRUE)
 	{
-		bool cmp = attr_a->compare(attr_a, attr_b);
+		int cmp = attr_a->compare(attr_a, attr_b);
 
 		if (cmp == 0)
 		{

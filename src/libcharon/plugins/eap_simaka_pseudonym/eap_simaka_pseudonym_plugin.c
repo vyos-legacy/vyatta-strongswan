@@ -42,10 +42,14 @@ struct private_eap_simaka_pseudonym_t {
 	eap_simaka_pseudonym_provider_t *provider;
 };
 
-/**
- * Implementation of eap_simaka_pseudonym_t.destroy.
- */
-static void destroy(private_eap_simaka_pseudonym_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_eap_simaka_pseudonym_t *this)
+{
+	return "eap-simaka-pseudonym";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_eap_simaka_pseudonym_t *this)
 {
 	charon->sim->remove_card(charon->sim, &this->card->card);
 	charon->sim->remove_provider(charon->sim, &this->provider->provider);
@@ -61,11 +65,17 @@ plugin_t *eap_simaka_pseudonym_plugin_create()
 {
 	private_eap_simaka_pseudonym_t *this;
 
-	this = malloc_thing(private_eap_simaka_pseudonym_t);
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+		.provider = eap_simaka_pseudonym_provider_create(),
+	);
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
-	this->provider = eap_simaka_pseudonym_provider_create();
 	if (!this->provider)
 	{
 		free(this);

@@ -50,10 +50,7 @@
 #include <processing/jobs/send_dpd_job.h>
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
-<<<<<<< HEAD
-=======
 #include <encoding/payloads/unknown_payload.h>
->>>>>>> upstream/4.5.1
 
 #ifdef ME
 #include <sa/tasks/ike_me.h>
@@ -563,16 +560,6 @@ METHOD(ike_sa_t, send_dpd, status_t,
 	time_t diff, delay;
 
 	delay = this->peer_cfg->get_dpd(this->peer_cfg);
-<<<<<<< HEAD
-
-	if (delay == 0)
-	{
-		/* DPD disabled */
-		return SUCCESS;
-	}
-
-=======
->>>>>>> upstream/4.5.1
 	if (this->task_manager->busy(this->task_manager))
 	{
 		/* an exchange is in the air, no need to start a DPD check */
@@ -585,11 +572,7 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		last_in = get_use_time(this, TRUE);
 		now = time_monotonic(NULL);
 		diff = now - last_in;
-<<<<<<< HEAD
-		if (diff >= delay)
-=======
 		if (!delay || diff >= delay)
->>>>>>> upstream/4.5.1
 		{
 			/* to long ago, initiate dead peer detection */
 			task_t *task;
@@ -615,16 +598,11 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		}
 	}
 	/* recheck in "interval" seconds */
-<<<<<<< HEAD
-	job = (job_t*)send_dpd_job_create(this->ike_sa_id);
-	lib->scheduler->schedule_job(lib->scheduler, job, delay - diff);
-=======
 	if (delay)
 	{
 		job = (job_t*)send_dpd_job_create(this->ike_sa_id);
 		lib->scheduler->schedule_job(lib->scheduler, job, delay - diff);
 	}
->>>>>>> upstream/4.5.1
 	return SUCCESS;
 }
 
@@ -699,14 +677,10 @@ METHOD(ike_sa_t, set_state, void,
 				}
 
 				/* start DPD checks */
-<<<<<<< HEAD
-				send_dpd(this);
-=======
 				if (this->peer_cfg->get_dpd(this->peer_cfg))
 				{
 					send_dpd(this);
 				}
->>>>>>> upstream/4.5.1
 			}
 			break;
 		}
@@ -851,11 +825,7 @@ METHOD(ike_sa_t, float_ports, void,
 }
 
 METHOD(ike_sa_t, update_hosts, void,
-<<<<<<< HEAD
-	private_ike_sa_t *this, host_t *me, host_t *other)
-=======
 	private_ike_sa_t *this, host_t *me, host_t *other, bool force)
->>>>>>> upstream/4.5.1
 {
 	bool update = FALSE;
 
@@ -888,11 +858,7 @@ METHOD(ike_sa_t, update_hosts, void,
 		if (!other->equals(other, this->other_host))
 		{
 			/* update others adress if we are NOT NATed */
-<<<<<<< HEAD
-			if (!has_condition(this, COND_NAT_HERE))
-=======
 			if (force || !has_condition(this, COND_NAT_HERE))
->>>>>>> upstream/4.5.1
 			{
 				set_other_host(this, other->clone(other));
 				update = TRUE;
@@ -925,10 +891,6 @@ METHOD(ike_sa_t, update_hosts, void,
 METHOD(ike_sa_t, generate_message, status_t,
 	private_ike_sa_t *this, message_t *message, packet_t **packet)
 {
-<<<<<<< HEAD
-	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
-	message->set_ike_sa_id(message, this->ike_sa_id);
-=======
 	if (message->is_encoded(message))
 	{	/* already done */
 		*packet = message->get_packet(message);
@@ -937,7 +899,6 @@ METHOD(ike_sa_t, generate_message, status_t,
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
 	charon->bus->message(charon->bus, message, FALSE);
->>>>>>> upstream/4.5.1
 	return message->generate(message,
 				this->keymat->get_aead(this->keymat, FALSE), packet);
 }
@@ -946,11 +907,7 @@ METHOD(ike_sa_t, generate_message, status_t,
  * send a notify back to the sender
  */
 static void send_notify_response(private_ike_sa_t *this, message_t *request,
-<<<<<<< HEAD
-								 notify_type_t type)
-=======
 								 notify_type_t type, chunk_t data)
->>>>>>> upstream/4.5.1
 {
 	message_t *response;
 	packet_t *packet;
@@ -959,11 +916,7 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	response->set_exchange_type(response, request->get_exchange_type(request));
 	response->set_request(response, FALSE);
 	response->set_message_id(response, request->get_message_id(request));
-<<<<<<< HEAD
-	response->add_notify(response, FALSE, type, chunk_empty);
-=======
 	response->add_notify(response, FALSE, type, data);
->>>>>>> upstream/4.5.1
 	if (this->my_host->is_anyaddr(this->my_host))
 	{
 		this->my_host->destroy(this->my_host);
@@ -1228,10 +1181,7 @@ METHOD(ike_sa_t, process_message, status_t,
 {
 	status_t status;
 	bool is_request;
-<<<<<<< HEAD
-=======
 	u_int8_t type = 0;
->>>>>>> upstream/4.5.1
 
 	if (this->state == IKE_PASSIVE)
 	{	/* do not handle messages in passive state */
@@ -1242,11 +1192,6 @@ METHOD(ike_sa_t, process_message, status_t,
 
 	status = message->parse_body(message,
 								 this->keymat->get_aead(this->keymat, TRUE));
-<<<<<<< HEAD
-	if (status != SUCCESS)
-	{
-
-=======
 	if (status == SUCCESS)
 	{	/* check for unsupported critical payloads */
 		enumerator_t *enumerator;
@@ -1270,7 +1215,6 @@ METHOD(ike_sa_t, process_message, status_t,
 	}
 	if (status != SUCCESS)
 	{
->>>>>>> upstream/4.5.1
 		if (is_request)
 		{
 			switch (status)
@@ -1279,40 +1223,28 @@ METHOD(ike_sa_t, process_message, status_t,
 					DBG1(DBG_IKE, "critical unknown payloads found");
 					if (is_request)
 					{
-<<<<<<< HEAD
-						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
-=======
 						send_notify_response(this, message,
 											 UNSUPPORTED_CRITICAL_PAYLOAD,
 											 chunk_from_thing(type));
 						this->task_manager->incr_mid(this->task_manager, FALSE);
->>>>>>> upstream/4.5.1
 					}
 					break;
 				case PARSE_ERROR:
 					DBG1(DBG_IKE, "message parsing failed");
 					if (is_request)
 					{
-<<<<<<< HEAD
-						send_notify_response(this, message, INVALID_SYNTAX);
-=======
 						send_notify_response(this, message,
 											 INVALID_SYNTAX, chunk_empty);
 						this->task_manager->incr_mid(this->task_manager, FALSE);
->>>>>>> upstream/4.5.1
 					}
 					break;
 				case VERIFY_ERROR:
 					DBG1(DBG_IKE, "message verification failed");
 					if (is_request)
 					{
-<<<<<<< HEAD
-						send_notify_response(this, message, INVALID_SYNTAX);
-=======
 						send_notify_response(this, message,
 											 INVALID_SYNTAX, chunk_empty);
 						this->task_manager->incr_mid(this->task_manager, FALSE);
->>>>>>> upstream/4.5.1
 					}
 					break;
 				case FAILED:
@@ -1321,13 +1253,6 @@ METHOD(ike_sa_t, process_message, status_t,
 					break;
 				case INVALID_STATE:
 					DBG1(DBG_IKE, "found encrypted message, but no keys available");
-<<<<<<< HEAD
-					if (is_request)
-					{
-						send_notify_response(this, message, INVALID_SYNTAX);
-					}
-=======
->>>>>>> upstream/4.5.1
 				default:
 					break;
 			}
@@ -1357,12 +1282,8 @@ METHOD(ike_sa_t, process_message, status_t,
 				/* no config found for these hosts, destroy */
 				DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
 					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
-<<<<<<< HEAD
-				send_notify_response(this, message, NO_PROPOSAL_CHOSEN);
-=======
 				send_notify_response(this, message,
 									 NO_PROPOSAL_CHOSEN, chunk_empty);
->>>>>>> upstream/4.5.1
 				return DESTROY_ME;
 			}
 			/* add a timeout if peer does not establish it completely */
@@ -1652,7 +1573,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 #endif /* ME */
 		))
 	{
-		DBG1(DBG_IKE, "unable to reestablish IKE_SA due asymetric setup");
+		DBG1(DBG_IKE, "unable to reestablish IKE_SA due to asymmetric setup");
 		return FAILED;
 	}
 
@@ -1975,7 +1896,7 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
-METHOD(ike_sa_t, inherit, status_t,
+METHOD(ike_sa_t, inherit, void,
 	private_ike_sa_t *this, ike_sa_t *other_public)
 {
 	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
@@ -2056,8 +1977,6 @@ METHOD(ike_sa_t, inherit, status_t,
 		lib->scheduler->schedule_job(lib->scheduler,
 				(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE), delete);
 	}
-	/* we have to initate here, there may be new tasks to handle */
-	return this->task_manager->initiate(this->task_manager);
 }
 
 METHOD(ike_sa_t, destroy, void,
@@ -2068,6 +1987,7 @@ METHOD(ike_sa_t, destroy, void,
 	charon->bus->set_sa(charon->bus, &this->public);
 
 	set_state(this, IKE_DESTROYING);
+	this->task_manager->destroy(this->task_manager);
 
 	/* remove attributes first, as we pass the IKE_SA to the handler */
 	while (this->attributes->remove_last(this->attributes,
@@ -2085,7 +2005,6 @@ METHOD(ike_sa_t, destroy, void,
 	/* unset SA after here to avoid usage by the listeners */
 	charon->bus->set_sa(charon->bus, NULL);
 
-	this->task_manager->destroy(this->task_manager);
 	this->keymat->destroy(this->keymat);
 
 	if (this->my_virtual_ip)

@@ -518,13 +518,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 
 	child_cfg = child_cfg_create(priv->name, &lifetime,
 								 NULL, TRUE, MODE_TUNNEL, /* updown, hostaccess */
-<<<<<<< HEAD
-								 ACTION_NONE, ACTION_NONE, ipcomp, 0, 0,
-								 NULL, NULL);
-=======
 								 ACTION_NONE, ACTION_NONE, ACTION_NONE, ipcomp,
 								 0, 0, NULL, NULL, 0);
->>>>>>> upstream/4.5.1
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);

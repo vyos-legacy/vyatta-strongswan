@@ -154,8 +154,6 @@ struct message_t {
 	bool (*get_request) (message_t *this);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Set the version flag in the IKE header.
 	 */
 	void (*set_version_flag)(message_t *this);
@@ -176,7 +174,6 @@ struct message_t {
 	void (*set_reserved_header_bit)(message_t *this, u_int nr);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Append a payload to the message.
 	 *
 	 * If the payload must be encrypted is not specified here. Encryption
@@ -204,14 +201,11 @@ struct message_t {
 						chunk_t data);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Disable automatic payload sorting for this message.
 	 */
 	void (*disable_sort)(message_t *this);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Parses header of message.
 	 *
 	 * Begins parisng of a message created via message_create_from_packet().
@@ -237,11 +231,6 @@ struct message_t {
 	 * @param aead		aead transform to verify/decrypt message
 	 * @return
 	 * 					- SUCCESS if parsing successful
-<<<<<<< HEAD
-	 * 					- NOT_SUPPORTED if ciritcal unknown payloads found
-	 * 					- NOT_SUPPORTED if message type is not supported!
-=======
->>>>>>> upstream/4.5.1
 	 *					- PARSE_ERROR if message parsing failed
 	 * 					- VERIFY_ERROR if message verification failed (bad syntax)
 	 * 					- FAILED if integrity check failed
@@ -269,8 +258,6 @@ struct message_t {
 	status_t (*generate) (message_t *this, aead_t *aead, packet_t **packet);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Check if the message has already been encoded using generate().
 	 *
 	 * @return			TRUE if message has been encoded
@@ -278,7 +265,6 @@ struct message_t {
 	bool (*is_encoded)(message_t *this);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Gets the source host informations.
 	 *
 	 * @warning Returned host_t object is not getting cloned,
@@ -326,8 +312,6 @@ struct message_t {
 	enumerator_t * (*create_payload_enumerator) (message_t *this);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Remove the payload at the current enumerator position.
 	 *
 	 * @param enumerator	enumerator created by create_payload_enumerator()
@@ -335,7 +319,6 @@ struct message_t {
 	void (*remove_payload_at)(message_t *this, enumerator_t *enumerator);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Find a payload of a specific type.
 	 *
 	 * Returns the first occurance.

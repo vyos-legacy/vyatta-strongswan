@@ -1,33 +1,13 @@
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libhydra \
-<<<<<<< HEAD
-	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls \
-	`xml2-config --cflags`
-
-AM_CFLAGS = -rdynamic
-
-libstrongswan_tnccs_20_la_LIBADD = -ltnc
-
-=======
 	-I$(top_srcdir)/src/libcharon -I$(top_srcdir)/src/libtls
 
 AM_CFLAGS = -rdynamic
 
->>>>>>> upstream/4.5.1
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-tnccs-20.la
 else
 plugin_LTLIBRARIES = libstrongswan-tnccs-20.la
-<<<<<<< HEAD
-libstrongswan_tnccs_20_la_LIBADD += $(top_builddir)/src/libtls/libtls.la
-endif
-
-libstrongswan_tnccs_20_la_SOURCES = \
-	tnccs_20_plugin.h tnccs_20_plugin.c tnccs_20.h tnccs_20.c
-
-libstrongswan_tnccs_20_la_LDFLAGS = -module -avoid-version
-
-=======
 libstrongswan_tnccs_20_la_LIBADD = $(top_builddir)/src/libtls/libtls.la
 endif
 
@@ -46,4 +26,3 @@ libstrongswan_tnccs_20_la_SOURCES = \
 	state_machine/pb_tnc_state_machine.h state_machine/pb_tnc_state_machine.c
 
 libstrongswan_tnccs_20_la_LDFLAGS = -module -avoid-version
->>>>>>> upstream/4.5.1

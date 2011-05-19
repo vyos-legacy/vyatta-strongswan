@@ -21,13 +21,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-<<<<<<< HEAD
-#include <pthread.h>
-
-=======
 
 #include <threading/thread.h>
->>>>>>> upstream/4.5.1
 #include <processing/jobs/callback_job.h>
 
 #define HA_FIFO IPSEC_PIDDIR "/charon.ha"
@@ -65,15 +60,6 @@ struct private_ha_ctl_t {
  */
 static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 {
-<<<<<<< HEAD
-	int fifo, old;
-	char buf[8];
-	u_int segment;
-
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old);
-	fifo = open(HA_FIFO, O_RDONLY);
-	pthread_setcancelstate(old, NULL);
-=======
 	int fifo;
 	bool oldstate;
 	char buf[8];
@@ -82,7 +68,6 @@ static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 	oldstate = thread_cancelability(TRUE);
 	fifo = open(HA_FIFO, O_RDONLY);
 	thread_cancelability(oldstate);
->>>>>>> upstream/4.5.1
 	if (fifo == -1)
 	{
 		DBG1(DBG_CFG, "opening HA fifo failed: %s", strerror(errno));

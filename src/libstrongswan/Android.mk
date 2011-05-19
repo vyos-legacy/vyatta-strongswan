@@ -32,8 +32,7 @@ credentials/keys/private_key.c credentials/keys/private_key.h \
 credentials/keys/public_key.c credentials/keys/public_key.h \
 credentials/keys/shared_key.c credentials/keys/shared_key.h \
 credentials/certificates/certificate.c credentials/certificates/certificate.h \
-credentials/certificates/x509.h credentials/certificates/x509.c \
-credentials/certificates/ac.h \
+credentials/certificates/x509.h credentials/certificates/ac.h \
 credentials/certificates/crl.h credentials/certificates/crl.c \
 credentials/certificates/pkcs10.h \
 credentials/certificates/ocsp_request.h \
@@ -49,7 +48,7 @@ credentials/sets/callback_cred.c credentials/sets/callback_cred.h \
 credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
 credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
-fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
+fetcher/fetcher.h fetcher/fetcher.c fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
 eap/eap.h eap/eap.c \
 plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h \
 processing/jobs/job.h \

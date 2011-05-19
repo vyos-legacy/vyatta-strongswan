@@ -591,7 +591,7 @@ static u_int32_t decode_long_duration(pb_stream *pbs)
 	if (pbs_left(pbs) > sizeof(val))
 	{
 		/* "clamp" too large value to max representable value */
-		val -= 1;       /* portable way to get to maximum value */
+		val = UINT32_MAX;
 		DBG(DBG_PARSING, DBG_log("   too large duration clamped to: %lu"
 			, (unsigned long)val));
 	}
@@ -881,7 +881,7 @@ notification_t parse_isakmp_sa_body(u_int32_t ipsecdoisit,
 		lset_t seen_attrs = 0;
 		lset_t seen_durations = 0;
 		u_int16_t life_type = 0;
-		struct oakley_trans_attrs ta;
+		struct oakley_trans_attrs ta = { .encrypter = NULL };
 		err_t ugh = NULL;       /* set to diagnostic when problem detected */
 
 		/* initialize only optional field in ta */

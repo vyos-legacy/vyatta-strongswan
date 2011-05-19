@@ -705,8 +705,6 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				cfg->err++;
 			}
 			break;
-<<<<<<< HEAD
-=======
 		case KW_TFC:
 			if (streq(kw->value, "%mtu"))
 			{
@@ -724,7 +722,6 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				}
 			}
 			break;
->>>>>>> upstream/4.5.1
 		case KW_KEYINGTRIES:
 			if (streq(kw->value, "%forever"))
 			{

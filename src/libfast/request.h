@@ -86,8 +86,6 @@ struct request_t {
 	char* (*get_query_data)(request_t *this, char *name);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Get an arbitrary environment variable.
 	 *
 	 * @param name		name of the environment variable
@@ -96,7 +94,6 @@ struct request_t {
 	char* (*get_env_var)(request_t *this, char *name);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Read raw POST/PUT data from HTTP request.
 	 *
 	 * @param buf		buffer to read data into

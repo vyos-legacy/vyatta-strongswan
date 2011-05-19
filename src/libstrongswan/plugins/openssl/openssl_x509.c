@@ -84,11 +84,7 @@ struct private_openssl_x509_t {
 	/**
 	 * Pathlen constraint
 	 */
-<<<<<<< HEAD
-	int pathlen;
-=======
 	u_char pathlen;
->>>>>>> upstream/4.5.1
 
 	/**
 	 * certificate subject
@@ -141,11 +137,7 @@ struct private_openssl_x509_t {
 	linked_list_t *issuerAltNames;
 
 	/**
-<<<<<<< HEAD
-	 * List of CRL URIs
-=======
 	 * List of CRL URIs, as x509_cdp_t
->>>>>>> upstream/4.5.1
 	 */
 	linked_list_t *crl_uris;
 
@@ -161,8 +153,6 @@ struct private_openssl_x509_t {
 };
 
 /**
-<<<<<<< HEAD
-=======
  * Destroy a CRL URI struct
  */
 static void crl_uri_destroy(x509_cdp_t *this)
@@ -173,7 +163,6 @@ static void crl_uri_destroy(x509_cdp_t *this)
 }
 
 /**
->>>>>>> upstream/4.5.1
  * Convert a GeneralName to an identification_t.
  */
 static identification_t *general_name2id(GENERAL_NAME *name)
@@ -261,12 +250,6 @@ METHOD(x509_t, get_authKeyIdentifier, chunk_t,
 	return chunk_empty;
 }
 
-<<<<<<< HEAD
-METHOD(x509_t, get_pathLenConstraint, int,
-	private_openssl_x509_t *this)
-{
-	return this->pathlen;
-=======
 METHOD(x509_t, get_constraint, u_int,
 	private_openssl_x509_t *this, x509_constraint_t type)
 {
@@ -277,7 +260,6 @@ METHOD(x509_t, get_constraint, u_int,
 		default:
 			return X509_NO_CONSTRAINT;
 	}
->>>>>>> upstream/4.5.1
 }
 
 METHOD(x509_t, create_subjectAltName_enumerator, enumerator_t*,
@@ -298,16 +280,6 @@ METHOD(x509_t, create_ocsp_uri_enumerator, enumerator_t*,
 	return this->ocsp_uris->create_enumerator(this->ocsp_uris);
 }
 
-<<<<<<< HEAD
-METHOD(x509_t, create_ipAddrBlock_enumerator, enumerator_t*,
-	private_openssl_x509_t *this)
-{
-	/* TODO */
-	return enumerator_create_empty();
-}
-
-=======
->>>>>>> upstream/4.5.1
 METHOD(certificate_t, get_type, certificate_type_t,
 	private_openssl_x509_t *this)
 {
@@ -520,11 +492,7 @@ METHOD(certificate_t, destroy, void,
 										offsetof(identification_t, destroy));
 		this->issuerAltNames->destroy_offset(this->issuerAltNames,
 										offsetof(identification_t, destroy));
-<<<<<<< HEAD
-		this->crl_uris->destroy_function(this->crl_uris, free);
-=======
 		this->crl_uris->destroy_function(this->crl_uris, (void*)crl_uri_destroy);
->>>>>>> upstream/4.5.1
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
 		free(this);
 	}
@@ -558,13 +526,6 @@ static private_openssl_x509_t *create_empty()
 				.get_serial = _get_serial,
 				.get_subjectKeyIdentifier = _get_subjectKeyIdentifier,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
-<<<<<<< HEAD
-				.get_pathLenConstraint = _get_pathLenConstraint,
-				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
-				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
-				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,
-				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
-=======
 				.get_constraint = _get_constraint,
 				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
 				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
@@ -573,18 +534,13 @@ static private_openssl_x509_t *create_empty()
 				.create_name_constraint_enumerator = (void*)enumerator_create_empty,
 				.create_cert_policy_enumerator = (void*)enumerator_create_empty,
 				.create_policy_mapping_enumerator = (void*)enumerator_create_empty,
->>>>>>> upstream/4.5.1
 			},
 		},
 		.subjectAltNames = linked_list_create(),
 		.issuerAltNames = linked_list_create(),
 		.crl_uris = linked_list_create(),
 		.ocsp_uris = linked_list_create(),
-<<<<<<< HEAD
-		.pathlen = X509_NO_PATH_LEN_CONSTRAINT,
-=======
 		.pathlen = X509_NO_CONSTRAINT,
->>>>>>> upstream/4.5.1
 		.ref = 1,
 	);
 
@@ -630,10 +586,7 @@ static bool parse_basicConstraints_ext(private_openssl_x509_t *this,
 									   X509_EXTENSION *ext)
 {
 	BASIC_CONSTRAINTS *constraints;
-<<<<<<< HEAD
-=======
 	long pathlen;
->>>>>>> upstream/4.5.1
 
 	constraints = (BASIC_CONSTRAINTS*)X509V3_EXT_d2i(ext);
 	if (constraints)
@@ -644,14 +597,10 @@ static bool parse_basicConstraints_ext(private_openssl_x509_t *this,
 		}
 		if (constraints->pathlen)
 		{
-<<<<<<< HEAD
-			this->pathlen = ASN1_INTEGER_get(constraints->pathlen);
-=======
 			
 			pathlen = ASN1_INTEGER_get(constraints->pathlen);
 			this->pathlen = (pathlen >= 0 && pathlen < 128) ?
 							 pathlen : X509_NO_CONSTRAINT;
->>>>>>> upstream/4.5.1
 		}
 		BASIC_CONSTRAINTS_free(constraints);
 		return TRUE;
@@ -667,16 +616,10 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 {
 	CRL_DIST_POINTS *cdps;
 	DIST_POINT *cdp;
-<<<<<<< HEAD
-	identification_t *id;
-	char *uri;
-	int i, j, point_num, name_num;
-=======
 	identification_t *id, *issuer;
 	x509_cdp_t *entry;
 	char *uri;
 	int i, j, k, point_num, name_num, issuer_num;
->>>>>>> upstream/4.5.1
 
 	cdps = X509V3_EXT_d2i(ext);
 	if (!cdps)
@@ -701,9 +644,6 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 					{
 						if (asprintf(&uri, "%Y", id) > 0)
 						{
-<<<<<<< HEAD
-							this->crl_uris->insert_first(this->crl_uris, uri);
-=======
 							if (cdp->CRLissuer)
 							{
 								issuer_num = sk_GENERAL_NAME_num(cdp->CRLissuer);
@@ -730,16 +670,12 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 								);
 								this->crl_uris->insert_last(this->crl_uris, entry);
 							}
->>>>>>> upstream/4.5.1
 						}
 						id->destroy(id);
 					}
 				}
 			}
-<<<<<<< HEAD
-=======
 
->>>>>>> upstream/4.5.1
 			DIST_POINT_free(cdp);
 		}
 	}
@@ -872,9 +808,6 @@ static bool parse_extensions(private_openssl_x509_t *this)
 					ok = parse_crlDistributionPoints_ext(this, ext);
 					break;
 				default:
-<<<<<<< HEAD
-					ok = TRUE;
-=======
 					ok = X509_EXTENSION_get_critical(ext) == 0 ||
 						 !lib->settings->get_bool(lib->settings,
 								"libstrongswan.x509.enforce_critical", TRUE);
@@ -882,7 +815,6 @@ static bool parse_extensions(private_openssl_x509_t *this)
 					{
 						DBG1(DBG_LIB, "found unsupported critical X.509 extension");
 					}
->>>>>>> upstream/4.5.1
 					break;
 			}
 			if (!ok)
@@ -940,8 +872,6 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	{
 		return FALSE;
 	}
-<<<<<<< HEAD
-=======
 	if (X509_get_version(this->x509) < 0 || X509_get_version(this->x509) > 2)
 	{
 		DBG1(DBG_LIB, "unsupported x509 version: %d",
@@ -949,7 +879,6 @@ static bool parse_certificate(private_openssl_x509_t *this)
 		return FALSE;
 	}
 
->>>>>>> upstream/4.5.1
 	this->subject = openssl_x509_name2id(X509_get_subject_name(this->x509));
 	this->issuer = openssl_x509_name2id(X509_get_issuer_name(this->x509));
 
@@ -993,11 +922,7 @@ static bool parse_certificate(private_openssl_x509_t *this)
 
 	if (!parse_extensions(this))
 	{
-<<<<<<< HEAD
-		return TRUE;
-=======
 		return FALSE;
->>>>>>> upstream/4.5.1
 	}
 	parse_extKeyUsage(this);
 

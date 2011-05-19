@@ -132,12 +132,8 @@ static bool enumerate(wrapper_enumerator_t *this, certificate_t **cert)
 			}
 		}
 		else if (rule != AUTH_HELPER_SUBJECT_CERT &&
-<<<<<<< HEAD
-				 rule != AUTH_HELPER_IM_CERT)
-=======
 				 rule != AUTH_HELPER_IM_CERT &&
 				 rule != AUTH_HELPER_REVOCATION_CERT)
->>>>>>> upstream/4.5.1
 		{	/* handle only HELPER certificates */
 			continue;
 		}

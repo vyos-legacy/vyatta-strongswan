@@ -343,14 +343,9 @@ struct ike_sa_t {
 	 *
 	 * @param me			new local host address, or NULL
 	 * @param other			new remote host address, or NULL
-<<<<<<< HEAD
-	 */
-	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other);
-=======
 	 * @param force			force update
 	 */
 	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other, bool force);
->>>>>>> upstream/4.5.1
 
 	/**
 	 * Get the own identification.
@@ -917,9 +912,8 @@ struct ike_sa_t {
 	 * As this call may initiate inherited tasks, a status is returned.
 	 *
 	 * @param other			other task to inherit from
-	 * @return				DESTROY_ME if initiation of inherited task failed
 	 */
-	status_t (*inherit) (ike_sa_t *this, ike_sa_t *other);
+	void (*inherit) (ike_sa_t *this, ike_sa_t *other);
 
 	/**
 	 * Reset the IKE_SA, useable when initiating fails

@@ -39,12 +39,8 @@ ENUM_END(auth_method_names, AUTH_ECDSA_521);
  */
 authenticator_t *authenticator_create_builder(ike_sa_t *ike_sa, auth_cfg_t *cfg,
 									chunk_t received_nonce, chunk_t sent_nonce,
-<<<<<<< HEAD
-									chunk_t received_init, chunk_t sent_init)
-=======
 									chunk_t received_init, chunk_t sent_init,
 									char reserved[3])
->>>>>>> upstream/4.5.1
 {
 	switch ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS))
 	{
@@ -52,15 +48,6 @@ authenticator_t *authenticator_create_builder(ike_sa_t *ike_sa, auth_cfg_t *cfg,
 			/* defaults to PUBKEY */
 		case AUTH_CLASS_PUBKEY:
 			return (authenticator_t*)pubkey_authenticator_create_builder(ike_sa,
-<<<<<<< HEAD
-											received_nonce, sent_init);
-		case AUTH_CLASS_PSK:
-			return (authenticator_t*)psk_authenticator_create_builder(ike_sa,
-											received_nonce, sent_init);
-		case AUTH_CLASS_EAP:
-			return (authenticator_t*)eap_authenticator_create_builder(ike_sa,
-						received_nonce, sent_nonce, received_init, sent_init);
-=======
 										received_nonce, sent_init, reserved);
 		case AUTH_CLASS_PSK:
 			return (authenticator_t*)psk_authenticator_create_builder(ike_sa,
@@ -69,7 +56,6 @@ authenticator_t *authenticator_create_builder(ike_sa_t *ike_sa, auth_cfg_t *cfg,
 			return (authenticator_t*)eap_authenticator_create_builder(ike_sa,
 										received_nonce, sent_nonce,
 										received_init, sent_init, reserved);
->>>>>>> upstream/4.5.1
 		default:
 			return NULL;
 	}
@@ -81,12 +67,8 @@ authenticator_t *authenticator_create_builder(ike_sa_t *ike_sa, auth_cfg_t *cfg,
 authenticator_t *authenticator_create_verifier(
 									ike_sa_t *ike_sa, message_t *message,
 									chunk_t received_nonce, chunk_t sent_nonce,
-<<<<<<< HEAD
-									chunk_t received_init, chunk_t sent_init)
-=======
 									chunk_t received_init, chunk_t sent_init,
 									char reserved[3])
->>>>>>> upstream/4.5.1
 {
 	auth_payload_t *auth_payload;
 
@@ -94,12 +76,8 @@ authenticator_t *authenticator_create_verifier(
 	if (auth_payload == NULL)
 	{
 		return (authenticator_t*)eap_authenticator_create_verifier(ike_sa,
-<<<<<<< HEAD
-						received_nonce, sent_nonce, received_init, sent_init);
-=======
 										received_nonce, sent_nonce,
 										received_init, sent_init, reserved);
->>>>>>> upstream/4.5.1
 	}
 	switch (auth_payload->get_auth_method(auth_payload))
 	{
@@ -108,17 +86,10 @@ authenticator_t *authenticator_create_verifier(
 		case AUTH_ECDSA_384:
 		case AUTH_ECDSA_521:
 			return (authenticator_t*)pubkey_authenticator_create_verifier(ike_sa,
-<<<<<<< HEAD
-													sent_nonce, received_init);
-		case AUTH_PSK:
-			return (authenticator_t*)psk_authenticator_create_verifier(ike_sa,
-													sent_nonce, received_init);
-=======
 										sent_nonce, received_init, reserved);
 		case AUTH_PSK:
 			return (authenticator_t*)psk_authenticator_create_verifier(ike_sa,
 										sent_nonce, received_init, reserved);
->>>>>>> upstream/4.5.1
 		default:
 			return NULL;
 	}

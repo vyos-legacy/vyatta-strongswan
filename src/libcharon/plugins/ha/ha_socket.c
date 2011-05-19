@@ -20,17 +20,10 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <unistd.h>
-<<<<<<< HEAD
-#include <pthread.h>
-
-#include <daemon.h>
-#include <utils/host.h>
-=======
 
 #include <daemon.h>
 #include <utils/host.h>
 #include <threading/thread.h>
->>>>>>> upstream/4.5.1
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ha_socket_t private_ha_socket_t;
@@ -128,21 +121,12 @@ METHOD(ha_socket_t, pull, ha_message_t*,
 	{
 		ha_message_t *message;
 		char buf[1024];
-<<<<<<< HEAD
-		int oldstate;
-		ssize_t len;
-
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		len = recv(this->fd, buf, sizeof(buf), 0);
-		pthread_setcancelstate(oldstate, NULL);
-=======
 		bool oldstate;
 		ssize_t len;
 
 		oldstate = thread_cancelability(TRUE);
 		len = recv(this->fd, buf, sizeof(buf), 0);
 		thread_cancelability(oldstate);
->>>>>>> upstream/4.5.1
 		if (len <= 0)
 		{
 			switch (errno)

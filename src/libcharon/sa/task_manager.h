@@ -149,8 +149,6 @@ struct task_manager_t {
 	void (*adopt_tasks) (task_manager_t *this, task_manager_t *other);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Increment a message ID counter, in- or outbound.
 	 *
 	 * If a message is processed outside of the manager, this call increments
@@ -161,7 +159,6 @@ struct task_manager_t {
 	void (*incr_mid)(task_manager_t *this, bool initiate);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Reset message ID counters of the task manager.
 	 *
 	 * The IKEv2 protocol requires to restart exchanges with message IDs

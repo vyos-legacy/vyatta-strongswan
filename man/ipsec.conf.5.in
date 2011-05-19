@@ -409,12 +409,20 @@ comma-separated list of ESP encryption/authentication algorithms to be used
 for the connection, e.g.
 .BR aes128-sha256 .
 The notation is
-.BR encryption-integrity-[dh-group] .
+.BR encryption-integrity[-dhgroup][-esnmodes] .
 .br
 If
 .B dh-group
 is specified, CHILD_SA setup and rekeying include a separate diffe hellman
-exchange (IKEv2 only).
+exchange (IKEv2 only). Valid
+.B esnmodes
+(IKEv2 only) are
+.B esn
+and
+.B noesn.
+Specifying both negotiates Extended Sequence number support with the peer,
+the defaut is
+.B noesn.
 .TP
 .BR forceencaps " = yes | " no
 force UDP encapsulation for ESP packets even if no NAT situation is detected.
@@ -544,10 +552,6 @@ for public key authentication (RSA/ECDSA),
 .B psk
 for pre-shared key authentication and
 .B eap
-<<<<<<< HEAD
-to (require the) use of the Extensible Authentication Protocol. In the case
-of
-=======
 to (require the) use of the Extensible Authentication Protocol.
 To require a trustchain public key strength for the remote side, specify the
 key type followed by the strength in bits (for example
@@ -555,7 +559,6 @@ key type followed by the strength in bits (for example
 or
 .BR ecdsa-256 ).
 For
->>>>>>> upstream/4.5.1
 .B eap,
 an optional EAP method can be appended. Currently defined methods are
 .BR eap-aka ,
@@ -599,11 +602,7 @@ sets
 to the distinguished name of the certificate's subject and
 .B leftca
 to the distinguished name of the certificate's issuer.
-<<<<<<< HEAD
-The left participant's ID can be overriden by specifying a
-=======
 The left participant's ID can be overridden by specifying a
->>>>>>> upstream/4.5.1
 .B leftid
 value which must be certified by the certificate, though.
 .TP
@@ -612,13 +611,10 @@ Same as
 .B leftcert,
 but for the second authentication round (IKEv2 only).
 .TP
-<<<<<<< HEAD
-=======
 .BR leftcertpolicy " = <OIDs>"
 Comma separated list of certificate policy OIDs the peers certificate must have.
 OIDs are specified using the numerical dotted representation (IKEv2 only).
 .TP
->>>>>>> upstream/4.5.1
 .BR leftfirewall " = yes | " no
 whether the left participant is doing forwarding-firewalling
 (including masquerading) using iptables for traffic from \fIleftsubnet\fR,
@@ -974,8 +970,6 @@ synonym for
 .BR reqid " = <number>"
 sets the reqid for a given connection to a pre-configured fixed value.
 .TP
-<<<<<<< HEAD
-=======
 .BR tfc " = <value>"
 number of bytes to pad ESP payload data to. Traffic Flow Confidentiality
 is currently supported in IKEv2 and applies to outgoing packets only. The
@@ -983,7 +977,6 @@ special value
 .BR %mtu
 fills up ESP packets with padding to have the size of the MTU.
 .TP
->>>>>>> upstream/4.5.1
 .BR type " = " tunnel " | transport | transport_proxy | passthrough | drop"
 the type of the connection; currently the accepted values
 are
@@ -1050,8 +1043,11 @@ is not given, the
 of this connection will be used as peer ID.
 
 .SH "CA SECTIONS"
-This are optional sections that can be used to assign special
-parameters to a Certification Authority (CA).
+These are optional sections that can be used to assign special
+parameters to a Certification Authority (CA). Because the daemons
+automatically import CA certificates from \fI/etc/ipsec.d/cacerts\fP,
+there is no need to explicitly add them with a CA section, unless you
+want to assign special parameters (like a CRL) to a CA.
 .TP
 .BR also " = <name>"
 includes ca section

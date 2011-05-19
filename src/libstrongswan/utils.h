@@ -57,11 +57,7 @@
 #define streq(x,y) (strcmp(x, y) == 0)
 
 /**
-<<<<<<< HEAD
- * Macro compares two strings for equality
-=======
  * Macro compares two strings for equality, length limited
->>>>>>> upstream/4.5.1
  */
 #define strneq(x,y,len) (strncmp(x, y, len) == 0)
 
@@ -71,8 +67,6 @@
 #define strcaseeq(x,y) (strcasecmp(x, y) == 0)
 
 /**
-<<<<<<< HEAD
-=======
  * Macro compares two strings for equality ignoring case, length limited
  */
 #define strncaseeq(x,y,len) (strncasecmp(x, y, len) == 0)
@@ -83,7 +77,6 @@
 #define strdupnull(x) ({ char *_x = x; _x ? strdup(_x) : NULL; })
 
 /**
->>>>>>> upstream/4.5.1
  * Macro compares two binary blobs for equality
  */
 #define memeq(x,y,len) (memcmp(x, y, len) == 0)
@@ -344,6 +337,51 @@ void *clalloc(void *pointer, size_t size);
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 
 /**
+ * Safely overwrite n bytes of memory at ptr with zero, non-inlining variant.
+ */
+void memwipe_noinline(void *ptr, size_t n);
+
+/**
+ * Safely overwrite n bytes of memory at ptr with zero, inlining variant.
+ */
+static inline void memwipe_inline(void *ptr, size_t n)
+{
+	volatile char *c = (volatile char*)ptr;
+	int m, i;
+
+	/* byte wise until long aligned */
+	for (i = 0; (uintptr_t)&c % sizeof(long) && i < n; i++)
+	{
+		c[i] = 0;
+	}
+	/* word wize */
+	for (m = n - sizeof(long); i <= m; i += sizeof(long))
+	{
+		*(volatile long*)&c[i] = 0;
+	}
+	/* byte wise of the rest */
+	for (; i < n; i++)
+	{
+		c[i] = 0;
+	}
+}
+
+/**
+ * Safely overwrite n bytes of memory at ptr with zero, auto-inlining variant.
+ */
+static inline void memwipe(void *ptr, size_t n)
+{
+	if (__builtin_constant_p(n))
+	{
+		memwipe_inline(ptr, n);
+	}
+	else
+	{
+		memwipe_noinline(ptr, n);
+	}
+}
+
+/**
  * A variant of strstr with the characteristics of memchr, where haystack is not
  * a null-terminated string but simply a memory area of length n.
  */
@@ -399,14 +437,11 @@ bool return_true();
 bool return_false();
 
 /**
-<<<<<<< HEAD
-=======
  * returns FAILED
  */
 status_t return_failed();
 
 /**
->>>>>>> upstream/4.5.1
  * Write a 16-bit host order value in network order to an unaligned address.
  *
  * @param host		host order 16-bit value

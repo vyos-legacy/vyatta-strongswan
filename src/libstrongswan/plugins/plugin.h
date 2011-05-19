@@ -21,12 +21,28 @@
 #ifndef PLUGIN_H_
 #define PLUGIN_H_
 
+#include <utils.h>
+
 typedef struct plugin_t plugin_t;
 
 /**
  * Interface definition of a plugin.
  */
 struct plugin_t {
+
+	/**
+	 * Get the name of the plugin.
+	 *
+	 * @return		plugin name
+	 */
+	char* (*get_name)(plugin_t *this);
+
+	/**
+	 * Try to reload plugin configuration.
+	 *
+	 * @return		TRUE if reloaded, FALSE if reloading not supporty by plugin
+	 */
+	bool (*reload)(plugin_t *this);
 
 	/**
 	 * Destroy a plugin instance.

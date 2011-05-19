@@ -96,14 +96,11 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 		{
 			match += MATCH_ANY;
 		}
-<<<<<<< HEAD
-=======
 		else
 		{
 			me_cand->destroy(me_cand);
 			return MATCH_NONE;
 		}
->>>>>>> upstream/4.5.1
 		me_cand->destroy(me_cand);
 	}
 	else
@@ -127,14 +124,11 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 		{
 			match += MATCH_ANY;
 		}
-<<<<<<< HEAD
-=======
 		else
 		{
 			other_cand->destroy(other_cand);
 			return MATCH_NONE;
 		}
->>>>>>> upstream/4.5.1
 		other_cand->destroy(other_cand);
 	}
 	else
@@ -144,16 +138,8 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other)
 	return match;
 }
 
-<<<<<<< HEAD
-/**
- * implements backend_manager_t.get_ike_cfg.
- */
-static ike_cfg_t *get_ike_cfg(private_backend_manager_t *this,
-							  host_t *me, host_t *other)
-=======
 METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 	private_backend_manager_t *this, host_t *me, host_t *other)
->>>>>>> upstream/4.5.1
 {
 	ike_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
@@ -329,18 +315,9 @@ static void insert_sorted(match_entry_t *entry, linked_list_t *list,
 	}
 }
 
-<<<<<<< HEAD
-/**
- * Implements backend_manager_t.create_peer_cfg_enumerator.
- */
-static enumerator_t *create_peer_cfg_enumerator(private_backend_manager_t *this,
-							host_t *me, host_t *other, identification_t *my_id,
-							identification_t *other_id)
-=======
 METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 	private_backend_manager_t *this, host_t *me, host_t *other,
 	identification_t *my_id, identification_t *other_id)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	peer_data_t *data;
@@ -399,15 +376,8 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 									(void*)peer_enum_filter_destroy);
 }
 
-<<<<<<< HEAD
-/**
- * implements backend_manager_t.get_peer_cfg_by_name.
- */
-static peer_cfg_t *get_peer_cfg_by_name(private_backend_manager_t *this, char *name)
-=======
 METHOD(backend_manager_t, get_peer_cfg_by_name, peer_cfg_t*,
 	private_backend_manager_t *this, char *name)
->>>>>>> upstream/4.5.1
 {
 	backend_t *backend;
 	peer_cfg_t *config = NULL;
@@ -424,45 +394,24 @@ METHOD(backend_manager_t, get_peer_cfg_by_name, peer_cfg_t*,
 	return config;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of backend_manager_t.remove_backend.
- */
-static void remove_backend(private_backend_manager_t *this, backend_t *backend)
-=======
 METHOD(backend_manager_t, remove_backend, void,
 	private_backend_manager_t *this, backend_t *backend)
->>>>>>> upstream/4.5.1
 {
 	this->lock->write_lock(this->lock);
 	this->backends->remove(this->backends, backend, NULL);
 	this->lock->unlock(this->lock);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of backend_manager_t.add_backend.
- */
-static void add_backend(private_backend_manager_t *this, backend_t *backend)
-=======
 METHOD(backend_manager_t, add_backend, void,
 	private_backend_manager_t *this, backend_t *backend)
->>>>>>> upstream/4.5.1
 {
 	this->lock->write_lock(this->lock);
 	this->backends->insert_last(this->backends, backend);
 	this->lock->unlock(this->lock);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of backend_manager_t.destroy.
- */
-static void destroy(private_backend_manager_t *this)
-=======
 METHOD(backend_manager_t, destroy, void,
 	private_backend_manager_t *this)
->>>>>>> upstream/4.5.1
 {
 	this->backends->destroy(this->backends);
 	this->lock->destroy(this->lock);
@@ -471,22 +420,6 @@ METHOD(backend_manager_t, destroy, void,
 
 /*
  * Described in header-file
-<<<<<<< HEAD
- */
-backend_manager_t *backend_manager_create()
-{
-	private_backend_manager_t *this = malloc_thing(private_backend_manager_t);
-
-	this->public.get_ike_cfg = (ike_cfg_t* (*)(backend_manager_t*, host_t*, host_t*))get_ike_cfg;
-	this->public.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_manager_t*,char*))get_peer_cfg_by_name;
-	this->public.create_peer_cfg_enumerator = (enumerator_t* (*)(backend_manager_t*,host_t*,host_t*,identification_t*,identification_t*))create_peer_cfg_enumerator;
-	this->public.add_backend = (void(*)(backend_manager_t*, backend_t *backend))add_backend;
-	this->public.remove_backend = (void(*)(backend_manager_t*, backend_t *backend))remove_backend;
-	this->public.destroy = (void (*)(backend_manager_t*))destroy;
-
-	this->backends = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-=======
 
  */
 backend_manager_t *backend_manager_create()
@@ -505,7 +438,6 @@ backend_manager_t *backend_manager_create()
 		.backends = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

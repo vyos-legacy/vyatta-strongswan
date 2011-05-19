@@ -1,8 +1,5 @@
 /*
-<<<<<<< HEAD
-=======
  * Copyright (C) 2010 Sansar Choinyanbuu
->>>>>>> upstream/4.5.1
  * Copyright (C) 2010 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -18,12 +15,6 @@
  */
 
 #include "tnccs_20.h"
-<<<<<<< HEAD
-
-#include <debug.h>
-
-static chunk_t tncc_output;
-=======
 #include "batch/pb_tnc_batch.h"
 #include "messages/pb_tnc_msg.h"
 #include "messages/pb_pa_msg.h"
@@ -41,7 +32,6 @@ static chunk_t tncc_output;
 #include <tnc/tncif.h>
 #include <tnc/tncifimv.h>
 #include <tnc/tnccs/tnccs.h>
->>>>>>> upstream/4.5.1
 
 typedef struct private_tnccs_20_t private_tnccs_20_t;
 
@@ -59,20 +49,6 @@ struct private_tnccs_20_t {
 	 * TNCC if TRUE, TNCS if FALSE
 	 */
 	bool is_server;
-<<<<<<< HEAD
-};
-
-METHOD(tls_t, process, status_t,
-	private_tnccs_20_t *this, void *buf, size_t buflen)
-{
-	return NEED_MORE;
-}
-
-METHOD(tls_t, build, status_t,
-	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
-{
-	return ALREADY_DONE;
-=======
 
 	/**
 	 * PB-TNC State Machine
@@ -105,12 +81,17 @@ METHOD(tls_t, build, status_t,
 	bool request_handshake_retry;
 
 	/**
+	  * SendMessage() by IMC/IMV only allowed if flag is set
+	  */
+	bool send_msg;
+
+	/**
 	 * Set of IMV recommendations  (TNC Server only)
 	 */
 	recommendations_t *recs;
 };
 
-METHOD(tnccs_t, send_msg, void,
+METHOD(tnccs_t, send_msg, TNC_Result,
 	private_tnccs_20_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
 							  TNC_BufferReference msg,
 							  TNC_UInt32 msg_len,
@@ -120,6 +101,14 @@ METHOD(tnccs_t, send_msg, void,
 	TNC_VendorID msg_vendor_id;
 	pb_tnc_msg_t *pb_tnc_msg;
 	pb_tnc_batch_type_t batch_type;
+
+	if (!this->send_msg)
+	{
+		DBG1(DBG_TNC, "%s %u not allowed to call SendMessage()",
+			this->is_server ? "IMV" : "IMC",
+			this->is_server ? imv_id : imc_id);
+		return TNC_RESULT_ILLEGAL_OPERATION;
+	}
 
 	msg_sub_type =   msg_type       & TNC_SUBTYPE_ANY;
 	msg_vendor_id = (msg_type >> 8) & TNC_VENDORID_ANY;
@@ -143,6 +132,7 @@ METHOD(tnccs_t, send_msg, void,
 		pb_tnc_msg->destroy(pb_tnc_msg);
 	}
 	this->mutex->unlock(this->mutex);
+	return TNC_RESULT_SUCCESS;
 }
 
 /**
@@ -169,6 +159,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 
 			DBG2(DBG_TNC, "handling PB-PA message type 0x%08x", msg_type);
 
+			this->send_msg = TRUE;
 			if (this->is_server)
 			{
 				charon->imvs->receive_message(charon->imvs,
@@ -179,6 +170,7 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
 				charon->imcs->receive_message(charon->imcs,
 				this->connection_id, msg_body.ptr, msg_body.len,msg_type);
 			}
+			this->send_msg = FALSE;
 			break;
 		}
 		case PB_MSG_ASSESSMENT_RESULT:
@@ -313,14 +305,21 @@ static void handle_message(private_tnccs_20_t *this, pb_tnc_msg_t *msg)
  */
 static void build_retry_batch(private_tnccs_20_t *this)
 {
+	pb_tnc_batch_type_t batch_retry_type;
+
+	batch_retry_type = this->is_server ? PB_BATCH_SRETRY : PB_BATCH_CRETRY;
 	if (this->batch)
 	{
+		if (this->batch->get_type(this->batch) == batch_retry_type)
+		{
+			/* retry batch has already been created */
+			return;
+		}
 		DBG1(DBG_TNC, "cancelling PB-TNC %N batch",
 			pb_tnc_batch_type_names, this->batch->get_type(this->batch));
 		this->batch->destroy(this->batch);
 	 }
-	this->batch = pb_tnc_batch_create(this->is_server,
-						this->is_server ? PB_BATCH_SRETRY : PB_BATCH_CRETRY);
+	this->batch = pb_tnc_batch_create(this->is_server, batch_retry_type);
 }
 
 METHOD(tls_t, process, status_t,
@@ -343,6 +342,8 @@ METHOD(tls_t, process, status_t,
 		}
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
+		charon->imvs->notify_connection_change(charon->imvs,
+							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
 	}
 
 	data = chunk_create(buf, buflen);
@@ -373,7 +374,9 @@ METHOD(tls_t, process, status_t,
 			/* Restart the measurements */
 			charon->imcs->notify_connection_change(charon->imcs,
 			this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+			this->send_msg = TRUE;
 			charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+			this->send_msg = FALSE;
 		}
 
 		enumerator = batch->create_msg_enumerator(batch);
@@ -400,6 +403,7 @@ METHOD(tls_t, process, status_t,
 			}
 		}
 
+		this->send_msg = TRUE;
 		if (this->is_server)
 		{
 			charon->imvs->batch_ending(charon->imvs, this->connection_id);
@@ -408,6 +412,7 @@ METHOD(tls_t, process, status_t,
 		{
 			charon->imcs->batch_ending(charon->imcs, this->connection_id);
 		}
+		this->send_msg = FALSE;
 	}
 
 	switch (status)
@@ -487,6 +492,7 @@ METHOD(tls_t, build, status_t,
 	private_tnccs_20_t *this, void *buf, size_t *buflen, size_t *msglen)
 {
 	status_t status;
+	pb_tnc_state_t state;
 
 	/* Initialize the connection */
 	if (!this->is_server && !this->connection_id)
@@ -515,11 +521,14 @@ METHOD(tls_t, build, status_t,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+		this->send_msg = TRUE;
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+		this->send_msg = FALSE;
 	}
 
-	if (this->is_server && this->fatal_error &&
-		this->state_machine->get_state(this->state_machine) == PB_STATE_END)
+	state = this->state_machine->get_state(this->state_machine);
+
+	if (this->is_server && this->fatal_error && state == PB_STATE_END)
 	{
 		DBG1(DBG_TNC, "a fatal PB-TNC error occurred, terminating connection");
 		return FAILED;
@@ -530,7 +539,10 @@ METHOD(tls_t, build, status_t,
 
 	if (this->request_handshake_retry)
 	{
-		build_retry_batch(this);
+		if (state != PB_STATE_INIT)
+		{
+			build_retry_batch(this);
+		}
 
 		/* Reset the flag for the next handshake retry request */
 		this->request_handshake_retry = FALSE;
@@ -538,9 +550,6 @@ METHOD(tls_t, build, status_t,
 
 	if (!this->batch)
 	{
-		pb_tnc_state_t state;
-
-		state = this->state_machine->get_state(this->state_machine);
 		if (this->is_server)
 		{
 			if (state == PB_STATE_SERVER_WORKING)
@@ -608,7 +617,6 @@ METHOD(tls_t, build, status_t,
 	this->mutex->unlock(this->mutex);
 
 	return status;
->>>>>>> upstream/4.5.1
 }
 
 METHOD(tls_t, is_server, bool,
@@ -626,25 +634,17 @@ METHOD(tls_t, get_purpose, tls_purpose_t,
 METHOD(tls_t, is_complete, bool,
 	private_tnccs_20_t *this)
 {
-<<<<<<< HEAD
-	return FALSE;
-=======
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
 
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
-		DBG2(DBG_TNC, "Final recommendation is '%N' and evaluation is '%N'",
-			 TNC_IMV_Action_Recommendation_names, rec,
-			 TNC_IMV_Evaluation_Result_names, eval);
-
-		return charon->imvs->enforce_recommendation(charon->imvs, rec);
+		return charon->imvs->enforce_recommendation(charon->imvs, rec, eval);
 	}
 	else
 	{
 		return FALSE;
 	}
->>>>>>> upstream/4.5.1
 }
 
 METHOD(tls_t, get_eap_msk, chunk_t,
@@ -656,23 +656,11 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_20_t *this)
 {
-<<<<<<< HEAD
-=======
-	if (this->is_server)
-	{
-		charon->imvs->notify_connection_change(charon->imvs,
-							this->connection_id, TNC_CONNECTION_STATE_DELETE);
-	}
-	else
-	{
-		charon->imcs->notify_connection_change(charon->imcs,
-							this->connection_id, TNC_CONNECTION_STATE_DELETE);
-	}
-	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
+	charon->tnccs->remove_connection(charon->tnccs, this->connection_id,
+													this->is_server);
 	this->state_machine->destroy(this->state_machine);
 	this->mutex->destroy(this->mutex);
 	DESTROY_IF(this->batch);
->>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -694,11 +682,8 @@ tls_t *tnccs_20_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-<<<<<<< HEAD
-=======
 		.state_machine = pb_tnc_state_machine_create(is_server),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
->>>>>>> upstream/4.5.1
 	);
 
 	return &this->public;

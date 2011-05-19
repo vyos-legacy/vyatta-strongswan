@@ -16,8 +16,4 @@ carol::sleep 1
 bob::ipsec start
 bob::sleep 1
 alice::ipsec start 
-<<<<<<< HEAD
-alice::sleep 2 
-=======
 alice::sleep 4 
->>>>>>> upstream/4.5.1

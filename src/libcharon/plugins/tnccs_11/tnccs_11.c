@@ -14,83 +14,6 @@
  */
 
 #include "tnccs_11.h"
-<<<<<<< HEAD
-
-#include <libtnctncc.h>
-#include <libtnctncs.h>
-
-#include <daemon.h>
-#include <debug.h>
-
-#define TNC_SEND_BUFFER_SIZE	32
-
-static chunk_t tnc_send_buffer[TNC_SEND_BUFFER_SIZE];
-
-/**
- * Buffers TNCCS batch to be sent (TODO make the buffer scalable)
- */
-static TNC_Result buffer_batch(u_int32_t id, const char *data, size_t len)
-{
-	if (id >= TNC_SEND_BUFFER_SIZE)
-	{
-		DBG1(DBG_TNC, "TNCCS Batch for Connection ID %u cannot be stored in "
-					  "send buffer with size %d", id, TNC_SEND_BUFFER_SIZE);
-		return TNC_RESULT_FATAL;
-	}
-	if (tnc_send_buffer[id].ptr)
-	{
-		DBG1(DBG_TNC, "send buffer slot for Connection ID %u is already "
-					  "occupied", id);
-		return TNC_RESULT_FATAL;
-	}
-	tnc_send_buffer[id] = chunk_alloc(len);
-	memcpy(tnc_send_buffer[id].ptr, data, len);
-
-	return TNC_RESULT_SUCCESS;
-}
-
-/**
- * Retrieves TNCCS batch to be sent
- */
-static bool retrieve_batch(u_int32_t id, chunk_t *batch)
-{
-	if (id >= TNC_SEND_BUFFER_SIZE)
-	{
-		DBG1(DBG_TNC, "TNCCS Batch for Connection ID %u cannot be retrieved from "
-					  "send buffer with size %d", id, TNC_SEND_BUFFER_SIZE);
-		return FALSE;
-	}
-
-	*batch = tnc_send_buffer[id];
-	return TRUE;
-}
-
-/**
- * Frees TNCCS batch that was sent
- */
-static void free_batch(u_int32_t id)
-{
-	if (id < TNC_SEND_BUFFER_SIZE)
-	{
-		chunk_free(&tnc_send_buffer[id]);
-	}
-}
-
-/**
- * Define callback functions called by the libtnc library
- */
-TNC_Result TNC_TNCC_SendBatch(libtnc_tncc_connection* conn, 
-							  const char* messageBuffer, size_t messageLength)
-{
-	return buffer_batch(conn->connectionID, messageBuffer, messageLength);
-}
-
-TNC_Result TNC_TNCS_SendBatch(libtnc_tncs_connection* conn, 
-							  const char* messageBuffer, size_t messageLength)
-{
-	return buffer_batch(conn->connectionID, messageBuffer, messageLength);
-}
-=======
 #include "batch/tnccs_batch.h"
 #include "messages/tnccs_msg.h"
 #include "messages/imc_imv_msg.h"
@@ -105,7 +28,6 @@ TNC_Result TNC_TNCS_SendBatch(libtnc_tncs_connection* conn,
 #include <tnc/tncif.h>
 #include <tnc/tncifimv.h>
 #include <tnc/tnccs/tnccs.h>
->>>>>>> upstream/4.5.1
 
 typedef struct private_tnccs_11_t private_tnccs_11_t;
 
@@ -125,118 +47,6 @@ struct private_tnccs_11_t {
 	bool is_server;
 
 	/**
-<<<<<<< HEAD
-	 * TNCC Connection to IMCs
-	 */
-	libtnc_tncc_connection* tncc_connection;
-
-	/**
-	 * TNCS Connection to IMVs
-	 */
-	libtnc_tncs_connection* tncs_connection;
-};
-
-METHOD(tls_t, process, status_t,
-	private_tnccs_11_t *this, void *buf, size_t buflen)
-{
-	u_int32_t conn_id;
-
-	if (this->is_server && !this->tncs_connection)
-	{
-		this->tncs_connection = libtnc_tncs_CreateConnection(NULL);
-		if (!this->tncs_connection)
-		{
-			DBG1(DBG_TNC, "TNCS CreateConnection failed");
-			return FAILED;
-		}
-		DBG1(DBG_TNC, "assigned TNCS Connection ID %u",
-					   this->tncs_connection->connectionID);
-		if (libtnc_tncs_BeginSession(this->tncs_connection) != TNC_RESULT_SUCCESS)
-		{
-			DBG1(DBG_TNC, "TNCS BeginSession failed");
-			return FAILED;
-		}
-	}
-	conn_id = this->is_server ? this->tncs_connection->connectionID
-							  : this->tncc_connection->connectionID;
-
-	DBG1(DBG_TNC, "received TNCCS Batch (%u bytes) for Connection ID %u",
-				   buflen, conn_id);
-	DBG3(DBG_TNC, "%.*s", buflen, buf);
-
-	if (this->is_server)
-	{
-		if (libtnc_tncs_ReceiveBatch(this->tncs_connection, buf, buflen) !=
-			TNC_RESULT_SUCCESS)
-		{
-			DBG1(DBG_TNC, "TNCS ReceiveBatch failed");
-			return FAILED;
-		}
-	}
-	else
-	{
-		if (libtnc_tncc_ReceiveBatch(this->tncc_connection, buf, buflen) !=
-			TNC_RESULT_SUCCESS)
-		{
-			DBG1(DBG_TNC, "TNCC ReceiveBatch failed");
-			return FAILED;
-		}
-	}
-	return NEED_MORE;
-}
-
-METHOD(tls_t, build, status_t,
-	private_tnccs_11_t *this, void *buf, size_t *buflen, size_t *msglen)
-{
-	chunk_t batch;
-	u_int32_t conn_id;
-	size_t len;
-
-	if (!this->is_server && !this->tncc_connection)
-	{
-		this->tncc_connection = libtnc_tncc_CreateConnection(NULL);
-		if (!this->tncc_connection)
-		{
-			DBG1(DBG_TNC, "TNCC CreateConnection failed");
-			return FAILED;
-		}
-		DBG1(DBG_TNC, "assigned TNCC Connection ID %u",
-					   this->tncc_connection->connectionID);
-		if (libtnc_tncc_BeginSession(this->tncc_connection) != TNC_RESULT_SUCCESS)
-		{
-			DBG1(DBG_TNC, "TNCC BeginSession failed");
-			return FAILED;
-		}
-	}
-	conn_id = this->is_server ? this->tncs_connection->connectionID
-							  : this->tncc_connection->connectionID;
-	
-	if (!retrieve_batch(conn_id, &batch))
-	{
-		return FAILED;
-	}
-	len = *buflen;
-	len = min(len, batch.len);
-	*buflen = len;
-	if (msglen)
-	{
-		*msglen = batch.len;
-	}
-
-	if (batch.len)
-	{
-		DBG1(DBG_TNC, "sending TNCCS Batch (%d bytes) for Connection ID %u",
-					   batch.len, conn_id);
-		DBG3(DBG_TNC, "%.*s", batch.len, batch.ptr);
-		memcpy(buf, batch.ptr, len);
-		free_batch(conn_id);
-		return ALREADY_DONE;
-	}
-	else
-	{
-		return INVALID_STATE;
-	}
-=======
 	 * Connection ID assigned to this TNCCS connection
 	 */
 	TNC_ConnectionID connection_id;
@@ -267,6 +77,11 @@ METHOD(tls_t, build, status_t,
 	bool delete_state;
 
 	/**
+	 * SendMessage() by IMC/IMV only allowed if flag is set
+	 */
+	bool send_msg;
+
+	/**
 	 * Flag set by IMC/IMV RequestHandshakeRetry() function
 	 */
 	bool request_handshake_retry;
@@ -277,7 +92,7 @@ METHOD(tls_t, build, status_t,
 	recommendations_t *recs;
 };
 
-METHOD(tnccs_t, send_msg, void,
+METHOD(tnccs_t, send_msg, TNC_Result,
 	private_tnccs_11_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
 							  TNC_BufferReference msg,
 							  TNC_UInt32 msg_len,
@@ -285,6 +100,13 @@ METHOD(tnccs_t, send_msg, void,
 {
 	tnccs_msg_t *tnccs_msg;
 
+	if (!this->send_msg)
+	{
+		DBG1(DBG_TNC, "%s %u not allowed to call SendMessage()",
+			this->is_server ? "IMV" : "IMC",
+			this->is_server ? imv_id : imc_id);
+		return TNC_RESULT_ILLEGAL_OPERATION;
+	}
 	tnccs_msg = imc_imv_msg_create(msg_type, chunk_create(msg, msg_len));
 
 	/* adding an IMC-IMV Message to TNCCS batch */
@@ -295,6 +117,7 @@ METHOD(tnccs_t, send_msg, void,
 	}
 	this->batch->add_msg(this->batch, tnccs_msg);
 	this->mutex->unlock(this->mutex);
+	return TNC_RESULT_SUCCESS;
 }
 
 /**
@@ -316,6 +139,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 
 			DBG2(DBG_TNC, "handling IMC_IMV message type 0x%08x", msg_type);
 
+			this->send_msg = TRUE;
 			if (this->is_server)
 			{
 				charon->imvs->receive_message(charon->imvs,
@@ -326,6 +150,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 				charon->imcs->receive_message(charon->imcs,
 				this->connection_id, msg_body.ptr, msg_body.len,msg_type);
 			}
+			this->send_msg = FALSE;
 			break;
 		}
 		case TNCCS_MSG_RECOMMENDATION:
@@ -427,6 +252,8 @@ METHOD(tls_t, process, status_t,
 		}
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
+		charon->imvs->notify_connection_change(charon->imvs,
+							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
 	}
 
 	data = chunk_create(buf, buflen);
@@ -474,6 +301,7 @@ METHOD(tls_t, process, status_t,
 			return FAILED;
 		}
 
+		this->send_msg = TRUE;
 		if (this->is_server)
 		{
 			charon->imvs->batch_ending(charon->imvs, this->connection_id);
@@ -482,6 +310,7 @@ METHOD(tls_t, process, status_t,
 		{
 			charon->imcs->batch_ending(charon->imcs, this->connection_id);
 		}
+		this->send_msg = FALSE;
 	}
 	batch->destroy(batch);
 
@@ -559,13 +388,15 @@ METHOD(tls_t, build, status_t,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+		this->send_msg = TRUE;
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+		this->send_msg = FALSE;
 	}
 
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
 
-	if (this->is_server && !this->delete_state &&
+	if (this->recs && !this->delete_state &&
 	   (!this->batch || this->fatal_error))
 	{
 		check_and_build_recommendation(this);
@@ -603,7 +434,6 @@ METHOD(tls_t, build, status_t,
 	this->mutex->unlock(this->mutex);
 
 	return status;
->>>>>>> upstream/4.5.1
 }
 
 METHOD(tls_t, is_server, bool,
@@ -623,50 +453,10 @@ METHOD(tls_t, is_complete, bool,
 {
 	TNC_IMV_Action_Recommendation rec;
 	TNC_IMV_Evaluation_Result eval;
-<<<<<<< HEAD
-	char *group;
-	identification_t *id;
-	ike_sa_t *ike_sa;
-	auth_cfg_t *auth;
-	
-	if (libtnc_tncs_HaveRecommendation(this->tncs_connection, &rec, &eval) ==
-		TNC_RESULT_SUCCESS)
-	{
-		switch (rec)
-		{
-			case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
-				DBG1(DBG_TNC, "TNC recommendation is allow");
-				group = "allow";
-				break;				
-			case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-				DBG1(DBG_TNC, "TNC recommendation is isolate");
-				group = "isolate";
-				break;
-			case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
-			case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
-			default:
-				DBG1(DBG_TNC, "TNC recommendation is none");
-				return FALSE;
-		}
-		ike_sa = charon->bus->get_sa(charon->bus);
-		if (ike_sa)
-		{
-			auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
-			id = identification_create_from_string(group);
-			auth->add(auth, AUTH_RULE_GROUP, id);
-			DBG1(DBG_TNC, "added group membership '%s' based on TNC recommendation", group);
-		}
-		return TRUE;
-=======
 
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
-		DBG2(DBG_TNC, "Final recommendation is '%N' and evaluation is '%N'",
-			 TNC_IMV_Action_Recommendation_names, rec,
-			 TNC_IMV_Evaluation_Result_names, eval);
-
-		return charon->imvs->enforce_recommendation(charon->imvs, rec);
->>>>>>> upstream/4.5.1
+		return charon->imvs->enforce_recommendation(charon->imvs, rec, eval);
 	}
 	else
 	{
@@ -683,35 +473,10 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_11_t *this)
 {
-	if (this->is_server)
-	{
-<<<<<<< HEAD
-		if (this->tncs_connection)
-		{
-			libtnc_tncs_DeleteConnection(this->tncs_connection);
-		}
-	}
-	else
-	{
-		if (this->tncc_connection)
-		{
-			libtnc_tncc_DeleteConnection(this->tncc_connection);
-		}
-		libtnc_tncc_Terminate();
-	}
-=======
-		charon->imvs->notify_connection_change(charon->imvs,
-							this->connection_id, TNC_CONNECTION_STATE_DELETE);
-	}
-	else
-	{
-		charon->imcs->notify_connection_change(charon->imcs,
-							this->connection_id, TNC_CONNECTION_STATE_DELETE);
-	}
-	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
+	charon->tnccs->remove_connection(charon->tnccs, this->connection_id,
+													this->is_server);
 	this->mutex->destroy(this->mutex);
 	DESTROY_IF(this->batch);
->>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -733,10 +498,7 @@ tls_t *tnccs_11_create(bool is_server)
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-<<<<<<< HEAD
-=======
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
->>>>>>> upstream/4.5.1
 	);
 
 	return &this->public;

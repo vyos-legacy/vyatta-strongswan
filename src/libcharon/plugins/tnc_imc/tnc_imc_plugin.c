@@ -14,12 +14,6 @@
  */
 
 #include "tnc_imc_plugin.h"
-<<<<<<< HEAD
-
-#include <libtnctncc.h>
-
-#include <daemon.h>
-=======
 #include "tnc_imc_manager.h"
 #include "tnc_imc.h"
 
@@ -136,6 +130,12 @@ static bool load_imcs(char *filename)
 		}
 		if (!charon->imcs->add(charon->imcs, imc))
 		{
+			if (imc->terminate &&
+				imc->terminate(imc->get_id(imc)) != TNC_RESULT_SUCCESS)
+			{
+				DBG1(DBG_TNC, "IMC \"%s\" not terminated successfully",
+							   imc->get_name(imc));
+			}
 			imc->destroy(imc);
 			return FALSE;
 		}
@@ -146,16 +146,17 @@ static bool load_imcs(char *filename)
 	close(fd);
 	return TRUE;
 }
->>>>>>> upstream/4.5.1
+
+METHOD(plugin_t, get_name, char*,
+	tnc_imc_plugin_t *this)
+{
+	return "tnc-imc";
+}
 
 METHOD(plugin_t, destroy, void,
 	tnc_imc_plugin_t *this)
 {
-<<<<<<< HEAD
-	libtnc_tncc_Terminate();
-=======
 	charon->imcs->destroy(charon->imcs);
->>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -164,33 +165,17 @@ METHOD(plugin_t, destroy, void,
  */
 plugin_t *tnc_imc_plugin_create()
 {
-<<<<<<< HEAD
-	char *tnc_config, *pref_lang;
-=======
 	char *tnc_config;
->>>>>>> upstream/4.5.1
 	tnc_imc_plugin_t *this;
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
+				.reload = (void*)return_false,
 			.destroy = _destroy,
 		},
 	);
 
-<<<<<<< HEAD
-	pref_lang = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-imc.preferred_language", "en");
-	tnc_config = lib->settings->get_str(lib->settings,
-					"charon.plugins.tnc-imc.tnc_config", "/etc/tnc_config");
-
-	if (libtnc_tncc_Initialize(tnc_config) != TNC_RESULT_SUCCESS)
-	{
-		free(this);
-		DBG1(DBG_TNC, "TNC IMC initialization failed");
-		return NULL;
-	}
-
-=======
 	/* Create IMC manager */
 	charon->imcs = tnc_imc_manager_create();
 
@@ -204,7 +189,6 @@ plugin_t *tnc_imc_plugin_create()
 		free(this);
 		return NULL;
 	}
->>>>>>> upstream/4.5.1
 	return &this->plugin;
 }
 

@@ -53,15 +53,14 @@ struct private_sql_plugin_t {
 	sql_logger_t *logger;
 };
 
-<<<<<<< HEAD
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_sql_plugin_t *this)
-=======
+METHOD(plugin_t, get_name, char*,
+	private_sql_plugin_t *this)
+{
+	return "sql";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_sql_plugin_t *this)
->>>>>>> upstream/4.5.1
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
@@ -88,23 +87,17 @@ plugin_t *sql_plugin_create()
 		return NULL;
 	}
 
-<<<<<<< HEAD
-	this = malloc_thing(private_sql_plugin_t);
-
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
-	this->db = lib->db->create(lib->db, uri);
-=======
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
 		},
 		.db = lib->db->create(lib->db, uri),
 	);
 
->>>>>>> upstream/4.5.1
 	if (!this->db)
 	{
 		DBG1(DBG_CFG, "sql plugin failed to connect to database");

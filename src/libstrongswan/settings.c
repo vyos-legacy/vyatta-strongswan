@@ -1,8 +1,5 @@
 /*
-<<<<<<< HEAD
-=======
  * Copyright (C) 2010 Tobias Brunner
->>>>>>> upstream/4.5.1
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -22,24 +19,23 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <errno.h>
-<<<<<<< HEAD
-=======
 #include <limits.h>
-#include <glob.h>
 #include <libgen.h>
->>>>>>> upstream/4.5.1
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#ifdef HAVE_GLOB_H
+#include <glob.h>
+#endif /* HAVE_GLOB_H */
 
 #include "settings.h"
 
 #include "debug.h"
 #include "utils/linked_list.h"
-<<<<<<< HEAD
-
-=======
 #include "threading/rwlock.h"
 
 #define MAX_INCLUSION_LEVEL		10
->>>>>>> upstream/4.5.1
 
 typedef struct private_settings_t private_settings_t;
 typedef struct section_t section_t;
@@ -61,11 +57,6 @@ struct private_settings_t {
 	section_t *top;
 
 	/**
-<<<<<<< HEAD
-	 * allocated file text
-	 */
-	char *text;
-=======
 	 * contents of loaded files and in-memory settings (char*)
 	 */
 	linked_list_t *contents;
@@ -74,7 +65,6 @@ struct private_settings_t {
 	 * lock to safely access the settings
 	 */
 	rwlock_t *lock;
->>>>>>> upstream/4.5.1
 };
 
 /**
@@ -115,8 +105,6 @@ struct kv_t {
 };
 
 /**
-<<<<<<< HEAD
-=======
  * create a key/value pair
  */
 static kv_t *kv_create(char *key, char *value)
@@ -164,6 +152,17 @@ static void section_destroy(section_t *this)
 }
 
 /**
+ * Purge contents of a section
+ */
+static void section_purge(section_t *this)
+{
+	this->kv->destroy_function(this->kv, (void*)kv_destroy);
+	this->kv = linked_list_create();
+	this->sections->destroy_function(this->sections, (void*)section_destroy);
+	this->sections = linked_list_create();
+}
+
+/**
  * callback to find a section by name
  */
 static bool section_find(section_t *this, char *name)
@@ -180,7 +179,6 @@ static bool kv_find(kv_t *this, char *key)
 }
 
 /**
->>>>>>> upstream/4.5.1
  * Print a format key, but consume already processed arguments
  */
 static bool print_key(char *buf, int len, char *start, char *key, va_list args)
@@ -229,16 +227,6 @@ static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 }
 
 /**
-<<<<<<< HEAD
- * find a section by a given key, using buffered key, reusable buffer
- */
-static section_t *find_section_buffered(section_t *section,
-					char *start, char *key, va_list args, char *buf, int len)
-{
-	char *pos;
-	enumerator_t *enumerator;
-	section_t *current, *found = NULL;
-=======
  * Find a section by a given key, using buffered key, reusable buffer.
  * If "ensure" is TRUE, the sections are created if they don't exist.
  */
@@ -248,7 +236,6 @@ static section_t *find_section_buffered(section_t *section,
 {
 	char *pos;
 	section_t *found = NULL;
->>>>>>> upstream/4.5.1
 
 	if (section == NULL)
 	{
@@ -264,21 +251,6 @@ static section_t *find_section_buffered(section_t *section,
 	{
 		return NULL;
 	}
-<<<<<<< HEAD
-	enumerator = section->sections->create_enumerator(section->sections);
-	while (enumerator->enumerate(enumerator, &current))
-	{
-		if (streq(current->name, buf))
-		{
-			found = current;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	if (found && pos)
-	{
-		return find_section_buffered(found, start, pos, args, buf, len);
-=======
 	if (section->sections->find_first(section->sections,
 									  (linked_list_match_t)section_find,
 									  (void**)&found, buf) != SUCCESS)
@@ -292,19 +264,11 @@ static section_t *find_section_buffered(section_t *section,
 	if (found && pos)
 	{
 		return find_section_buffered(found, start, pos, args, buf, len, ensure);
->>>>>>> upstream/4.5.1
 	}
 	return found;
 }
 
 /**
-<<<<<<< HEAD
- * find a section by a given key
- */
-static section_t *find_section(section_t *section, char *key, va_list args)
-{
-	char buf[128], keybuf[512];
-=======
  * Find a section by a given key (thread-safe).
  */
 static section_t *find_section(private_settings_t *this, section_t *section,
@@ -312,27 +276,11 @@ static section_t *find_section(private_settings_t *this, section_t *section,
 {
 	char buf[128], keybuf[512];
 	section_t *found;
->>>>>>> upstream/4.5.1
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
 	{
 		return NULL;
 	}
-<<<<<<< HEAD
-	return find_section_buffered(section, keybuf, keybuf, args, buf, sizeof(buf));
-}
-
-/**
- * Find the string value for a key, using buffered key, reusable buffer
- */
-static char *find_value_buffered(section_t *section,
-					char *start, char *key, va_list args, char *buf, int len)
-{
-	char *pos, *value = NULL;
-	enumerator_t *enumerator;
-	kv_t *kv;
-	section_t *current, *found = NULL;
-=======
 	this->lock->read_lock(this->lock);
 	found = find_section_buffered(section, keybuf, keybuf, args, buf,
 								  sizeof(buf), FALSE);
@@ -372,7 +320,6 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 	char *pos;
 	kv_t *kv = NULL;
 	section_t *found = NULL;
->>>>>>> upstream/4.5.1
 
 	if (section == NULL)
 	{
@@ -389,22 +336,6 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			return NULL;
 		}
-<<<<<<< HEAD
-		enumerator = section->sections->create_enumerator(section->sections);
-		while (enumerator->enumerate(enumerator, &current))
-		{
-			if (streq(current->name, buf))
-			{
-				found = current;
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-		if (found)
-		{
-			return find_value_buffered(found, start, pos, args, buf, len);
-		}
-=======
 		if (section->sections->find_first(section->sections,
 										  (linked_list_match_t)section_find,
 										  (void**)&found, buf) != SUCCESS)
@@ -418,7 +349,6 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		}
 		return find_value_buffered(found, start, pos, args, buf, len,
 								   ensure);
->>>>>>> upstream/4.5.1
 	}
 	else
 	{
@@ -426,28 +356,6 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			return NULL;
 		}
-<<<<<<< HEAD
-		enumerator = section->kv->create_enumerator(section->kv);
-		while (enumerator->enumerate(enumerator, &kv))
-		{
-			if (streq(kv->key, buf))
-			{
-				value = kv->value;
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-	return value;
-}
-
-/**
- * Find the string value for a key
- */
-static char *find_value(section_t *section, char *key, va_list args)
-{
-	char buf[128], keybuf[512];
-=======
 		if (section->kv->find_first(section->kv, (linked_list_match_t)kv_find,
 									(void**)&kv, buf) != SUCCESS)
 		{
@@ -469,21 +377,11 @@ static char *find_value(private_settings_t *this, section_t *section,
 {
 	char buf[128], keybuf[512], *value = NULL;
 	kv_t *kv;
->>>>>>> upstream/4.5.1
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
 	{
 		return NULL;
 	}
-<<<<<<< HEAD
-	return find_value_buffered(section, keybuf, keybuf, args, buf, sizeof(buf));
-}
-
-/**
- * Implementation of settings_t.get.
- */
-static char* get_str(private_settings_t *this, char *key, char *def, ...)
-=======
 	this->lock->read_lock(this->lock);
 	kv = find_value_buffered(section, keybuf, keybuf, args, buf, sizeof(buf),
 							 FALSE);
@@ -532,17 +430,12 @@ static void set_value(private_settings_t *this, section_t *section,
 
 METHOD(settings_t, get_str, char*,
 	   private_settings_t *this, char *key, char *def, ...)
->>>>>>> upstream/4.5.1
 {
 	char *value;
 	va_list args;
 
 	va_start(args, def);
-<<<<<<< HEAD
-	value = find_value(this->top, key, args);
-=======
 	value = find_value(this, this->top, key, args);
->>>>>>> upstream/4.5.1
 	va_end(args);
 	if (value)
 	{
@@ -552,31 +445,6 @@ METHOD(settings_t, get_str, char*,
 }
 
 /**
-<<<<<<< HEAD
- * Implementation of settings_t.get_bool.
- */
-static bool get_bool(private_settings_t *this, char *key, bool def, ...)
-{
-	char *value;
-	va_list args;
-
-	va_start(args, def);
-	value = find_value(this->top, key, args);
-	va_end(args);
-	if (value)
-	{
-		if (strcaseeq(value, "true") ||
-			strcaseeq(value, "enabled") ||
-			strcaseeq(value, "yes") ||
-			strcaseeq(value, "1"))
-		{
-			return TRUE;
-		}
-		else if (strcaseeq(value, "false") ||
-				 strcaseeq(value, "disabled") ||
-				 strcaseeq(value, "no") ||
-				 strcaseeq(value, "0"))
-=======
  * Described in header
  */
 inline bool settings_value_as_bool(char *value, bool def)
@@ -594,7 +462,6 @@ inline bool settings_value_as_bool(char *value, bool def)
 				 strcaseeq(value, "no") ||
 				 strcaseeq(value, "false") ||
 				 strcaseeq(value, "disabled"))
->>>>>>> upstream/4.5.1
 		{
 			return FALSE;
 		}
@@ -602,20 +469,6 @@ inline bool settings_value_as_bool(char *value, bool def)
 	return def;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of settings_t.get_int.
- */
-static int get_int(private_settings_t *this, char *key, int def, ...)
-{
-	char *value;
-	int intval;
-	va_list args;
-
-	va_start(args, def);
-	value = find_value(this->top, key, args);
-	va_end(args);
-=======
 METHOD(settings_t, get_bool, bool,
 	   private_settings_t *this, char *key, bool def, ...)
 {
@@ -634,7 +487,6 @@ METHOD(settings_t, get_bool, bool,
 inline int settings_value_as_int(char *value, int def)
 {
 	int intval;
->>>>>>> upstream/4.5.1
 	if (value)
 	{
 		errno = 0;
@@ -647,20 +499,6 @@ inline int settings_value_as_int(char *value, int def)
 	return def;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of settings_t.get_double.
- */
-static double get_double(private_settings_t *this, char *key, double def, ...)
-{
-	char *value;
-	double dval;
-	va_list args;
-
-	va_start(args, def);
-	value = find_value(this->top, key, args);
-	va_end(args);
-=======
 METHOD(settings_t, get_int, int,
 	   private_settings_t *this, char *key, int def, ...)
 {
@@ -679,7 +517,6 @@ METHOD(settings_t, get_int, int,
 inline double settings_value_as_double(char *value, double def)
 {
 	double dval;
->>>>>>> upstream/4.5.1
 	if (value)
 	{
 		errno = 0;
@@ -692,20 +529,6 @@ inline double settings_value_as_double(char *value, double def)
 	return def;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of settings_t.get_time.
- */
-static u_int32_t get_time(private_settings_t *this, char *key, u_int32_t def, ...)
-{
-	char *value, *endptr;
-	u_int32_t timeval;
-	va_list args;
-
-	va_start(args, def);
-	value = find_value(this->top, key, args);
-	va_end(args);
-=======
 METHOD(settings_t, get_double, double,
 	   private_settings_t *this, char *key, double def, ...)
 {
@@ -725,7 +548,6 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 {
 	char *endptr;
 	u_int32_t timeval;
->>>>>>> upstream/4.5.1
 	if (value)
 	{
 		errno = 0;
@@ -744,11 +566,7 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 					timeval *= 60;
 					break;
 				case 's':		/* time in seconds */
-<<<<<<< HEAD
-					default:
-=======
 				default:
->>>>>>> upstream/4.5.1
 					break;
 			}
 			return timeval;
@@ -757,8 +575,6 @@ inline u_int32_t settings_value_as_time(char *value, u_int32_t def)
 	return def;
 }
 
-<<<<<<< HEAD
-=======
 METHOD(settings_t, get_time, u_int32_t,
 	   private_settings_t *this, char *key, u_int32_t def, ...)
 {
@@ -828,7 +644,6 @@ METHOD(settings_t, set_time, void,
 	va_end(args);
 }
 
->>>>>>> upstream/4.5.1
 /**
  * Enumerate section names, not sections
  */
@@ -838,42 +653,24 @@ static bool section_filter(void *null, section_t **in, char **out)
 	return TRUE;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of settings_t.create_section_enumerator
- */
-static enumerator_t* create_section_enumerator(private_settings_t *this,
-											   char *key, ...)
-=======
 METHOD(settings_t, create_section_enumerator, enumerator_t*,
 	   private_settings_t *this, char *key, ...)
->>>>>>> upstream/4.5.1
 {
 	section_t *section;
 	va_list args;
 
 	va_start(args, key);
-<<<<<<< HEAD
-	section = find_section(this->top, key, args);
-=======
 	section = find_section(this, this->top, key, args);
->>>>>>> upstream/4.5.1
 	va_end(args);
 
 	if (!section)
 	{
 		return enumerator_create_empty();
 	}
-<<<<<<< HEAD
-	return enumerator_create_filter(
-					section->sections->create_enumerator(section->sections),
-					(void*)section_filter, NULL, NULL);
-=======
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
 				section->sections->create_enumerator(section->sections),
 				(void*)section_filter, this->lock, (void*)this->lock->unlock);
->>>>>>> upstream/4.5.1
 }
 
 /**
@@ -887,53 +684,24 @@ static bool kv_filter(void *null, kv_t **in, char **key,
 	return TRUE;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of settings_t.create_key_value_enumerator
- */
-static enumerator_t* create_key_value_enumerator(private_settings_t *this,
-												 char *key, ...)
-=======
 METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
 	   private_settings_t *this, char *key, ...)
->>>>>>> upstream/4.5.1
 {
 	section_t *section;
 	va_list args;
 
 	va_start(args, key);
-<<<<<<< HEAD
-	section = find_section(this->top, key, args);
-=======
 	section = find_section(this, this->top, key, args);
->>>>>>> upstream/4.5.1
 	va_end(args);
 
 	if (!section)
 	{
 		return enumerator_create_empty();
 	}
-<<<<<<< HEAD
-	return enumerator_create_filter(
-					section->kv->create_enumerator(section->kv),
-					(void*)kv_filter, NULL, NULL);
-}
-
-/**
- * destroy a section
- */
-static void section_destroy(section_t *this)
-{
-	this->kv->destroy_function(this->kv, free);
-	this->sections->destroy_function(this->sections, (void*)section_destroy);
-
-	free(this);
-=======
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
 					section->kv->create_enumerator(section->kv),
 					(void*)kv_filter, this->lock, (void*)this->lock->unlock);
->>>>>>> upstream/4.5.1
 }
 
 /**
@@ -1011,26 +779,6 @@ static char parse(char **text, char *skip, char *term, char *br, char **token)
 }
 
 /**
-<<<<<<< HEAD
- * Parse a section
- */
-static section_t* parse_section(char **text, char *name)
-{
-	section_t *sub, *section;
-	bool finished = FALSE;
-	char *key, *value, *inner;
-
-	static int lev = 0;
-	lev++;
-
-	section = malloc_thing(section_t);
-	section->name = name;
-	section->sections = linked_list_create();
-	section->kv = linked_list_create();
-
-	while (!finished)
-	{
-=======
  * Check if "text" starts with "pattern".
  * Characters in "skip" are skipped first. If found, TRUE is returned and "text"
  * is modified to point to the character right after "pattern".
@@ -1101,20 +849,11 @@ static bool parse_section(linked_list_t *contents, char *file, int level,
 			}
 			continue;
 		}
->>>>>>> upstream/4.5.1
 		switch (parse(text, "\t\n ", "{=#", NULL, &key))
 		{
 			case '{':
 				if (parse(text, "\t ", "}", "{", &inner))
 				{
-<<<<<<< HEAD
-					sub = parse_section(&inner, key);
-					if (sub)
-					{
-						section->sections->insert_last(section->sections, sub);
-						continue;
-					}
-=======
 					section_t *sub;
 					if (!strlen(key))
 					{
@@ -1144,19 +883,12 @@ static bool parse_section(linked_list_t *contents, char *file, int level,
 					}
 					DBG1(DBG_LIB, "parsing subsection '%s' failed", key);
 					break;
->>>>>>> upstream/4.5.1
 				}
 				DBG1(DBG_LIB, "matching '}' not found near %s", *text);
 				break;
 			case '=':
 				if (parse(text, "\t ", "\n", NULL, &value))
 				{
-<<<<<<< HEAD
-					kv_t *kv = malloc_thing(kv_t);
-					kv->key = key;
-					kv->value = value;
-					section->kv->insert_last(section->kv, kv);
-=======
 					kv_t *kv;
 					if (!strlen(key))
 					{
@@ -1175,7 +907,6 @@ static bool parse_section(linked_list_t *contents, char *file, int level,
 					{	/* replace with the most recently read value */
 						kv->value = value;
 					}
->>>>>>> upstream/4.5.1
 					continue;
 				}
 				DBG1(DBG_LIB, "parsing value failed near %s", *text);
@@ -1187,80 +918,6 @@ static bool parse_section(linked_list_t *contents, char *file, int level,
 				finished = TRUE;
 				continue;
 		}
-<<<<<<< HEAD
-		section_destroy(section);
-		return NULL;
-	}
-	return section;
-}
-
-/**
- * Implementation of settings_t.destroy
- */
-static void destroy(private_settings_t *this)
-{
-	if (this->top)
-	{
-		section_destroy(this->top);
-	}
-	free(this->text);
-	free(this);
-}
-
-/*
- * see header file
- */
-settings_t *settings_create(char *file)
-{
-	private_settings_t *this;
-	char *pos;
-	FILE *fd;
-	int len;
-
-	this = malloc_thing(private_settings_t);
-	this->public.get_str = (char*(*)(settings_t*, char *key, char* def, ...))get_str;
-	this->public.get_int = (int(*)(settings_t*, char *key, int def, ...))get_int;
-	this->public.get_double = (double(*)(settings_t*, char *key, double def, ...))get_double;
-	this->public.get_time = (u_int32_t(*)(settings_t*, char *key, u_int32_t def, ...))get_time;
-	this->public.get_bool = (bool(*)(settings_t*, char *key, bool def, ...))get_bool;
-	this->public.create_section_enumerator = (enumerator_t*(*)(settings_t*,char *section, ...))create_section_enumerator;
-	this->public.create_key_value_enumerator = (enumerator_t*(*)(settings_t*, char *key, ...))create_key_value_enumerator;
-	this->public.destroy = (void(*)(settings_t*))destroy;
-
-	this->top = NULL;
-	this->text = NULL;
-
-	if (file == NULL)
-	{
-		file = STRONGSWAN_CONF;
-	}
-	fd = fopen(file, "r");
-	if (fd == NULL)
-	{
-		DBG1(DBG_LIB, "'%s' does not exist or is not readable", file);
-		return &this->public;
-	}
-	fseek(fd, 0, SEEK_END);
-	len = ftell(fd);
-	rewind(fd);
-	this->text = malloc(len + 1);
-	this->text[len] = '\0';
-	if (fread(this->text, 1, len, fd) != len)
-	{
-		free(this->text);
-		this->text = NULL;
-		return &this->public;
-	}
-	fclose(fd);
-
-	pos = this->text;
-	this->top = parse_section(&pos, NULL);
-	if (this->top == NULL)
-	{
-		free(this->text);
-		this->text = NULL;
-	}
-=======
 		return FALSE;
 	}
 	return TRUE;
@@ -1274,14 +931,30 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 {
 	bool success;
 	char *text, *pos;
+	struct stat st;
 	FILE *fd;
 	int len;
 
 	DBG2(DBG_LIB, "loading config file '%s'", file);
+	if (stat(file, &st) == -1)
+	{
+		if (errno == ENOENT)
+		{
+			DBG2(DBG_LIB, "'%s' does not exist, ignored", file);
+			return TRUE;
+		}
+		DBG1(DBG_LIB, "failed to stat '%s': %s", file, strerror(errno));
+		return FALSE;
+	}
+	else if (!S_ISREG(st.st_mode))
+	{
+		DBG1(DBG_LIB, "'%s' is not a regular file", file);
+		return FALSE;
+	}
 	fd = fopen(file, "r");
 	if (fd == NULL)
 	{
-		DBG1(DBG_LIB, "'%s' does not exist or is not readable", file);
+		DBG1(DBG_LIB, "'%s' is not readable", file);
 		return FALSE;
 	}
 	fseek(fd, 0, SEEK_END);
@@ -1310,16 +983,15 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 }
 
 /**
- * Load the files matching "pattern", which is resolved with glob(3).
+ * Load the files matching "pattern", which is resolved with glob(3), if
+ * available.
  * If the pattern is relative, the directory of "file" is used as base.
  */
 static bool parse_files(linked_list_t *contents, char *file, int level,
 						char *pattern, section_t *section)
 {
 	bool success = TRUE;
-	int status;
-	glob_t buf;
-	char **expanded, pat[PATH_MAX];
+	char pat[PATH_MAX];
 
 	if (level > MAX_INCLUSION_LEVEL)
 	{
@@ -1354,28 +1026,39 @@ static bool parse_files(linked_list_t *contents, char *file, int level,
 		}
 		free(dir);
 	}
-	status = glob(pat, GLOB_ERR, NULL, &buf);
-	if (status == GLOB_NOMATCH)
+#ifdef HAVE_GLOB_H
 	{
-		DBG2(DBG_LIB, "no files found matching '%s', ignored", pat);
-	}
-	else if (status != 0)
-	{
-		DBG1(DBG_LIB, "expanding file pattern '%s' failed", pat);
-		success = FALSE;
-	}
-	else
-	{
-		for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
+		int status;
+		glob_t buf;
+
+		status = glob(pat, GLOB_ERR, NULL, &buf);
+		if (status == GLOB_NOMATCH)
 		{
-			success &= parse_file(contents, *expanded, level + 1, section);
-			if (!success)
+			DBG2(DBG_LIB, "no files found matching '%s', ignored", pat);
+		}
+		else if (status != 0)
+		{
+			DBG1(DBG_LIB, "expanding file pattern '%s' failed", pat);
+			success = FALSE;
+		}
+		else
+		{
+			char **expanded;
+			for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
 			{
-				break;
+				success &= parse_file(contents, *expanded, level + 1, section);
+				if (!success)
+				{
+					break;
+				}
 			}
 		}
+		globfree(&buf);
 	}
-	globfree(&buf);
+#else /* HAVE_GLOB_H */
+	/* if glob(3) is not available, try to load pattern directly */
+	success = parse_file(contents, pat, level + 1, section);
+#endif /* HAVE_GLOB_H */
 	return success;
 }
 
@@ -1430,11 +1113,16 @@ static void section_extend(section_t *base, section_t *extension)
  * All files (even included ones) have to be loaded successfully.
  */
 static bool load_files_internal(private_settings_t *this, section_t *parent,
-								char *pattern)
+								char *pattern, bool merge)
 {
 	char *text;
 	linked_list_t *contents = linked_list_create();
 	section_t *section = section_create(NULL);
+
+	if (pattern == NULL)
+	{
+		pattern = STRONGSWAN_CONF;
+	}
 
 	if (!parse_files(contents, NULL, 0, pattern, section))
 	{
@@ -1444,6 +1132,10 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 	}
 
 	this->lock->write_lock(this->lock);
+	if (!merge)
+	{
+		section_purge(parent);
+	}
 	/* extend parent section */
 	section_extend(parent, section);
 	/* move contents of loaded files to main store */
@@ -1459,13 +1151,13 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 }
 
 METHOD(settings_t, load_files, bool,
-	   private_settings_t *this, char *pattern)
+	   private_settings_t *this, char *pattern, bool merge)
 {
-	return load_files_internal(this, this->top, pattern);
+	return load_files_internal(this, this->top, pattern, merge);
 }
 
 METHOD(settings_t, load_files_section, bool,
-	   private_settings_t *this, char *pattern, char *key, ...)
+	   private_settings_t *this, char *pattern, bool merge, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -1478,7 +1170,7 @@ METHOD(settings_t, load_files_section, bool,
 	{
 		return FALSE;
 	}
-	return load_files_internal(this, section, pattern);
+	return load_files_internal(this, section, pattern, merge);
 }
 
 METHOD(settings_t, destroy, void,
@@ -1520,14 +1212,8 @@ settings_t *settings_create(char *file)
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
-	if (file == NULL)
-	{
-		file = STRONGSWAN_CONF;
-	}
+	load_files(this, file, FALSE);
 
-	load_files(this, file);
-
->>>>>>> upstream/4.5.1
 	return &this->public;
 }
 

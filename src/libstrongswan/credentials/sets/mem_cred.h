@@ -1,9 +1,6 @@
 /*
-<<<<<<< HEAD
-=======
  * Copyright (C) 2010 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
->>>>>>> upstream/4.5.1
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -29,11 +26,8 @@
 typedef struct mem_cred_t mem_cred_t;
 
 #include <credentials/credential_set.h>
-<<<<<<< HEAD
-=======
 #include <credentials/certificates/crl.h>
 #include <utils/linked_list.h>
->>>>>>> upstream/4.5.1
 
 /**
  * Generic in-memory credential set.
@@ -54,8 +48,6 @@ struct mem_cred_t {
 	void (*add_cert)(mem_cred_t *this, bool trusted, certificate_t *cert);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Add a certificate to the credential set, returning a reference to it or
 	 * to a cached duplicate.
 	 *
@@ -76,7 +68,6 @@ struct mem_cred_t {
 	bool (*add_crl)(mem_cred_t *this, crl_t *crl);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Add a private key to the credential set.
 	 *
 	 * @param key			key, reference gets owned by set
@@ -87,17 +78,11 @@ struct mem_cred_t {
 	 * Add a shared key to the credential set.
 	 *
 	 * @param shared		shared key to add, gets owned by set
-<<<<<<< HEAD
-	 * @param ...			NULL terminated list of owners identification_t*
-=======
 	 * @param ...			NULL terminated list of owners (identification_t*)
->>>>>>> upstream/4.5.1
 	 */
 	void (*add_shared)(mem_cred_t *this, shared_key_t *shared, ...);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Add a shared key to the credential set.
 	 *
 	 * @param shared		shared key to add, gets owned by set
@@ -116,21 +101,17 @@ struct mem_cred_t {
 					identification_t *id, char *uri);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Clear all credentials from the credential set.
 	 */
 	void (*clear)(mem_cred_t *this);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Clear the secrets (private and shared keys, not the certificates) from
 	 * the credential set.
 	 */
 	void (*clear_secrets)(mem_cred_t *this);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Destroy a mem_cred_t.
 	 */
 	void (*destroy)(mem_cred_t *this);

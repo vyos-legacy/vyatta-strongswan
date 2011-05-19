@@ -54,21 +54,12 @@ struct stroke_token {
     stroke_keyword_t kw;
 };
 
-<<<<<<< HEAD
-#define TOTAL_KEYWORDS 34
-#define MIN_WORD_LENGTH 2
-#define MAX_WORD_LENGTH 15
-#define MIN_HASH_VALUE 3
-#define MAX_HASH_VALUE 39
-/* maximum key range = 37, duplicates = 0 */
-=======
 #define TOTAL_KEYWORDS 37
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 15
 #define MIN_HASH_VALUE 2
 #define MAX_HASH_VALUE 42
 /* maximum key range = 41, duplicates = 0 */
->>>>>>> upstream/4.5.1
 
 #ifdef __GNUC__
 __inline
@@ -84,34 +75,6 @@ hash (str, len)
 {
   static const unsigned char asso_values[] =
     {
-<<<<<<< HEAD
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 18, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40,  0,  4,  1,
-       1,  0, 40, 17, 40, 20, 40,  3,  0, 40,
-      40, 12, 19, 40,  6,  3, 20, 12, 40, 40,
-      10, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-      40, 40, 40, 40, 40, 40
-=======
       43, 43, 43, 43, 43, 43, 43, 43, 43, 43,
       43, 43, 43, 43, 43, 43, 43, 43, 43, 43,
       43, 43, 43, 43, 43, 43, 43, 43, 43, 43,
@@ -138,7 +101,6 @@ hash (str, len)
       43, 43, 43, 43, 43, 43, 43, 43, 43, 43,
       43, 43, 43, 43, 43, 43, 43, 43, 43, 43,
       43, 43, 43, 43, 43, 43
->>>>>>> upstream/4.5.1
     };
   register int hval = len;
 
@@ -163,20 +125,6 @@ hash (str, len)
 
 static const struct stroke_token wordlist[] =
   {
-<<<<<<< HEAD
-    {"add",             STROKE_ADD},
-    {"del",             STROKE_DEL},
-    {"down",            STROKE_DOWN},
-    {"leases",          STROKE_LEASES},
-    {"listall",         STROKE_LIST_ALL},
-    {"loglevel",        STROKE_LOGLEVEL},
-    {"listcrls",        STROKE_LIST_CRLS},
-    {"listacerts",      STROKE_LIST_ACERTS},
-    {"route",           STROKE_ROUTE},
-    {"listaacerts",     STROKE_LIST_AACERTS},
-    {"listcacerts",     STROKE_LIST_CACERTS},
-    {"up",              STROKE_UP},
-=======
     {"up",              STROKE_UP},
     {"add",             STROKE_ADD},
     {"del",             STROKE_DEL},
@@ -188,31 +136,12 @@ static const struct stroke_token wordlist[] =
     {"listaacerts",     STROKE_LIST_AACERTS},
     {"listcacerts",     STROKE_LIST_CACERTS},
     {"statusall",       STROKE_STATUSALL},
->>>>>>> upstream/4.5.1
     {"rereadall",       STROKE_REREAD_ALL},
     {"listcerts",       STROKE_LIST_CERTS},
     {"rereadcrls",      STROKE_REREAD_CRLS},
     {"rereadacerts",    STROKE_REREAD_ACERTS},
     {"rereadaacerts",   STROKE_REREAD_AACERTS},
     {"rereadcacerts",   STROKE_REREAD_CACERTS},
-<<<<<<< HEAD
-    {"status",          STROKE_STATUS},
-    {"rereadsecrets",   STROKE_REREAD_SECRETS},
-    {"listocsp",        STROKE_LIST_OCSP},
-    {"statusall",       STROKE_STATUSALL},
-    {"listalgs",        STROKE_LIST_ALGS},
-    {"exportx509",      STROKE_EXPORT_X509},
-    {"delete",          STROKE_DELETE},
-    {"listocspcerts",   STROKE_LIST_OCSPCERTS},
-    {"purgeocsp",       STROKE_PURGE_OCSP},
-    {"purgeike",        STROKE_PURGE_IKE},
-    {"unroute",         STROKE_UNROUTE},
-    {"listcainfos",     STROKE_LIST_CAINFOS},
-    {"rereadocspcerts", STROKE_REREAD_OCSPCERTS},
-    {"listpubkeys",     STROKE_LIST_PUBKEYS},
-    {"down-srcip",      STROKE_DOWN_SRCIP},
-    {"listgroups",      STROKE_LIST_GROUPS}
-=======
     {"leases",          STROKE_LEASES},
     {"unroute",         STROKE_UNROUTE},
     {"listocsp",        STROKE_LIST_OCSP},
@@ -233,21 +162,14 @@ static const struct stroke_token wordlist[] =
     {"loglevel",        STROKE_LOGLEVEL},
     {"listgroups",      STROKE_LIST_GROUPS},
     {"purgecerts",      STROKE_PURGE_CERTS}
->>>>>>> upstream/4.5.1
   };
 
 static const short lookup[] =
   {
-<<<<<<< HEAD
-    -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,
-    11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-    25, 26, 27, 28, 29, 30, 31, 32, -1, -1, -1, 33
-=======
     -1, -1,  0,  1,  2,  3, -1,  4,  5,  6, -1,  7,  8,  9,
     10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, -1, -1, 35,
     36
->>>>>>> upstream/4.5.1
   };
 
 #ifdef __GNUC__

@@ -122,7 +122,7 @@ static void pop_string(stroke_msg_t *msg, char **string)
 
 	/* check for sanity of string pointer and string */
 	if (string < (char**)msg ||
-		string > (char**)msg + sizeof(stroke_msg_t) ||
+		string > (char**)((char*)msg + sizeof(stroke_msg_t)) ||
 		(unsigned long)*string < (unsigned long)((char*)msg->buffer - (char*)msg) ||
 		(unsigned long)*string > msg->length)
 	{
@@ -151,10 +151,7 @@ static void pop_end(stroke_msg_t *msg, const char* label, stroke_end_t *end)
 	pop_string(msg, &end->ca);
 	pop_string(msg, &end->ca2);
 	pop_string(msg, &end->groups);
-<<<<<<< HEAD
-=======
 	pop_string(msg, &end->cert_policy);
->>>>>>> upstream/4.5.1
 	pop_string(msg, &end->updown);
 
 	DBG2(DBG_CFG, "  %s=%s", label, end->address);
@@ -250,8 +247,6 @@ static void stroke_terminate_srcip(private_stroke_socket_t *this,
 }
 
 /**
-<<<<<<< HEAD
-=======
  * rekey a connection by name/id
  */
 static void stroke_rekey(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out)
@@ -263,7 +258,6 @@ static void stroke_rekey(private_stroke_socket_t *this, stroke_msg_t *msg, FILE 
 }
 
 /**
->>>>>>> upstream/4.5.1
  * route a policy (install SPD entries)
  */
 static void stroke_route(private_stroke_socket_t *this, stroke_msg_t *msg, FILE *out)
@@ -366,8 +360,6 @@ static void stroke_purge(private_stroke_socket_t *this,
 	{
 		lib->credmgr->flush_cache(lib->credmgr, CERT_X509_OCSP_RESPONSE);
 	}
-<<<<<<< HEAD
-=======
 	if (msg->purge.flags & PURGE_CRLS)
 	{
 		lib->credmgr->flush_cache(lib->credmgr, CERT_X509_CRL);
@@ -376,7 +368,6 @@ static void stroke_purge(private_stroke_socket_t *this,
 	{
 		lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
 	}
->>>>>>> upstream/4.5.1
 	if (msg->purge.flags & PURGE_IKE)
 	{
 		this->control->purge_ike(this->control, msg, out);
@@ -405,7 +396,7 @@ static void stroke_export(private_stroke_socket_t *this,
 		{
 			if (cert->get_encoding(cert, CERT_PEM, &encoded))
 			{
-				fprintf(out, "%.*s", encoded.len, encoded.ptr);
+				fprintf(out, "%.*s", (int)encoded.len, encoded.ptr);
 				free(encoded.ptr);
 			}
 		}
@@ -539,12 +530,9 @@ static job_requeue_t process(stroke_job_context_t *ctx)
 		case STR_TERMINATE_SRCIP:
 			stroke_terminate_srcip(this, msg, out);
 			break;
-<<<<<<< HEAD
-=======
 		case STR_REKEY:
 			stroke_rekey(this, msg, out);
 			break;
->>>>>>> upstream/4.5.1
 		case STR_STATUS:
 			stroke_status(this, msg, out, FALSE);
 			break;

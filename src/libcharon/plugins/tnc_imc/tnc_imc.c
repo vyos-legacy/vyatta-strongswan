@@ -19,11 +19,12 @@
 
 #include <debug.h>
 #include <library.h>
+#include <threading/mutex.h>
 
 typedef struct private_tnc_imc_t private_tnc_imc_t;
 
 /**
- * Private data of an imv_t object.
+ * Private data of an imc_t object.
  */
 struct private_tnc_imc_t {
 
@@ -61,6 +62,11 @@ struct private_tnc_imc_t {
 	 * Number of supported message types
 	 */
 	TNC_UInt32 type_count;
+
+	/**
+	 * mutex to lock the imc_t object
+	 */
+	mutex_t *mutex;
 };
 
 METHOD(imc_t, set_id, void,
@@ -85,6 +91,14 @@ METHOD(imc_t, set_message_types, void,
 	private_tnc_imc_t *this, TNC_MessageTypeList supported_types,
 							 TNC_UInt32 type_count)
 {
+	char buf[512];
+	char *pos = buf;
+	int len = sizeof(buf);
+	int written;
+
+	/* lock the imc_t instance */
+	this->mutex->lock(this->mutex);
+
 	/* Free an existing MessageType list */
 	free(this->supported_types);
 	this->supported_types = NULL;
@@ -94,11 +108,27 @@ METHOD(imc_t, set_message_types, void,
 	if (type_count && supported_types)
 	{
 		size_t size = type_count * sizeof(TNC_MessageType);
+		int i;
 
+		for (i = 0; i < type_count; i++)
+		{
+			written = snprintf(pos, len, " 0x%08x", supported_types[i]);
+			if (written >= len)
+			{
+				break;
+			}
+			pos += written;
+			len -= written;
+		}
 		this->supported_types = malloc(size);
 		memcpy(this->supported_types, supported_types, size);
 	}
-	DBG2(DBG_TNC, "IMC %u supports %u message types", this->id, type_count);
+	*pos = '\0';
+	DBG2(DBG_TNC, "IMC %u supports %u message types:%s",
+				  this->id, type_count, buf);
+
+	/* lock the imc_t instance */
+	this->mutex->unlock(this->mutex);
 }
 
 METHOD(imc_t, type_supported, bool,
@@ -132,6 +162,7 @@ METHOD(imc_t, destroy, void,
 	private_tnc_imc_t *this)
 {
 	dlclose(this->handle);
+	this->mutex->destroy(this->mutex);
 	free(this->supported_types);
 	free(this->name);
 	free(this->path);
@@ -156,6 +187,7 @@ imc_t* tnc_imc_create(char *name, char *path)
         },
 		.name = name,
 		.path = path,
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
 	this->handle = dlopen(path, RTLD_LAZY);

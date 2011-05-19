@@ -102,16 +102,10 @@ typedef enum {
 	KW_MARK,
 	KW_MARK_IN,
 	KW_MARK_OUT,
-<<<<<<< HEAD
-
-#define KW_CONN_FIRST   KW_CONN_SETUP
-#define KW_CONN_LAST    KW_MARK_OUT
-=======
 	KW_TFC,
 
 #define KW_CONN_FIRST   KW_CONN_SETUP
 #define KW_CONN_LAST    KW_TFC
->>>>>>> upstream/4.5.1
 
    /* ca section keywords */
 	KW_CA_NAME,
@@ -148,10 +142,7 @@ typedef enum {
 	KW_RSASIGKEY,
 	KW_CERT,
 	KW_CERT2,
-<<<<<<< HEAD
-=======
 	KW_CERTPOLICY,
->>>>>>> upstream/4.5.1
 	KW_SENDCERT,
 	KW_CA,
 	KW_CA2,
@@ -181,10 +172,7 @@ typedef enum {
 	KW_LEFTRSASIGKEY,
 	KW_LEFTCERT,
 	KW_LEFTCERT2,
-<<<<<<< HEAD
-=======
 	KW_LEFTCERTPOLICY,
->>>>>>> upstream/4.5.1
 	KW_LEFTSENDCERT,
 	KW_LEFTCA,
 	KW_LEFTCA2,
@@ -213,10 +201,7 @@ typedef enum {
 	KW_RIGHTRSASIGKEY,
 	KW_RIGHTCERT,
 	KW_RIGHTCERT2,
-<<<<<<< HEAD
-=======
 	KW_RIGHTCERTPOLICY,
->>>>>>> upstream/4.5.1
 	KW_RIGHTSENDCERT,
 	KW_RIGHTCA,
 	KW_RIGHTCA2,

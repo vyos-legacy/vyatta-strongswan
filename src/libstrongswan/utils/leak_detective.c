@@ -165,6 +165,7 @@ char *whitelist[] = {
 	"__gmtime_r",
 	"localtime_r",
 	"tzset",
+	"time_printf_hook",
 	"inet_ntoa",
 	"strerror",
 	"getprotobyname",
@@ -190,6 +191,7 @@ char *whitelist[] = {
 	"dlopen",
 	"dlerror",
 	"dlclose",
+	"dlsym",
 	/* mysql functions */
 	"mysql_init_character_set",
 	"init_client_errs",
@@ -218,27 +220,6 @@ char *whitelist[] = {
 	"gcry_create_nonce",
 	/* NSPR */
 	"PR_CallOnce",
-<<<<<<< HEAD
-};
-
-/**
- * check if a stack frame contains functions listed above
- */
-static bool is_whitelisted(backtrace_t *backtrace)
-{
-	int i;
-	for (i = 0; i < sizeof(whitelist)/sizeof(char*); i++)
-	{
-		if (backtrace->contains_function(backtrace, whitelist[i]))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-/**
-=======
 	/* libapr */
 	"apr_pool_create_ex",
 	/* glib */
@@ -256,7 +237,6 @@ static bool is_whitelisted(backtrace_t *backtrace)
 };
 
 /**
->>>>>>> upstream/4.5.1
  * Report leaks at library destruction
  */
 static void report(private_leak_detective_t *this, bool detailed)
@@ -268,12 +248,8 @@ static void report(private_leak_detective_t *this, bool detailed)
 
 		for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 		{
-<<<<<<< HEAD
-			if (is_whitelisted(hdr->backtrace))
-=======
 			if (hdr->backtrace->contains_function(hdr->backtrace,
 											whitelist, countof(whitelist)))
->>>>>>> upstream/4.5.1
 			{
 				whitelisted++;
 			}

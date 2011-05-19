@@ -18,11 +18,6 @@
 #include <library.h>
 #include "aes_crypter.h"
 
-<<<<<<< HEAD
-=======
-static const char *plugin_name = "aes";
-
->>>>>>> upstream/4.5.1
 typedef struct private_aes_plugin_t private_aes_plugin_t;
 
 /**
@@ -35,6 +30,12 @@ struct private_aes_plugin_t {
 	 */
 	aes_plugin_t public;
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_aes_plugin_t *this)
+{
+	return "aes";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_aes_plugin_t *this)
@@ -54,16 +55,14 @@ plugin_t *aes_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-<<<<<<< HEAD
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
-=======
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, plugin_name,
->>>>>>> upstream/4.5.1
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, get_name(this),
 							 (crypter_constructor_t)aes_crypter_create);
 
 	return &this->public.plugin;

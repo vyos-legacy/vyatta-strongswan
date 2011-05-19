@@ -52,13 +52,8 @@ METHOD(tls_reader_t, read_uint8, bool,
 {
 	if (this->buf.len < 1)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_TLS, "%d bytes insufficient to parse uint%d TLS data",
-			 this->buf.len, 8);
-=======
 		DBG1(DBG_TLS, "%d bytes insufficient to parse u_int8 data",
 			 this->buf.len);
->>>>>>> upstream/4.5.1
 		return FALSE;
 	}
 	*res = this->buf.ptr[0];
@@ -71,13 +66,8 @@ METHOD(tls_reader_t, read_uint16, bool,
 {
 	if (this->buf.len < 2)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_TLS, "%d bytes insufficient to parse uint%d TLS data",
-			 this->buf.len, 16);
-=======
 		DBG1(DBG_TLS, "%d bytes insufficient to parse u_int16 data",
 			 this->buf.len);
->>>>>>> upstream/4.5.1
 		return FALSE;
 	}
 	*res = untoh16(this->buf.ptr);
@@ -90,13 +80,8 @@ METHOD(tls_reader_t, read_uint24, bool,
 {
 	if (this->buf.len < 3)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_TLS, "%d bytes insufficient to parse uint%d TLS data",
-			 this->buf.len, 24);
-=======
 		DBG1(DBG_TLS, "%d bytes insufficient to parse u_int24 data",
 			 this->buf.len);
->>>>>>> upstream/4.5.1
 		return FALSE;
 	}
 	*res = untoh32(this->buf.ptr) >> 8;
@@ -109,13 +94,8 @@ METHOD(tls_reader_t, read_uint32, bool,
 {
 	if (this->buf.len < 4)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_TLS, "%d bytes insufficient to parse uint%d TLS data",
-			 this->buf.len, 32);
-=======
 		DBG1(DBG_TLS, "%d bytes insufficient to parse u_int32 data",
 			 this->buf.len);
->>>>>>> upstream/4.5.1
 		return FALSE;
 	}
 	*res = untoh32(this->buf.ptr);
@@ -128,11 +108,7 @@ METHOD(tls_reader_t, read_data, bool,
 {
 	if (this->buf.len < len)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_TLS, "%d bytes insufficient to parse %d bytes TLS data",
-=======
 		DBG1(DBG_TLS, "%d bytes insufficient to parse %d bytes of data",
->>>>>>> upstream/4.5.1
 			 this->buf.len, len);
 		return FALSE;
 	}

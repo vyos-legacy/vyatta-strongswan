@@ -35,11 +35,6 @@ ENUM(protocol_id_names, PROTO_NONE, PROTO_ESP,
 	"ESP",
 );
 
-ENUM(extended_sequence_numbers_names, NO_EXT_SEQ_NUMBERS, EXT_SEQ_NUMBERS,
-	"NO_EXT_SEQ",
-	"EXT_SEQ",
-);
-
 typedef struct private_proposal_t private_proposal_t;
 typedef struct algorithm_t algorithm_t;
 
@@ -549,6 +544,16 @@ static void check_proposal(private_proposal_t *this)
 			free(alg);
 		}
 	}
+
+	if (this->protocol == PROTO_AH || this->protocol == PROTO_ESP)
+	{
+		e = this->esns->create_enumerator(this->esns);
+		if (!e->enumerate(e, &alg))
+		{	/* ESN not specified, assume not supported */
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+		}
+		e->destroy(e);
+	}
 }
 
 /**
@@ -560,10 +565,7 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 
 	if (token == NULL)
 	{
-<<<<<<< HEAD
-=======
 		DBG1(DBG_CFG, "algorithm '%.*s' not recognized", alg.len, alg.ptr);
->>>>>>> upstream/4.5.1
 		return FAILED;
 	}
 
@@ -744,16 +746,10 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	integrity_algorithm_t integrity;
 	pseudo_random_function_t prf;
 	diffie_hellman_group_t group;
-<<<<<<< HEAD
-
-	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &encryption))
-=======
 	const char *plugin_name;
 
 	enumerator = lib->crypto->create_crypter_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &encryption, &plugin_name))
->>>>>>> upstream/4.5.1
 	{
 		switch (encryption)
 		{
@@ -788,11 +784,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	enumerator->destroy(enumerator);
 
 	enumerator = lib->crypto->create_signer_enumerator(lib->crypto);
-<<<<<<< HEAD
-	while (enumerator->enumerate(enumerator, &integrity))
-=======
 	while (enumerator->enumerate(enumerator, &integrity, &plugin_name))
->>>>>>> upstream/4.5.1
 	{
 		switch (integrity)
 		{
@@ -811,11 +803,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	enumerator->destroy(enumerator);
 
 	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
-<<<<<<< HEAD
-	while (enumerator->enumerate(enumerator, &prf))
-=======
 	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
->>>>>>> upstream/4.5.1
 	{
 		switch (prf)
 		{
@@ -834,11 +822,7 @@ static void proposal_add_supported_ike(private_proposal_t *this)
 	enumerator->destroy(enumerator);
 
 	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
-<<<<<<< HEAD
-	while (enumerator->enumerate(enumerator, &group))
-=======
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
->>>>>>> upstream/4.5.1
 	{
 		switch (group)
 		{
@@ -939,9 +923,5 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 
 	check_proposal(this);
 
-	if (protocol == PROTO_AH || protocol == PROTO_ESP)
-	{
-		add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
-	}
 	return &this->public;
 }

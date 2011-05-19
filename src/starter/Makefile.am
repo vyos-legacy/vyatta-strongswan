@@ -25,10 +25,6 @@ AM_CFLAGS = \
 
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
-<<<<<<< HEAD
-dist_man_MANS = starter.8
-=======
->>>>>>> upstream/4.5.1
 MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
@@ -62,18 +58,6 @@ defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $(PLUTODIR)/defs.c
 
 install-exec-local :
-<<<<<<< HEAD
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/certs" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/certs" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/acerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/acerts" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/aacerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/aacerts" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/crls" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/crls" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
-		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
-=======
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts" || true
@@ -84,5 +68,4 @@ install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
 		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
->>>>>>> upstream/4.5.1
 

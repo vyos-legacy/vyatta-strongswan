@@ -100,13 +100,8 @@ static bool parse(LDAP *ldap, LDAPMessage *result, chunk_t *response)
 }
 
 
-<<<<<<< HEAD
-static status_t fetch(private_ldap_fetcher_t *this, char *url,
-					  chunk_t *result, va_list args)
-=======
 METHOD(fetcher_t, fetch, status_t,
-	private_ldap_fetcher_t *this, char *url, chunk_t *result)
->>>>>>> upstream/4.5.1
+	private_ldap_fetcher_t *this, char *url, void *userdata)
 {
 	LDAP *ldap;
 	LDAPURLDesc *lurl;
@@ -115,6 +110,7 @@ METHOD(fetcher_t, fetch, status_t,
 	int ldap_version = LDAP_VERSION3;
 	struct timeval timeout;
 	status_t status = FAILED;
+	chunk_t *result = userdata;
 
 	if (!strneq(url, "ldap", 4))
 	{
@@ -171,15 +167,8 @@ METHOD(fetcher_t, fetch, status_t,
 }
 
 
-<<<<<<< HEAD
-/**
- * Implementation of fetcher_t.set_option.
- */
-static bool set_option(private_ldap_fetcher_t *this, fetcher_option_t option, ...)
-=======
 METHOD(fetcher_t, set_option, bool,
 	private_ldap_fetcher_t *this, fetcher_option_t option, ...)
->>>>>>> upstream/4.5.1
 {
 	va_list args;
 
@@ -196,15 +185,8 @@ METHOD(fetcher_t, set_option, bool,
 	}
 }
 
-<<<<<<< HEAD
-/**
- * Implements ldap_fetcher_t.destroy
- */
-static void destroy(private_ldap_fetcher_t *this)
-=======
 METHOD(fetcher_t, destroy, void,
 	private_ldap_fetcher_t *this)
->>>>>>> upstream/4.5.1
 {
 	free(this);
 }
@@ -214,15 +196,6 @@ METHOD(fetcher_t, destroy, void,
  */
 ldap_fetcher_t *ldap_fetcher_create()
 {
-<<<<<<< HEAD
-	private_ldap_fetcher_t *this = malloc_thing(private_ldap_fetcher_t);
-
-	this->public.interface.fetch = (status_t(*)(fetcher_t*,char*,chunk_t*))fetch;
-	this->public.interface.set_option = (bool(*)(fetcher_t*, fetcher_option_t option, ...))set_option;
-	this->public.interface.destroy = (void (*)(fetcher_t*))destroy;
-
-	this->timeout = DEFAULT_TIMEOUT;
-=======
 	private_ldap_fetcher_t *this;
 
 	INIT(this,
@@ -235,7 +208,6 @@ ldap_fetcher_t *ldap_fetcher_create()
 		},
 		.timeout = DEFAULT_TIMEOUT,
 	);
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

@@ -190,8 +190,6 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
 host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
 
 /**
-<<<<<<< HEAD
-=======
  * Create a host from a CIDR subnet definition (1.2.3.0/24), return bits.
  *
  * @param string		string to parse
@@ -201,7 +199,6 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
 host_t *host_create_from_subnet(char *string, int *bits);
 
 /**
->>>>>>> upstream/4.5.1
  * Create a host without an address, a "any" host.
  *
  * @param family		family of the any host

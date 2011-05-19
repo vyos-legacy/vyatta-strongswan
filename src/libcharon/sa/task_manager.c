@@ -161,12 +161,12 @@ static void flush(private_task_manager_t *this)
 {
 	this->queued_tasks->destroy_offset(this->queued_tasks,
 										offsetof(task_t, destroy));
+	this->queued_tasks = linked_list_create();
 	this->passive_tasks->destroy_offset(this->passive_tasks,
 										offsetof(task_t, destroy));
+	this->passive_tasks = linked_list_create();
 	this->active_tasks->destroy_offset(this->active_tasks,
 										offsetof(task_t, destroy));
-	this->queued_tasks = linked_list_create();
-	this->passive_tasks = linked_list_create();
 	this->active_tasks = linked_list_create();
 }
 
@@ -465,10 +465,6 @@ METHOD(task_manager_t, initiate, status_t,
 	/* update exchange type if a task changed it */
 	this->initiating.type = message->get_exchange_type(message);
 
-<<<<<<< HEAD
-	charon->bus->message(charon->bus, message, FALSE);
-=======
->>>>>>> upstream/4.5.1
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->initiating.packet);
 	if (status != SUCCESS)
@@ -549,7 +545,7 @@ static status_t process_response(private_task_manager_t *this,
 /**
  * handle exchange collisions
  */
-static void handle_collisions(private_task_manager_t *this, task_t *task)
+static bool handle_collisions(private_task_manager_t *this, task_t *task)
 {
 	iterator_t *iterator;
 	task_t *active;
@@ -588,12 +584,11 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 					continue;
 			}
 			iterator->destroy(iterator);
-			return;
+			return TRUE;
 		}
 		iterator->destroy(iterator);
 	}
-	/* destroy task if not registered in any active task */
-	task->destroy(task);
+	return FALSE;
 }
 
 /**
@@ -627,9 +622,17 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 			case SUCCESS:
 				/* task completed, remove it */
 				iterator->remove(iterator);
-				handle_collisions(this, task);
+				if (!handle_collisions(this, task))
+				{
+					task->destroy(task);
+				}
+				break;
 			case NEED_MORE:
 				/* processed, but task needs another exchange */
+				if (handle_collisions(this, task))
+				{
+					iterator->remove(iterator);
+				}
 				break;
 			case FAILED:
 			default:
@@ -657,10 +660,6 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	/* message complete, send it */
 	DESTROY_IF(this->responding.packet);
 	this->responding.packet = NULL;
-<<<<<<< HEAD
-	charon->bus->message(charon->bus, message, FALSE);
-=======
->>>>>>> upstream/4.5.1
 	status = this->ike_sa->generate_message(this->ike_sa, message,
 											&this->responding.packet);
 	message->destroy(message);
@@ -888,17 +887,12 @@ static status_t process_request(private_task_manager_t *this,
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
 {
-<<<<<<< HEAD
-	u_int32_t mid = msg->get_message_id(msg);
-	host_t *me = msg->get_destination(msg), *other = msg->get_source(msg);
-=======
 	host_t *me, *other;
 	u_int32_t mid;
 
 	mid = msg->get_message_id(msg);
 	me = msg->get_destination(msg);
 	other = msg->get_source(msg);
->>>>>>> upstream/4.5.1
 
 	if (msg->get_request(msg))
 	{
@@ -910,12 +904,6 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* only do host updates based on verified messages */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 				{	/* with MOBIKE, we do no implicit updates */
-<<<<<<< HEAD
-					this->ike_sa->update_hosts(this->ike_sa, me, other);
-				}
-			}
-			charon->bus->message(charon->bus, msg, TRUE);
-=======
 					this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
 				}
 			}
@@ -924,7 +912,6 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
 				return SUCCESS;
 			}
->>>>>>> upstream/4.5.1
 			if (process_request(this, msg) != SUCCESS)
 			{
 				flush(this);
@@ -935,26 +922,15 @@ METHOD(task_manager_t, process_message, status_t,
 		else if ((mid == this->responding.mid - 1) && this->responding.packet)
 		{
 			packet_t *clone;
-<<<<<<< HEAD
-			host_t *me, *other;
-=======
 			host_t *host;
->>>>>>> upstream/4.5.1
 
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 				 "retransmitting response", mid);
 			clone = this->responding.packet->clone(this->responding.packet);
-<<<<<<< HEAD
-			me = msg->get_destination(msg);
-			other = msg->get_source(msg);
-			clone->set_source(clone, me->clone(me));
-			clone->set_destination(clone, other->clone(other));
-=======
 			host = msg->get_destination(msg);
 			clone->set_source(clone, host->clone(host));
 			host = msg->get_source(msg);
 			clone->set_destination(clone, host->clone(host));
->>>>>>> upstream/4.5.1
 			charon->sender->send(charon->sender, clone);
 		}
 		else
@@ -973,12 +949,6 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* only do host updates based on verified messages */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 				{	/* with MOBIKE, we do no implicit updates */
-<<<<<<< HEAD
-					this->ike_sa->update_hosts(this->ike_sa, me, other);
-				}
-			}
-			charon->bus->message(charon->bus, msg, TRUE);
-=======
 					this->ike_sa->update_hosts(this->ike_sa, me, other, FALSE);
 				}
 			}
@@ -987,7 +957,6 @@ METHOD(task_manager_t, process_message, status_t,
 			{	/* ignore messages altered to EXCHANGE_TYPE_UNDEFINED */
 				return SUCCESS;
 			}
->>>>>>> upstream/4.5.1
 			if (process_response(this, msg) != SUCCESS)
 			{
 				flush(this);
@@ -1050,8 +1019,6 @@ METHOD(task_manager_t, busy, bool,
 	return (this->active_tasks->get_count(this->active_tasks) > 0);
 }
 
-<<<<<<< HEAD
-=======
 METHOD(task_manager_t, incr_mid, void,
 	private_task_manager_t *this, bool initiate)
 {
@@ -1065,7 +1032,6 @@ METHOD(task_manager_t, incr_mid, void,
 	}
 }
 
->>>>>>> upstream/4.5.1
 METHOD(task_manager_t, reset, void,
 	private_task_manager_t *this, u_int32_t initiate, u_int32_t respond)
 {
@@ -1149,10 +1115,7 @@ task_manager_t *task_manager_create(ike_sa_t *ike_sa)
 			.queue_task = _queue_task,
 			.initiate = _initiate,
 			.retransmit = _retransmit,
-<<<<<<< HEAD
-=======
 			.incr_mid = _incr_mid,
->>>>>>> upstream/4.5.1
 			.reset = _reset,
 			.adopt_tasks = _adopt_tasks,
 			.busy = _busy,

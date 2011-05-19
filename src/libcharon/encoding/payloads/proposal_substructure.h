@@ -111,19 +111,11 @@ struct proposal_substructure_t {
 	proposal_t * (*get_proposal) (proposal_substructure_t *this);
 
 	/**
-<<<<<<< HEAD
-	 * Clones an proposal_substructure_t object.
-	 *
-	 * @return		cloned object
-	 */
-	proposal_substructure_t* (*clone) (proposal_substructure_t *this);
-=======
 	 * Create an enumerator over transform substructures.
 	 *
 	 * @return			enumerator over transform_substructure_t
 	 */
 	enumerator_t* (*create_substructure_enumerator)(proposal_substructure_t *this);
->>>>>>> upstream/4.5.1
 
 	/**
 	 * Destroys an proposal_substructure_t object.

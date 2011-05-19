@@ -109,15 +109,9 @@ INSERT INTO ike_configs (
 );
 
 INSERT INTO peer_configs (
-<<<<<<< HEAD
-  name, ike_cfg, local_id, remote_id, mobike
-) VALUES (
-  'net-net', 1, 4, 5, 0
-=======
   name, ike_cfg, local_id, remote_id, mobike, dpd_delay
 ) VALUES (
   'net-net', 1, 4, 5, 0, 0
->>>>>>> upstream/4.5.1
 );
 
 INSERT INTO child_configs (

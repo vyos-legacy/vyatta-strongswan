@@ -165,11 +165,7 @@ static u_int bench_crypter(private_crypto_tester_t *this,
 
 METHOD(crypto_tester_t, test_crypter, bool,
 	private_crypto_tester_t *this, encryption_algorithm_t alg, size_t key_size,
-<<<<<<< HEAD
-	crypter_constructor_t create, u_int *speed)
-=======
 	crypter_constructor_t create, u_int *speed, const char *plugin_name)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	crypter_test_vector_t *vector;
@@ -192,15 +188,11 @@ METHOD(crypto_tester_t, test_crypter, bool,
 		}
 		crypter = create(alg, vector->key_size);
 		if (!crypter)
-<<<<<<< HEAD
-		{	/* key size not supported... */
-=======
 		{
 			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
 				 encryption_algorithm_names, alg, plugin_name,
 				 BITS_PER_BYTE * vector->key_size);
 			failed = TRUE;
->>>>>>> upstream/4.5.1
 			continue;
 		}
 
@@ -243,30 +235,19 @@ METHOD(crypto_tester_t, test_crypter, bool,
 		crypter->destroy(crypter);
 		if (failed)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
-				 encryption_algorithm_names, alg, get_name(vector));
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
 				 encryption_algorithm_names, alg, plugin_name, get_name(vector));
->>>>>>> upstream/4.5.1
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
-			 this->required ? "disabled" : "enabled ",
-			 encryption_algorithm_names, alg);
-		return !this->required;
-=======
 		if (failed)
 		{
 			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
 				 encryption_algorithm_names, alg, plugin_name);
-			return FALSE;              
+			return FALSE;
 		}
 		else
 		{
@@ -275,30 +256,19 @@ METHOD(crypto_tester_t, test_crypter, bool,
 				 encryption_algorithm_names, alg, plugin_name);
 			return !this->required;
 		}
->>>>>>> upstream/4.5.1
 	}
 	if (!failed)
 	{
 		if (speed)
 		{
 			*speed = bench_crypter(this, alg, create);
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
-				 encryption_algorithm_names, alg, tested, *speed);
-		}
-		else
-		{
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-				 encryption_algorithm_names, alg, tested);
-=======
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
-				 encryption_algorithm_names, alg, tested, plugin_name, *speed);
+				 encryption_algorithm_names, alg, plugin_name, tested, *speed);
 		}
 		else
 		{
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
 				 encryption_algorithm_names, alg, plugin_name, tested);
->>>>>>> upstream/4.5.1
 		}
 	}
 	return !failed;
@@ -354,11 +324,7 @@ static u_int bench_aead(private_crypto_tester_t *this,
 
 METHOD(crypto_tester_t, test_aead, bool,
 	private_crypto_tester_t *this, encryption_algorithm_t alg, size_t key_size,
-<<<<<<< HEAD
-	aead_constructor_t create, u_int *speed)
-=======
 	aead_constructor_t create, u_int *speed, const char *plugin_name)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	aead_test_vector_t *vector;
@@ -382,15 +348,11 @@ METHOD(crypto_tester_t, test_aead, bool,
 		}
 		aead = create(alg, vector->key_size);
 		if (!aead)
-<<<<<<< HEAD
-		{	/* key size not supported... */
-=======
 		{
 			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
 				 encryption_algorithm_names, alg, plugin_name,
 				 BITS_PER_BYTE * vector->key_size);
 			failed = TRUE;
->>>>>>> upstream/4.5.1
 			continue;
 		}
 
@@ -443,30 +405,19 @@ METHOD(crypto_tester_t, test_aead, bool,
 		aead->destroy(aead);
 		if (failed)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
-				 encryption_algorithm_names, alg, get_name(vector));
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
 				 encryption_algorithm_names, alg, plugin_name, get_name(vector));
->>>>>>> upstream/4.5.1
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
-			 this->required ? "disabled" : "enabled ",
-			 encryption_algorithm_names, alg);
-		return !this->required;
-=======
 		if (failed)
 		{
 			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
 				 encryption_algorithm_names, alg, plugin_name);
-			return FALSE;              
+			return FALSE;
 		}
 		else
 		{
@@ -475,22 +426,12 @@ METHOD(crypto_tester_t, test_aead, bool,
 				 encryption_algorithm_names, alg, plugin_name);
 			return !this->required;
 		}
->>>>>>> upstream/4.5.1
 	}
 	if (!failed)
 	{
 		if (speed)
 		{
 			*speed = bench_aead(this, alg, create);
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
-				 encryption_algorithm_names, alg, tested, *speed);
-		}
-		else
-		{
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-				 encryption_algorithm_names, alg, tested);
-=======
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
 				 encryption_algorithm_names, alg, plugin_name, tested, *speed);
 		}
@@ -498,7 +439,6 @@ METHOD(crypto_tester_t, test_aead, bool,
 		{
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
 				 encryption_algorithm_names, alg, plugin_name, tested);
->>>>>>> upstream/4.5.1
 		}
 	}
 	return !failed;
@@ -546,11 +486,7 @@ static u_int bench_signer(private_crypto_tester_t *this,
 
 METHOD(crypto_tester_t, test_signer, bool,
 	private_crypto_tester_t *this, integrity_algorithm_t alg,
-<<<<<<< HEAD
-	signer_constructor_t create, u_int *speed)
-=======
 	signer_constructor_t create, u_int *speed, const char *plugin_name)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	signer_test_vector_t *vector;
@@ -572,13 +508,8 @@ METHOD(crypto_tester_t, test_signer, bool,
 		signer = create(alg);
 		if (!signer)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: creating instance failed",
-				 integrity_algorithm_names, alg);
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
 				 integrity_algorithm_names, alg, plugin_name);
->>>>>>> upstream/4.5.1
 			failed = TRUE;
 			break;
 		}
@@ -633,28 +564,17 @@ METHOD(crypto_tester_t, test_signer, bool,
 		signer->destroy(signer);
 		if (failed)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
-				 integrity_algorithm_names, alg, get_name(vector));
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
 				 integrity_algorithm_names, alg, plugin_name, get_name(vector));
->>>>>>> upstream/4.5.1
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
-			 this->required ? "disabled" : "enabled ",
-			 integrity_algorithm_names, alg);
-=======
 		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
 			 integrity_algorithm_names, alg, plugin_name);
->>>>>>> upstream/4.5.1
 		return !this->required;
 	}
 	if (!failed)
@@ -662,15 +582,6 @@ METHOD(crypto_tester_t, test_signer, bool,
 		if (speed)
 		{
 			*speed = bench_signer(this, alg, create);
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
-				 integrity_algorithm_names, alg, tested, *speed);
-		}
-		else
-		{
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-				 integrity_algorithm_names, alg, tested);
-=======
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
 				 integrity_algorithm_names, alg, plugin_name, tested, *speed);
 		}
@@ -678,7 +589,6 @@ METHOD(crypto_tester_t, test_signer, bool,
 		{
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
 				 integrity_algorithm_names, alg, plugin_name, tested);
->>>>>>> upstream/4.5.1
 		}
 	}
 	return !failed;
@@ -720,11 +630,7 @@ static u_int bench_hasher(private_crypto_tester_t *this,
 
 METHOD(crypto_tester_t, test_hasher, bool,
 	private_crypto_tester_t *this, hash_algorithm_t alg,
-<<<<<<< HEAD
-	hasher_constructor_t create, u_int *speed)
-=======
 	hasher_constructor_t create, u_int *speed, const char *plugin_name)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	hasher_test_vector_t *vector;
@@ -746,13 +652,8 @@ METHOD(crypto_tester_t, test_hasher, bool,
 		hasher = create(alg);
 		if (!hasher)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: creating instance failed",
-				 hash_algorithm_names, alg);
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
 				 hash_algorithm_names, alg, plugin_name);
->>>>>>> upstream/4.5.1
 			failed = TRUE;
 			break;
 		}
@@ -794,28 +695,17 @@ METHOD(crypto_tester_t, test_hasher, bool,
 		hasher->destroy(hasher);
 		if (failed)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
-				 hash_algorithm_names, alg, get_name(vector));
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
 				 hash_algorithm_names, alg, plugin_name, get_name(vector));
->>>>>>> upstream/4.5.1
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
-			 this->required ? "disabled" : "enabled ",
-			 hash_algorithm_names, alg);
-=======
 		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
 			 hash_algorithm_names, alg, plugin_name);
->>>>>>> upstream/4.5.1
 		return !this->required;
 	}
 	if (!failed)
@@ -823,15 +713,6 @@ METHOD(crypto_tester_t, test_hasher, bool,
 		if (speed)
 		{
 			*speed = bench_hasher(this, alg, create);
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
-				 hash_algorithm_names, alg, tested, *speed);
-		}
-		else
-		{
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-				 hash_algorithm_names, alg, tested);
-=======
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
 				 hash_algorithm_names, alg, plugin_name, tested, *speed);
 		}
@@ -839,7 +720,6 @@ METHOD(crypto_tester_t, test_hasher, bool,
 		{
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
 				 hash_algorithm_names, alg, plugin_name, tested);
->>>>>>> upstream/4.5.1
 		}
 	}
 	return !failed;
@@ -881,11 +761,7 @@ static u_int bench_prf(private_crypto_tester_t *this,
 
 METHOD(crypto_tester_t, test_prf, bool,
 	private_crypto_tester_t *this, pseudo_random_function_t alg,
-<<<<<<< HEAD
-	prf_constructor_t create, u_int *speed)
-=======
 	prf_constructor_t create, u_int *speed, const char *plugin_name)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	prf_test_vector_t *vector;
@@ -907,13 +783,8 @@ METHOD(crypto_tester_t, test_prf, bool,
 		prf = create(alg);
 		if (!prf)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: creating instance failed",
-				 pseudo_random_function_names, alg);
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
 				 pseudo_random_function_names, alg, plugin_name);
->>>>>>> upstream/4.5.1
 			failed = TRUE;
 			break;
 		}
@@ -966,28 +837,17 @@ METHOD(crypto_tester_t, test_prf, bool,
 		prf->destroy(prf);
 		if (failed)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
-				 pseudo_random_function_names, alg, get_name(vector));
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
 				 pseudo_random_function_names, alg, plugin_name, get_name(vector));
->>>>>>> upstream/4.5.1
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
-			 this->required ? "disabled" : "enabled ",
-			 pseudo_random_function_names, alg);
-=======
 		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
 			 pseudo_random_function_names, alg, plugin_name);
->>>>>>> upstream/4.5.1
 		return !this->required;
 	}
 	if (!failed)
@@ -995,15 +855,6 @@ METHOD(crypto_tester_t, test_prf, bool,
 		if (speed)
 		{
 			*speed = bench_prf(this, alg, create);
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
-				 pseudo_random_function_names, alg, tested, *speed);
-		}
-		else
-		{
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-				 pseudo_random_function_names, alg, tested);
-=======
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
 				 pseudo_random_function_names, alg, plugin_name, tested, *speed);
 		}
@@ -1011,7 +862,6 @@ METHOD(crypto_tester_t, test_prf, bool,
 		{
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
 				 pseudo_random_function_names, alg, plugin_name, tested);
->>>>>>> upstream/4.5.1
 		}
 	}
 	return !failed;
@@ -1050,11 +900,7 @@ static u_int bench_rng(private_crypto_tester_t *this,
 
 METHOD(crypto_tester_t, test_rng, bool,
 	private_crypto_tester_t *this, rng_quality_t quality,
-<<<<<<< HEAD
-	rng_constructor_t create, u_int *speed)
-=======
 	rng_constructor_t create, u_int *speed, const char *plugin_name)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	rng_test_vector_t *vector;
@@ -1063,13 +909,8 @@ METHOD(crypto_tester_t, test_rng, bool,
 
 	if (!this->rng_true && quality == RNG_TRUE)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_LIB, "enabled  %N: skipping test (disabled by config)",
-			 rng_quality_names, quality);
-=======
 		DBG1(DBG_LIB, "enabled  %N[%s]: skipping test (disabled by config)",
 			 rng_quality_names, quality, plugin_name);
->>>>>>> upstream/4.5.1
 		return TRUE;
 	}
 
@@ -1088,13 +929,8 @@ METHOD(crypto_tester_t, test_rng, bool,
 		rng = create(quality);
 		if (!rng)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: creating instance failed",
-				 rng_quality_names, quality);
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
 				 rng_quality_names, quality, plugin_name);
->>>>>>> upstream/4.5.1
 			failed = TRUE;
 			break;
 		}
@@ -1123,28 +959,17 @@ METHOD(crypto_tester_t, test_rng, bool,
 		rng->destroy(rng);
 		if (failed)
 		{
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "disabled %N: %s test vector failed",
-				 rng_quality_names, quality, get_name(vector));
-=======
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
 				 rng_quality_names, quality, plugin_name, get_name(vector));
->>>>>>> upstream/4.5.1
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-<<<<<<< HEAD
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
-			 this->required ? ", disabled" : "enabled ",
-			 rng_quality_names, quality);
-=======
 		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
 			 this->required ? ", disabled" : "enabled ",
 			 rng_quality_names, quality, plugin_name);
->>>>>>> upstream/4.5.1
 		return !this->required;
 	}
 	if (!failed)
@@ -1152,15 +977,6 @@ METHOD(crypto_tester_t, test_rng, bool,
 		if (speed)
 		{
 			*speed = bench_rng(this, quality, create);
-<<<<<<< HEAD
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors, %d points",
-				 rng_quality_names, quality, tested, *speed);
-		}
-		else
-		{
-			DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-				 rng_quality_names, quality, tested);
-=======
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
 				 rng_quality_names, quality, plugin_name, tested, *speed);
 		}
@@ -1168,7 +984,6 @@ METHOD(crypto_tester_t, test_rng, bool,
 		{
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
 				 rng_quality_names, quality, plugin_name, tested);
->>>>>>> upstream/4.5.1
 		}
 	}
 	return !failed;

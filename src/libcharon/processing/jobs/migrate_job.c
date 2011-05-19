@@ -57,15 +57,8 @@ struct private_migrate_job_t {
 	host_t *remote;
 };
 
-<<<<<<< HEAD
-/**
- * Implementation of job_t.destroy.
- */
-static void destroy(private_migrate_job_t *this)
-=======
 METHOD(job_t, destroy, void,
 	private_migrate_job_t *this)
->>>>>>> upstream/4.5.1
 {
 	DESTROY_IF(this->src_ts);
 	DESTROY_IF(this->dst_ts);
@@ -74,15 +67,8 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_migrate_job_t *this)
-=======
 METHOD(job_t, execute, void,
 	private_migrate_job_t *this)
->>>>>>> upstream/4.5.1
 {
 	ike_sa_t *ike_sa = NULL;
 
@@ -143,20 +129,6 @@ migrate_job_t *migrate_job_create(u_int32_t reqid,
 								  policy_dir_t dir,
 								  host_t *local, host_t *remote)
 {
-<<<<<<< HEAD
-	private_migrate_job_t *this = malloc_thing(private_migrate_job_t);
-
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-
-	/* private variables */
-	this->reqid = reqid;
-	this->src_ts = (dir == POLICY_OUT) ? src_ts : dst_ts;
-	this->dst_ts = (dir == POLICY_OUT) ? dst_ts : src_ts;
-	this->local = local;
-	this->remote = remote;
-=======
 	private_migrate_job_t *this;
 
 	INIT(this,
@@ -172,7 +144,6 @@ migrate_job_t *migrate_job_create(u_int32_t reqid,
 		.local = local,
 		.remote = remote,
 	);
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

@@ -46,14 +46,6 @@ struct private_pubkey_authenticator_t {
 	 * IKE_SA_INIT message data to include in AUTH calculation
 	 */
 	chunk_t ike_sa_init;
-<<<<<<< HEAD
-};
-
-/**
- * Implementation of authenticator_t.build for builder
- */
-static status_t build(private_pubkey_authenticator_t *this, message_t *message)
-=======
 
 	/**
 	 * Reserved bytes of ID payload
@@ -63,7 +55,6 @@ static status_t build(private_pubkey_authenticator_t *this, message_t *message)
 
 METHOD(authenticator_t, build, status_t,
 	private_pubkey_authenticator_t *this, message_t *message)
->>>>>>> upstream/4.5.1
 {
 	chunk_t octets, auth_data;
 	status_t status = FAILED;
@@ -121,11 +112,7 @@ METHOD(authenticator_t, build, status_t,
 	}
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	octets = keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
-<<<<<<< HEAD
-									 this->nonce, id);
-=======
 									 this->nonce, id, this->reserved);
->>>>>>> upstream/4.5.1
 	if (private->sign(private, scheme, octets, &auth_data))
 	{
 		auth_payload = auth_payload_create();
@@ -144,15 +131,8 @@ METHOD(authenticator_t, build, status_t,
 	return status;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of authenticator_t.process for verifier
- */
-static status_t process(private_pubkey_authenticator_t *this, message_t *message)
-=======
 METHOD(authenticator_t, process, status_t,
 	private_pubkey_authenticator_t *this, message_t *message)
->>>>>>> upstream/4.5.1
 {
 	public_key_t *public;
 	auth_method_t auth_method;
@@ -196,11 +176,7 @@ METHOD(authenticator_t, process, status_t,
 	id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	octets = keymat->get_auth_octets(keymat, TRUE, this->ike_sa_init,
-<<<<<<< HEAD
-									 this->nonce, id);
-=======
 									 this->nonce, id, this->reserved);
->>>>>>> upstream/4.5.1
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
 														key_type, id, auth);
@@ -231,24 +207,8 @@ METHOD(authenticator_t, process, status_t,
 	return status;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of authenticator_t.process for builder
- * Implementation of authenticator_t.build for verifier
- */
-static status_t return_failed()
-{
-	return FAILED;
-}
-
-/**
- * Implementation of authenticator_t.destroy.
- */
-static void destroy(private_pubkey_authenticator_t *this)
-=======
 METHOD(authenticator_t, destroy, void,
 	private_pubkey_authenticator_t *this)
->>>>>>> upstream/4.5.1
 {
 	free(this);
 }
@@ -257,20 +217,6 @@ METHOD(authenticator_t, destroy, void,
  * Described in header.
  */
 pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
-<<<<<<< HEAD
-									chunk_t received_nonce, chunk_t sent_init)
-{
-	private_pubkey_authenticator_t *this = malloc_thing(private_pubkey_authenticator_t);
-
-	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))build;
-	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))return_failed;
-	this->public.authenticator.is_mutual = (bool(*)(authenticator_t*))return_false;
-	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
-
-	this->ike_sa = ike_sa;
-	this->ike_sa_init = sent_init;
-	this->nonce = received_nonce;
-=======
 									chunk_t received_nonce, chunk_t sent_init,
 									char reserved[3])
 {
@@ -290,7 +236,6 @@ pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
 		.nonce = received_nonce,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }
@@ -299,20 +244,6 @@ pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
  * Described in header.
  */
 pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
-<<<<<<< HEAD
-									chunk_t sent_nonce, chunk_t received_init)
-{
-	private_pubkey_authenticator_t *this = malloc_thing(private_pubkey_authenticator_t);
-
-	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))return_failed;
-	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process;
-	this->public.authenticator.is_mutual = (bool(*)(authenticator_t*))return_false;
-	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
-
-	this->ike_sa = ike_sa;
-	this->ike_sa_init = received_init;
-	this->nonce = sent_nonce;
-=======
 									chunk_t sent_nonce, chunk_t received_init,
 									char reserved[3])
 {
@@ -332,7 +263,6 @@ pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
 		.nonce = sent_nonce,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

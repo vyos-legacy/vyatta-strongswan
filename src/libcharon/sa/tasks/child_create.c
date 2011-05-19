@@ -117,14 +117,11 @@ struct private_child_create_t {
 	ipsec_mode_t mode;
 
 	/**
-<<<<<<< HEAD
-=======
 	 * peer accepts TFC padding for this SA
 	 */
 	bool tfcv3;
 
 	/**
->>>>>>> upstream/4.5.1
 	 * IPComp transform to use
 	 */
 	ipcomp_transform_t ipcomp;
@@ -463,19 +460,6 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		if (this->initiator)
 		{
-<<<<<<< HEAD
-			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
-					this->my_spi, this->my_cpi, TRUE, my_ts, other_ts);
-			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
-					this->other_spi, this->other_cpi, FALSE, my_ts, other_ts);
-		}
-		else
-		{
-			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
-					this->my_spi, this->my_cpi, TRUE, my_ts, other_ts);
-			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
-					this->other_spi, this->other_cpi, FALSE, my_ts, other_ts);
-=======
 			status_i = this->child_sa->install(this->child_sa,
 							encr_r, integ_r, this->my_spi, this->my_cpi,
 							TRUE, this->tfcv3, my_ts, other_ts);
@@ -491,7 +475,6 @@ static status_t select_and_install(private_child_create_t *this,
 			status_o = this->child_sa->install(this->child_sa,
 							encr_r, integ_r, this->other_spi, this->other_cpi,
 							FALSE, this->tfcv3, my_ts, other_ts);
->>>>>>> upstream/4.5.1
 		}
 	}
 	chunk_clear(&integ_i);
@@ -657,9 +640,6 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 						 ipcomp_transform_names, ipcomp);
 					break;
 			}
-<<<<<<< HEAD
-		}
-=======
 			break;
 		}
 		case ESP_TFC_PADDING_NOT_SUPPORTED:
@@ -667,7 +647,6 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 				 notify_type_names, notify->get_notify_type(notify));
 			this->tfcv3 = FALSE;
 			break;
->>>>>>> upstream/4.5.1
 		default:
 			break;
 	}
@@ -727,15 +706,8 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 	enumerator->destroy(enumerator);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of task_t.build for initiator
- */
-static status_t build_i(private_child_create_t *this, message_t *message)
-=======
 METHOD(task_t, build_i, status_t,
 	private_child_create_t *this, message_t *message)
->>>>>>> upstream/4.5.1
 {
 	host_t *me, *other, *vip;
 	peer_cfg_t *peer_cfg;
@@ -872,15 +844,8 @@ METHOD(task_t, build_i, status_t,
 	return NEED_MORE;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_child_create_t *this, message_t *message)
-=======
 METHOD(task_t, process_r, status_t,
 	private_child_create_t *this, message_t *message)
->>>>>>> upstream/4.5.1
 {
 	switch (message->get_exchange_type(message))
 	{
@@ -923,15 +888,8 @@ static void handle_child_sa_failure(private_child_create_t *this,
 	}
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_child_create_t *this, message_t *message)
-=======
 METHOD(task_t, build_r, status_t,
 	private_child_create_t *this, message_t *message)
->>>>>>> upstream/4.5.1
 {
 	peer_cfg_t *peer_cfg;
 	payload_t *payload;
@@ -1009,11 +967,7 @@ METHOD(task_t, build_r, status_t,
 				case INTERNAL_ADDRESS_FAILURE:
 				case FAILED_CP_REQUIRED:
 				{
-<<<<<<< HEAD
-					DBG1(DBG_IKE,"configuration payload negotation "
-=======
 					DBG1(DBG_IKE,"configuration payload negotiation "
->>>>>>> upstream/4.5.1
 						 "failed, no CHILD_SA built");
 					enumerator->destroy(enumerator);
 					handle_child_sa_failure(this, message);
@@ -1084,15 +1038,8 @@ METHOD(task_t, build_r, status_t,
 	return SUCCESS;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_child_create_t *this, message_t *message)
-=======
 METHOD(task_t, process_i, status_t,
 	private_child_create_t *this, message_t *message)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -1163,9 +1110,6 @@ METHOD(task_t, process_i, status_t,
 					return NEED_MORE;
 				}
 				default:
-<<<<<<< HEAD
-					break;
-=======
 				{
 					if (message->get_exchange_type(message) == CREATE_CHILD_SA)
 					{	/* handle notifies if not handled in IKE_AUTH */
@@ -1181,7 +1125,6 @@ METHOD(task_t, process_i, status_t,
 					}
 					break;
 				}
->>>>>>> upstream/4.5.1
 			}
 		}
 	}
@@ -1233,49 +1176,20 @@ METHOD(task_t, process_i, status_t,
 	return SUCCESS;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_child_create_t *this)
-{
-	return CHILD_CREATE;
-}
-
-/**
- * Implementation of child_create_t.use_reqid
- */
-static void use_reqid(private_child_create_t *this, u_int32_t reqid)
-=======
 METHOD(child_create_t, use_reqid, void,
 	private_child_create_t *this, u_int32_t reqid)
->>>>>>> upstream/4.5.1
 {
 	this->reqid = reqid;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of child_create_t.get_child
- */
-static child_sa_t* get_child(private_child_create_t *this)
-=======
 METHOD(child_create_t, get_child, child_sa_t*,
 	private_child_create_t *this)
->>>>>>> upstream/4.5.1
 {
 	return this->child_sa;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of child_create_t.get_lower_nonce
- */
-static chunk_t get_lower_nonce(private_child_create_t *this)
-=======
 METHOD(child_create_t, get_lower_nonce, chunk_t,
 	private_child_create_t *this)
->>>>>>> upstream/4.5.1
 {
 	if (memcmp(this->my_nonce.ptr, this->other_nonce.ptr,
 			   min(this->my_nonce.len, this->other_nonce.len)) < 0)
@@ -1288,12 +1202,6 @@ METHOD(child_create_t, get_lower_nonce, chunk_t,
 	}
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_child_create_t *this, ike_sa_t *ike_sa)
-=======
 METHOD(task_t, get_type, task_type_t,
 	private_child_create_t *this)
 {
@@ -1302,7 +1210,6 @@ METHOD(task_t, get_type, task_type_t,
 
 METHOD(task_t, migrate, void,
 	private_child_create_t *this, ike_sa_t *ike_sa)
->>>>>>> upstream/4.5.1
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
@@ -1338,15 +1245,8 @@ METHOD(task_t, migrate, void,
 	this->established = FALSE;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_child_create_t *this)
-=======
 METHOD(task_t, destroy, void,
 	private_child_create_t *this)
->>>>>>> upstream/4.5.1
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
@@ -1382,20 +1282,6 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 							child_cfg_t *config, bool rekey,
 							traffic_selector_t *tsi, traffic_selector_t *tsr)
 {
-<<<<<<< HEAD
-	private_child_create_t *this = malloc_thing(private_child_create_t);
-
-	this->public.get_child = (child_sa_t*(*)(child_create_t*))get_child;
-	this->public.get_lower_nonce = (chunk_t(*)(child_create_t*))get_lower_nonce;
-	this->public.use_reqid = (void(*)(child_create_t*,u_int32_t))use_reqid;
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
-	if (config)
-	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
-=======
 	private_child_create_t *this;
 
 	INIT(this,
@@ -1426,49 +1312,15 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 	{
 		this->public.task.build = _build_i;
 		this->public.task.process = _process_i;
->>>>>>> upstream/4.5.1
 		this->initiator = TRUE;
 		config->get_ref(config);
 	}
 	else
 	{
-<<<<<<< HEAD
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
-		this->initiator = FALSE;
-	}
-
-	this->ike_sa = ike_sa;
-	this->config = config;
-	this->my_nonce = chunk_empty;
-	this->other_nonce = chunk_empty;
-	this->proposals = NULL;
-	this->proposal = NULL;
-	this->tsi = NULL;
-	this->tsr = NULL;
-	this->packet_tsi = tsi ? tsi->clone(tsi) : NULL;
-	this->packet_tsr = tsr ? tsr->clone(tsr) : NULL;
-	this->dh = NULL;
-	this->dh_group = MODP_NONE;
-	this->keymat = ike_sa->get_keymat(ike_sa);
-	this->child_sa = NULL;
-	this->mode = MODE_TUNNEL;
-	this->ipcomp = IPCOMP_NONE;
-	this->ipcomp_received = IPCOMP_NONE;
-	this->my_spi = 0;
-	this->other_spi = 0;
-	this->my_cpi = 0;
-	this->other_cpi = 0;
-	this->reqid = 0;
-	this->established = FALSE;
-	this->rekey = rekey;
-
-=======
 		this->public.task.build = _build_r;
 		this->public.task.process = _process_r;
 		this->initiator = FALSE;
 	}
 
->>>>>>> upstream/4.5.1
 	return &this->public;
 }

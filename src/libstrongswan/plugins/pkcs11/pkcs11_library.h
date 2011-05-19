@@ -21,10 +21,7 @@
 #ifndef PKCS11_LIBRARY_H_
 #define PKCS11_LIBRARY_H_
 
-<<<<<<< HEAD
-=======
 typedef enum pkcs11_feature_t pkcs11_feature_t;
->>>>>>> upstream/4.5.1
 typedef struct pkcs11_library_t pkcs11_library_t;
 
 #include "pkcs11.h"
@@ -33,8 +30,6 @@ typedef struct pkcs11_library_t pkcs11_library_t;
 #include <utils/enumerator.h>
 
 /**
-<<<<<<< HEAD
-=======
  * Optional PKCS#11 features some libraries support, some not
  */
 enum pkcs11_feature_t {
@@ -45,7 +40,6 @@ enum pkcs11_feature_t {
 };
 
 /**
->>>>>>> upstream/4.5.1
  * A loaded and initialized PKCS#11 library.
  */
 struct pkcs11_library_t {
@@ -63,8 +57,6 @@ struct pkcs11_library_t {
 	char* (*get_name)(pkcs11_library_t *this);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Get the feature set supported by this library.
 	 *
 	 * @return			ORed set of features supported
@@ -72,7 +64,6 @@ struct pkcs11_library_t {
 	pkcs11_feature_t (*get_features)(pkcs11_library_t *this);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Create an enumerator over CK_OBJECT_HANDLE using a search template.
 	 *
 	 * An optional attribute array is automatically filled in with the
@@ -130,15 +121,9 @@ void pkcs11_library_trim(char *str, int len);
  *
  * @param name		an arbitrary name, for debugging
  * @param file		pkcs11 library file to dlopen()
-<<<<<<< HEAD
- * @return			library abstraction
- */
-pkcs11_library_t *pkcs11_library_create(char *name, char *file);
-=======
  * @param os_lock	enforce OS Locking for this library
  * @return			library abstraction
  */
 pkcs11_library_t *pkcs11_library_create(char *name, char *file, bool os_lock);
->>>>>>> upstream/4.5.1
 
 #endif /** PKCS11_LIBRARY_H_ @}*/

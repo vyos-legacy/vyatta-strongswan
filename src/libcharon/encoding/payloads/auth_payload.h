@@ -62,35 +62,13 @@ struct auth_payload_t {
 	/**
 	 * Set the AUTH data.
 	 *
-<<<<<<< HEAD
-	 * Data gets cloned.
-	 *
-	 * @param data			AUTH data as chunk_t
-=======
 	 * @param data			AUTH data as chunk_t, gets cloned
->>>>>>> upstream/4.5.1
 	 */
 	void (*set_data) (auth_payload_t *this, chunk_t data);
 
 	/**
 	 * Get the AUTH data.
 	 *
-<<<<<<< HEAD
-	 * Returned data are a copy of the internal one.
-	 *
-	 * @return				AUTH data as chunk_t
-	 */
-	chunk_t (*get_data_clone) (auth_payload_t *this);
-
-	/**
-	 * Get the AUTH data.
-	 *
-	 * Returned data are NOT copied
-	 *
-	 * @return				AUTH data as chunk_t
-	 */
-	chunk_t (*get_data) (auth_payload_t *this);
-=======
 	 * @return				AUTH data as chunk_t, internal data
 	 */
 	chunk_t (*get_data) (auth_payload_t *this);
@@ -109,7 +87,6 @@ struct auth_payload_t {
 	 * @param nr			number of the reserved bit, 0-6
 	 */
 	void (*set_reserved_bit)(auth_payload_t *this, u_int nr);
->>>>>>> upstream/4.5.1
 
 	/**
 	 * Destroys an auth_payload_t object.

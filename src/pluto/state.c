@@ -166,7 +166,10 @@ static struct state **state_hash(const u_char *icookie, const u_char *rcookie,
  */
 struct state *new_state(void)
 {
-	static const struct state blank_state;      /* initialized all to zero & NULL */
+	/* initialized all to zero & NULL */
+	static const struct state blank_state = {
+		.st_serialno = 0,
+	};
 	static so_serial_t next_so = SOS_FIRST;
 	struct state *st;
 
@@ -347,19 +350,20 @@ void delete_state(struct state *st)
 
 	DESTROY_IF(st->st_dh);
 
-	free(st->st_tpacket.ptr);
-	free(st->st_rpacket.ptr);
-	free(st->st_p1isa.ptr);
-	free(st->st_gi.ptr);
-	free(st->st_gr.ptr);
-	free(st->st_shared.ptr);
-	free(st->st_ni.ptr);
-	free(st->st_nr.ptr);
-	free(st->st_skeyid.ptr);
-	free(st->st_skeyid_d.ptr);
-	free(st->st_skeyid_a.ptr);
-	free(st->st_skeyid_e.ptr);
-	free(st->st_enc_key.ptr);
+	chunk_clear(&st->st_tpacket);
+	chunk_clear(&st->st_rpacket);
+	chunk_clear(&st->st_p1isa);
+	chunk_clear(&st->st_gi);
+	chunk_clear(&st->st_gr);
+	chunk_clear(&st->st_shared);
+	chunk_clear(&st->st_ni);
+	chunk_clear(&st->st_nr);
+	chunk_clear(&st->st_skeyid);
+	chunk_clear(&st->st_skeyid_d);
+	chunk_clear(&st->st_skeyid_a);
+	chunk_clear(&st->st_skeyid_e);
+	chunk_clear(&st->st_enc_key);
+
 	free(st->st_ah.our_keymat);
 	free(st->st_ah.peer_keymat);
 	free(st->st_esp.our_keymat);

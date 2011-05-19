@@ -19,16 +19,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-<<<<<<< HEAD
-#include <syslog.h>
-#include <time.h>
-#include <errno.h>
-
-#ifdef CAPABILITIES
-#ifdef HAVE_SYS_CAPABILITY_H
-#include <sys/capability.h>
-#endif /* HAVE_SYS_CAPABILITY_H */
-=======
 #include <time.h>
 
 #ifdef CAPABILITIES
@@ -37,7 +27,6 @@
 # elif defined(CAPABILITIES_NATIVE)
 #  include <linux/capability.h>
 # endif /* CAPABILITIES_NATIVE */
->>>>>>> upstream/4.5.1
 #endif /* CAPABILITIES */
 
 #include "daemon.h"
@@ -45,14 +34,7 @@
 #include <library.h>
 #include <config/proposal.h>
 #include <kernel/kernel_handler.h>
-<<<<<<< HEAD
-
-#ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
-#define LOG_AUTHPRIV LOG_AUTH
-#endif
-=======
 #include <processing/jobs/start_action_job.h>
->>>>>>> upstream/4.5.1
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -77,11 +59,7 @@ struct private_daemon_t {
 	cap_t caps;
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
-<<<<<<< HEAD
-	struct __user_cap_data_struct caps;
-=======
 	struct __user_cap_data_struct caps[2];
->>>>>>> upstream/4.5.1
 #endif /* CAPABILITIES_NATIVE */
 
 };
@@ -166,11 +144,6 @@ METHOD(daemon_t, keep_cap, void,
 	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
-<<<<<<< HEAD
-	this->caps.effective |= 1 << cap;
-	this->caps.permitted |= 1 << cap;
-	this->caps.inheritable |= 1 << cap;
-=======
 	int i = 0;
 
 	if (cap >= 32)
@@ -181,7 +154,6 @@ METHOD(daemon_t, keep_cap, void,
 	this->caps[i].effective |= 1 << cap;
 	this->caps[i].permitted |= 1 << cap;
 	this->caps[i].inheritable |= 1 << cap;
->>>>>>> upstream/4.5.1
 #endif /* CAPABILITIES_NATIVE */
 }
 
@@ -196,21 +168,17 @@ METHOD(daemon_t, drop_capabilities, bool,
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
 	struct __user_cap_header_struct header = {
-<<<<<<< HEAD
-		.version = _LINUX_CAPABILITY_VERSION,
-	};
-	if (capset(&header, &this->caps) != 0)
-=======
 #if defined(_LINUX_CAPABILITY_VERSION_3)
 		.version = _LINUX_CAPABILITY_VERSION_3,
 #elif defined(_LINUX_CAPABILITY_VERSION_2)
 		.version = _LINUX_CAPABILITY_VERSION_2,
-#else
+#elif defined(_LINUX_CAPABILITY_VERSION_1)
 		.version = _LINUX_CAPABILITY_VERSION_1,
+#else
+		.version = _LINUX_CAPABILITY_VERSION,
 #endif
 	};
 	if (capset(&header, this->caps) != 0)
->>>>>>> upstream/4.5.1
 	{
 		return FALSE;
 	}
@@ -232,175 +200,25 @@ METHOD(daemon_t, start, void,
  */
 static void print_plugins()
 {
-	char buf[512], *plugin;
+	char buf[512];
 	int len = 0;
 	enumerator_t *enumerator;
+	plugin_t *plugin;
 
 	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
 	{
-		len += snprintf(&buf[len], sizeof(buf)-len, "%s ", plugin);
+		len += snprintf(&buf[len], sizeof(buf)-len, "%s ",
+						plugin->get_name(plugin));
 	}
 	enumerator->destroy(enumerator);
 	DBG1(DBG_DMN, "loaded plugins: %s", buf);
 }
 
-<<<<<<< HEAD
-/**
- * Initialize logging
- */
-static void initialize_loggers(private_daemon_t *this, bool use_stderr,
-							   level_t levels[])
-{
-	sys_logger_t *sys_logger;
-	file_logger_t *file_logger;
-	enumerator_t *enumerator;
-	char *facility, *filename;
-	int loggers_defined = 0;
-	debug_t group;
-	level_t  def;
-	bool append, ike_name;
-	FILE *file;
-
-	/* setup sysloggers */
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
-														  "charon.syslog");
-	while (enumerator->enumerate(enumerator, &facility))
-	{
-		loggers_defined++;
-
-		ike_name = lib->settings->get_bool(lib->settings,
-								"charon.syslog.%s.ike_name", FALSE, facility);
-		if (streq(facility, "daemon"))
-		{
-			sys_logger = sys_logger_create(LOG_DAEMON, ike_name);
-		}
-		else if (streq(facility, "auth"))
-		{
-			sys_logger = sys_logger_create(LOG_AUTHPRIV, ike_name);
-		}
-		else
-		{
-			continue;
-		}
-		def = lib->settings->get_int(lib->settings,
-									 "charon.syslog.%s.default", 1, facility);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group,
-				lib->settings->get_int(lib->settings,
-									   "charon.syslog.%s.%N", def,
-									   facility, debug_lower_names, group));
-		}
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-	}
-	enumerator->destroy(enumerator);
-
-	/* and file loggers */
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
-														  "charon.filelog");
-	while (enumerator->enumerate(enumerator, &filename))
-	{
-		loggers_defined++;
-		if (streq(filename, "stderr"))
-		{
-			file = stderr;
-		}
-		else if (streq(filename, "stdout"))
-		{
-			file = stdout;
-		}
-		else
-		{
-			append = lib->settings->get_bool(lib->settings,
-									"charon.filelog.%s.append", TRUE, filename);
-			file = fopen(filename, append ? "a" : "w");
-			if (file == NULL)
-			{
-				DBG1(DBG_DMN, "opening file %s for logging failed: %s",
-					 filename, strerror(errno));
-				continue;
-			}
-			if (lib->settings->get_bool(lib->settings,
-							"charon.filelog.%s.flush_line", FALSE, filename))
-			{
-				setlinebuf(file);
-			}
-		}
-		file_logger = file_logger_create(file,
-						lib->settings->get_str(lib->settings,
-							"charon.filelog.%s.time_format", NULL, filename),
-						lib->settings->get_bool(lib->settings,
-							"charon.filelog.%s.ike_name", FALSE, filename));
-		def = lib->settings->get_int(lib->settings,
-									 "charon.filelog.%s.default", 1, filename);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			file_logger->set_level(file_logger, group,
-				lib->settings->get_int(lib->settings,
-									   "charon.filelog.%s.%N", def,
-									   filename, debug_lower_names, group));
-		}
-		this->public.file_loggers->insert_last(this->public.file_loggers,
-											   file_logger);
-		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-
-	}
-	enumerator->destroy(enumerator);
-
-	/* set up legacy style default loggers provided via command-line */
-	if (!loggers_defined)
-	{
-		/* set up default stdout file_logger */
-		file_logger = file_logger_create(stdout, NULL, FALSE);
-		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-		this->public.file_loggers->insert_last(this->public.file_loggers,
-											   file_logger);
-		/* set up default daemon sys_logger */
-		sys_logger = sys_logger_create(LOG_DAEMON, FALSE);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group, levels[group]);
-			if (use_stderr)
-			{
-				file_logger->set_level(file_logger, group, levels[group]);
-			}
-		}
-
-		/* set up default auth sys_logger */
-		sys_logger = sys_logger_create(LOG_AUTHPRIV, FALSE);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
-	}
-}
-
-METHOD(daemon_t, initialize, bool,
-	   private_daemon_t *this, bool syslog, level_t levels[])
-{
-	/* for uncritical pseudo random numbers */
-	srandom(time(NULL) + getpid());
-
-	/* setup bus and it's listeners first to enable log output */
-	this->public.bus = bus_create();
-	/* set up hook to log dbg message in library via charons message bus */
-	dbg_old = dbg;
-	dbg = dbg_bus;
-
-	initialize_loggers(this, !syslog, levels);
-
-=======
 METHOD(daemon_t, initialize, bool,
 	private_daemon_t *this)
 {
->>>>>>> upstream/4.5.1
 	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
 	if (lib->integrity)
@@ -412,19 +230,6 @@ METHOD(daemon_t, initialize, bool,
 		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
 	}
 
-<<<<<<< HEAD
-	/* load secrets, ca certificates and crls */
-	this->public.controller = controller_create();
-	this->public.eap = eap_manager_create();
-	this->public.sim = sim_manager_create();
-	this->public.tnccs = tnccs_manager_create();
-	this->public.backends = backend_manager_create();
-	this->public.socket = socket_manager_create();
-	this->public.traps = trap_manager_create();
-	this->kernel_handler = kernel_handler_create();
-
-=======
->>>>>>> upstream/4.5.1
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, NULL,
 			lib->settings->get_str(lib->settings, "charon.load", PLUGINS)))
@@ -446,12 +251,9 @@ METHOD(daemon_t, initialize, bool,
 		return FALSE;
 	}
 
-<<<<<<< HEAD
-=======
 	/* Queue start_action job */
 	lib->processor->queue_job(lib->processor, (job_t*)start_action_job_create());
 
->>>>>>> upstream/4.5.1
 #ifdef ME
 	this->public.connect_manager = connect_manager_create();
 	if (this->public.connect_manager == NULL)
@@ -477,16 +279,11 @@ private_daemon_t *daemon_create()
 			.drop_capabilities = _drop_capabilities,
 			.initialize = _initialize,
 			.start = _start,
-<<<<<<< HEAD
-=======
 			.bus = bus_create(),
->>>>>>> upstream/4.5.1
 			.file_loggers = linked_list_create(),
 			.sys_loggers = linked_list_create(),
 		},
 	);
-<<<<<<< HEAD
-=======
 	charon = &this->public;
 	this->public.controller = controller_create();
 	this->public.eap = eap_manager_create();
@@ -496,7 +293,6 @@ private_daemon_t *daemon_create()
 	this->public.socket = socket_manager_create();
 	this->public.traps = trap_manager_create();
 	this->kernel_handler = kernel_handler_create();
->>>>>>> upstream/4.5.1
 
 #ifdef CAPABILITIES
 #ifdef CAPABILITIES_LIBCAP
@@ -517,10 +313,6 @@ private_daemon_t *daemon_create()
  */
 void libcharon_deinit()
 {
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/4.5.1
 	destroy((private_daemon_t*)charon);
 	charon = NULL;
 }
@@ -533,9 +325,6 @@ bool libcharon_init()
 	private_daemon_t *this;
 
 	this = daemon_create();
-<<<<<<< HEAD
-	charon = &this->public;
-=======
 
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
@@ -543,7 +332,6 @@ bool libcharon_init()
 	/* set up hook to log dbg message in library via charons message bus */
 	dbg_old = dbg;
 	dbg = dbg_bus;
->>>>>>> upstream/4.5.1
 
 	lib->printf_hook->add_handler(lib->printf_hook, 'P',
 								  proposal_printf_hook,

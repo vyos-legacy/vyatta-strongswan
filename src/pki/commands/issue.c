@@ -18,18 +18,13 @@
 #include "pki.h"
 
 #include <debug.h>
-<<<<<<< HEAD
-=======
 #include <asn1/asn1.h>
->>>>>>> upstream/4.5.1
 #include <utils/linked_list.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/pkcs10.h>
 
 /**
-<<<<<<< HEAD
-=======
  * Free cert policy with OID
  */
 static void destroy_cert_policy(x509_cert_policy_t *policy)
@@ -58,7 +53,6 @@ static void destroy_cdp(x509_cdp_t *this)
 }
 
 /**
->>>>>>> upstream/4.5.1
  * Issue a certificate using a CA certificate and key
  */
 static int issue()
@@ -72,38 +66,26 @@ static int issue()
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
-<<<<<<< HEAD
-	linked_list_t *san, *cdps, *ocsp;
-	int lifetime = 1095;
-	int pathlen = X509_NO_PATH_LEN_CONSTRAINT;
-=======
 	linked_list_t *san, *cdps, *ocsp, *permitted, *excluded, *policies, *mappings;
 	int lifetime = 1095;
 	int pathlen = X509_NO_CONSTRAINT, inhibit_any = X509_NO_CONSTRAINT;
 	int inhibit_mapping = X509_NO_CONSTRAINT, require_explicit = X509_NO_CONSTRAINT;
->>>>>>> upstream/4.5.1
 	chunk_t serial = chunk_empty;
 	chunk_t encoding = chunk_empty;
 	time_t not_before, not_after;
 	x509_flag_t flags = 0;
 	x509_t *x509;
-<<<<<<< HEAD
-=======
 	x509_cdp_t *cdp = NULL;
 	x509_cert_policy_t *policy = NULL;
->>>>>>> upstream/4.5.1
 	char *arg;
 
 	san = linked_list_create();
 	cdps = linked_list_create();
 	ocsp = linked_list_create();
-<<<<<<< HEAD
-=======
 	permitted = linked_list_create();
 	excluded = linked_list_create();
 	policies = linked_list_create();
 	mappings = linked_list_create();
->>>>>>> upstream/4.5.1
 
 	while (TRUE)
 	{
@@ -165,8 +147,6 @@ static int issue()
 			case 'p':
 				pathlen = atoi(arg);
 				continue;
-<<<<<<< HEAD
-=======
 			case 'n':
 				permitted->insert_last(permitted,
 									   identification_create_from_string(arg));
@@ -240,7 +220,6 @@ static int issue()
 			case 'A':
 				inhibit_any = atoi(arg);
 				continue;
->>>>>>> upstream/4.5.1
 			case 'e':
 				if (streq(arg, "serverAuth"))
 				{
@@ -250,13 +229,10 @@ static int issue()
 				{
 					flags |= X509_CLIENT_AUTH;
 				}
-<<<<<<< HEAD
-=======
 				else if (streq(arg, "crlSign"))
 				{
 					flags |= X509_CRL_SIGN;
 				}
->>>>>>> upstream/4.5.1
 				else if (streq(arg, "ocspSigning"))
 				{
 					flags |= X509_OCSP_SIGNER;
@@ -265,13 +241,6 @@ static int issue()
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
-<<<<<<< HEAD
-					return command_usage("invalid output format");
-				}
-				continue;
-			case 'u':
-				cdps->insert_last(cdps, arg);
-=======
 					error = "invalid output format";
 					goto usage;
 				}
@@ -289,7 +258,6 @@ static int issue()
 					goto usage;
 				}
 				cdp->issuer = identification_create_from_string(arg);
->>>>>>> upstream/4.5.1
 				continue;
 			case 'o':
 				ocsp->insert_last(ocsp, arg);
@@ -302,15 +270,6 @@ static int issue()
 		}
 		break;
 	}
-<<<<<<< HEAD
-
-	if (!pkcs10 && !dn)
-	{
-		error = "--dn is required";
-		goto usage;
-	}
-=======
->>>>>>> upstream/4.5.1
 	if (!cacert)
 	{
 		error = "--cacert is required";
@@ -321,11 +280,7 @@ static int issue()
 		error = "--cakey or --keyid is required";
 		goto usage;
 	}
-<<<<<<< HEAD
-	if (dn)
-=======
 	if (dn && *dn)
->>>>>>> upstream/4.5.1
 	{
 		id = identification_create_from_string(dn);
 		if (id->get_type(id) != ID_DER_ASN1_DN)
@@ -470,15 +425,12 @@ static int issue()
 		goto end;
 	}
 
-<<<<<<< HEAD
-=======
 	if (!id)
 	{
 		id = identification_create_from_encoding(ID_DER_ASN1_DN,
 										chunk_from_chars(ASN1_SEQUENCE, 0));
 	}
 
->>>>>>> upstream/4.5.1
 	not_before = time(NULL);
 	not_after = not_before + lifetime * 24 * 60 * 60;
 
@@ -490,9 +442,6 @@ static int issue()
 					BUILD_SUBJECT_ALTNAMES, san, BUILD_X509_FLAG, flags,
 					BUILD_PATHLEN, pathlen,
 					BUILD_CRL_DISTRIBUTION_POINTS, cdps,
-<<<<<<< HEAD
-					BUILD_OCSP_ACCESS_LOCATIONS, ocsp, BUILD_END);
-=======
 					BUILD_OCSP_ACCESS_LOCATIONS, ocsp,
 					BUILD_PERMITTED_NAME_CONSTRAINTS, permitted,
 					BUILD_EXCLUDED_NAME_CONSTRAINTS, excluded,
@@ -502,7 +451,6 @@ static int issue()
 					BUILD_POLICY_INHIBIT_MAPPING, inhibit_mapping,
 					BUILD_POLICY_INHIBIT_ANY, inhibit_any,
 					BUILD_END);
->>>>>>> upstream/4.5.1
 	if (!cert)
 	{
 		error = "generating certificate failed";
@@ -527,15 +475,11 @@ end:
 	DESTROY_IF(public);
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
-<<<<<<< HEAD
-	cdps->destroy(cdps);
-=======
 	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	policies->destroy_function(policies, (void*)destroy_cert_policy);
 	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
 	cdps->destroy_function(cdps, (void*)destroy_cdp);
->>>>>>> upstream/4.5.1
 	ocsp->destroy(ocsp);
 	free(encoding.ptr);
 	free(serial.ptr);
@@ -549,15 +493,11 @@ end:
 
 usage:
 	san->destroy_offset(san, offsetof(identification_t, destroy));
-<<<<<<< HEAD
-	cdps->destroy(cdps);
-=======
 	permitted->destroy_offset(permitted, offsetof(identification_t, destroy));
 	excluded->destroy_offset(excluded, offsetof(identification_t, destroy));
 	policies->destroy_function(policies, (void*)destroy_cert_policy);
 	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
 	cdps->destroy_function(cdps, (void*)destroy_cdp);
->>>>>>> upstream/4.5.1
 	ocsp->destroy(ocsp);
 	return command_usage(error);
 }
@@ -571,30 +511,6 @@ static void __attribute__ ((constructor))reg()
 		issue, 'i', "issue",
 		"issue a certificate using a CA certificate and key",
 		{"[--in file] [--type pub|pkcs10] --cakey file | --cakeyid hex",
-<<<<<<< HEAD
-		 " --cacert file --dn subject-dn [--san subjectAltName]+",
-		 "[--lifetime days] [--serial hex] [--crl uri]+ [--ocsp uri]+",
-		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|ocspSigning]+",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512] [--outform der|pem]"},
-		{
-			{"help",	'h', 0, "show usage information"},
-			{"in",		'i', 1, "public key/request file to issue, default: stdin"},
-			{"type",	't', 1, "type of input, default: pub"},
-			{"cacert",	'c', 1, "CA certificate file"},
-			{"cakey",	'k', 1, "CA private key file"},
-			{"cakeyid",	'x', 1, "keyid on smartcard of CA private key"},
-			{"dn",		'd', 1, "distinguished name to include as subject"},
-			{"san",		'a', 1, "subjectAltName to include in certificate"},
-			{"lifetime",'l', 1, "days the certificate is valid, default: 1095"},
-			{"serial",	's', 1, "serial number in hex, default: random"},
-			{"ca",		'b', 0, "include CA basicConstraint, default: no"},
-			{"pathlen",	'p', 1, "set path length constraint"},
-			{"flag",	'e', 1, "include extendedKeyUsage flag"},
-			{"crl",		'u', 1, "CRL distribution point URI to include"},
-			{"ocsp",	'o', 1, "OCSP AuthorityInfoAccess URI to include"},
-			{"digest",	'g', 1, "digest for signature creation, default: sha1"},
-			{"outform",	'f', 1, "encoding of generated cert, default: der"},
-=======
 		 " --cacert file [--dn subject-dn] [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--crl uri [--crlissuer i] ]+ [--ocsp uri]+",
 		 "[--ca] [--pathlen len] [--flag serverAuth|clientAuth|crlSign|ocspSigning]+",
@@ -631,7 +547,6 @@ static void __attribute__ ((constructor))reg()
 			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",			'g', 1, "digest for signature creation, default: sha1"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
->>>>>>> upstream/4.5.1
 		}
 	});
 }

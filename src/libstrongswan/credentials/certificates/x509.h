@@ -24,12 +24,6 @@
 #include <utils/enumerator.h>
 #include <credentials/certificates/certificate.h>
 
-<<<<<<< HEAD
-#define X509_NO_PATH_LEN_CONSTRAINT		-1
-
-typedef struct x509_t x509_t;
-typedef enum x509_flag_t x509_flag_t;
-=======
 /* constraints are currently restricted to the range 0..127 */
 #define X509_NO_CONSTRAINT	255
 
@@ -39,7 +33,6 @@ typedef struct x509_policy_mapping_t x509_policy_mapping_t;
 typedef struct x509_cdp_t x509_cdp_t;
 typedef enum x509_flag_t x509_flag_t;
 typedef enum x509_constraint_t x509_constraint_t;
->>>>>>> upstream/4.5.1
 
 /**
  * X.509 certificate flags.
@@ -61,14 +54,6 @@ enum x509_flag_t {
 	X509_SELF_SIGNED =		(1<<5),
 	/** cert has an ipAddrBlocks extension */
 	X509_IP_ADDR_BLOCKS =	(1<<6),
-<<<<<<< HEAD
-};
-
-/**
- * enum names for x509 flags
- */
-extern enum_name_t *x509_flag_names;
-=======
 	/** cert has CRL sign key usage */
 	X509_CRL_SIGN =			(1<<7),
 };
@@ -118,7 +103,6 @@ struct x509_cdp_t {
 	/** CRL issuer */
 	identification_t *issuer;
 };
->>>>>>> upstream/4.5.1
 
 /**
  * X.509 certificate interface.
@@ -162,20 +146,12 @@ struct x509_t {
 	chunk_t (*get_authKeyIdentifier)(x509_t *this);
 
 	/**
-<<<<<<< HEAD
-	 * Get an optional path length constraint.
-	 *
-	 * @return			pathLenConstraint, -1 if no constraint exists
-	 */
-	int (*get_pathLenConstraint)(x509_t *this);
-=======
 	 * Get a numerical X.509 constraint.
 	 *
 	 * @param type		type of constraint to get
 	 * @return			constraint, X509_NO_CONSTRAINT if none found
 	 */
 	u_int (*get_constraint)(x509_t *this, x509_constraint_t type);
->>>>>>> upstream/4.5.1
 
 	/**
 	 * Create an enumerator over all subjectAltNames.
@@ -185,15 +161,9 @@ struct x509_t {
 	enumerator_t* (*create_subjectAltName_enumerator)(x509_t *this);
 
 	/**
-<<<<<<< HEAD
-	 * Create an enumerator over all CRL URIs.
-	 *
-	 * @return			enumerator over URIs as char*
-=======
 	 * Create an enumerator over all CRL URIs and CRL Issuers.
 	 *
 	 * @return			enumerator over x509_cdp_t
->>>>>>> upstream/4.5.1
 	 */
 	enumerator_t* (*create_crl_uri_enumerator)(x509_t *this);
 
@@ -210,8 +180,6 @@ struct x509_t {
 	 * @return			enumerator over ipAddrBlocks as traffic_selector_t*
 	 */
 	enumerator_t* (*create_ipAddrBlock_enumerator)(x509_t *this);
-<<<<<<< HEAD
-=======
 
 	/**
 	 * Create an enumerator over name constraints.
@@ -236,7 +204,6 @@ struct x509_t {
 	enumerator_t* (*create_policy_mapping_enumerator)(x509_t *this);
 
 
->>>>>>> upstream/4.5.1
 };
 
 #endif /** X509_H_ @}*/

@@ -78,29 +78,19 @@ METHOD(kernel_interface_t, get_cpi, status_t,
 
 METHOD(kernel_interface_t, add_sa, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
-<<<<<<< HEAD
-	u_int32_t spi, u_int8_t protocol, u_int32_t reqid,
-	mark_t mark, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
-=======
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
->>>>>>> upstream/4.5.1
 	u_int16_t int_alg, chunk_t int_key,	ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool encap, bool inbound, traffic_selector_t *src_ts,
-	traffic_selector_t *dst_ts)
+	u_int16_t cpi, bool encap, bool esn, bool inbound,
+	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
 {
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->ipsec->add_sa(this->ipsec, src, dst, spi, protocol, reqid,
-<<<<<<< HEAD
-			mark, lifetime, enc_alg, enc_key, int_alg, int_key,	mode, ipcomp,
-			cpi, encap, inbound, src_ts, dst_ts);
-=======
 			mark, tfc, lifetime, enc_alg, enc_key, int_alg, int_key, mode,
-			ipcomp, cpi, encap, inbound, src_ts, dst_ts);
->>>>>>> upstream/4.5.1
+			ipcomp, cpi, encap, esn, inbound, src_ts, dst_ts);
 }
 
 METHOD(kernel_interface_t, update_sa, status_t,

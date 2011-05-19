@@ -20,15 +20,6 @@
 #include <utils/linked_list.h>
 #include <crypto/crypto_tester.h>
 
-<<<<<<< HEAD
-typedef struct entry_t entry_t;
-struct entry_t {
-	/* algorithm */
-	u_int algo;
-	/* benchmarked speed */
-	u_int speed;
-	/* constructor */
-=======
 const char *default_plugin_name = "default";
 
 typedef struct entry_t entry_t;
@@ -52,7 +43,6 @@ struct entry_t {
 	/**
 	 * constructor
 	 */
->>>>>>> upstream/4.5.1
 	union {
 		crypter_constructor_t create_crypter;
 		aead_constructor_t create_aead;
@@ -154,12 +144,8 @@ METHOD(crypto_factory_t, create_crypter, crypter_t*,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_crypter(this->tester, algo, key_size,
-<<<<<<< HEAD
-											entry->create_crypter, NULL))
-=======
 											entry->create_crypter, NULL,
 											default_plugin_name))
->>>>>>> upstream/4.5.1
 			{
 				continue;
 			}
@@ -191,12 +177,8 @@ METHOD(crypto_factory_t, create_aead, aead_t*,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_aead(this->tester, algo, key_size,
-<<<<<<< HEAD
-										 entry->create_aead, NULL))
-=======
 										 entry->create_aead, NULL,
 										 default_plugin_name))
->>>>>>> upstream/4.5.1
 			{
 				continue;
 			}
@@ -227,12 +209,8 @@ METHOD(crypto_factory_t, create_signer, signer_t*,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_signer(this->tester, algo,
-<<<<<<< HEAD
-										   entry->create_signer, NULL))
-=======
 										   entry->create_signer, NULL,
 										   default_plugin_name))
->>>>>>> upstream/4.5.1
 			{
 				continue;
 			}
@@ -264,12 +242,8 @@ METHOD(crypto_factory_t, create_hasher, hasher_t*,
 		{
 			if (this->test_on_create && algo != HASH_PREFERRED &&
 				!this->tester->test_hasher(this->tester, algo,
-<<<<<<< HEAD
-										   entry->create_hasher, NULL))
-=======
 										   entry->create_hasher, NULL,
 										   default_plugin_name))
->>>>>>> upstream/4.5.1
 			{
 				continue;
 			}
@@ -300,12 +274,8 @@ METHOD(crypto_factory_t, create_prf, prf_t*,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_prf(this->tester, algo,
-<<<<<<< HEAD
-										entry->create_prf, NULL))
-=======
 										entry->create_prf, NULL,
 										default_plugin_name))
->>>>>>> upstream/4.5.1
 			{
 				continue;
 			}
@@ -337,12 +307,8 @@ METHOD(crypto_factory_t, create_rng, rng_t*,
 		{
 			if (this->test_on_create &&
 				!this->tester->test_rng(this->tester, quality,
-<<<<<<< HEAD
-										entry->create_rng, NULL))
-=======
 										entry->create_rng, NULL,
 										default_plugin_name))
->>>>>>> upstream/4.5.1
 			{
 				continue;
 			}
@@ -406,12 +372,8 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
  * Insert an algorithm entry to a list
  */
 static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
-<<<<<<< HEAD
-					  int algo, u_int speed, void *create)
-=======
 					  int algo, const char *plugin_name,
 					  u_int speed, void *create)
->>>>>>> upstream/4.5.1
 {
 	entry_t *entry, *current;
 	linked_list_t *tmp;
@@ -419,10 +381,7 @@ static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
 
 	INIT(entry,
 		.algo = algo,
-<<<<<<< HEAD
-=======
 		.plugin_name = plugin_name,
->>>>>>> upstream/4.5.1
 		.speed = speed,
 	);
 	entry->create = create;
@@ -456,27 +415,16 @@ static void add_entry(private_crypto_factory_t *this, linked_list_t *list,
 }
 
 METHOD(crypto_factory_t, add_crypter, void,
-<<<<<<< HEAD
-	private_crypto_factory_t *this, encryption_algorithm_t algo,
-	crypter_constructor_t create)
-=======
 	private_crypto_factory_t *this,	encryption_algorithm_t algo,
 	const char *plugin_name, crypter_constructor_t create)
->>>>>>> upstream/4.5.1
 {
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
 		this->tester->test_crypter(this->tester, algo, 0, create,
-<<<<<<< HEAD
-								   this->bench ? &speed : NULL))
-	{
-		add_entry(this, this->crypters, algo, speed, create);
-=======
 								   this->bench ? &speed : NULL,	plugin_name))
 	{
 		add_entry(this, this->crypters, algo, plugin_name, speed, create);
->>>>>>> upstream/4.5.1
 	}
 }
 
@@ -501,27 +449,16 @@ METHOD(crypto_factory_t, remove_crypter, void,
 }
 
 METHOD(crypto_factory_t, add_aead, void,
-<<<<<<< HEAD
-	private_crypto_factory_t *this, encryption_algorithm_t algo,
-	aead_constructor_t create)
-=======
 	private_crypto_factory_t *this,	encryption_algorithm_t algo,
 	const char *plugin_name, aead_constructor_t create)
->>>>>>> upstream/4.5.1
 {
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
 		this->tester->test_aead(this->tester, algo, 0, create,
-<<<<<<< HEAD
-								   this->bench ? &speed : NULL))
-	{
-		add_entry(this, this->aeads, algo, speed, create);
-=======
 								this->bench ? &speed : NULL, plugin_name))
 	{
 		add_entry(this, this->aeads, algo, plugin_name, speed, create);
->>>>>>> upstream/4.5.1
 	}
 }
 
@@ -546,27 +483,16 @@ METHOD(crypto_factory_t, remove_aead, void,
 }
 
 METHOD(crypto_factory_t, add_signer, void,
-<<<<<<< HEAD
-	private_crypto_factory_t *this, integrity_algorithm_t algo,
-	signer_constructor_t create)
-=======
 	private_crypto_factory_t *this,	integrity_algorithm_t algo,
 	const char *plugin_name, signer_constructor_t create)
->>>>>>> upstream/4.5.1
 {
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
 		this->tester->test_signer(this->tester, algo, create,
-<<<<<<< HEAD
-								  this->bench ? &speed : NULL))
-	{
-		add_entry(this, this->signers, algo, speed, create);
-=======
 								  this->bench ? &speed : NULL, plugin_name))
 	{
 		add_entry(this, this->signers, algo, plugin_name, speed, create);
->>>>>>> upstream/4.5.1
 	}
 }
 
@@ -591,27 +517,16 @@ METHOD(crypto_factory_t, remove_signer, void,
 }
 
 METHOD(crypto_factory_t, add_hasher, void,
-<<<<<<< HEAD
-	private_crypto_factory_t *this, hash_algorithm_t algo,
-	hasher_constructor_t create)
-=======
 	private_crypto_factory_t *this,	hash_algorithm_t algo,
 	const char *plugin_name, hasher_constructor_t create)
->>>>>>> upstream/4.5.1
 {
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
 		this->tester->test_hasher(this->tester, algo, create,
-<<<<<<< HEAD
-								  this->bench ? &speed : NULL))
-	{
-		add_entry(this, this->hashers, algo, speed, create);
-=======
 								  this->bench ? &speed : NULL, plugin_name))
 	{
 		add_entry(this, this->hashers, algo, plugin_name, speed, create);
->>>>>>> upstream/4.5.1
 	}
 }
 
@@ -636,27 +551,16 @@ METHOD(crypto_factory_t, remove_hasher, void,
 }
 
 METHOD(crypto_factory_t, add_prf, void,
-<<<<<<< HEAD
-	private_crypto_factory_t *this, pseudo_random_function_t algo,
-	prf_constructor_t create)
-=======
 	private_crypto_factory_t *this,	pseudo_random_function_t algo,
 	const char *plugin_name, prf_constructor_t create)
->>>>>>> upstream/4.5.1
 {
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
 		this->tester->test_prf(this->tester, algo, create,
-<<<<<<< HEAD
-							   this->bench ? &speed : NULL))
-	{
-		add_entry(this, this->prfs, algo, speed, create);
-=======
 							   this->bench ? &speed : NULL, plugin_name))
 	{
 		add_entry(this, this->prfs, algo, plugin_name, speed, create);
->>>>>>> upstream/4.5.1
 	}
 }
 
@@ -682,25 +586,15 @@ METHOD(crypto_factory_t, remove_prf, void,
 
 METHOD(crypto_factory_t, add_rng, void,
 	private_crypto_factory_t *this, rng_quality_t quality,
-<<<<<<< HEAD
-	rng_constructor_t create)
-=======
 	const char *plugin_name, rng_constructor_t create)
->>>>>>> upstream/4.5.1
 {
 	u_int speed = 0;
 
 	if (!this->test_on_add ||
 		this->tester->test_rng(this->tester, quality, create,
-<<<<<<< HEAD
-							   this->bench ? &speed : NULL))
-	{
-		add_entry(this, this->rngs, quality, speed, create);
-=======
 							   this->bench ? &speed : NULL, plugin_name))
 	{
 		add_entry(this, this->rngs, quality, plugin_name, speed, create);
->>>>>>> upstream/4.5.1
 	}
 }
 
@@ -725,17 +619,10 @@ METHOD(crypto_factory_t, remove_rng, void,
 }
 
 METHOD(crypto_factory_t, add_dh, void,
-<<<<<<< HEAD
-	private_crypto_factory_t *this, diffie_hellman_group_t group,
-	dh_constructor_t create)
-{
-	add_entry(this, this->dhs, group, 0, create);
-=======
 	private_crypto_factory_t *this,	diffie_hellman_group_t group,
 	 const char *plugin_name, dh_constructor_t create)
 {
 	add_entry(this, this->dhs, group, plugin_name, 0, create);
->>>>>>> upstream/4.5.1
 }
 
 METHOD(crypto_factory_t, remove_dh, void,
@@ -797,17 +684,11 @@ static enumerator_t *create_enumerator(private_crypto_factory_t *this,
 /**
  * Filter function to enumerate algorithm, not entry
  */
-<<<<<<< HEAD
-static bool crypter_filter(void *n, entry_t **entry, encryption_algorithm_t *algo)
-{
-	*algo = (*entry)->algo;
-=======
 static bool crypter_filter(void *n, entry_t **entry, encryption_algorithm_t *algo,
 						   void *i2, const char **plugin_name)
 {
 	*algo = (*entry)->algo;
 	*plugin_name = (*entry)->plugin_name;
->>>>>>> upstream/4.5.1
 	return TRUE;
 }
 
@@ -826,17 +707,11 @@ METHOD(crypto_factory_t, create_aead_enumerator, enumerator_t*,
 /**
  * Filter function to enumerate algorithm, not entry
  */
-<<<<<<< HEAD
-static bool signer_filter(void *n, entry_t **entry, integrity_algorithm_t *algo)
-{
-	*algo = (*entry)->algo;
-=======
 static bool signer_filter(void *n, entry_t **entry, integrity_algorithm_t *algo,
 						  void *i2, const char **plugin_name)
 {
 	*algo = (*entry)->algo;
 	*plugin_name = (*entry)->plugin_name;
->>>>>>> upstream/4.5.1
 	return TRUE;
 }
 
@@ -849,17 +724,11 @@ METHOD(crypto_factory_t, create_signer_enumerator, enumerator_t*,
 /**
  * Filter function to enumerate algorithm, not entry
  */
-<<<<<<< HEAD
-static bool hasher_filter(void *n, entry_t **entry, hash_algorithm_t *algo)
-{
-	*algo = (*entry)->algo;
-=======
 static bool hasher_filter(void *n, entry_t **entry, hash_algorithm_t *algo,
 						  void *i2, const char **plugin_name)
 {
 	*algo = (*entry)->algo;
 	*plugin_name = (*entry)->plugin_name;
->>>>>>> upstream/4.5.1
 	return TRUE;
 }
 
@@ -872,17 +741,11 @@ METHOD(crypto_factory_t, create_hasher_enumerator, enumerator_t*,
 /**
  * Filter function to enumerate algorithm, not entry
  */
-<<<<<<< HEAD
-static bool prf_filter(void *n, entry_t **entry, pseudo_random_function_t *algo)
-{
-	*algo = (*entry)->algo;
-=======
 static bool prf_filter(void *n, entry_t **entry, pseudo_random_function_t *algo,
 					   void *i2, const char **plugin_name)
 {
 	*algo = (*entry)->algo;
 	*plugin_name = (*entry)->plugin_name;
->>>>>>> upstream/4.5.1
 	return TRUE;
 }
 
@@ -895,17 +758,11 @@ METHOD(crypto_factory_t, create_prf_enumerator, enumerator_t*,
 /**
  * Filter function to enumerate algorithm, not entry
  */
-<<<<<<< HEAD
-static bool dh_filter(void *n, entry_t **entry, diffie_hellman_group_t *group)
-{
-	*group = (*entry)->algo;
-=======
 static bool dh_filter(void *n, entry_t **entry, diffie_hellman_group_t *group,
 					  void *i2, const char **plugin_name)
 {
 	*group = (*entry)->algo;
 	*plugin_name = (*entry)->plugin_name;
->>>>>>> upstream/4.5.1
 	return TRUE;
 }
 
@@ -915,8 +772,6 @@ METHOD(crypto_factory_t, create_dh_enumerator, enumerator_t*,
 	return create_enumerator(this, this->dhs, dh_filter);
 }
 
-<<<<<<< HEAD
-=======
 /**
  * Filter function to enumerate algorithm, not entry
  */
@@ -933,7 +788,6 @@ METHOD(crypto_factory_t, create_rng_enumerator, enumerator_t*,
 {
 	return create_enumerator(this, this->rngs, rng_filter);
 }
->>>>>>> upstream/4.5.1
 METHOD(crypto_factory_t, add_test_vector, void,
 	private_crypto_factory_t *this, transform_type_t type, void *vector)
 {
@@ -1008,10 +862,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_hasher_enumerator = _create_hasher_enumerator,
 			.create_prf_enumerator = _create_prf_enumerator,
 			.create_dh_enumerator = _create_dh_enumerator,
-<<<<<<< HEAD
-=======
 			.create_rng_enumerator = _create_rng_enumerator,
->>>>>>> upstream/4.5.1
 			.add_test_vector = _add_test_vector,
 			.destroy = _destroy,
 		},

@@ -192,7 +192,7 @@ static const asn1Object_t basicResponseObjects[] = {
 	{ 5,           "critical",				ASN1_BOOLEAN,			ASN1_BODY |
 																	ASN1_DEF  }, /* 16 */
 	{ 5,           "extnValue",				ASN1_OCTET_STRING,		ASN1_BODY }, /* 17 */
-	{ 4,         "end loop",				ASN1_EOC,				ASN1_END  }, /* 18 */
+	{ 3,       "end loop",					ASN1_EOC,				ASN1_END  }, /* 18 */
 	{ 2,     "end opt",						ASN1_EOC,				ASN1_END  }, /* 19 */
 	{ 1,   "signatureAlgorithm",			ASN1_EOC,				ASN1_RAW  }, /* 20 */
 	{ 1,   "signature",						ASN1_BIT_STRING,		ASN1_BODY }, /* 21 */
@@ -1045,13 +1045,8 @@ static bool valid_ocsp_response(response_t *res)
 		)
 
 		/* check path length constraint */
-<<<<<<< HEAD
-		pathlen_constraint = x509->get_pathLenConstraint(x509);
-		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
-=======
 		pathlen_constraint = x509->get_constraint(x509, X509_PATH_LEN);
 		if (pathlen_constraint != X509_NO_CONSTRAINT &&
->>>>>>> upstream/4.5.1
 			pathlen > pathlen_constraint)
 		{
 			plog("path length of %d violates constraint of %d",

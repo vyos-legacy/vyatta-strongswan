@@ -196,13 +196,8 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 		this->peer_cfg->add_auth_cfg(this->peer_cfg, auth, FALSE);
 
 		child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
-<<<<<<< HEAD
-									 ACTION_NONE, ACTION_NONE, FALSE, 0, 0,
-									 NULL, NULL);
-=======
 									 ACTION_NONE, ACTION_NONE, ACTION_NONE,
 									 FALSE, 0, 0, NULL, NULL, 0);
->>>>>>> upstream/4.5.1
 		child_cfg->add_proposal(child_cfg, create_proposal(esp_proposal, PROTO_ESP));
 		child_cfg->add_traffic_selector(child_cfg, TRUE, create_ts(local_net));
 		child_cfg->add_traffic_selector(child_cfg, FALSE, create_ts(remote_net));

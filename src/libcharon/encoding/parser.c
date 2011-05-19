@@ -387,15 +387,6 @@ static status_t parse_payload(private_parser_t *this,
 	DBG3(DBG_ENC, "parsing payload from %b",
 		 this->byte_pos, this->input_roof - this->byte_pos);
 
-<<<<<<< HEAD
-	if (pld->get_type(pld) == UNKNOWN_PAYLOAD)
-	{
-		DBG1(DBG_ENC, "  payload type %d is unknown, handling as %N",
-			 payload_type, payload_type_names, UNKNOWN_PAYLOAD);
-	}
-
-=======
->>>>>>> upstream/4.5.1
 	/* base pointer for output, avoids casting in every rule */
 	output = pld;
 
@@ -418,10 +409,7 @@ static status_t parse_payload(private_parser_t *this,
 				break;
 			}
 			case U_INT_8:
-<<<<<<< HEAD
-=======
 			case RESERVED_BYTE:
->>>>>>> upstream/4.5.1
 			{
 				if (!parse_uint8(this, rule_number, output + rule->offset))
 				{
@@ -440,10 +428,7 @@ static status_t parse_payload(private_parser_t *this,
 				break;
 			}
 			case U_INT_32:
-<<<<<<< HEAD
-=======
 			case HEADER_LENGTH:
->>>>>>> upstream/4.5.1
 			{
 				if (!parse_uint32(this, rule_number, output + rule->offset))
 				{
@@ -462,26 +447,6 @@ static status_t parse_payload(private_parser_t *this,
 				break;
 			}
 			case RESERVED_BIT:
-<<<<<<< HEAD
-			{
-				if (!parse_bit(this, rule_number, NULL))
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				break;
-			}
-			case RESERVED_BYTE:
-			{
-				if (!parse_uint8(this, rule_number, NULL))
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				break;
-			}
-=======
->>>>>>> upstream/4.5.1
 			case FLAG:
 			{
 				if (!parse_bit(this, rule_number, output + rule->offset))
@@ -507,18 +472,6 @@ static status_t parse_payload(private_parser_t *this,
 				}
 				break;
 			}
-<<<<<<< HEAD
-			case HEADER_LENGTH:
-			{
-				if (!parse_uint32(this, rule_number, output + rule->offset))
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				break;
-			}
-=======
->>>>>>> upstream/4.5.1
 			case SPI_SIZE:
 			{
 				if (!parse_uint8(this, rule_number, output + rule->offset))

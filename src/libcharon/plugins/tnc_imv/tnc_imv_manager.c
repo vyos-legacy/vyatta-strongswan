@@ -84,7 +84,7 @@ METHOD(imv_manager_t, remove_, imv_t*,
 	private_tnc_imv_manager_t *this, TNC_IMVID id)
 {
 	enumerator_t *enumerator;
-	imv_t *imv;
+	imv_t *imv, *removed_imv = NULL;
 
 	enumerator = this->imvs->create_enumerator(this->imvs);
 	while (enumerator->enumerate(enumerator, &imv))
@@ -92,11 +92,34 @@ METHOD(imv_manager_t, remove_, imv_t*,
 		if (id == imv->get_id(imv))
 		{
 			this->imvs->remove_at(this->imvs, enumerator);
-			return imv;
+			removed_imv = imv;
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return NULL;
+
+	return removed_imv;
+}
+
+METHOD(imv_manager_t, is_registered, bool,
+	private_tnc_imv_manager_t *this, TNC_IMVID id)
+{
+	enumerator_t *enumerator;
+	imv_t *imv;
+	bool found = FALSE;
+
+	enumerator = this->imvs->create_enumerator(this->imvs);
+	while (enumerator->enumerate(enumerator, &imv))
+	{
+		if (id == imv->get_id(imv))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
 }
 
 METHOD(imv_manager_t, get_recommendation_policy, recommendation_policy_t,
@@ -112,36 +135,56 @@ METHOD(imv_manager_t, create_recommendations, recommendations_t*,
 }
 
 METHOD(imv_manager_t, enforce_recommendation, bool,
-	private_tnc_imv_manager_t *this, TNC_IMV_Action_Recommendation rec)
+	private_tnc_imv_manager_t *this, TNC_IMV_Action_Recommendation rec,
+									 TNC_IMV_Evaluation_Result eval)
 {
 	char *group;
 	identification_t *id;
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
+	bool no_access = FALSE;
+
+	DBG1(DBG_TNC, "final recommendation is '%N' and evaluation is '%N'",
+		 TNC_IMV_Action_Recommendation_names, rec,
+		 TNC_IMV_Evaluation_Result_names, eval);
 
 	switch (rec)
 	{
 		case TNC_IMV_ACTION_RECOMMENDATION_ALLOW:
-			DBG1(DBG_TNC, "TNC recommendation is allow");
 			group = "allow";
 			break;
 		case TNC_IMV_ACTION_RECOMMENDATION_ISOLATE:
-			DBG1(DBG_TNC, "TNC recommendation is isolate");
 			group = "isolate";
 			break;
 		case TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS:
 		case TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION:
 		default:
-			DBG1(DBG_TNC, "TNC recommendation is none");
-			return FALSE;
+			group = "no access";
+			no_access = TRUE;
+			break;
 	}
+
 	ike_sa = charon->bus->get_sa(charon->bus);
-	if (ike_sa)
+	if (!ike_sa)
 	{
+		DBG1(DBG_TNC, "policy enforcement point did not find IKE_SA");
+		return FALSE;
+	}
+
+	id = ike_sa->get_other_id(ike_sa);
+	DBG0(DBG_TNC, "policy enforced on peer '%Y' is '%s'", id, group);
+
+	if (no_access)
+	{
+		return FALSE;
+	}
+	else
+	{	
 		auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
 		id = identification_create_from_string(group);
 		auth->add(auth, AUTH_RULE_GROUP, id);
-		DBG1(DBG_TNC, "TNC added group membership '%s'", group);
+		DBG1(DBG_TNC, "policy enforcement point added group membership '%s'",
+			 group);
 	}
 	return TRUE;
 }
@@ -208,6 +251,7 @@ METHOD(imv_manager_t, receive_message, void,
 									 TNC_UInt32 message_len,
 									 TNC_MessageType message_type)
 {
+	bool type_supported = FALSE;
 	enumerator_t *enumerator;
 	imv_t *imv;
 
@@ -216,11 +260,16 @@ METHOD(imv_manager_t, receive_message, void,
 	{
 		if (imv->receive_message && imv->type_supported(imv, message_type))
 		{
+			type_supported = TRUE;
 			imv->receive_message(imv->get_id(imv), connection_id,
 								 message, message_len, message_type);
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (!type_supported)
+	{
+		DBG2(DBG_TNC, "message type 0x%08x not supported by any IMV", message_type);
+	}
 }
 
 METHOD(imv_manager_t, batch_ending, void,
@@ -271,6 +320,7 @@ imv_manager_t* tnc_imv_manager_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
+			.is_registered = _is_registered,
 			.get_recommendation_policy = _get_recommendation_policy,
 			.create_recommendations = _create_recommendations,
 			.enforce_recommendation = _enforce_recommendation,

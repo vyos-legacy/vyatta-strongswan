@@ -45,28 +45,14 @@ struct private_rekey_child_sa_job_t {
 	u_int32_t spi;
 };
 
-<<<<<<< HEAD
-/**
- * Implementation of job_t.destroy.
- */
-static void destroy(private_rekey_child_sa_job_t *this)
-=======
 METHOD(job_t, destroy, void,
 	private_rekey_child_sa_job_t *this)
->>>>>>> upstream/4.5.1
 {
 	free(this);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_rekey_child_sa_job_t *this)
-=======
 METHOD(job_t, execute, void,
 	private_rekey_child_sa_job_t *this)
->>>>>>> upstream/4.5.1
 {
 	ike_sa_t *ike_sa;
 
@@ -92,18 +78,6 @@ rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid,
 												protocol_id_t protocol,
 												u_int32_t spi)
 {
-<<<<<<< HEAD
-	private_rekey_child_sa_job_t *this = malloc_thing(private_rekey_child_sa_job_t);
-
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-
-	/* private variables */
-	this->reqid = reqid;
-	this->protocol = protocol;
-	this->spi = spi;
-=======
 	private_rekey_child_sa_job_t *this;
 
 	INIT(this,
@@ -117,7 +91,6 @@ rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid,
 		.protocol = protocol,
 		.spi = spi,
 	);
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

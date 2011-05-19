@@ -40,14 +40,6 @@ struct cert_validator_t {
 	 * @param subject		subject certificate to check
 	 * @param issuer		issuer of subject
 	 * @param online		wheter to do online revocation checking
-<<<<<<< HEAD
-	 * @param pathlen		the current length of the path up to the root CA
-	 * @param auth			container for resulting authentication info
-	 */
-	bool (*validate)(cert_validator_t *this, certificate_t *subject,
-					 certificate_t *issuer, bool online, int pathlen,
-					 auth_cfg_t *auth);
-=======
 	 * @param pathlen		the current length of the path bottom-up
 	 * @param anchor		is issuer trusted root anchor
 	 * @param auth			container for resulting authentication info
@@ -55,7 +47,6 @@ struct cert_validator_t {
 	bool (*validate)(cert_validator_t *this, certificate_t *subject,
 					 certificate_t *issuer, bool online, u_int pathlen,
 					 bool anchor, auth_cfg_t *auth);
->>>>>>> upstream/4.5.1
 };
 
 #endif /** CERT_VALIDATOR_H_ @}*/

@@ -59,41 +59,23 @@ ENUM_NEXT(payload_type_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICATION, N
 #ifdef ME
 ENUM_NEXT(payload_type_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
 	"ID_PEER");
-<<<<<<< HEAD
-ENUM_NEXT(payload_type_names, HEADER, UNKNOWN_PAYLOAD, ID_PEER,
-=======
 ENUM_NEXT(payload_type_names, HEADER, CONFIGURATION_ATTRIBUTE, ID_PEER,
->>>>>>> upstream/4.5.1
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"TRANSFORM_SUBSTRUCTURE",
 	"TRANSFORM_ATTRIBUTE",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
-<<<<<<< HEAD
-	"CONFIGURATION_ATTRIBUTE",
-	"UNKNOWN_PAYLOAD");
-#else
-ENUM_NEXT(payload_type_names, HEADER, UNKNOWN_PAYLOAD, EXTENSIBLE_AUTHENTICATION,
-=======
 	"CONFIGURATION_ATTRIBUTE");
 #else
 ENUM_NEXT(payload_type_names, HEADER, CONFIGURATION_ATTRIBUTE, EXTENSIBLE_AUTHENTICATION,
->>>>>>> upstream/4.5.1
 	"HEADER",
 	"PROPOSAL_SUBSTRUCTURE",
 	"TRANSFORM_SUBSTRUCTURE",
 	"TRANSFORM_ATTRIBUTE",
 	"TRAFFIC_SELECTOR_SUBSTRUCTURE",
-<<<<<<< HEAD
-	"CONFIGURATION_ATTRIBUTE",
-	"UNKNOWN_PAYLOAD");
-#endif /* ME */
-ENUM_END(payload_type_names, UNKNOWN_PAYLOAD);
-=======
 	"CONFIGURATION_ATTRIBUTE");
 #endif /* ME */
 ENUM_END(payload_type_names, CONFIGURATION_ATTRIBUTE);
->>>>>>> upstream/4.5.1
 
 /* short forms of payload names */
 ENUM_BEGIN(payload_type_short_names, NO_PAYLOAD, NO_PAYLOAD,
@@ -118,41 +100,23 @@ ENUM_NEXT(payload_type_short_names, SECURITY_ASSOCIATION, EXTENSIBLE_AUTHENTICAT
 #ifdef ME
 ENUM_NEXT(payload_type_short_names, ID_PEER, ID_PEER, EXTENSIBLE_AUTHENTICATION,
 	"IDp");
-<<<<<<< HEAD
-ENUM_NEXT(payload_type_short_names, HEADER, UNKNOWN_PAYLOAD, ID_PEER,
-=======
 ENUM_NEXT(payload_type_short_names, HEADER, CONFIGURATION_ATTRIBUTE, ID_PEER,
->>>>>>> upstream/4.5.1
 	"HDR",
 	"PROP",
 	"TRANS",
 	"TRANSATTR",
 	"TSSUB",
-<<<<<<< HEAD
-	"CPATTR",
-	"??");
-#else
-ENUM_NEXT(payload_type_short_names, HEADER, UNKNOWN_PAYLOAD, EXTENSIBLE_AUTHENTICATION,
-=======
 	"CPATTR");
 #else
 ENUM_NEXT(payload_type_short_names, HEADER, CONFIGURATION_ATTRIBUTE, EXTENSIBLE_AUTHENTICATION,
->>>>>>> upstream/4.5.1
 	"HDR",
 	"PROP",
 	"TRANS",
 	"TRANSATTR",
 	"TSSUB",
-<<<<<<< HEAD
-	"CPATTR",
-	"??");
-#endif /* ME */
-ENUM_END(payload_type_short_names, UNKNOWN_PAYLOAD);
-=======
 	"CPATTR");
 #endif /* ME */
 ENUM_END(payload_type_short_names, CONFIGURATION_ATTRIBUTE);
->>>>>>> upstream/4.5.1
 
 /*
  * see header
@@ -210,12 +174,6 @@ payload_t *payload_create(payload_type_t type)
 		case ENCRYPTED:
 			return (payload_t*)encryption_payload_create();
 		default:
-<<<<<<< HEAD
-			return (payload_t*)unknown_payload_create();
-	}
-}
-
-=======
 			return (payload_t*)unknown_payload_create(type);
 	}
 }
@@ -258,4 +216,3 @@ void* payload_get_field(payload_t *payload, encoding_type_t type, u_int skip)
 	}
 	return NULL;
 }
->>>>>>> upstream/4.5.1

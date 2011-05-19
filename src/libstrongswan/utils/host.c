@@ -476,13 +476,10 @@ host_t *host_create_from_dns(char *string, int af, u_int16_t port)
 	{
 		return host_create_any_port(af ? af : AF_INET6, port);
 	}
-<<<<<<< HEAD
-=======
 	if (af == AF_INET && strchr(string, ':'))
 	{	/* do not try to convert v6 addresses for v4 family */
 		return NULL;
 	}
->>>>>>> upstream/4.5.1
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = af;
@@ -571,8 +568,6 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 /*
  * Described in header.
  */
-<<<<<<< HEAD
-=======
 host_t *host_create_from_subnet(char *string, int *bits)
 {
 	char *pos, buf[64];
@@ -608,7 +603,6 @@ host_t *host_create_from_subnet(char *string, int *bits)
 /*
  * Described in header.
  */
->>>>>>> upstream/4.5.1
 host_t *host_create_any(int family)
 {
 	private_host_t *this = host_create_empty();
@@ -631,5 +625,6 @@ host_t *host_create_any(int family)
 		default:
 			break;
 	}
+	free(this);
 	return NULL;
 }

@@ -113,10 +113,7 @@ static void ca_section_destroy(ca_section_t *this)
 	this->crl->destroy_function(this->crl, free);
 	this->ocsp->destroy_function(this->ocsp, free);
 	this->hashes->destroy_offset(this->hashes, offsetof(identification_t, destroy));
-<<<<<<< HEAD
-=======
 	this->cert->destroy(this->cert);
->>>>>>> upstream/4.5.1
 	free(this->certuribase);
 	free(this->name);
 	free(this);
@@ -211,16 +208,8 @@ static enumerator_t *create_inner_cdp_hashandurl(ca_section_t *section, cdp_data
 	return enumerator;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of credential_set_t.create_cdp_enumerator.
- */
-static enumerator_t *create_cdp_enumerator(private_stroke_ca_t *this,
-								certificate_type_t type, identification_t *id)
-=======
 METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 	private_stroke_ca_t *this, certificate_type_t type, identification_t *id)
->>>>>>> upstream/4.5.1
 {
 	cdp_data_t *data;
 
@@ -244,16 +233,9 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 			(type == CERT_X509) ? (void*)create_inner_cdp_hashandurl : (void*)create_inner_cdp,
 			data, (void*)cdp_data_destroy);
 }
-<<<<<<< HEAD
-/**
- * Implementation of stroke_ca_t.add.
- */
-static void add(private_stroke_ca_t *this, stroke_msg_t *msg)
-=======
 
 METHOD(stroke_ca_t, add, void,
 	private_stroke_ca_t *this, stroke_msg_t *msg)
->>>>>>> upstream/4.5.1
 {
 	certificate_t *cert;
 	ca_section_t *ca;
@@ -294,15 +276,8 @@ METHOD(stroke_ca_t, add, void,
 	}
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of stroke_ca_t.del.
- */
-static void del(private_stroke_ca_t *this, stroke_msg_t *msg)
-=======
 METHOD(stroke_ca_t, del, void,
 	private_stroke_ca_t *this, stroke_msg_t *msg)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *enumerator;
 	ca_section_t *ca = NULL;
@@ -356,15 +331,8 @@ static void list_uris(linked_list_t *list, char *label, FILE *out)
 	enumerator->destroy(enumerator);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of stroke_ca_t.check_for_hash_and_url.
- */
-static void check_for_hash_and_url(private_stroke_ca_t *this, certificate_t* cert)
-=======
 METHOD(stroke_ca_t, check_for_hash_and_url, void,
 	private_stroke_ca_t *this, certificate_t* cert)
->>>>>>> upstream/4.5.1
 {
 	ca_section_t *section;
 	enumerator_t *enumerator;
@@ -401,15 +369,8 @@ METHOD(stroke_ca_t, check_for_hash_and_url, void,
 	hasher->destroy(hasher);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of stroke_ca_t.list.
- */
-static void list(private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
-=======
 METHOD(stroke_ca_t, list, void,
 	private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
->>>>>>> upstream/4.5.1
 {
 	bool first = TRUE;
 	ca_section_t *section;
@@ -456,15 +417,8 @@ METHOD(stroke_ca_t, list, void,
 	this->lock->unlock(this->lock);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of stroke_ca_t.destroy
- */
-static void destroy(private_stroke_ca_t *this)
-=======
 METHOD(stroke_ca_t, destroy, void,
 	private_stroke_ca_t *this)
->>>>>>> upstream/4.5.1
 {
 	this->sections->destroy_function(this->sections, (void*)ca_section_destroy);
 	this->lock->destroy(this->lock);
@@ -476,24 +430,6 @@ METHOD(stroke_ca_t, destroy, void,
  */
 stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 {
-<<<<<<< HEAD
-	private_stroke_ca_t *this = malloc_thing(private_stroke_ca_t);
-
-	this->public.set.create_private_enumerator = (void*)return_null;
-	this->public.set.create_cert_enumerator = (void*)return_null;
-	this->public.set.create_shared_enumerator = (void*)return_null;
-	this->public.set.create_cdp_enumerator = (void*)create_cdp_enumerator;
-	this->public.set.cache_cert = (void*)nop;
-	this->public.add = (void(*)(stroke_ca_t*, stroke_msg_t *msg))add;
-	this->public.del = (void(*)(stroke_ca_t*, stroke_msg_t *msg))del;
-	this->public.list = (void(*)(stroke_ca_t*, stroke_msg_t *msg, FILE *out))list;
-	this->public.check_for_hash_and_url = (void(*)(stroke_ca_t*, certificate_t*))check_for_hash_and_url;
-	this->public.destroy = (void(*)(stroke_ca_t*))destroy;
-
-	this->sections = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-	this->cred = cred;
-=======
 	private_stroke_ca_t *this;
 
 	INIT(this,
@@ -515,7 +451,6 @@ stroke_ca_t *stroke_ca_create(stroke_cred_t *cred)
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.cred = cred,
 	);
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

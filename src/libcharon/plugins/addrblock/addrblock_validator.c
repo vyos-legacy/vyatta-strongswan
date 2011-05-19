@@ -1,13 +1,6 @@
 /*
-<<<<<<< HEAD
- * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
- * Copyright (C) 2009 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
-=======
  * Copyright (C) 2010 Martin Willi, revosec AG
  * Copyright (C) 2009 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
->>>>>>> upstream/4.5.1
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -95,12 +88,8 @@ static bool check_addrblock(x509_t *subject, x509_t *issuer)
 
 METHOD(cert_validator_t, validate, bool,
 	private_addrblock_validator_t *this, certificate_t *subject,
-<<<<<<< HEAD
-	certificate_t *issuer, bool online, int pathlen, auth_cfg_t *auth)
-=======
-	certificate_t *issuer, bool online, int pathlen, bool anchor,
+	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
 	auth_cfg_t *auth)
->>>>>>> upstream/4.5.1
 {
 	if (subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509)
@@ -125,7 +114,9 @@ addrblock_validator_t *addrblock_validator_create()
 
 	INIT(this,
 		.public = {
-			.validator.validate = _validate,
+			.validator = {
+				.validate = _validate,
+			},
 			.destroy = _destroy,
 		},
 	);

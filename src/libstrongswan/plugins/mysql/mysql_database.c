@@ -474,15 +474,8 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 	return TRUE;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of database_t.query.
- */
-static enumerator_t* query(private_mysql_database_t *this, char *sql, ...)
-=======
 METHOD(database_t, query, enumerator_t*,
 	private_mysql_database_t *this, char *sql, ...)
->>>>>>> upstream/4.5.1
 {
 	MYSQL_STMT *stmt;
 	va_list args;
@@ -568,15 +561,8 @@ METHOD(database_t, query, enumerator_t*,
 	return (enumerator_t*)enumerator;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of database_t.execute.
- */
-static int execute(private_mysql_database_t *this, int *rowid, char *sql, ...)
-=======
 METHOD(database_t, execute, int,
 	private_mysql_database_t *this, int *rowid, char *sql, ...)
->>>>>>> upstream/4.5.1
 {
 	MYSQL_STMT *stmt;
 	va_list args;
@@ -604,28 +590,14 @@ METHOD(database_t, execute, int,
 	return affected;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of database_t.get_driver
- */
-static db_driver_t get_driver(private_mysql_database_t *this)
-=======
 METHOD(database_t, get_driver,db_driver_t,
 	private_mysql_database_t *this)
->>>>>>> upstream/4.5.1
 {
 	return DB_MYSQL;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of database_t.destroy
- */
-static void destroy(private_mysql_database_t *this)
-=======
 METHOD(database_t, destroy, void,
 	private_mysql_database_t *this)
->>>>>>> upstream/4.5.1
 {
 	this->pool->destroy_function(this->pool, (void*)conn_destroy);
 	this->mutex->destroy(this->mutex);
@@ -697,14 +669,6 @@ mysql_database_t *mysql_database_create(char *uri)
 		return NULL;
 	}
 
-<<<<<<< HEAD
-	this = malloc_thing(private_mysql_database_t);
-
-	this->public.db.query = (enumerator_t* (*)(database_t *this, char *sql, ...))query;
-	this->public.db.execute = (int (*)(database_t *this, int *rowid, char *sql, ...))execute;
-	this->public.db.get_driver = (db_driver_t(*)(database_t*))get_driver;
-	this->public.db.destroy = (void(*)(database_t*))destroy;
-=======
 	INIT(this,
 		.public = {
 			.db = {
@@ -715,7 +679,6 @@ mysql_database_t *mysql_database_create(char *uri)
 			},
 		},
 	);
->>>>>>> upstream/4.5.1
 
 	if (!parse_uri(this, uri))
 	{

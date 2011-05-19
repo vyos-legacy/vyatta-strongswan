@@ -27,15 +27,6 @@ static const char *co[] = {
  "    Christoph Gysin, Andreas Hess, Patric Lichtsteiner, Michael Meier,",
  "    Andreas Schleiss, Ariane Seiler, Mario Strasser, Lukas Suter,",
  "    Roger Wegmann, Simon Zwahlen,",
-<<<<<<< HEAD
- "    Zuercher Hochschule Winterthur (Switzerland).",
- "",
- "    Philip Boetschi, Tobias Brunner, Adrian Doerig, Andreas Eigenmann,",
- "    Fabian Hartmann, Noah Heusser, Jan Hutter, Thomas Kallenberg,",
- "    Daniel Roethlisberger, Joel Stillhart, Martin Willi, Daniel Wydler,",
- "    Andreas Steffen,",
- "    Hochschule fuer Technik Rapperswil (Switzerland).",
-=======
  "    ZHW Zuercher Hochschule Winterthur (Switzerland).",
  "",
  "    Philip Boetschi, Tobias Brunner, Sansar Choinyambuu, Adrian Doerig,",
@@ -43,7 +34,6 @@ static const char *co[] = {
  "    Thomas Kallenberg, Daniel Roethlisberger, Joel Stillhart, Martin Willi,",
  "    Daniel Wydler, Andreas Steffen,",
  "    HSR Hochschule fuer Technik Rapperswil (Switzerland).",
->>>>>>> upstream/4.5.1
  "",
  "This program is free software; you can redistribute it and/or modify it",
  "under the terms of the GNU General Public License as published by the",

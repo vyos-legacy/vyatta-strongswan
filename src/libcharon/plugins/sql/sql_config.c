@@ -1,9 +1,6 @@
 /*
  * Copyright (C) 2006-2008 Martin Willi
-<<<<<<< HEAD
-=======
  * Copyright (C) 2010 Andreas Steffen
->>>>>>> upstream/4.5.1
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -42,21 +39,13 @@ struct private_sql_config_t {
 };
 
 /**
-<<<<<<< HEAD
- * forward declaration
-=======
  * Forward declaration
->>>>>>> upstream/4.5.1
  */
 static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 								  identification_t *me, identification_t *other);
 
 /**
-<<<<<<< HEAD
- * build a traffic selector from a SQL query
-=======
  * Build a traffic selector from an SQL query
->>>>>>> upstream/4.5.1
  */
 static traffic_selector_t *build_traffic_selector(private_sql_config_t *this,
 												  enumerator_t *e, bool *local)
@@ -131,18 +120,6 @@ static void add_traffic_selectors(private_sql_config_t *this,
 }
 
 /**
-<<<<<<< HEAD
- * build a Child configuration from a SQL query
- */
-static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
-{
-	int id, lifetime, rekeytime, jitter, hostaccess, mode, dpd, close, ipcomp;
-	char *name, *updown;
-	child_cfg_t *child_cfg;
-
-	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter,
-						&updown, &hostaccess, &mode, &dpd, &close, &ipcomp))
-=======
  * Add ESP proposals to a child config
  */
 static void add_esp_proposals(private_sql_config_t *this,
@@ -191,21 +168,14 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, &updown,
 						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid))
->>>>>>> upstream/4.5.1
 	{
 		lifetime_cfg_t lft = {
 			.time = { .life = lifetime, .rekey = rekeytime, .jitter = jitter }
 		};
 		child_cfg = child_cfg_create(name, &lft, updown, hostaccess, mode,
-<<<<<<< HEAD
-									 dpd, close, ipcomp, 0, 0, NULL, NULL);
-		/* TODO: read proposal from db */
-		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-=======
 									 start, dpd, close, ipcomp, 0, reqid,
 									 NULL, NULL, 0);
 		add_esp_proposals(this, child_cfg, id);
->>>>>>> upstream/4.5.1
 		add_traffic_selectors(this, child_cfg, id);
 		return child_cfg;
 	}
@@ -221,15 +191,6 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 	child_cfg_t *child_cfg;
 
 	e = this->db->query(this->db,
-<<<<<<< HEAD
-			"SELECT id, name, lifetime, rekeytime, jitter, "
-			"updown, hostaccess, mode, dpd_action, close_action, ipcomp "
-			"FROM child_configs JOIN peer_config_child_config ON id = child_cfg "
-			"WHERE peer_cfg = ?",
-			DB_INT, id,
-			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT,
-			DB_TEXT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT);
-=======
 			"SELECT id, name, lifetime, rekeytime, jitter, updown, hostaccess, "
 			"mode, start_action, dpd_action, close_action, ipcomp, reqid "
 			"FROM child_configs JOIN peer_config_child_config ON id = child_cfg "
@@ -237,7 +198,6 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_TEXT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT);
->>>>>>> upstream/4.5.1
 	if (e)
 	{
 		while ((child_cfg = build_child_cfg(this, e)))
@@ -249,9 +209,6 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 }
 
 /**
-<<<<<<< HEAD
- * build a ike configuration from a SQL query
-=======
  * Add IKE proposals to an IKE config
  */
 static void add_ike_proposals(private_sql_config_t *this,
@@ -290,44 +247,27 @@ static void add_ike_proposals(private_sql_config_t *this,
 
 /**
  * Build an IKE config from an SQL query
->>>>>>> upstream/4.5.1
  */
 static ike_cfg_t *build_ike_cfg(private_sql_config_t *this, enumerator_t *e,
 								host_t *my_host, host_t *other_host)
 {
-<<<<<<< HEAD
-	int certreq, force_encap;
-	char *local, *remote;
-
-	while (e->enumerate(e, &certreq, &force_encap, &local, &remote))
-=======
 	int id, certreq, force_encap;
 	char *local, *remote;
 
 	while (e->enumerate(e, &id, &certreq, &force_encap, &local, &remote))
->>>>>>> upstream/4.5.1
 	{
 		ike_cfg_t *ike_cfg;
 
 		ike_cfg = ike_cfg_create(certreq, force_encap,
 								 local, IKEV2_UDP_PORT, remote, IKEV2_UDP_PORT);
-<<<<<<< HEAD
-		/* TODO: read proposal from db */
-		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-=======
 		add_ike_proposals(this, ike_cfg, id);
->>>>>>> upstream/4.5.1
 		return ike_cfg;
 	}
 	return NULL;
 }
 
 /**
-<<<<<<< HEAD
- * Query a IKE config by its id
-=======
  * Query an IKE config by its id
->>>>>>> upstream/4.5.1
  */
 static ike_cfg_t* get_ike_cfg_by_id(private_sql_config_t *this, int id)
 {
@@ -335,17 +275,10 @@ static ike_cfg_t* get_ike_cfg_by_id(private_sql_config_t *this, int id)
 	ike_cfg_t *ike_cfg = NULL;
 
 	e = this->db->query(this->db,
-<<<<<<< HEAD
-			"SELECT certreq, force_encap, local, remote "
-			"FROM ike_configs WHERE id = ?",
-			DB_INT, id,
-			DB_INT, DB_INT, DB_TEXT, DB_TEXT);
-=======
 			"SELECT id, certreq, force_encap, local, remote "
 			"FROM ike_configs WHERE id = ?",
 			DB_INT, id,
 			DB_INT, DB_INT, DB_INT, DB_TEXT, DB_TEXT);
->>>>>>> upstream/4.5.1
 	if (e)
 	{
 		ike_cfg = build_ike_cfg(this, e, NULL, NULL);
@@ -388,11 +321,7 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 }
 
 /**
-<<<<<<< HEAD
- * build a peer configuration from a SQL query
-=======
  * Build a peer config from an SQL query
->>>>>>> upstream/4.5.1
  */
 static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 								  identification_t *me, identification_t *other)
@@ -471,15 +400,8 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 	return NULL;
 }
 
-<<<<<<< HEAD
-/**
- * implements backend_t.get_peer_cfg_by_name.
- */
-static peer_cfg_t *get_peer_cfg_by_name(private_sql_config_t *this, char *name)
-=======
 METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 	private_sql_config_t *this, char *name)
->>>>>>> upstream/4.5.1
 {
 	enumerator_t *e;
 	peer_cfg_t *peer_cfg = NULL;
@@ -549,16 +471,8 @@ static void ike_enumerator_destroy(ike_enumerator_t *this)
 	free(this);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of backend_t.create_ike_cfg_enumerator.
- */
-static enumerator_t* create_ike_cfg_enumerator(private_sql_config_t *this,
-											   host_t *me, host_t *other)
-=======
 METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
 	private_sql_config_t *this, host_t *me, host_t *other)
->>>>>>> upstream/4.5.1
 {
 	ike_enumerator_t *e = malloc_thing(ike_enumerator_t);
 
@@ -570,15 +484,9 @@ METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
 	e->public.destroy = (void*)ike_enumerator_destroy;
 
 	e->inner = this->db->query(this->db,
-<<<<<<< HEAD
-			"SELECT certreq, force_encap, local, remote "
-			"FROM ike_configs",
-			DB_INT, DB_INT, DB_TEXT, DB_TEXT);
-=======
 			"SELECT id, certreq, force_encap, local, remote "
 			"FROM ike_configs",
 			DB_INT, DB_INT, DB_INT, DB_TEXT, DB_TEXT);
->>>>>>> upstream/4.5.1
 	if (!e->inner)
 	{
 		free(e);
@@ -628,17 +536,8 @@ static void peer_enumerator_destroy(peer_enumerator_t *this)
 	free(this);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of backend_t.create_peer_cfg_enumerator.
- */
-static enumerator_t* create_peer_cfg_enumerator(private_sql_config_t *this,
-												identification_t *me,
-												identification_t *other)
-=======
 METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 	private_sql_config_t *this, identification_t *me, identification_t *other)
->>>>>>> upstream/4.5.1
 {
 	peer_enumerator_t *e = malloc_thing(peer_enumerator_t);
 
@@ -675,15 +574,8 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 	return &e->public;
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of sql_config_t.destroy.
- */
-static void destroy(private_sql_config_t *this)
-=======
 METHOD(sql_config_t, destroy, void,
 	private_sql_config_t *this)
->>>>>>> upstream/4.5.1
 {
 	free(this);
 }
@@ -693,16 +585,6 @@ METHOD(sql_config_t, destroy, void,
  */
 sql_config_t *sql_config_create(database_t *db)
 {
-<<<<<<< HEAD
-	private_sql_config_t *this = malloc_thing(private_sql_config_t);
-
-	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
-	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
-	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
-	this->public.destroy = (void(*)(sql_config_t*))destroy;
-
-	this->db = db;
-=======
 	private_sql_config_t *this;
 
 	INIT(this,
@@ -716,7 +598,6 @@ sql_config_t *sql_config_create(database_t *db)
 		},
 		.db = db
 	);
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

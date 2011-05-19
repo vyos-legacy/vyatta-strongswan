@@ -143,8 +143,6 @@ struct ike_header_t {
 	u_int8_t (*get_maj_version) (ike_header_t *this);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Set the major version.
 	 *
 	 * @param major			major version
@@ -152,7 +150,6 @@ struct ike_header_t {
 	void (*set_maj_version) (ike_header_t *this, u_int8_t major);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Get the minor version.
 	 *
 	 * @return 				minor version
@@ -160,8 +157,6 @@ struct ike_header_t {
 	u_int8_t (*get_min_version) (ike_header_t *this);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Set the minor version.
 	 *
 	 * @param minor			minor version
@@ -169,7 +164,6 @@ struct ike_header_t {
 	void (*set_min_version) (ike_header_t *this, u_int8_t minor);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Get the response flag.
 	 *
 	 * @return 				response flag
@@ -182,10 +176,7 @@ struct ike_header_t {
 	 * @param response		response flag
 	 */
 	void (*set_response_flag) (ike_header_t *this, bool response);
-<<<<<<< HEAD
-=======
 
->>>>>>> upstream/4.5.1
 	/**
 	 * Get "higher version supported"-flag.
 	 *
@@ -194,8 +185,6 @@ struct ike_header_t {
 	bool (*get_version_flag) (ike_header_t *this);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Set the "higher version supported"-flag.
 	 *
 	 * @param version		flag value
@@ -203,7 +192,6 @@ struct ike_header_t {
 	void (*set_version_flag)(ike_header_t *this, bool version);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Get the initiator flag.
 	 *
 	 * @return 				initiator flag

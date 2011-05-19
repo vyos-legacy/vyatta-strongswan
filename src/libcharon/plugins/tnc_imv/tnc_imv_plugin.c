@@ -14,12 +14,6 @@
  */
 
 #include "tnc_imv_plugin.h"
-<<<<<<< HEAD
-
-#include <libtnctncs.h>
-
-#include <daemon.h>
-=======
 #include "tnc_imv_manager.h"
 #include "tnc_imv.h"
 
@@ -136,6 +130,12 @@ static bool load_imvs(char *filename)
 		}
 		if (!charon->imvs->add(charon->imvs, imv))
 		{
+			if (imv->terminate &&
+				imv->terminate(imv->get_id(imv)) != TNC_RESULT_SUCCESS)
+			{
+				DBG1(DBG_TNC, "IMV \"%s\" not terminated successfully",
+							   imv->get_name(imv));
+			}
 			imv->destroy(imv);
 			return FALSE;
 		}
@@ -146,16 +146,17 @@ static bool load_imvs(char *filename)
 	close(fd);
 	return TRUE;
 }
->>>>>>> upstream/4.5.1
+
+METHOD(plugin_t, get_name, char*,
+	tnc_imv_plugin_t *this)
+{
+	return "tnc-imv";
+}
 
 METHOD(plugin_t, destroy, void,
 	tnc_imv_plugin_t *this)
 {
-<<<<<<< HEAD
-	libtnc_tncs_Terminate();
-=======
 	charon->imvs->destroy(charon->imvs);
->>>>>>> upstream/4.5.1
 	free(this);
 }
 
@@ -169,21 +170,14 @@ plugin_t *tnc_imv_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
+			.reload = (void*)return_false,
 			.destroy = _destroy,
 		},
 	);
 
 	tnc_config = lib->settings->get_str(lib->settings,
 					"charon.plugins.tnc-imv.tnc_config", "/etc/tnc_config");
-<<<<<<< HEAD
-	if (libtnc_tncs_Initialize(tnc_config) != TNC_RESULT_SUCCESS)
-	{
-		free(this);
-		DBG1(DBG_TNC, "TNC IMV initialization failed");
-		return NULL;
-	}
-
-=======
 
 	/* Create IMV manager */
 	charon->imvs = tnc_imv_manager_create();
@@ -196,7 +190,6 @@ plugin_t *tnc_imv_plugin_create()
 		free(this);
 		return NULL;
 	}
->>>>>>> upstream/4.5.1
 	return &this->plugin;
 }
 

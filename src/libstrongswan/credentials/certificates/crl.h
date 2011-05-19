@@ -72,8 +72,6 @@ struct crl_t {
 	chunk_t (*get_authKeyIdentifier)(crl_t *this);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Is this CRL a delta CRL?
 	 *
 	 * @param base_crl	gets to baseCrlNumber, if this is a delta CRL
@@ -89,7 +87,6 @@ struct crl_t {
 	enumerator_t* (*create_delta_crl_uri_enumerator)(crl_t *this);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Create an enumerator over all revoked certificates.
 	 *
 	 * The enumerator takes 3 pointer arguments:

@@ -37,19 +37,6 @@ host_triplet = @host@
 @USE_LIBHYDRA_TRUE@am__append_2 = libhydra
 @USE_SIMAKA_TRUE@am__append_3 = libsimaka
 @USE_TLS_TRUE@am__append_4 = libtls
-<<<<<<< HEAD
-@USE_FILE_CONFIG_TRUE@am__append_5 = libfreeswan starter ipsec _copyright
-@USE_PLUTO_TRUE@am__append_6 = pluto whack
-@USE_CHARON_TRUE@am__append_7 = libcharon charon
-@USE_STROKE_TRUE@am__append_8 = stroke
-@USE_UPDOWN_TRUE@am__append_9 = _updown _updown_espmark
-@USE_TOOLS_TRUE@am__append_10 = libfreeswan openac scepclient pki
-@USE_DUMM_TRUE@am__append_11 = dumm
-@USE_FAST_TRUE@am__append_12 = libfast
-@USE_MANAGER_TRUE@am__append_13 = manager
-@USE_MEDSRV_TRUE@am__append_14 = medsrv
-@USE_INTEGRITY_TEST_TRUE@am__append_15 = checksum
-=======
 @USE_LIBCHARON_TRUE@am__append_5 = libcharon
 @USE_FILE_CONFIG_TRUE@am__append_6 = libfreeswan starter
 @USE_IPSEC_SCRIPT_TRUE@am__append_7 = ipsec _copyright
@@ -64,7 +51,6 @@ host_triplet = @host@
 @USE_MANAGER_TRUE@am__append_16 = manager
 @USE_MEDSRV_TRUE@am__append_17 = medsrv
 @USE_INTEGRITY_TEST_TRUE@am__append_18 = checksum
->>>>>>> upstream/4.5.1
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -99,15 +85,9 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = . include libstrongswan libhydra libsimaka libtls \
-<<<<<<< HEAD
-	libfreeswan starter ipsec _copyright pluto whack libcharon \
-	charon stroke _updown _updown_espmark openac scepclient pki \
-	dumm libfast manager medsrv checksum
-=======
 	libcharon libfreeswan starter ipsec _copyright pluto whack \
 	charon stroke _updown _updown_espmark openac scepclient pki \
 	conftest dumm libfast manager medsrv checksum
->>>>>>> upstream/4.5.1
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -253,13 +233,7 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-<<<<<<< HEAD
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
-=======
-ipsecgroup = @ipsecgroup@
->>>>>>> upstream/4.5.1
 ipsecuser = @ipsecuser@
 libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
@@ -280,6 +254,8 @@ nm_ca_dir = @nm_ca_dir@
 oldincludedir = @oldincludedir@
 openac_plugins = @openac_plugins@
 p_plugins = @p_plugins@
+pcsclite_CFLAGS = @pcsclite_CFLAGS@
+pcsclite_LIBS = @pcsclite_LIBS@
 pdfdir = @pdfdir@
 piddir = @piddir@
 pki_plugins = @pki_plugins@
@@ -298,14 +274,12 @@ sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
-<<<<<<< HEAD
-=======
 soup_CFLAGS = @soup_CFLAGS@
 soup_LIBS = @soup_LIBS@
->>>>>>> upstream/4.5.1
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
+systemdsystemunitdir = @systemdsystemunitdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
@@ -317,12 +291,8 @@ SUBDIRS = . include $(am__append_1) $(am__append_2) $(am__append_3) \
 	$(am__append_4) $(am__append_5) $(am__append_6) \
 	$(am__append_7) $(am__append_8) $(am__append_9) \
 	$(am__append_10) $(am__append_11) $(am__append_12) \
-<<<<<<< HEAD
-	$(am__append_13) $(am__append_14) $(am__append_15)
-=======
 	$(am__append_13) $(am__append_14) $(am__append_15) \
 	$(am__append_16) $(am__append_17) $(am__append_18)
->>>>>>> upstream/4.5.1
 EXTRA_DIST = strongswan.conf
 all: all-recursive
 
@@ -673,11 +643,7 @@ uninstall-am:
 
 install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)"
-<<<<<<< HEAD
-		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true
-=======
 		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true
->>>>>>> upstream/4.5.1
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -60,8 +60,12 @@ enum eap_type_t {
 	EAP_SIM = 18,
 	EAP_TTLS = 21,
 	EAP_AKA = 23,
+	EAP_PEAP = 25,
 	EAP_MSCHAPV2 = 26,
+	EAP_MSTLV = 33, 
 	EAP_TNC = 38,
+	/** select EAP method dynamically based on i.e. EAP-Identity */
+	EAP_DYNAMIC = 252,
 	/** not a method, but an implementation providing different methods */
 	EAP_RADIUS = 253,
 	EAP_EXPANDED = 254,
@@ -79,14 +83,21 @@ extern enum_name_t *eap_type_names;
 extern enum_name_t *eap_type_short_names;
 
 /**
+ * EAP packet format
+ */
+typedef struct __attribute__((packed)) {
+	u_int8_t code;
+	u_int8_t identifier;
+	u_int16_t length;
+	u_int8_t type;
+	u_int8_t data;
+} eap_packet_t;
+
+/**
  * Lookup the EAP method type from a string.
  *
  * @param name		EAP method name (such as "md5", "aka")
-<<<<<<< HEAD
- * @return			method type, 0 if unkown
-=======
  * @return			method type, 0 if unknown
->>>>>>> upstream/4.5.1
  */
 eap_type_t eap_type_from_string(char *name);
 

@@ -241,20 +241,11 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 		/* if we have the lower nonce, delete rekeyed SA. If not, delete
 		 * the redundant. */
 		if (memcmp(this_nonce.ptr, other_nonce.ptr,
-<<<<<<< HEAD
-				   min(this_nonce.len, other_nonce.len)) < 0)
-		{
-			child_sa_t *child_sa;
-
-			DBG1(DBG_IKE, "CHILD_SA rekey collision won, "
-				 "deleting rekeyed child");
-=======
 				   min(this_nonce.len, other_nonce.len)) > 0)
 		{
 			child_sa_t *child_sa;
 
 			DBG1(DBG_IKE, "CHILD_SA rekey collision won, deleting old child");
->>>>>>> upstream/4.5.1
 			to_delete = this->child_sa;
 			/* don't touch child other created, it has already been deleted */
 			if (!this->other_child_destroyed)
@@ -267,11 +258,7 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 		else
 		{
 			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, "
-<<<<<<< HEAD
-				 "deleting redundant child");
-=======
 				 "deleting rekeyed child");
->>>>>>> upstream/4.5.1
 			to_delete = this->child_create->get_child(this->child_create);
 		}
 	}
@@ -395,7 +382,7 @@ static void collide(private_child_rekey_t *this, task_t *other)
 	if (other->get_type(other) == CHILD_REKEY)
 	{
 		private_child_rekey_t *rekey = (private_child_rekey_t*)other;
-		if (rekey == NULL || rekey->child_sa != this->child_sa)
+		if (rekey->child_sa != this->child_sa)
 		{
 			/* not the same child => no collision */
 			other->destroy(other);
@@ -412,7 +399,7 @@ static void collide(private_child_rekey_t *this, task_t *other)
 			other->destroy(other);
 			return;
 		}
-		if (del == NULL || del->get_child(del) != this->child_sa)
+		if (del->get_child(del) != this->child_sa)
 		{
 			/* not the same child => no collision */
 			other->destroy(other);
@@ -425,6 +412,8 @@ static void collide(private_child_rekey_t *this, task_t *other)
 		other->destroy(other);
 		return;
 	}
+	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names, CHILD_REKEY,
+		 task_type_names, other->get_type(other));
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }

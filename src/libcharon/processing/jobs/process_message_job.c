@@ -35,29 +35,15 @@ struct private_process_message_job_t {
 	message_t *message;
 };
 
-<<<<<<< HEAD
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_process_message_job_t *this)
-=======
 METHOD(job_t, destroy, void,
 	private_process_message_job_t *this)
->>>>>>> upstream/4.5.1
 {
 	this->message->destroy(this->message);
 	free(this);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_process_message_job_t *this)
-=======
 METHOD(job_t, execute, void,
 	private_process_message_job_t *this)
->>>>>>> upstream/4.5.1
 {
 	ike_sa_t *ike_sa;
 
@@ -103,16 +89,6 @@ METHOD(job_t, execute, void,
  */
 process_message_job_t *process_message_job_create(message_t *message)
 {
-<<<<<<< HEAD
-	private_process_message_job_t *this = malloc_thing(private_process_message_job_t);
-
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void(*)(job_t*))destroy;
-
-	/* private variables */
-	this->message = message;
-=======
 	private_process_message_job_t *this;
 
 	INIT(this,
@@ -124,7 +100,6 @@ process_message_job_t *process_message_job_create(message_t *message)
 		},
 		.message = message,
 	);
->>>>>>> upstream/4.5.1
 
 	return &(this->public);
 }

@@ -26,11 +26,8 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-<<<<<<< HEAD
-=======
 #include <syslog.h>
 #include <errno.h>
->>>>>>> upstream/4.5.1
 #include <unistd.h>
 #include <getopt.h>
 #include <pwd.h>
@@ -47,12 +44,9 @@
 #include <private/android_filesystem_config.h>
 #endif
 
-<<<<<<< HEAD
-=======
 #ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
 #define LOG_AUTHPRIV LOG_AUTH
 #endif
->>>>>>> upstream/4.5.1
 
 /**
  * PID file, in which charon stores its process id
@@ -115,7 +109,16 @@ static void run()
 		{
 			case SIGHUP:
 			{
-				DBG1(DBG_DMN, "signal of type SIGHUP received. Ignored");
+				DBG1(DBG_DMN, "signal of type SIGHUP received. Reloading "
+					 "configuration");
+				if (lib->settings->load_files(lib->settings, NULL, FALSE))
+				{
+					lib->plugins->reload(lib->plugins, NULL);
+				}
+				else
+				{
+					DBG1(DBG_DMN, "reloading config failed, keeping old");
+				}
 				break;
 			}
 			case SIGINT:
@@ -279,8 +282,6 @@ static void unlink_pidfile()
 	unlink(PID_FILE);
 }
 
-<<<<<<< HEAD
-=======
 /**
  * Initialize logging
  */
@@ -409,7 +410,6 @@ static void initialize_loggers(bool use_stderr, level_t levels[])
 		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
 	}
 }
->>>>>>> upstream/4.5.1
 
 /**
  * print command line usage and exit
@@ -537,15 +537,10 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-<<<<<<< HEAD
-	/* initialize daemon */
-	if (!charon->initialize(charon, use_syslog, levels))
-=======
 	initialize_loggers(!use_syslog, levels);
 
 	/* initialize daemon */
 	if (!charon->initialize(charon))
->>>>>>> upstream/4.5.1
 	{
 		DBG1(DBG_DMN, "initialization failed - aborting charon");
 		goto deinit;

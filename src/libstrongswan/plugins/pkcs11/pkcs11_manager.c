@@ -369,18 +369,14 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 				"libstrongswan.plugins.pkcs11.modules.%s.path", NULL, module);
 		if (!entry->path)
 		{
-			DBG1(DBG_CFG, "PKCS11 module '%s' misses library path", module);
+			DBG1(DBG_CFG, "PKCS11 module '%s' lacks library path", module);
 			free(entry);
 			continue;
 		}
-<<<<<<< HEAD
-		entry->lib = pkcs11_library_create(module, entry->path);
-=======
 		entry->lib = pkcs11_library_create(module, entry->path,
 						lib->settings->get_bool(lib->settings,
 							"libstrongswan.plugins.pkcs11.modules.%s.os_locking",
 							FALSE, module));
->>>>>>> upstream/4.5.1
 		if (!entry->lib)
 		{
 			free(entry);

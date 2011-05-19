@@ -382,11 +382,8 @@ static private_openssl_crl_t *create_empty()
 				},
 				.get_serial = _get_serial,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
-<<<<<<< HEAD
-=======
 				.is_delta_crl = (void*)return_false,
 				.create_delta_crl_uri_enumerator = (void*)enumerator_create_empty,
->>>>>>> upstream/4.5.1
 				.create_enumerator = _create_enumerator,
 			},
 		},
@@ -463,9 +460,6 @@ static bool parse_extensions(private_openssl_crl_t *this)
 					ok = parse_crlNumber_ext(this, ext);
 					break;
 				default:
-<<<<<<< HEAD
-					ok = TRUE;
-=======
 					ok = X509_EXTENSION_get_critical(ext) == 0 ||
 						 !lib->settings->get_bool(lib->settings,
 								"libstrongswan.x509.enforce_critical", TRUE);
@@ -474,7 +468,6 @@ static bool parse_extensions(private_openssl_crl_t *this)
 						DBG1(DBG_LIB, "found unsupported critical X.509 "
 							 "CRL extension");
 					}
->>>>>>> upstream/4.5.1
 					break;
 			}
 			if (!ok)

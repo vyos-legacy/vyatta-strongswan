@@ -19,11 +19,6 @@
 
 #include "ctr_ipsec_crypter.h"
 
-<<<<<<< HEAD
-=======
-static const char *plugin_name = "ctr";
-
->>>>>>> upstream/4.5.1
 typedef struct private_ctr_plugin_t private_ctr_plugin_t;
 
 /**
@@ -36,6 +31,12 @@ struct private_ctr_plugin_t {
 	 */
 	ctr_plugin_t public;
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_ctr_plugin_t *this)
+{
+	return "ctr";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_ctr_plugin_t *this)
@@ -52,40 +53,31 @@ METHOD(plugin_t, destroy, void,
 plugin_t *ctr_plugin_create()
 {
 	private_ctr_plugin_t *this;
-<<<<<<< HEAD
-=======
 	crypter_t *crypter;
->>>>>>> upstream/4.5.1
 
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
 		},
 	);
 
-<<<<<<< HEAD
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR,
-					(crypter_constructor_t)ctr_ipsec_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR,
-					(crypter_constructor_t)ctr_ipsec_crypter_create);
-
-=======
 	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CBC, 16);
 	if (crypter)
 	{
 		crypter->destroy(crypter);
-		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR, plugin_name,
+		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR, get_name(this),
 						(crypter_constructor_t)ctr_ipsec_crypter_create);
 	}
 	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_CAMELLIA_CBC, 16);
 	if (crypter)
 	{
 		crypter->destroy(crypter);
-		lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR, plugin_name,
+		lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR, get_name(this),
 						(crypter_constructor_t)ctr_ipsec_crypter_create);
 	}
->>>>>>> upstream/4.5.1
 	return &this->public.plugin;
 }

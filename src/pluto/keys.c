@@ -494,7 +494,6 @@ static err_t process_rsa_secret(private_key_t **key)
 		if (ugh)
 		{
 			ugh = builddiag("RSA data malformed (%s): %s", ugh, tok);
-			part++;
 			goto end;
 		}
 		rsa_chunk[part] = chunk_create(buf, sz);
@@ -902,10 +901,7 @@ static void process_secret(secret_t *s, int whackfd)
 	{
 		loglog(RC_LOG_SERIOUS, "\"%s\" line %d: %s"
 			, flp->filename, flp->lino, ugh);
-<<<<<<< HEAD
-=======
 		s->ids->destroy_offset(s->ids, offsetof(identification_t, destroy));
->>>>>>> upstream/4.5.1
 		free(s);
 	}
 	else if (flushline("expected record boundary in key"))
@@ -1014,16 +1010,11 @@ static void process_secret_records(int whackfd)
 					if (!shift())
 					{
 						/* unexpected Record Boundary or EOF */
-<<<<<<< HEAD
-						loglog(RC_LOG_SERIOUS, "\"%s\" line %d: unexpected end of id list"
-							, flp->filename, flp->lino);
-=======
 						loglog(RC_LOG_SERIOUS, "\"%s\" line %d: unexpected end"
 							   " of id list", flp->filename, flp->lino);
 						s->ids->destroy_offset(s->ids,
 										offsetof(identification_t, destroy));
 						free(s);
->>>>>>> upstream/4.5.1
 						break;
 					}
 				}

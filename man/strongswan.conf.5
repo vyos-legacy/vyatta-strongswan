@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-.TH STRONGSWAN.CONF 5 "2010-09-09" "4.5.0rc2" "strongSwan"
-=======
-.TH STRONGSWAN.CONF 5 "2010-09-09" "4.5.1" "strongSwan"
->>>>>>> upstream/4.5.1
+.TH STRONGSWAN.CONF 5 "2010-09-09" "4.5.2" "strongSwan"
 .SH NAME
 strongswan.conf \- strongSwan configuration file
 .SH DESCRIPTION
@@ -64,8 +60,6 @@ An example file in this format might look like this:
 .PP
 Indentation is optional, you may use tabs or spaces.
 
-<<<<<<< HEAD
-=======
 .SH INCLUDING FILES
 Using the
 .B include
@@ -121,7 +115,6 @@ other.conf:
 	}
 .EE
 
->>>>>>> upstream/4.5.1
 .SH READING VALUES
 Values are accessed using a dot-separated section list and a key.
 With reference to the example above, accessing
@@ -211,6 +204,9 @@ Delay request messages
 .BR charon.receive_delay_type " [0]"
 Specific IKEv2 message type to delay, 0 for any
 .TP
+.BR charon.replay_window " [32]"
+Size of the AH/ESP replay window, in packets.
+.TP
 .BR charon.retransmit_base " [1.8]"
 Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION
 .TP
@@ -264,6 +260,9 @@ Derive user-defined MAC address from hash of IKEv2 identity
 .BR charon.plugins.dhcp.server " [255.255.255.255]"
 DHCP server unicast or broadcast IP address
 .TP
+.BR charon.plugins.duplicheck.enable " [yes]"
+enable loaded duplicheck plugin
+.TP
 .BR charon.plugins.eap-aka.request_identity " [yes]"
 
 .TP
@@ -272,6 +271,29 @@ DHCP server unicast or broadcast IP address
 .TP
 .BR charon.plugins.eap-gtc.pam_service " [login]"
 PAM service to be used for authentication
+
+.TP
+.BR charon.plugins.eap-peap.fragment_size " [1024]"
+Maximum size of an EAP-PEAP packet
+.TP
+.BR charon.plugins.eap-peap.max_message_count " [32]"
+Maximum number of processed EAP-PEAP packets
+.TP
+.BR charon.plugins.eap-peap.include_length " [no]"
+Include length in non-fragmented EAP-PEAP packets
+.TP
+.BR charon.plugins.eap-peap.phase2_method " [mschapv2]"
+Phase2 EAP client authentication method
+.TP
+.BR charon.plugins.eap-peap.phase2_piggyback " [no]"
+Phase2 EAP Identity request piggybacked by server onto TLS Finished message
+.TP
+.BR charon.plugins.eap-peap.phase2_tnc " [no]"
+Start phase2 EAP TNC protocol after successful client authentication
+.TP
+.BR charon.plugins.eap-peap.request_peer_auth " [no]"
+Request peer authentication based on a client certificate
+
 .TP
 .BR charon.plugins.eap-radius.class_group " [no]"
 Use the
@@ -291,7 +313,7 @@ If the RADIUS
 attribute with value
 .B ESP
 is received, use the
-.I filter_id 
+.I filter_id
 attribute sent in the RADIUS-Accept message as group membership information that
 is compared to the groups specified in the
 .B rightgroups
@@ -346,17 +368,26 @@ Maximum size of an EAP-TLS packet
 .BR charon.plugins.eap-tls.max_message_count " [32]"
 Maximum number of processed EAP-TLS packets
 .TP
+.BR charon.plugins.eap-tls.include_length " [yes]"
+Include length in non-fragmented EAP-TLS packets
+.TP
 .BR charon.plugins.eap-tnc.fragment_size " [50000]"
 Maximum size of an EAP-TNC packet
 .TP
 .BR charon.plugins.eap-tnc.max_message_count " [10]"
 Maximum number of processed EAP-TNC packets
 .TP
+.BR charon.plugins.eap-tnc.include_length " [yes]"
+Include length in non-fragmented EAP-TNC packets
+.TP
 .BR charon.plugins.eap-ttls.fragment_size " [1024]"
 Maximum size of an EAP-TTLS packet
 .TP
 .BR charon.plugins.eap-ttls.max_message_count " [32]"
 Maximum number of processed EAP-TTLS packets
+.TP
+.BR charon.plugins.eap-ttls.include_length " [yes]"
+Include length in non-fragmented EAP-TTLS packets
 .TP
 .BR charon.plugins.eap-ttls.phase2_method " [md5]"
 Phase2 EAP client authentication method
@@ -389,7 +420,7 @@ Request peer authentication based on a client certificate
 
 .TP
 .BR charon.plugins.ha.remote
- 
+
 .TP
 .BR charon.plugins.ha.resync " [yes]"
 
@@ -432,6 +463,9 @@ TNC IMC configuration directory
 .TP
 .BR charon.plugins.tnc-imv.tnc_config " [/etc/tnc_config]"
 TNC IMV configuration directory
+.TP
+.BR charon.plugins.whitelist.enable " [yes]"
+enable loaded whitelist plugin
 .SS libstrongswan section
 .TP
 .BR libstrongswan.crypto_test.bench " [no]"
@@ -467,12 +501,9 @@ Check daemon, libstrongswan and plugin integrity at startup
 .TP
 .BR libstrongswan.leak_detective.detailed " [yes]"
 Includes source file names and line numbers in leak detective output
-<<<<<<< HEAD
-=======
 .TP
 .BR libstrongswan.x509.enforce_critical " [yes]"
 Discard certificates with unsupported or unknown critical extensions
->>>>>>> upstream/4.5.1
 .SS libstrongswan.plugins subsection
 .TP
 .BR libstrongswan.plugins.attr-sql.database
@@ -488,18 +519,8 @@ Use faster random numbers in gcrypt; for testing only, produces weak keys!
 ENGINE ID to use in the OpenSSL plugin
 .TP
 .BR libstrongswan.plugins.pkcs11.modules
-<<<<<<< HEAD
-
 .TP
 .BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
-
-.TP
-.BR libstrongswan.plugins.x509.enforce_critical " [no]"
-Discard certificates with unsupported or unknown critical extensions
-=======
-.TP
-.BR libstrongswan.plugins.pkcs11.use_hasher " [no]"
->>>>>>> upstream/4.5.1
 .SS libtls section
 .TP
 .BR libtls.cipher

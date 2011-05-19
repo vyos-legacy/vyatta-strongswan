@@ -626,17 +626,6 @@ static void filter_suite(private_tls_crypto_t *this,
 						 suite_algs_t suites[], int *count, int offset,
 						 enumerator_t*(*create_enumerator)(crypto_factory_t*))
 {
-<<<<<<< HEAD
-	suite_algs_t current;
-	int i, remaining = 0;
-	enumerator_t *enumerator;
-
-	memset(&current, 0, sizeof(current));
-	for (i = 0; i < *count; i++)
-	{
-		enumerator = create_enumerator(lib->crypto);
-		while (enumerator->enumerate(enumerator, ((char*)&current) + offset))
-=======
 	const char *plugin_name;
 	suite_algs_t current;
 	int *current_alg, i, remaining = 0;
@@ -649,7 +638,6 @@ static void filter_suite(private_tls_crypto_t *this,
 	{
 		enumerator = create_enumerator(lib->crypto);
 		while (enumerator->enumerate(enumerator, current_alg, &plugin_name))
->>>>>>> upstream/4.5.1
 		{
 			if ((suites[i].encr == ENCR_NULL ||
 				 !current.encr || current.encr == suites[i].encr) &&
@@ -1075,18 +1063,11 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 	enumerator_t *enumerator;
 	hash_algorithm_t alg;
 	tls_hash_algorithm_t hash;
-<<<<<<< HEAD
-
-	supported = tls_writer_create(32);
-	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &alg))
-=======
 	const char *plugin_name;
 
 	supported = tls_writer_create(32);
 	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &alg, &plugin_name))
->>>>>>> upstream/4.5.1
 	{
 		switch (alg)
 		{
@@ -1678,6 +1659,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls)
 	switch (tls->get_purpose(tls))
 	{
 		case TLS_PURPOSE_EAP_TLS:
+		case TLS_PURPOSE_EAP_PEAP:
 			/* MSK PRF ASCII constant label according to EAP-TLS RFC 5216 */
 			this->msk_label = "client EAP encryption";
 			build_cipher_suite_list(this, FALSE);

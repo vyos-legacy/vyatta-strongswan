@@ -131,19 +131,13 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
-<<<<<<< HEAD
-=======
 		case AUTH_HELPER_REVOCATION_CERT:
->>>>>>> upstream/4.5.1
 		{
 			certificate_t *cert = (certificate_t*)entry->value;
 			cert->destroy(cert);
 			break;
 		}
-<<<<<<< HEAD
-=======
 		case AUTH_RULE_CERT_POLICY:
->>>>>>> upstream/4.5.1
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		{
@@ -155,11 +149,8 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_EAP_VENDOR:
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
-<<<<<<< HEAD
-=======
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
->>>>>>> upstream/4.5.1
 			break;
 	}
 }
@@ -185,11 +176,8 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_EAP_VENDOR:
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
-<<<<<<< HEAD
-=======
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
->>>>>>> upstream/4.5.1
 				/* integer type */
 				enumerator->current->value = (void*)(uintptr_t)va_arg(args, u_int);
 				break;
@@ -200,18 +188,12 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_CA_CERT:
 			case AUTH_RULE_IM_CERT:
 			case AUTH_RULE_SUBJECT_CERT:
-<<<<<<< HEAD
-=======
 			case AUTH_RULE_CERT_POLICY:
->>>>>>> upstream/4.5.1
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
-<<<<<<< HEAD
-=======
 			case AUTH_HELPER_REVOCATION_CERT:
->>>>>>> upstream/4.5.1
 				/* pointer type */
 				enumerator->current->value = va_arg(args, void*);
 				break;
@@ -263,11 +245,8 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 		case AUTH_RULE_EAP_TYPE:
 			return (void*)EAP_NAK;
 		case AUTH_RULE_EAP_VENDOR:
-<<<<<<< HEAD
-=======
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
->>>>>>> upstream/4.5.1
 			return (void*)0;
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
@@ -279,18 +258,12 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
-<<<<<<< HEAD
-=======
 		case AUTH_RULE_CERT_POLICY:
->>>>>>> upstream/4.5.1
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
-<<<<<<< HEAD
-=======
 		case AUTH_HELPER_REVOCATION_CERT:
->>>>>>> upstream/4.5.1
 		default:
 			return NULL;
 	}
@@ -313,11 +286,8 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 		case AUTH_RULE_EAP_VENDOR:
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
-<<<<<<< HEAD
-=======
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
->>>>>>> upstream/4.5.1
 			/* integer type */
 			entry->value = (void*)(uintptr_t)va_arg(args, u_int);
 			break;
@@ -328,18 +298,12 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
-<<<<<<< HEAD
-=======
 		case AUTH_RULE_CERT_POLICY:
->>>>>>> upstream/4.5.1
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
-<<<<<<< HEAD
-=======
 		case AUTH_HELPER_REVOCATION_CERT:
->>>>>>> upstream/4.5.1
 			/* pointer type */
 			entry->value = va_arg(args, void*);
 			break;
@@ -410,40 +374,6 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
 			{
-<<<<<<< HEAD
-				cert_validation_t validated, required;
-
-				required = (uintptr_t)value;
-				validated = (uintptr_t)get(this, t1);
-				switch (required)
-				{
-					case VALIDATION_FAILED:
-						/* no constraint */
-						break;
-					case VALIDATION_SKIPPED:
-						if (validated == VALIDATION_SKIPPED)
-						{
-							break;
-						}
-						/* FALL */
-					case VALIDATION_GOOD:
-						if (validated == VALIDATION_GOOD)
-						{
-							break;
-						}
-						/* FALL */
-					default:
-						success = FALSE;
-						if (log_error)
-						{
-							DBG1(DBG_CFG, "constraint check failed: %N is %N, "
-								 "but requires at least %N", auth_rule_names,
-								 t1, cert_validation_names, validated,
-								 cert_validation_names, required);
-						}
-						break;
-				}
-=======
 				uintptr_t validated;
 
 				e2 = create_enumerator(this);
@@ -483,7 +413,6 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 					}
 				}
 				e2->destroy(e2);
->>>>>>> upstream/4.5.1
 				break;
 			}
 			case AUTH_RULE_IDENTITY:
@@ -567,8 +496,6 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 				e2->destroy(e2);
 				break;
 			}
-<<<<<<< HEAD
-=======
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
 			{
@@ -634,15 +561,11 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 				}
 				break;
 			}
->>>>>>> upstream/4.5.1
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
-<<<<<<< HEAD
-=======
 			case AUTH_HELPER_REVOCATION_CERT:
->>>>>>> upstream/4.5.1
 				/* skip helpers */
 				continue;
 		}
@@ -689,10 +612,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_SUBJECT_CERT:
 				case AUTH_HELPER_IM_CERT:
 				case AUTH_HELPER_SUBJECT_CERT:
-<<<<<<< HEAD
-=======
 				case AUTH_HELPER_REVOCATION_CERT:
->>>>>>> upstream/4.5.1
 				{
 					certificate_t *cert = (certificate_t*)value;
 
@@ -704,11 +624,8 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_AUTH_CLASS:
 				case AUTH_RULE_EAP_TYPE:
 				case AUTH_RULE_EAP_VENDOR:
-<<<<<<< HEAD
-=======
 				case AUTH_RULE_RSA_STRENGTH:
 				case AUTH_RULE_ECDSA_STRENGTH:
->>>>>>> upstream/4.5.1
 				{
 					add(this, type, (uintptr_t)value);
 					break;
@@ -723,10 +640,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 					add(this, type, id->clone(id));
 					break;
 				}
-<<<<<<< HEAD
-=======
 				case AUTH_RULE_CERT_POLICY:
->>>>>>> upstream/4.5.1
 				case AUTH_HELPER_IM_HASH_URL:
 				case AUTH_HELPER_SUBJECT_HASH_URL:
 				{
@@ -779,11 +693,8 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_RULE_EAP_VENDOR:
 					case AUTH_RULE_CRL_VALIDATION:
 					case AUTH_RULE_OCSP_VALIDATION:
-<<<<<<< HEAD
-=======
 					case AUTH_RULE_RSA_STRENGTH:
 					case AUTH_RULE_ECDSA_STRENGTH:
->>>>>>> upstream/4.5.1
 					{
 						if (i1->value == i2->value)
 						{
@@ -797,10 +708,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_RULE_SUBJECT_CERT:
 					case AUTH_HELPER_IM_CERT:
 					case AUTH_HELPER_SUBJECT_CERT:
-<<<<<<< HEAD
-=======
 					case AUTH_HELPER_REVOCATION_CERT:
->>>>>>> upstream/4.5.1
 					{
 						certificate_t *c1, *c2;
 
@@ -831,10 +739,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 						}
 						continue;
 					}
-<<<<<<< HEAD
-=======
 					case AUTH_RULE_CERT_POLICY:
->>>>>>> upstream/4.5.1
 					case AUTH_HELPER_IM_HASH_URL:
 					case AUTH_HELPER_SUBJECT_HASH_URL:
 					{
@@ -917,19 +822,13 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 			case AUTH_RULE_SUBJECT_CERT:
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
-<<<<<<< HEAD
-=======
 			case AUTH_HELPER_REVOCATION_CERT:
->>>>>>> upstream/4.5.1
 			{
 				certificate_t *cert = (certificate_t*)entry->value;
 				clone->add(clone, entry->type, cert->get_ref(cert));
 				break;
 			}
-<<<<<<< HEAD
-=======
 			case AUTH_RULE_CERT_POLICY:
->>>>>>> upstream/4.5.1
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			{
@@ -941,11 +840,8 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 			case AUTH_RULE_EAP_VENDOR:
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
-<<<<<<< HEAD
-=======
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
->>>>>>> upstream/4.5.1
 				clone->add(clone, entry->type, (uintptr_t)entry->value);
 				break;
 		}

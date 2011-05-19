@@ -1,8 +1,5 @@
 /*
-<<<<<<< HEAD
-=======
  * Copyright (C) 2010 Tobias Brunner
->>>>>>> upstream/4.5.1
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -31,16 +28,6 @@ typedef struct settings_t settings_t;
 #include "utils/enumerator.h"
 
 /**
-<<<<<<< HEAD
- * Generic configuration options read from a config file.
- *
- * The syntax is quite simple:
- *
- * settings := (section|keyvalue)*
- * section  := name { settings }
- * keyvalue := key = value\n
- *
-=======
  * Convert a string value returned by a key/value enumerator to a boolean.
  *
  * @see settings_t.create_key_value_enumerator()
@@ -89,7 +76,6 @@ u_int32_t settings_value_as_time(char *value, u_int32_t def);
  * section  := name { settings }
  * keyvalue := key = value\n
  * @endcode
->>>>>>> upstream/4.5.1
  * E.g.:
  * @code
 	a = b
@@ -109,8 +95,6 @@ u_int32_t settings_value_as_time(char *value, u_int32_t def);
  *
  * Currently only a limited set of printf format specifiers are supported
  * (namely %s, %d and %N, see implementation for details).
-<<<<<<< HEAD
-=======
  *
  * \section includes Including other files
  * Other files can be included, using the include statement e.g.
@@ -156,7 +140,6 @@ u_int32_t settings_value_as_time(char *value, u_int32_t def);
 	section-two {
 	}
 	@endcode
->>>>>>> upstream/4.5.1
  */
 struct settings_t {
 
@@ -211,8 +194,6 @@ struct settings_t {
 	u_int32_t (*get_time)(settings_t *this, char *key, u_int32_t def, ...);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Set a string value.
 	 *
 	 * @param key		key including sections, printf style format
@@ -258,7 +239,6 @@ struct settings_t {
 	void (*set_time)(settings_t *this, char *key, u_int32_t value, ...);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Create an enumerator over subsection names of a section.
 	 *
 	 * @param section	section including parents, printf style format
@@ -272,37 +252,34 @@ struct settings_t {
 	 * Create an enumerator over key/value pairs in a section.
 	 *
 	 * @param section	section name to list key/value pairs of, printf style
-<<<<<<< HEAD
-	 * @param ...		argmuent list for section
-=======
 	 * @param ...		argument list for section
->>>>>>> upstream/4.5.1
 	 * @return			enumerator over (char *key, char *value)
 	 */
 	enumerator_t* (*create_key_value_enumerator)(settings_t *this,
 												 char *section, ...);
 
 	/**
-<<<<<<< HEAD
-=======
 	 * Load settings from the files matching the given pattern.
 	 *
-	 * Existing sections are extended, existing values replaced, by those found
-	 * in the loaded files.
+	 * If merge is TRUE, existing sections are extended, existing values
+	 * replaced, by those found in the loaded files. If it is FALSE, existing
+	 * sections are purged before reading the new config.
 	 *
 	 * @note If any of the files matching the pattern fails to load, no settings
 	 * are added at all. So, it's all or nothing.
 	 *
 	 * @param pattern	file pattern
+	 * @param merge		TRUE to merge config with existing values
 	 * @return			TRUE, if settings were loaded successfully
 	 */
-	bool (*load_files)(settings_t *this, char *pattern);
+	bool (*load_files)(settings_t *this, char *pattern, bool merge);
 
 	/**
 	 * Load settings from the files matching the given pattern.
 	 *
-	 * Existing sections are extended, existing values replaced, by those found
-	 * in the loaded files.
+	 * If merge is TRUE, existing sections are extended, existing values
+	 * replaced, by those found in the loaded files. If it is FALSE, existing
+	 * sections are purged before reading the new config.
 	 *
 	 * All settings are loaded relative to the given section. The section is
 	 * created, if it does not yet exist.
@@ -311,15 +288,15 @@ struct settings_t {
 	 * are added at all. So, it's all or nothing.
 	 *
 	 * @param pattern	file pattern
+	 * @param merge		TRUE to merge config with existing values
 	 * @param section	section name of parent section, printf style
 	 * @param ...		argument list for section
 	 * @return			TRUE, if settings were loaded successfully
 	 */
-	bool (*load_files_section)(settings_t *this, char *pattern,
+	bool (*load_files_section)(settings_t *this, char *pattern, bool merge,
 							   char *section, ...);
 
 	/**
->>>>>>> upstream/4.5.1
 	 * Destroy a settings instance.
 	 */
 	void (*destroy)(settings_t *this);

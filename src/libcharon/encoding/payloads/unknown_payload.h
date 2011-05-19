@@ -70,13 +70,6 @@ struct unknown_payload_t {
 };
 
 /**
-<<<<<<< HEAD
- * Creates an empty unknown_payload_t object.
- *
- * @return unknown_payload_t object
- */
-unknown_payload_t *unknown_payload_create(void);
-=======
  * Creates an empty unknown_payload_t.
  *
  * @param			type of the payload
@@ -94,6 +87,5 @@ unknown_payload_t *unknown_payload_create(payload_type_t type);
  */
 unknown_payload_t *unknown_payload_create_data(payload_type_t type,
 											   bool critical, chunk_t data);
->>>>>>> upstream/4.5.1
 
 #endif /** UNKNOWN_PAYLOAD_H_ @}*/

@@ -38,29 +38,15 @@ struct private_send_keepalive_job_t {
 	ike_sa_id_t *ike_sa_id;
 };
 
-<<<<<<< HEAD
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_send_keepalive_job_t *this)
-=======
 METHOD(job_t, destroy, void,
 	private_send_keepalive_job_t *this)
->>>>>>> upstream/4.5.1
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
 }
 
-<<<<<<< HEAD
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_send_keepalive_job_t *this)
-=======
 METHOD(job_t, execute, void,
 	private_send_keepalive_job_t *this)
->>>>>>> upstream/4.5.1
 {
 	ike_sa_t *ike_sa;
 
@@ -79,16 +65,6 @@ METHOD(job_t, execute, void,
  */
 send_keepalive_job_t *send_keepalive_job_create(ike_sa_id_t *ike_sa_id)
 {
-<<<<<<< HEAD
-	private_send_keepalive_job_t *this = malloc_thing(private_send_keepalive_job_t);
-
-	/* interface functions */
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-
-	/* private variables */
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-=======
 	private_send_keepalive_job_t *this;
 
 	INIT(this,
@@ -100,7 +76,6 @@ send_keepalive_job_t *send_keepalive_job_create(ike_sa_id_t *ike_sa_id)
 		},
 		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
 	);
->>>>>>> upstream/4.5.1
 
 	return &this->public;
 }

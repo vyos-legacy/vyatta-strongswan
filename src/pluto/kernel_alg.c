@@ -397,13 +397,6 @@ struct sadb_alg* kernel_alg_esp_sadb_alg(u_int alg_id)
 	return sadb_alg;
 }
 
-<<<<<<< HEAD
-void kernel_alg_list(void)
-{
-	char buf[BUF_LEN];
-	char *pos;
-	int n, len;
-=======
 /**
  * Print the name of a kernel algorithm
  */
@@ -411,7 +404,7 @@ static void print_alg(char *buf, int *len, enum_names *alg_names, int alg_type)
 {
 	char alg_name[BUF_LEN];
 	int alg_name_len;
-	
+
 	alg_name_len = sprintf(alg_name, " %s", enum_name(alg_names, alg_type));
 	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
 	{
@@ -426,71 +419,33 @@ void kernel_alg_list(void)
 {
 	char buf[BUF_LEN];
 	int len;
->>>>>>> upstream/4.5.1
 	u_int sadb_id;
 
 	whack_log(RC_COMMENT, " ");
 	whack_log(RC_COMMENT, "List of registered ESP Algorithms:");
 	whack_log(RC_COMMENT, " ");
 
-<<<<<<< HEAD
-	pos = buf;
-	*pos = '\0';
-	len = BUF_LEN;
-=======
 	len = sprintf(buf, "  encryption:");
->>>>>>> upstream/4.5.1
 	for (sadb_id = 1; sadb_id <= SADB_EALG_MAX; sadb_id++)
 	{
 		if (ESP_EALG_PRESENT(sadb_id))
 		{
-<<<<<<< HEAD
-			n = snprintf(pos, len, " %s",
-						 enum_name(&esp_transform_names, sadb_id));
-			pos += n;
-			len -= n;
-			if (len <= 0)
-			{
-				break;
-			}
-		}
-	}
-	whack_log(RC_COMMENT, "  encryption:%s", buf);
-
-	pos = buf;
-	*pos = '\0';
-	len = BUF_LEN;
-=======
 			print_alg(buf, &len, &esp_transform_names, sadb_id);
 		}
 	}
 	whack_log(RC_COMMENT, "%s", buf);
 
 	len = sprintf(buf, "  integrity: ");
->>>>>>> upstream/4.5.1
 	for (sadb_id = 1; sadb_id <= SADB_AALG_MAX; sadb_id++)
 	{
 		if (ESP_AALG_PRESENT(sadb_id))
 		{
 			u_int aaid = alg_info_esp_sadb2aa(sadb_id);
 
-<<<<<<< HEAD
-			n = snprintf(pos, len, " %s", enum_name(&auth_alg_names, aaid));
-			pos += n;
-			len -= n;
-			if (len <= 0)
-			{
-				break;
-			}
-		}
-	}
-	whack_log(RC_COMMENT, "  integrity: %s", buf);
-=======
 			print_alg(buf, &len, &auth_alg_names, aaid);
 		}
 	}
 	whack_log(RC_COMMENT, "%s", buf);
->>>>>>> upstream/4.5.1
 }
 
 void kernel_alg_show_connection(connection_t *c, const char *instance)
@@ -678,12 +633,11 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
  *      malloced pointer (this quirk allows easier spdb.c change)
  */
 struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
-									 lset_t policy )
+									 lset_t policy)
 {
 	const struct esp_info *esp_info;
 	struct esp_info tmp_esp_info;
 	struct db_context *ctx_new = NULL;
-	struct db_prop  *prop;
 	u_int trans_cnt = esp_ealg_num * esp_aalg_num;
 
 	if (!(policy & POLICY_ENCRYPT))     /* not possible, I think  */
@@ -704,7 +658,6 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 			kernel_alg_db_add(ctx_new, &tmp_esp_info, policy);
 		}
 	}
-	prop = db_prop_get(ctx_new);
 	return ctx_new;
 }
 

@@ -63,6 +63,7 @@ static struct {
 	size_t iv_size;
 } algs[] = {
 	{ENCR_DES,			"cbc(des)",					 8,	 8,	 8,	 8,	},
+	{ENCR_DES_ECB,		"ecb(des)",					 8,	 8,	 8,	 0,	},
 	{ENCR_3DES,			"cbc(des3_ede)",			 8,	24,	24,	 8,	},
 	{ENCR_AES_CBC,		"cbc(aes)",					16,	16,	16,	16,	},
 	{ENCR_AES_CBC,		"cbc(aes)",					16,	24,	24,	16,	},
@@ -91,7 +92,7 @@ static struct {
 /**
  * See header.
  */
-void af_alg_crypter_probe()
+void af_alg_crypter_probe(char *plugin)
 {
 	encryption_algorithm_t prev = -1;
 	af_alg_ops_t *ops;
@@ -105,7 +106,7 @@ void af_alg_crypter_probe()
 			if (ops)
 			{
 				ops->destroy(ops);
-				lib->crypto->add_crypter(lib->crypto, algs[i].id, af_alg_plugin_name,
+				lib->crypto->add_crypter(lib->crypto, algs[i].id, plugin,
 								(crypter_constructor_t)af_alg_crypter_create);
 			}
 		}

@@ -201,6 +201,9 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	dhcp->transaction_id = transaction->get_id(transaction);
 	if (chunk_equals(broadcast, this->dst->get_address(this->dst)))
 	{
+		/* Set broadcast flag to get broadcasted replies, as we actually
+		 * do not own the MAC we request an address for. */
+		dhcp->flags = htons(0x8000);
 		/* TODO: send with 0.0.0.0 source address */
 	}
 	else
@@ -459,11 +462,7 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 {
 	dhcp_transaction_t *transaction = NULL;
 	enumerator_t *enumerator;
-<<<<<<< HEAD
-	host_t *offer, *server;
-=======
 	host_t *offer, *server = NULL;
->>>>>>> upstream/4.5.1
 
 	offer = host_create_from_chunk(AF_INET,
 					chunk_from_thing(dhcp->your_address), 0);
@@ -504,11 +503,7 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 						chunk_create((char*)&option->data[pos], 4));
 				}
 			}
-<<<<<<< HEAD
-			if (option->type == DHCP_SERVER_ID && option->len == 4)
-=======
 			if (!server && option->type == DHCP_SERVER_ID && option->len == 4)
->>>>>>> upstream/4.5.1
 			{
 				server = host_create_from_chunk(AF_INET,
 							chunk_create(option->data, 4), DHCP_SERVER_PORT);
@@ -523,19 +518,11 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 		}
 		DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
 		transaction->set_address(transaction, offer->clone(offer));
-<<<<<<< HEAD
-		transaction->set_server(transaction, server->clone(server));
-=======
 		transaction->set_server(transaction, server);
->>>>>>> upstream/4.5.1
 	}
 	this->mutex->unlock(this->mutex);
 	this->condvar->broadcast(this->condvar);
 	offer->destroy(offer);
-<<<<<<< HEAD
-	server->destroy(server);
-=======
->>>>>>> upstream/4.5.1
 }
 
 /**
