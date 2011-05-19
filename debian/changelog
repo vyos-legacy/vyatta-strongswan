@@ -1,8 +1,19 @@
-strongswan (4.5.0-1ubuntu1) maverick; urgency=low
+strongswan (4.5.2-1) unstable; urgency=low
+
+  * New upstream version 4.5.2
+    Closes: #616482: strongswan-ikev1: virtual ips not released if xauth name 
+                     does not match id
+    Closes: #626169: strongswan: ipsec tunnels fail because charon segfaults
+    Closes: #625228: strongswan-starter: left-/rightnexthop options are broken
+    Closes: #614105: strongswan-ikev2: charon continually respawns
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 19 May 2011 13:42:21 +0200
+
+strongswan (4.5.1-1) unstable; urgency=low
 
   * New upstream version
 
- -- René Mayrhofer <rene@earth>  Sat, 05 Mar 2011 09:27:49 +0100
+ -- Rene Mayrhofer <rmayr@debian.org>  Sat, 05 Mar 2011 09:27:49 +0100
 
 strongswan (4.5.0-1) unstable; urgency=low
 
