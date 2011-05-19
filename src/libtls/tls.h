@@ -96,6 +96,8 @@ enum tls_purpose_t {
 	TLS_PURPOSE_EAP_TLS,
 	/** outer authentication and protection in EAP-TTLS */
 	TLS_PURPOSE_EAP_TTLS,
+	/** outer authentication and protection in EAP-PEAP */
+	TLS_PURPOSE_EAP_PEAP,
 	/** non-EAP TLS */
 	TLS_PURPOSE_GENERIC,
 	/** EAP binding for TNC */
@@ -124,6 +126,12 @@ enum tls_extension_t {
 	TLS_EXT_EC_POINT_FORMATS = 11,
 	/** list supported signature algorithms */
 	TLS_EXT_SIGNATURE_ALGORITHMS = 13,
+	/** cryptographic binding for RFC 5746 renegotiation indication */
+	TLS_EXT_RENEGOTIATION_INFO = 65281,
+};
+
+enum tls_name_type_t {
+	TLS_NAME_TYPE_HOST_NAME = 0,
 };
 
 /**

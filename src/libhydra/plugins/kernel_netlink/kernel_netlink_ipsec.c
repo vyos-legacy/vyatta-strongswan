@@ -61,6 +61,9 @@
 #define PRIO_LOW 1024
 #define PRIO_HIGH 512
 
+/** default replay window size, if not set using charon.replay_window */
+#define DEFAULT_REPLAY_WINDOW 32
+
 /**
  * map the limit for bytes and packets to XFRM_INF per default
  */
@@ -348,6 +351,16 @@ struct private_kernel_netlink_ipsec_t {
 	 * whether to install routes along policies
 	 */
 	bool install_routes;
+
+	/**
+	 * Size of the replay window, in packets
+	 */
+	u_int32_t replay_window;
+
+	/**
+	 * Size of the replay window bitmap, in bytes
+	 */
+	u_int32_t replay_bmp;
 };
 
 /**
@@ -868,7 +881,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	u_int32_t spi, u_int8_t protocol, u_int32_t reqid, mark_t mark,
 	u_int32_t tfc, lifetime_cfg_t *lifetime, u_int16_t enc_alg, chunk_t enc_key,
 	u_int16_t int_alg, chunk_t int_key, ipsec_mode_t mode, u_int16_t ipcomp,
-	u_int16_t cpi, bool encap, bool inbound,
+	u_int16_t cpi, bool encap, bool esn, bool inbound,
 	traffic_selector_t* src_ts, traffic_selector_t* dst_ts)
 {
 	netlink_buf_t request;
@@ -876,6 +889,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	u_int16_t icv_size = 64;
+	status_t status = FAILED;
 
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
 	 * we are in the recursive call below */
@@ -884,7 +898,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		lifetime_cfg_t lft = {{0,0,0},{0,0,0},{0,0,0}};
 		add_sa(this, src, dst, htonl(ntohs(cpi)), IPPROTO_COMP, reqid, mark, tfc,
 			   &lft, ENCR_UNDEFINED, chunk_empty, AUTH_UNDEFINED, chunk_empty,
-			   mode, ipcomp, 0, FALSE, inbound, NULL, NULL);
+			   mode, ipcomp, 0, FALSE, FALSE, inbound, NULL, NULL);
 		ipcomp = IPCOMP_NONE;
 		/* use transport mode ESP SA, IPComp uses tunnel mode */
 		mode = MODE_TRANSPORT;
@@ -930,7 +944,6 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			break;
 	}
 
-	sa->replay_window = (protocol == IPPROTO_COMP) ? 0 : 32;
 	sa->reqid = reqid;
 	sa->lft.soft_byte_limit = XFRM_LIMIT(lifetime->bytes.rekey);
 	sa->lft.hard_byte_limit = XFRM_LIMIT(lifetime->bytes.life);
@@ -971,17 +984,17 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 					 encryption_algorithm_names, enc_alg);
-				return FAILED;
+				goto failed;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 
 			rthdr->rta_type = XFRMA_ALG_AEAD;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_aead) + enc_key.len);
-			hdr->nlmsg_len += rthdr->rta_len;
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			algo = (struct xfrm_algo_aead*)RTA_DATA(rthdr);
@@ -1002,17 +1015,17 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			{
 				DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 					 encryption_algorithm_names, enc_alg);
-				return FAILED;
+				goto failed;
 			}
 			DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 				 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 
 			rthdr->rta_type = XFRMA_ALG_CRYPT;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + enc_key.len);
-			hdr->nlmsg_len += rthdr->rta_len;
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
@@ -1031,7 +1044,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 				 integrity_algorithm_names, int_alg);
-			return FAILED;
+			goto failed;
 		}
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
 			 integrity_algorithm_names, int_alg, int_key.len * 8);
@@ -1045,10 +1058,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			rthdr->rta_type = XFRMA_ALG_AUTH_TRUNC;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo_auth) + int_key.len);
 
-			hdr->nlmsg_len += rthdr->rta_len;
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			algo = (struct xfrm_algo_auth*)RTA_DATA(rthdr);
@@ -1064,10 +1077,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			rthdr->rta_type = XFRMA_ALG_AUTH;
 			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + int_key.len);
 
-			hdr->nlmsg_len += rthdr->rta_len;
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 			if (hdr->nlmsg_len > sizeof(request))
 			{
-				return FAILED;
+				goto failed;
 			}
 
 			algo = (struct xfrm_algo*)RTA_DATA(rthdr);
@@ -1086,16 +1099,16 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 				 ipcomp_transform_names, ipcomp);
-			return FAILED;
+			goto failed;
 		}
 		DBG2(DBG_KNL, "  using compression algorithm %N",
 			 ipcomp_transform_names, ipcomp);
 
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo));
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
@@ -1112,10 +1125,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		rthdr->rta_type = XFRMA_ENCAP;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
@@ -1142,10 +1155,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		mrk = (struct xfrm_mark*)RTA_DATA(rthdr);
@@ -1161,15 +1174,50 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		rthdr->rta_type = XFRMA_TFCPAD;
 		rthdr->rta_len = RTA_LENGTH(sizeof(u_int32_t));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		tfcpad = (u_int32_t*)RTA_DATA(rthdr);
 		*tfcpad = tfc;
 		rthdr = XFRM_RTA_NEXT(rthdr);
+	}
+
+	if (protocol != IPPROTO_COMP)
+	{
+		if (esn || this->replay_window > DEFAULT_REPLAY_WINDOW)
+		{
+			/* for ESN or larger replay windows we need the new
+			 * XFRMA_REPLAY_ESN_VAL attribute to configure a bitmap */
+			struct xfrm_replay_state_esn *replay;
+
+			rthdr->rta_type = XFRMA_REPLAY_ESN_VAL;
+			rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state_esn) +
+										(this->replay_window + 7) / 8);
+
+			hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
+			if (hdr->nlmsg_len > sizeof(request))
+			{
+				goto failed;
+			}
+
+			replay = (struct xfrm_replay_state_esn*)RTA_DATA(rthdr);
+			/* bmp_len contains number uf __u32's */
+			replay->bmp_len = this->replay_bmp;
+			replay->replay_window = this->replay_window;
+
+			rthdr = XFRM_RTA_NEXT(rthdr);
+			if (esn)
+			{
+				sa->flags |= XFRM_STATE_ESN;
+			}
+		}
+		else
+		{
+			sa->replay_window = DEFAULT_REPLAY_WINDOW;
+		}
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
@@ -1183,17 +1231,25 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x", ntohl(spi));
 		}
-		return FAILED;
+		goto failed;
 	}
-	return SUCCESS;
+
+	status = SUCCESS;
+
+failed:
+	memwipe(request, sizeof(request));
+	return status;
 }
 
 /**
- * Get the replay state (i.e. sequence numbers) of an SA.
+ * Get the ESN replay state (i.e. sequence numbers) of an SA.
+ *
+ * Allocates into one the replay state structure we get from the kernel.
  */
-static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
-						  u_int32_t spi, u_int8_t protocol, host_t *dst,
-						  struct xfrm_replay_state *replay)
+static void get_replay_state(private_kernel_netlink_ipsec_t *this,
+							 u_int32_t spi, u_int8_t protocol, host_t *dst,
+							 struct xfrm_replay_state_esn **replay_esn,
+							 struct xfrm_replay_state **replay)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out = NULL;
@@ -1204,7 +1260,8 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI %.8x", ntohl(spi));
+	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI %.8x",
+		 ntohl(spi));
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -1248,32 +1305,30 @@ static status_t get_replay_state(private_kernel_netlink_ipsec_t *this,
 		}
 	}
 
-	if (out_aevent == NULL)
+	if (out_aevent)
 	{
-		DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI %.8x",
-					  ntohl(spi));
-		free(out);
-		return FAILED;
-	}
-
-	rta = XFRM_RTA(out, struct xfrm_aevent_id);
-	rtasize = XFRM_PAYLOAD(out, struct xfrm_aevent_id);
-	while(RTA_OK(rta, rtasize))
-	{
-		if (rta->rta_type == XFRMA_REPLAY_VAL &&
-			RTA_PAYLOAD(rta) == sizeof(struct xfrm_replay_state))
+		rta = XFRM_RTA(out, struct xfrm_aevent_id);
+		rtasize = XFRM_PAYLOAD(out, struct xfrm_aevent_id);
+		while (RTA_OK(rta, rtasize))
 		{
-			memcpy(replay, RTA_DATA(rta), RTA_PAYLOAD(rta));
-			free(out);
-			return SUCCESS;
+			if (rta->rta_type == XFRMA_REPLAY_VAL &&
+				RTA_PAYLOAD(rta) == sizeof(**replay))
+			{
+				*replay = malloc(RTA_PAYLOAD(rta));
+				memcpy(*replay, RTA_DATA(rta), RTA_PAYLOAD(rta));
+				break;
+			}
+			if (rta->rta_type == XFRMA_REPLAY_ESN_VAL &&
+				RTA_PAYLOAD(rta) >= sizeof(**replay_esn) + this->replay_bmp)
+			{
+				*replay_esn = malloc(RTA_PAYLOAD(rta));
+				memcpy(*replay_esn, RTA_DATA(rta), RTA_PAYLOAD(rta));
+				break;
+			}
+			rta = RTA_NEXT(rta, rtasize);
 		}
-		rta = RTA_NEXT(rta, rtasize);
 	}
-
-	DBG1(DBG_KNL, "unable to query replay state from SAD entry with SPI %.8x",
-				  ntohl(spi));
 	free(out);
-	return FAILED;
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
@@ -1284,6 +1339,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	struct nlmsghdr *out = NULL, *hdr;
 	struct xfrm_usersa_id *sa_id;
 	struct xfrm_usersa_info *sa = NULL;
+	status_t status = FAILED;
 	size_t len;
 
 	memset(&request, 0, sizeof(request));
@@ -1315,7 +1371,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1370,13 +1426,15 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	if (sa == NULL)
 	{
 		DBG2(DBG_KNL, "unable to query SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
 	}
-	*bytes = sa->curlft.bytes;
-
+	else
+	{
+		*bytes = sa->curlft.bytes;
+		status = SUCCESS;
+	}
+	memwipe(out, len);
 	free(out);
-	return SUCCESS;
+	return status;
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
@@ -1422,7 +1480,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1472,8 +1530,9 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	struct rtattr *rta;
 	size_t rtasize;
 	struct xfrm_encap_tmpl* tmpl = NULL;
-	bool got_replay_state = FALSE;
-	struct xfrm_replay_state replay;
+	struct xfrm_replay_state *replay = NULL;
+	struct xfrm_replay_state_esn *replay_esn = NULL;
+	status_t status = FAILED;
 
 	/* if IPComp is used, we first update the IPComp SA */
 	if (cpi)
@@ -1529,22 +1588,16 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	if (out_sa == NULL)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 
-	/* try to get the replay state */
-	if (get_replay_state(this, spi, protocol, dst, &replay) == SUCCESS)
-	{
-		got_replay_state = TRUE;
-	}
+	get_replay_state(this, spi, protocol, dst, &replay_esn, &replay);
 
 	/* delete the old SA (without affecting the IPComp SA) */
 	if (del_sa(this, src, dst, spi, protocol, 0, mark) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to delete old SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 
 	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
@@ -1594,10 +1647,10 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		rta->rta_type = XFRMA_ENCAP;
 		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
 
-		hdr->nlmsg_len += rta->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
 
 		tmpl = (struct xfrm_encap_tmpl*)RTA_DATA(rta);
@@ -1609,30 +1662,56 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		rta = XFRM_RTA_NEXT(rta);
 	}
 
-	if (got_replay_state)
-	{	/* copy the replay data if available */
+	if (replay_esn)
+	{
+		rta->rta_type = XFRMA_REPLAY_ESN_VAL;
+		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state_esn) +
+								  this->replay_bmp);
+
+		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			goto failed;
+		}
+		memcpy(RTA_DATA(rta), replay_esn,
+			   sizeof(struct xfrm_replay_state_esn) + this->replay_bmp);
+
+		rta = XFRM_RTA_NEXT(rta);
+	}
+	else if (replay)
+	{
 		rta->rta_type = XFRMA_REPLAY_VAL;
 		rta->rta_len = RTA_LENGTH(sizeof(struct xfrm_replay_state));
 
-		hdr->nlmsg_len += rta->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rta->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
-			return FAILED;
+			goto failed;
 		}
-		memcpy(RTA_DATA(rta), &replay, sizeof(replay));
+		memcpy(RTA_DATA(rta), replay, sizeof(replay));
 
 		rta = XFRM_RTA_NEXT(rta);
+	}
+	else
+	{
+		DBG1(DBG_KNL, "unable to copy replay state from old SAD entry "
+			 "with SPI %.8x", ntohl(spi));
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x", ntohl(spi));
-		free(out);
-		return FAILED;
+		goto failed;
 	}
+
+	status = SUCCESS;
+failed:
+	free(replay);
+	free(replay_esn);
+	memwipe(out, len);
 	free(out);
 
-	return SUCCESS;
+	return status;
 }
 
 METHOD(kernel_ipsec_t, add_policy, status_t,
@@ -1757,7 +1836,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			}
 
 			rthdr->rta_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
-			hdr->nlmsg_len += RTA_LENGTH(sizeof(struct xfrm_user_tmpl));
+			hdr->nlmsg_len += RTA_ALIGN(RTA_LENGTH(sizeof(struct xfrm_user_tmpl)));
 			if (hdr->nlmsg_len > sizeof(request))
 			{
 				return FAILED;
@@ -1793,7 +1872,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -1912,7 +1991,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
 
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -2054,7 +2133,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 		rthdr->rta_type = XFRMA_MARK;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_mark));
-		hdr->nlmsg_len += rthdr->rta_len;
+		hdr->nlmsg_len += RTA_ALIGN(rthdr->rta_len);
 		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
@@ -2195,9 +2274,13 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 									 (hashtable_equals_t)policy_equals, 32),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.install_routes = lib->settings->get_bool(lib->settings,
-												  "%s.install_routes", TRUE,
-												  hydra->daemon),
+					"%s.install_routes", TRUE, hydra->daemon),
+		.replay_window = lib->settings->get_int(lib->settings,
+					"%s.replay_window", DEFAULT_REPLAY_WINDOW, hydra->daemon),
 	);
+
+	this->replay_bmp = (this->replay_window + sizeof(u_int32_t) * 8 - 1) /
+													(sizeof(u_int32_t) * 8);
 
 	if (streq(hydra->daemon, "pluto"))
 	{	/* no routes for pluto, they are installed via updown script */

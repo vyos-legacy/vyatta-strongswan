@@ -44,14 +44,22 @@ struct plugin_loader_t {
 	bool (*load)(plugin_loader_t *this, char *path, char *list);
 
 	/**
+	 * Reload the configuration of one or multiple plugins.
+	 *
+	 * @param				space separated plugin names to reload, NULL for all
+	 * @return				number of plugins that did support reloading
+	 */
+	u_int (*reload)(plugin_loader_t *this, char *list);
+
+	/**
 	 * Unload all loaded plugins.
 	 */
 	void (*unload)(plugin_loader_t *this);
 
 	/**
-	 * Create an enumerator over all loaded plugin names.
+	 * Create an enumerator over all loaded plugins.
 	 *
-	 * @return				enumerator over char*
+	 * @return				enumerator over plugin_t*
 	 */
 	enumerator_t* (*create_plugin_enumerator)(plugin_loader_t *this);
 

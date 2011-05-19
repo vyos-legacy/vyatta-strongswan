@@ -1,3 +1,47 @@
+strongswan-4.5.2
+----------------
+
+- The whitelist plugin for the IKEv2 daemon maintains an in-memory identity
+  whitelist. Any connection attempt of peers not whitelisted will get rejected.
+  The 'ipsec whitelist' utility provides a simple command line frontend for
+  whitelist administration.
+
+- The duplicheck plugin provides a specialized form of duplicate checking,
+  doing a liveness check on the old SA and optionally notify a third party
+  application about detected duplicates.
+
+- The coupling plugin permanently couples two or more devices by limiting
+  authentication to previously used certificates.
+
+- In the case that the peer config and child config don't have the same name
+  (usually in SQL database defined connections), ipsec up|route <peer config>
+  starts|routes all associated child configs and ipsec up|route <child config>
+  only starts|routes the specific child config.
+
+- fixed the encoding and parsing of X.509 certificate policy statements (CPS).
+
+- Duncan Salerno contributed the eap-sim-pcsc plugin implementing a
+  pcsc-lite based SIM card backend.
+
+- The eap-peap plugin implements the EAP PEAP protocol. Interoperates
+  successfully with a FreeRADIUS server and Windows 7 Agile VPN clients.
+
+- The IKEv2 daemon charon rereads strongswan.conf on SIGHUP and instructs
+  all plugins to reload. Currently only the eap-radius and the attr plugins
+  support configuration reloading.
+
+- Added userland support to the IKEv2 daemon for Extended Sequence Numbers
+  support coming with Linux 2.6.39. To enable ESN on a connection, add
+  the 'esn' keyword to the proposal. The default proposal uses 32-bit sequence
+  numbers only ('noesn'), and the same value is used if no ESN mode is
+  specified. To negotiate ESN support with the peer, include both, e.g.
+  esp=aes128-sha1-esn-noesn.
+
+- In addition to ESN, Linux 2.6.39 gained support for replay windows larger
+  than 32 packets. The new global strongswan.conf option 'charon.replay_window'
+  configures the size of the replay window, in packets.
+
+
 strongswan-4.5.1
 ----------------
 

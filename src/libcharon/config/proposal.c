@@ -35,11 +35,6 @@ ENUM(protocol_id_names, PROTO_NONE, PROTO_ESP,
 	"ESP",
 );
 
-ENUM(extended_sequence_numbers_names, NO_EXT_SEQ_NUMBERS, EXT_SEQ_NUMBERS,
-	"NO_EXT_SEQ",
-	"EXT_SEQ",
-);
-
 typedef struct private_proposal_t private_proposal_t;
 typedef struct algorithm_t algorithm_t;
 
@@ -549,6 +544,16 @@ static void check_proposal(private_proposal_t *this)
 			free(alg);
 		}
 	}
+
+	if (this->protocol == PROTO_AH || this->protocol == PROTO_ESP)
+	{
+		e = this->esns->create_enumerator(this->esns);
+		if (!e->enumerate(e, &alg))
+		{	/* ESN not specified, assume not supported */
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+		}
+		e->destroy(e);
+	}
 }
 
 /**
@@ -918,9 +923,5 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 
 	check_proposal(this);
 
-	if (protocol == PROTO_AH || protocol == PROTO_ESP)
-	{
-		add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
-	}
 	return &this->public;
 }

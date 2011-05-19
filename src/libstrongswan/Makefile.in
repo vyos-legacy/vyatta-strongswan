@@ -216,7 +216,7 @@ am__libstrongswan_la_SOURCES_DIST = library.c library.h chunk.c \
 	credentials/auth_cfg.h credentials/credential_set.h \
 	credentials/cert_validator.h database/database.h \
 	database/database_factory.h database/database_factory.c \
-	fetcher/fetcher.h fetcher/fetcher_manager.h \
+	fetcher/fetcher.h fetcher/fetcher.c fetcher/fetcher_manager.h \
 	fetcher/fetcher_manager.c eap/eap.h eap/eap.c \
 	plugins/plugin_loader.c plugins/plugin_loader.h \
 	plugins/plugin.h processing/jobs/job.h \
@@ -247,7 +247,7 @@ am_libstrongswan_la_OBJECTS = library.lo chunk.lo debug.lo enum.lo \
 	crl.lo ocsp_response.lo ietf_attributes.lo \
 	credential_manager.lo auth_cfg_wrapper.lo \
 	ocsp_response_wrapper.lo cert_cache.lo mem_cred.lo \
-	callback_cred.lo auth_cfg.lo database_factory.lo \
+	callback_cred.lo auth_cfg.lo database_factory.lo fetcher.lo \
 	fetcher_manager.lo eap.lo plugin_loader.lo callback_job.lo \
 	processor.lo scheduler.lo traffic_selector.lo thread.lo \
 	thread_value.lo mutex.lo rwlock.lo utils.lo host.lo \
@@ -460,6 +460,8 @@ nm_ca_dir = @nm_ca_dir@
 oldincludedir = @oldincludedir@
 openac_plugins = @openac_plugins@
 p_plugins = @p_plugins@
+pcsclite_CFLAGS = @pcsclite_CFLAGS@
+pcsclite_LIBS = @pcsclite_LIBS@
 pdfdir = @pdfdir@
 piddir = @piddir@
 pki_plugins = @pki_plugins@
@@ -483,6 +485,7 @@ soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
+systemdsystemunitdir = @systemdsystemunitdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
@@ -537,7 +540,7 @@ libstrongswan_la_SOURCES = library.c library.h chunk.c chunk.h debug.c \
 	credentials/auth_cfg.h credentials/credential_set.h \
 	credentials/cert_validator.h database/database.h \
 	database/database_factory.h database/database_factory.c \
-	fetcher/fetcher.h fetcher/fetcher_manager.h \
+	fetcher/fetcher.h fetcher/fetcher.c fetcher/fetcher_manager.h \
 	fetcher/fetcher_manager.c eap/eap.h eap/eap.c \
 	plugins/plugin_loader.c plugins/plugin_loader.h \
 	plugins/plugin.h processing/jobs/job.h \
@@ -724,6 +727,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enum.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enumerator.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fetcher.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fetcher_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hasher.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hashtable.Plo@am__quote@
@@ -1020,6 +1024,13 @@ database_factory.lo: database/database_factory.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='database/database_factory.c' object='database_factory.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o database_factory.lo `test -f 'database/database_factory.c' || echo '$(srcdir)/'`database/database_factory.c
+
+fetcher.lo: fetcher/fetcher.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fetcher.lo -MD -MP -MF $(DEPDIR)/fetcher.Tpo -c -o fetcher.lo `test -f 'fetcher/fetcher.c' || echo '$(srcdir)/'`fetcher/fetcher.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fetcher.Tpo $(DEPDIR)/fetcher.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fetcher/fetcher.c' object='fetcher.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fetcher.lo `test -f 'fetcher/fetcher.c' || echo '$(srcdir)/'`fetcher/fetcher.c
 
 fetcher_manager.lo: fetcher/fetcher_manager.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fetcher_manager.lo -MD -MP -MF $(DEPDIR)/fetcher_manager.Tpo -c -o fetcher_manager.lo `test -f 'fetcher/fetcher_manager.c' || echo '$(srcdir)/'`fetcher/fetcher_manager.c

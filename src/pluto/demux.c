@@ -770,7 +770,7 @@ check_msg_errqueue(const struct iface *ifp, short interest)
 					/* note dirty trick to suppress ~ at start of format
 					 * if we know what state to blame.
 					 */
-					if ((packet_len == 1) && (buffer[0] = 0xff)
+					if ((packet_len == 1) && (buffer[0] == 0xff)
 #ifdef DEBUG
 						&& ((cur_debugging & DBG_NATT) == 0)
 #endif
@@ -966,7 +966,9 @@ malloc_md(void)
 	 * - .note = NOTHING_WRONG
 	 * - .encrypted = FALSE
 	 */
-	static const struct msg_digest blank_md;
+	static const struct msg_digest blank_md = {
+		.next = NULL,
+	};
 
 	if (md == NULL)
 	{
@@ -1142,13 +1144,14 @@ read_packet(struct msg_digest *md)
 				, ifp->rname
 				, ip_str(&md->sender), (unsigned)md->sender_port));
 		}
-
+		free(buffer);
 		return FALSE;
 	}
 	else if (from_ugh != NULL)
 	{
 		plog("recvfrom on %s returned malformed source sockaddr: %s"
 			, ifp->rname, from_ugh);
+		free(buffer);
 		return FALSE;
 	}
 	cur_from = &md->sender;
@@ -1162,6 +1165,7 @@ read_packet(struct msg_digest *md)
 		{
 			plog("recvfrom %s:%u too small packet (%d)"
 				, ip_str(cur_from), (unsigned) cur_from_port, packet_len);
+			free(buffer);
 			return FALSE;
 		}
 		memcpy(&non_esp, buffer, sizeof(u_int32_t));
@@ -1169,6 +1173,7 @@ read_packet(struct msg_digest *md)
 		{
 			plog("recvfrom %s:%u has no Non-ESP marker"
 				, ip_str(cur_from), (unsigned) cur_from_port);
+			free(buffer);
 			return FALSE;
 		}
 		packet_len -= sizeof(u_int32_t);
@@ -1661,7 +1666,7 @@ process_packet(struct msg_digest **mdp)
 	 * Look up the appropriate microcode based on state and
 	 * possibly Oakley Auth type.
 	 */
-	passert(STATE_IKE_FLOOR <= from_state && from_state <= STATE_IKE_ROOF);
+	passert(STATE_IKE_FLOOR <= from_state && from_state < STATE_IKE_ROOF);
 	smc = ike_microcode_index[from_state - STATE_IKE_FLOOR];
 
 	if (st != NULL)

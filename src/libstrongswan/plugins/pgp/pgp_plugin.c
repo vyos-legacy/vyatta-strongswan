@@ -33,6 +33,12 @@ struct private_pgp_plugin_t {
 	pgp_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_pgp_plugin_t *this)
+{
+	return "pgp";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_pgp_plugin_t *this)
 {
@@ -59,6 +65,8 @@ plugin_t *pgp_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
 		},

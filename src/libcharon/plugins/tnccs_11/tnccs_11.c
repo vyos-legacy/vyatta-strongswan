@@ -77,6 +77,11 @@ struct private_tnccs_11_t {
 	bool delete_state;
 
 	/**
+	 * SendMessage() by IMC/IMV only allowed if flag is set
+	 */
+	bool send_msg;
+
+	/**
 	 * Flag set by IMC/IMV RequestHandshakeRetry() function
 	 */
 	bool request_handshake_retry;
@@ -87,7 +92,7 @@ struct private_tnccs_11_t {
 	recommendations_t *recs;
 };
 
-METHOD(tnccs_t, send_msg, void,
+METHOD(tnccs_t, send_msg, TNC_Result,
 	private_tnccs_11_t* this, TNC_IMCID imc_id, TNC_IMVID imv_id,
 							  TNC_BufferReference msg,
 							  TNC_UInt32 msg_len,
@@ -95,6 +100,13 @@ METHOD(tnccs_t, send_msg, void,
 {
 	tnccs_msg_t *tnccs_msg;
 
+	if (!this->send_msg)
+	{
+		DBG1(DBG_TNC, "%s %u not allowed to call SendMessage()",
+			this->is_server ? "IMV" : "IMC",
+			this->is_server ? imv_id : imc_id);
+		return TNC_RESULT_ILLEGAL_OPERATION;
+	}
 	tnccs_msg = imc_imv_msg_create(msg_type, chunk_create(msg, msg_len));
 
 	/* adding an IMC-IMV Message to TNCCS batch */
@@ -105,6 +117,7 @@ METHOD(tnccs_t, send_msg, void,
 	}
 	this->batch->add_msg(this->batch, tnccs_msg);
 	this->mutex->unlock(this->mutex);
+	return TNC_RESULT_SUCCESS;
 }
 
 /**
@@ -126,6 +139,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 
 			DBG2(DBG_TNC, "handling IMC_IMV message type 0x%08x", msg_type);
 
+			this->send_msg = TRUE;
 			if (this->is_server)
 			{
 				charon->imvs->receive_message(charon->imvs,
@@ -136,6 +150,7 @@ static void handle_message(private_tnccs_11_t *this, tnccs_msg_t *msg)
 				charon->imcs->receive_message(charon->imcs,
 				this->connection_id, msg_body.ptr, msg_body.len,msg_type);
 			}
+			this->send_msg = FALSE;
 			break;
 		}
 		case TNCCS_MSG_RECOMMENDATION:
@@ -237,6 +252,8 @@ METHOD(tls_t, process, status_t,
 		}
 		charon->imvs->notify_connection_change(charon->imvs,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
+		charon->imvs->notify_connection_change(charon->imvs,
+							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
 	}
 
 	data = chunk_create(buf, buflen);
@@ -284,6 +301,7 @@ METHOD(tls_t, process, status_t,
 			return FAILED;
 		}
 
+		this->send_msg = TRUE;
 		if (this->is_server)
 		{
 			charon->imvs->batch_ending(charon->imvs, this->connection_id);
@@ -292,6 +310,7 @@ METHOD(tls_t, process, status_t,
 		{
 			charon->imcs->batch_ending(charon->imcs, this->connection_id);
 		}
+		this->send_msg = FALSE;
 	}
 	batch->destroy(batch);
 
@@ -369,13 +388,15 @@ METHOD(tls_t, build, status_t,
 							this->connection_id, TNC_CONNECTION_STATE_CREATE);
 		charon->imcs->notify_connection_change(charon->imcs,
 							this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+		this->send_msg = TRUE;
 		charon->imcs->begin_handshake(charon->imcs, this->connection_id);
+		this->send_msg = FALSE;
 	}
 
 	/* Do not allow any asynchronous IMCs or IMVs to add additional messages */
 	this->mutex->lock(this->mutex);
 
-	if (this->is_server && !this->delete_state &&
+	if (this->recs && !this->delete_state &&
 	   (!this->batch || this->fatal_error))
 	{
 		check_and_build_recommendation(this);
@@ -435,11 +456,7 @@ METHOD(tls_t, is_complete, bool,
 
 	if (this->recs && this->recs->have_recommendation(this->recs, &rec, &eval))
 	{
-		DBG2(DBG_TNC, "Final recommendation is '%N' and evaluation is '%N'",
-			 TNC_IMV_Action_Recommendation_names, rec,
-			 TNC_IMV_Evaluation_Result_names, eval);
-
-		return charon->imvs->enforce_recommendation(charon->imvs, rec);
+		return charon->imvs->enforce_recommendation(charon->imvs, rec, eval);
 	}
 	else
 	{
@@ -456,17 +473,8 @@ METHOD(tls_t, get_eap_msk, chunk_t,
 METHOD(tls_t, destroy, void,
 	private_tnccs_11_t *this)
 {
-	if (this->is_server)
-	{
-		charon->imvs->notify_connection_change(charon->imvs,
-							this->connection_id, TNC_CONNECTION_STATE_DELETE);
-	}
-	else
-	{
-		charon->imcs->notify_connection_change(charon->imcs,
-							this->connection_id, TNC_CONNECTION_STATE_DELETE);
-	}
-	charon->tnccs->remove_connection(charon->tnccs, this->connection_id);
+	charon->tnccs->remove_connection(charon->tnccs, this->connection_id,
+													this->is_server);
 	this->mutex->destroy(this->mutex);
 	DESTROY_IF(this->batch);
 	free(this);

@@ -172,8 +172,10 @@ METHOD(daemon_t, drop_capabilities, bool,
 		.version = _LINUX_CAPABILITY_VERSION_3,
 #elif defined(_LINUX_CAPABILITY_VERSION_2)
 		.version = _LINUX_CAPABILITY_VERSION_2,
-#else
+#elif defined(_LINUX_CAPABILITY_VERSION_1)
 		.version = _LINUX_CAPABILITY_VERSION_1,
+#else
+		.version = _LINUX_CAPABILITY_VERSION,
 #endif
 	};
 	if (capset(&header, this->caps) != 0)
@@ -198,15 +200,17 @@ METHOD(daemon_t, start, void,
  */
 static void print_plugins()
 {
-	char buf[512], *plugin;
+	char buf[512];
 	int len = 0;
 	enumerator_t *enumerator;
+	plugin_t *plugin;
 
 	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
 	{
-		len += snprintf(&buf[len], sizeof(buf)-len, "%s ", plugin);
+		len += snprintf(&buf[len], sizeof(buf)-len, "%s ",
+						plugin->get_name(plugin));
 	}
 	enumerator->destroy(enumerator);
 	DBG1(DBG_DMN, "loaded plugins: %s", buf);

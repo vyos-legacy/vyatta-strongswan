@@ -1573,7 +1573,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 #endif /* ME */
 		))
 	{
-		DBG1(DBG_IKE, "unable to reestablish IKE_SA due asymetric setup");
+		DBG1(DBG_IKE, "unable to reestablish IKE_SA due to asymmetric setup");
 		return FAILED;
 	}
 
@@ -1896,7 +1896,7 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
-METHOD(ike_sa_t, inherit, status_t,
+METHOD(ike_sa_t, inherit, void,
 	private_ike_sa_t *this, ike_sa_t *other_public)
 {
 	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
@@ -1977,8 +1977,6 @@ METHOD(ike_sa_t, inherit, status_t,
 		lib->scheduler->schedule_job(lib->scheduler,
 				(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE), delete);
 	}
-	/* we have to initate here, there may be new tasks to handle */
-	return this->task_manager->initiate(this->task_manager);
 }
 
 METHOD(ike_sa_t, destroy, void,
@@ -1989,6 +1987,7 @@ METHOD(ike_sa_t, destroy, void,
 	charon->bus->set_sa(charon->bus, &this->public);
 
 	set_state(this, IKE_DESTROYING);
+	this->task_manager->destroy(this->task_manager);
 
 	/* remove attributes first, as we pass the IKE_SA to the handler */
 	while (this->attributes->remove_last(this->attributes,
@@ -2006,7 +2005,6 @@ METHOD(ike_sa_t, destroy, void,
 	/* unset SA after here to avoid usage by the listeners */
 	charon->bus->set_sa(charon->bus, NULL);
 
-	this->task_manager->destroy(this->task_manager);
 	this->keymat->destroy(this->keymat);
 
 	if (this->my_virtual_ip)

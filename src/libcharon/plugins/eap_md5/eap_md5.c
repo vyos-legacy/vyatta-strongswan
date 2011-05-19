@@ -147,12 +147,12 @@ METHOD(eap_method_t, process_peer, status_t,
 
 	this->identifier = in->get_identifier(in);
 	data = in->get_data(in);
-	this->challenge = chunk_clone(chunk_skip(data, 6));
-	if (data.len < 6 || this->challenge.len < *(data.ptr + 5))
+	if (data.len < 6 || data.ptr[5] + 6 > data.len)
 	{
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
 	}
+	this->challenge = chunk_clone(chunk_create(data.ptr + 6, data.ptr[5]));
 	if (hash_challenge(this, &response, this->peer, this->server) != SUCCESS)
 	{
 		return FAILED;
@@ -176,7 +176,9 @@ METHOD(eap_method_t, process_server, status_t,
 	chunk_t response, expected;
 	chunk_t data;
 
-	if (this->identifier != in->get_identifier(in))
+	data = in->get_data(in);
+	if (this->identifier != in->get_identifier(in) ||
+		data.len < 6 || data.ptr[5] + 6 > data.len)
 	{
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
@@ -185,9 +187,7 @@ METHOD(eap_method_t, process_server, status_t,
 	{
 		return FAILED;
 	}
-	data = in->get_data(in);
-	response = chunk_skip(data, 6);
-
+	response = chunk_create(data.ptr + 6, data.ptr[5]);
 	if (response.len < expected.len ||
 		!memeq(response.ptr, expected.ptr, expected.len))
 	{
@@ -218,6 +218,18 @@ METHOD(eap_method_t, is_mutual, bool,
 	return FALSE;
 }
 
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_md5_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_md5_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
+}
+
 METHOD(eap_method_t, destroy, void,
 	private_eap_md5_t *this)
 {
@@ -242,6 +254,8 @@ eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *pee
 				.get_type = _get_type,
 				.is_mutual = _is_mutual,
 				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
 				.destroy = _destroy,
 			},
 		},

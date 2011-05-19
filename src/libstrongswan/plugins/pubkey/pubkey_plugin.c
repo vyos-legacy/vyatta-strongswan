@@ -31,6 +31,12 @@ struct private_pubkey_plugin_t {
 	pubkey_plugin_t public;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_pubkey_plugin_t *this)
+{
+	return "pubkey";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_pubkey_plugin_t *this)
 {
@@ -49,6 +55,8 @@ plugin_t *pubkey_plugin_create()
 	INIT(this,
 		.public = {
 			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
 				.destroy = _destroy,
 			},
 		},

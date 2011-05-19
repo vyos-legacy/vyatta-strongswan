@@ -20,8 +20,14 @@
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
-#include <glob.h>
 #include <libgen.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#ifdef HAVE_GLOB_H
+#include <glob.h>
+#endif /* HAVE_GLOB_H */
 
 #include "settings.h"
 
@@ -143,6 +149,17 @@ static void section_destroy(section_t *this)
 	this->sections->destroy_function(this->sections, (void*)section_destroy);
 	free(this->name);
 	free(this);
+}
+
+/**
+ * Purge contents of a section
+ */
+static void section_purge(section_t *this)
+{
+	this->kv->destroy_function(this->kv, (void*)kv_destroy);
+	this->kv = linked_list_create();
+	this->sections->destroy_function(this->sections, (void*)section_destroy);
+	this->sections = linked_list_create();
 }
 
 /**
@@ -914,14 +931,30 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 {
 	bool success;
 	char *text, *pos;
+	struct stat st;
 	FILE *fd;
 	int len;
 
 	DBG2(DBG_LIB, "loading config file '%s'", file);
+	if (stat(file, &st) == -1)
+	{
+		if (errno == ENOENT)
+		{
+			DBG2(DBG_LIB, "'%s' does not exist, ignored", file);
+			return TRUE;
+		}
+		DBG1(DBG_LIB, "failed to stat '%s': %s", file, strerror(errno));
+		return FALSE;
+	}
+	else if (!S_ISREG(st.st_mode))
+	{
+		DBG1(DBG_LIB, "'%s' is not a regular file", file);
+		return FALSE;
+	}
 	fd = fopen(file, "r");
 	if (fd == NULL)
 	{
-		DBG1(DBG_LIB, "'%s' does not exist or is not readable", file);
+		DBG1(DBG_LIB, "'%s' is not readable", file);
 		return FALSE;
 	}
 	fseek(fd, 0, SEEK_END);
@@ -950,16 +983,15 @@ static bool parse_file(linked_list_t *contents, char *file, int level,
 }
 
 /**
- * Load the files matching "pattern", which is resolved with glob(3).
+ * Load the files matching "pattern", which is resolved with glob(3), if
+ * available.
  * If the pattern is relative, the directory of "file" is used as base.
  */
 static bool parse_files(linked_list_t *contents, char *file, int level,
 						char *pattern, section_t *section)
 {
 	bool success = TRUE;
-	int status;
-	glob_t buf;
-	char **expanded, pat[PATH_MAX];
+	char pat[PATH_MAX];
 
 	if (level > MAX_INCLUSION_LEVEL)
 	{
@@ -994,28 +1026,39 @@ static bool parse_files(linked_list_t *contents, char *file, int level,
 		}
 		free(dir);
 	}
-	status = glob(pat, GLOB_ERR, NULL, &buf);
-	if (status == GLOB_NOMATCH)
+#ifdef HAVE_GLOB_H
 	{
-		DBG2(DBG_LIB, "no files found matching '%s', ignored", pat);
-	}
-	else if (status != 0)
-	{
-		DBG1(DBG_LIB, "expanding file pattern '%s' failed", pat);
-		success = FALSE;
-	}
-	else
-	{
-		for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
+		int status;
+		glob_t buf;
+
+		status = glob(pat, GLOB_ERR, NULL, &buf);
+		if (status == GLOB_NOMATCH)
 		{
-			success &= parse_file(contents, *expanded, level + 1, section);
-			if (!success)
+			DBG2(DBG_LIB, "no files found matching '%s', ignored", pat);
+		}
+		else if (status != 0)
+		{
+			DBG1(DBG_LIB, "expanding file pattern '%s' failed", pat);
+			success = FALSE;
+		}
+		else
+		{
+			char **expanded;
+			for (expanded = buf.gl_pathv; *expanded != NULL; expanded++)
 			{
-				break;
+				success &= parse_file(contents, *expanded, level + 1, section);
+				if (!success)
+				{
+					break;
+				}
 			}
 		}
+		globfree(&buf);
 	}
-	globfree(&buf);
+#else /* HAVE_GLOB_H */
+	/* if glob(3) is not available, try to load pattern directly */
+	success = parse_file(contents, pat, level + 1, section);
+#endif /* HAVE_GLOB_H */
 	return success;
 }
 
@@ -1070,11 +1113,16 @@ static void section_extend(section_t *base, section_t *extension)
  * All files (even included ones) have to be loaded successfully.
  */
 static bool load_files_internal(private_settings_t *this, section_t *parent,
-								char *pattern)
+								char *pattern, bool merge)
 {
 	char *text;
 	linked_list_t *contents = linked_list_create();
 	section_t *section = section_create(NULL);
+
+	if (pattern == NULL)
+	{
+		pattern = STRONGSWAN_CONF;
+	}
 
 	if (!parse_files(contents, NULL, 0, pattern, section))
 	{
@@ -1084,6 +1132,10 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 	}
 
 	this->lock->write_lock(this->lock);
+	if (!merge)
+	{
+		section_purge(parent);
+	}
 	/* extend parent section */
 	section_extend(parent, section);
 	/* move contents of loaded files to main store */
@@ -1099,13 +1151,13 @@ static bool load_files_internal(private_settings_t *this, section_t *parent,
 }
 
 METHOD(settings_t, load_files, bool,
-	   private_settings_t *this, char *pattern)
+	   private_settings_t *this, char *pattern, bool merge)
 {
-	return load_files_internal(this, this->top, pattern);
+	return load_files_internal(this, this->top, pattern, merge);
 }
 
 METHOD(settings_t, load_files_section, bool,
-	   private_settings_t *this, char *pattern, char *key, ...)
+	   private_settings_t *this, char *pattern, bool merge, char *key, ...)
 {
 	section_t *section;
 	va_list args;
@@ -1118,7 +1170,7 @@ METHOD(settings_t, load_files_section, bool,
 	{
 		return FALSE;
 	}
-	return load_files_internal(this, section, pattern);
+	return load_files_internal(this, section, pattern, merge);
 }
 
 METHOD(settings_t, destroy, void,
@@ -1160,12 +1212,7 @@ settings_t *settings_create(char *file)
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
-	if (file == NULL)
-	{
-		file = STRONGSWAN_CONF;
-	}
-
-	load_files(this, file);
+	load_files(this, file, FALSE);
 
 	return &this->public;
 }

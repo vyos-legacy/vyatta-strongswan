@@ -62,6 +62,8 @@ sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
 sa/authenticators/eap/eap_manager.c sa/authenticators/eap/eap_manager.h \
 sa/authenticators/eap/sim_manager.c sa/authenticators/eap/sim_manager.h \
+sa/authenticators/eap/sim_card.h sa/authenticators/eap/sim_provider.h \
+sa/authenticators/eap/sim_hooks.h \
 sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/pubkey_authenticator.c sa/authenticators/pubkey_authenticator.h \
 sa/child_sa.c sa/child_sa.h \
@@ -221,6 +223,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_SIM_PCSC
+  SUBDIRS += plugins/eap_sim_pcsc
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_sim_pcsc/libstrongswan-eap-sim-pcsc.la
+endif
+endif
+
 if USE_EAP_SIMAKA_SQL
   SUBDIRS += plugins/eap_simaka_sql
 if MONOLITHIC
@@ -302,6 +311,13 @@ if USE_EAP_TTLS
   SUBDIRS += plugins/eap_ttls
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_ttls/libstrongswan-eap-ttls.la
+endif
+endif
+
+if USE_EAP_PEAP
+  SUBDIRS += plugins/eap_peap
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_peap/libstrongswan-eap-peap.la
 endif
 endif
 
@@ -403,10 +419,31 @@ if MONOLITHIC
 endif
 endif
 
+if USE_WHITELIST
+  SUBDIRS += plugins/whitelist
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/whitelist/libstrongswan-whitelist.la
+endif
+endif
+
 if USE_LED
   SUBDIRS += plugins/led
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/led/libstrongswan-led.la
+endif
+endif
+
+if USE_DUPLICHECK
+  SUBDIRS += plugins/duplicheck
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/duplicheck/libstrongswan-duplicheck.la
+endif
+endif
+
+if USE_COUPLING
+  SUBDIRS += plugins/coupling
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/coupling/libstrongswan-coupling.la
 endif
 endif
 

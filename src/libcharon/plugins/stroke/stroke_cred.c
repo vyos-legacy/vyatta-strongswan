@@ -280,7 +280,7 @@ static void cache_cert(private_stroke_cred_t *this, certificate_t *cert)
 
 			chunk = crl->get_authKeyIdentifier(crl);
 			hex = chunk_to_hex(chunk, NULL, FALSE);
-			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex);
+			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex.ptr);
 			free(hex.ptr);
 
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &chunk))
@@ -518,7 +518,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		DBG1(DBG_CFG, "line %d: expected %%smartcard specifier", line_nr);
 		return FALSE;
 	}
-	snprintf(smartcard, sizeof(smartcard), "%.*s", sc.len, sc.ptr);
+	snprintf(smartcard, sizeof(smartcard), "%.*s", (int)sc.len, sc.ptr);
 	smartcard[sizeof(smartcard) - 1] = '\0';
 
 	/* parse slot and key id. Three formats are supported:
@@ -536,7 +536,7 @@ static bool load_pin(private_stroke_cred_t *this, chunk_t line, int line_nr,
 			return FALSE;
 		}
 		*pos = '\0';
-		strcpy(keyid, pos + 1);
+		strncpy(keyid, pos + 1, sizeof(keyid));
 		format = SC_FORMAT_SLOT_MODULE_KEYID;
 	}
 	else if (sscanf(smartcard, "%%smartcard%u:%s", &slot, keyid) == 2)
@@ -660,13 +660,13 @@ static bool load_private(private_stroke_cred_t *this, chunk_t line, int line_nr,
 	if (*filename.ptr == '/')
 	{
 		/* absolute path name */
-		snprintf(path, sizeof(path), "%.*s", filename.len, filename.ptr);
+		snprintf(path, sizeof(path), "%.*s", (int)filename.len, filename.ptr);
 	}
 	else
 	{
 		/* relative path name */
 		snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR,
-				 filename.len, filename.ptr);
+				 (int)filename.len, filename.ptr);
 	}
 
 	/* check for optional passphrase */
@@ -768,6 +768,8 @@ static bool load_shared(private_stroke_cred_t *this, chunk_t line, int line_nr,
 		if (ugh != NULL)
 		{
 			DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
+			shared_key->destroy(shared_key);
+			owners->destroy_offset(owners, offsetof(identification_t, destroy));
 			return FALSE;
 		}
 		if (id.len == 0)
@@ -874,7 +876,8 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 					DBG1(DBG_CFG, "include pattern too long, ignored");
 					continue;
 				}
-				snprintf(pattern, sizeof(pattern), "%.*s", line.len, line.ptr);
+				snprintf(pattern, sizeof(pattern), "%.*s",
+						 (int)line.len, line.ptr);
 			}
 			else
 			{	/* use directory of current file if relative */
@@ -888,7 +891,7 @@ static void load_secrets(private_stroke_cred_t *this, char *file, int level,
 					continue;
 				}
 				snprintf(pattern, sizeof(pattern), "%s/%.*s",
-						 dir, line.len, line.ptr);
+						 dir, (int)line.len, line.ptr);
 				free(dir);
 			}
 			if (glob(pattern, GLOB_ERR, NULL, &buf) != 0)

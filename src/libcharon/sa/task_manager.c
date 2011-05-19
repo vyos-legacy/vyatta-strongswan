@@ -161,12 +161,12 @@ static void flush(private_task_manager_t *this)
 {
 	this->queued_tasks->destroy_offset(this->queued_tasks,
 										offsetof(task_t, destroy));
+	this->queued_tasks = linked_list_create();
 	this->passive_tasks->destroy_offset(this->passive_tasks,
 										offsetof(task_t, destroy));
+	this->passive_tasks = linked_list_create();
 	this->active_tasks->destroy_offset(this->active_tasks,
 										offsetof(task_t, destroy));
-	this->queued_tasks = linked_list_create();
-	this->passive_tasks = linked_list_create();
 	this->active_tasks = linked_list_create();
 }
 
@@ -545,7 +545,7 @@ static status_t process_response(private_task_manager_t *this,
 /**
  * handle exchange collisions
  */
-static void handle_collisions(private_task_manager_t *this, task_t *task)
+static bool handle_collisions(private_task_manager_t *this, task_t *task)
 {
 	iterator_t *iterator;
 	task_t *active;
@@ -584,12 +584,11 @@ static void handle_collisions(private_task_manager_t *this, task_t *task)
 					continue;
 			}
 			iterator->destroy(iterator);
-			return;
+			return TRUE;
 		}
 		iterator->destroy(iterator);
 	}
-	/* destroy task if not registered in any active task */
-	task->destroy(task);
+	return FALSE;
 }
 
 /**
@@ -623,9 +622,17 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 			case SUCCESS:
 				/* task completed, remove it */
 				iterator->remove(iterator);
-				handle_collisions(this, task);
+				if (!handle_collisions(this, task))
+				{
+					task->destroy(task);
+				}
+				break;
 			case NEED_MORE:
 				/* processed, but task needs another exchange */
+				if (handle_collisions(this, task))
+				{
+					iterator->remove(iterator);
+				}
 				break;
 			case FAILED:
 			default:

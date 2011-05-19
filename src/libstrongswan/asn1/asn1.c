@@ -129,10 +129,10 @@ chunk_t asn1_build_known_oid(int n)
 chunk_t asn1_oid_from_string(char *str)
 {
 	enumerator_t *enumerator;
-	u_char buf[32];
+	u_char buf[64];
 	char *end;
-	int i = 0, pos = 0;
-	u_int val, first = 0;
+	int i = 0, pos = 0, shift;
+	u_int val, shifted_val, first = 0;
 
 	enumerator = enumerator_create_token(str, ".", "");
 	while (enumerator->enumerate(enumerator, &str))
@@ -152,16 +152,17 @@ chunk_t asn1_oid_from_string(char *str)
 				buf[pos++] = first * 40 + val;
 				break;
 			default:
-				if (val < 128)
+				shift = 28;		/* sufficient to handle 32 bit node numbers */
+				while (shift)
 				{
-					buf[pos++] = val;
+					shifted_val = val >> shift;
+					shift -= 7;
+					if (shifted_val)	/* do not encode leading zeroes */
+					{
+						buf[pos++] = 0x80 | (shifted_val & 0x7F);
+					}
 				}
-				else
-				{
-					buf[pos++] = 128 | (val >> 7);
-					buf[pos++] = (val % 256) & 0x7F;
-				}
-				break;
+				buf[pos++] = val & 0x7F;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -183,38 +184,32 @@ char *asn1_oid_to_string(chunk_t oid)
 		return NULL;
 	}
 	val = oid.ptr[0] / 40;
-	len = snprintf(buf, sizeof(buf), "%d.%d", val, oid.ptr[0] - val * 40);
+	len = snprintf(buf, sizeof(buf), "%u.%u", val, oid.ptr[0] - val * 40);
 	oid = chunk_skip(oid, 1);
 	if (len < 0 || len >= sizeof(buf))
 	{
 		return NULL;
 	}
 	pos += len;
+	val = 0;
 
 	while (oid.len)
 	{
+		val = (val << 7) + (u_int)(oid.ptr[0] & 0x7f);
+
 		if (oid.ptr[0] < 128)
 		{
-			len = snprintf(pos, sizeof(buf) + buf - pos, ".%d", oid.ptr[0]);
-			oid = chunk_skip(oid, 1);
-		}
-		else
-		{
-			if (oid.len == 1)
+			len = snprintf(pos, sizeof(buf) + buf - pos, ".%u", val);
+			if (len < 0 || len >= sizeof(buf) + buf - pos)
 			{
 				return NULL;
 			}
-			val = ((u_int)(oid.ptr[0] & 0x7F) << 7) + oid.ptr[1];
-			len = snprintf(pos, sizeof(buf) + buf - pos, ".%d", val);
-			oid = chunk_skip(oid, 2);
+			pos += len;
+			val = 0;
 		}
-		if (len < 0 || len >= sizeof(buf) + buf - pos)
-		{
-			return NULL;
-		}
-		pos += len;
+		oid = chunk_skip(oid, 1);
 	}
-	return strdup(buf);
+	return (val == 0) ? strdup(buf) : NULL;
 }
 
 /*
@@ -468,12 +463,22 @@ void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 	{
 		case ASN1_OID:
 			oid = asn1_known_oid(object);
-			if (oid != OID_UNKNOWN)
+			if (oid == OID_UNKNOWN)
+			{
+				char *oid_str = asn1_oid_to_string(object);
+
+				if (!oid_str)
+				{
+					break;
+				}
+				DBG2(DBG_LIB, "  %s", oid_str);
+				free(oid_str);
+			}
+			else
 			{
 				DBG2(DBG_LIB, "  '%s'", oid_names[oid].name);
-				return;
 			}
-			break;
+			return;
 		case ASN1_UTF8STRING:
 		case ASN1_IA5STRING:
 		case ASN1_PRINTABLESTRING:

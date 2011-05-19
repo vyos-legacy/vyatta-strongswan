@@ -215,10 +215,27 @@ METHOD(tnccs_manager_t, create_connection, TNC_ConnectionID,
 }
 
 METHOD(tnccs_manager_t, remove_connection, void,
-	private_tnccs_manager_t *this, TNC_ConnectionID id)
+	private_tnccs_manager_t *this, TNC_ConnectionID id, bool is_server)
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
+
+	if (is_server)
+	{
+		if (charon->imvs)
+		{
+			charon->imvs->notify_connection_change(charon->imvs, id,
+										TNC_CONNECTION_STATE_DELETE);
+		}
+	}
+	else
+	{
+		if (charon->imcs)
+		{
+			charon->imcs->notify_connection_change(charon->imcs, id,
+										TNC_CONNECTION_STATE_DELETE);
+		}
+	}
 
 	this->connection_lock->write_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
@@ -254,8 +271,8 @@ METHOD(tnccs_manager_t,	request_handshake_retry, TNC_Result,
 	}
 	else
 	{
-		DBG2(DBG_TNC, "%s %u requests handshake retry for connection ID %u "
-					  "(reason: %u)", is_imc ? "IMC":"IMV", id, reason);
+		DBG2(DBG_TNC, "%s %u requests handshake retry for Connection ID %u "
+					  "(reason: %u)", is_imc ? "IMC":"IMV", imcv_id, id, reason);
 	}
 	this->connection_lock->read_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
@@ -279,11 +296,23 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 								   TNC_BufferReference msg,
 								   TNC_UInt32 msg_len,
 								   TNC_MessageType msg_type)
+
 {
 	enumerator_t *enumerator;
 	tnccs_connection_entry_t *entry;
 	tnccs_send_message_t send_message = NULL;
 	tnccs_t *tnccs = NULL;
+	TNC_VendorID msg_vid;
+	TNC_MessageSubtype msg_subtype;
+
+	msg_vid = (msg_type >> 8) & TNC_VENDORID_ANY;
+	msg_subtype = msg_type & TNC_SUBTYPE_ANY;
+
+	if (msg_vid == TNC_VENDORID_ANY || msg_subtype == TNC_SUBTYPE_ANY)
+	{
+		DBG1(DBG_TNC, "not sending message of invalid type 0x%08x", msg_type);
+		return TNC_RESULT_INVALID_PARAMETER;
+	}
 
 	this->connection_lock->read_lock(this->connection_lock);
 	enumerator = this->connections->create_enumerator(this->connections);
@@ -301,9 +330,8 @@ METHOD(tnccs_manager_t, send_message, TNC_Result,
 
 	if (tnccs && send_message)
 	{
-		send_message(tnccs, imc_id, imv_id, msg, msg_len, msg_type);
-		return TNC_RESULT_SUCCESS;
-	 }
+		return send_message(tnccs, imc_id, imv_id, msg, msg_len, msg_type);
+	}
 	return TNC_RESULT_FATAL;
 }
 

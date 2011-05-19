@@ -91,6 +91,8 @@
                 0x02         "md2WithRSAEncryption"		OID_MD2_WITH_RSA
                 0x04         "md5WithRSAEncryption"		OID_MD5_WITH_RSA
                 0x05         "sha-1WithRSAEncryption"	OID_SHA1_WITH_RSA
+                0x07         "id-RSAES-OAEP"			OID_RSAES_OAEP
+                0x09         "id-pSpecified"
                 0x0B         "sha256WithRSAEncryption"	OID_SHA256_WITH_RSA
                 0x0C         "sha384WithRSAEncryption"	OID_SHA384_WITH_RSA
                 0x0D         "sha512WithRSAEncryption"	OID_SHA512_WITH_RSA
@@ -110,7 +112,7 @@
                 0x05         "signingTime"				OID_PKCS9_SIGNING_TIME
                 0x06         "counterSignature"
                 0x07         "challengePassword"		OID_CHALLENGE_PASSWORD
-                0x08         "unstructuredAddress"
+                0x08         "unstructuredAddress"		OID_UNSTRUCTURED_ADDRESS
                 0x0E         "extensionRequest"			OID_EXTENSION_REQUEST
                 0x0F         "S/MIME Capabilities"
             0x02             "digestAlgorithm"
@@ -356,4 +358,11 @@
                   0x06       "recipientNonce"			OID_PKI_RECIPIENT_NONCE
                   0x07       "transID"					OID_PKI_TRANS_ID
                   0x08       "extensionReq"
-
+0x67                         ""
+  0x81                       ""
+    0x05                     ""
+      0x02                   "tcg-attribute"
+        0x01                 "tcg-at-tpmManufacturer"	OID_TPM_MANUFACTURER
+        0x02                 "tcg-at-tpmModel"			OID_TPM_MODEL
+        0x03                 "tcg-at-tpmVersion"		OID_TPM_VERSION
+        0x0F                 "tcg-at-tpmIdLabel"		OID_TPM_ID_LABEL

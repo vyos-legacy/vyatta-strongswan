@@ -43,11 +43,6 @@ struct private_plugin_loader_t {
 	 * list of loaded plugins
 	 */
 	linked_list_t *plugins;
-
-	/**
-	 * names of loaded plugins
-	 */
-	linked_list_t *names;
 };
 
 /**
@@ -70,8 +65,6 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	constructor = dlsym(handle, create);
 	if (constructor == NULL)
 	{
-		DBG2(DBG_LIB, "plugin '%s': failed to load - %s not found", name,
-			 create);
 		return NOT_FOUND;
 	}
 	if (integrity && lib->integrity)
@@ -153,12 +146,12 @@ static bool plugin_loaded(private_plugin_loader_t *this, char *name)
 {
 	enumerator_t *enumerator;
 	bool found = FALSE;
-	char *current;
+	plugin_t *plugin;
 
-	enumerator = this->names->create_enumerator(this->names);
-	while (enumerator->enumerate(enumerator, &current))
+	enumerator = this->plugins->create_enumerator(this->plugins);
+	while (enumerator->enumerate(enumerator, &plugin))
 	{
-		if (streq(name, current))
+		if (streq(plugin->get_name(plugin), name))
 		{
 			found = TRUE;
 			break;
@@ -168,10 +161,8 @@ static bool plugin_loaded(private_plugin_loader_t *this, char *name)
 	return found;
 }
 
-/**
- * Implementation of plugin_loader_t.load_plugins.
- */
-static bool load(private_plugin_loader_t *this, char *path, char *list)
+METHOD(plugin_loader_t, load_plugins, bool,
+	private_plugin_loader_t *this, char *path, char *list)
 {
 	enumerator_t *enumerator;
 	char *token;
@@ -205,7 +196,6 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 		if (plugin)
 		{
 			this->plugins->insert_last(this->plugins, plugin);
-			this->names->insert_last(this->names, token);
 		}
 		else
 		{
@@ -214,20 +204,17 @@ static bool load(private_plugin_loader_t *this, char *path, char *list)
 				critical_failed = TRUE;
 				DBG1(DBG_LIB, "loading critical plugin '%s' failed", token);
 			}
-			free(token);
 		}
+		free(token);
 	}
 	enumerator->destroy(enumerator);
 	return !critical_failed;
 }
 
-/**
- * Implementation of plugin_loader_t.unload
- */
-static void unload(private_plugin_loader_t *this)
+METHOD(plugin_loader_t, unload, void,
+	private_plugin_loader_t *this)
 {
 	plugin_t *plugin;
-	char *name;
 
 	/* unload plugins in reverse order */
 	while (this->plugins->remove_last(this->plugins,
@@ -235,27 +222,64 @@ static void unload(private_plugin_loader_t *this)
 	{
 		plugin->destroy(plugin);
 	}
-	while (this->names->remove_last(this->names, (void**)&name) == SUCCESS)
-	{
-		free(name);
-	}
 }
 
-/**
- * Implementation of plugin_loader_t.create_plugin_enumerator
- */
-static enumerator_t* create_plugin_enumerator(private_plugin_loader_t *this)
+METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
+	private_plugin_loader_t *this)
 {
-	return this->names->create_enumerator(this->names);
+	return this->plugins->create_enumerator(this->plugins);
 }
 
 /**
- * Implementation of plugin_loader_t.destroy
+ * Reload a plugin by name, NULL for all
  */
-static void destroy(private_plugin_loader_t *this)
+static u_int reload_by_name(private_plugin_loader_t *this, char *name)
+{
+	u_int reloaded = 0;
+	enumerator_t *enumerator;
+	plugin_t *plugin;
+
+	enumerator = create_plugin_enumerator(this);
+	while (enumerator->enumerate(enumerator, &plugin))
+	{
+		if (name == NULL || streq(name, plugin->get_name(plugin)))
+		{
+			if (plugin->reload(plugin))
+			{
+				DBG2(DBG_LIB, "reloaded configuration of '%s' plugin",
+					 plugin->get_name(plugin));
+				reloaded++;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return reloaded;
+}
+
+METHOD(plugin_loader_t, reload, u_int,
+	private_plugin_loader_t *this, char *list)
+{
+	u_int reloaded = 0;
+	enumerator_t *enumerator;
+	char *name;
+
+	if (list == NULL)
+	{
+		return reload_by_name(this, NULL);
+	}
+	enumerator = enumerator_create_token(list, " ", "");
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		reloaded += reload_by_name(this, name);
+	}
+	enumerator->destroy(enumerator);
+	return reloaded;
+}
+
+METHOD(plugin_loader_t, destroy, void,
+	private_plugin_loader_t *this)
 {
 	this->plugins->destroy_offset(this->plugins, offsetof(plugin_t, destroy));
-	this->names->destroy_function(this->names, free);
 	free(this);
 }
 
@@ -264,15 +288,18 @@ static void destroy(private_plugin_loader_t *this)
  */
 plugin_loader_t *plugin_loader_create()
 {
-	private_plugin_loader_t *this = malloc_thing(private_plugin_loader_t);
+	private_plugin_loader_t *this;
 
-	this->public.load = (bool(*)(plugin_loader_t*, char *path, char *prefix))load;
-	this->public.unload = (void(*)(plugin_loader_t*))unload;
-	this->public.create_plugin_enumerator = (enumerator_t*(*)(plugin_loader_t*))create_plugin_enumerator;
-	this->public.destroy = (void(*)(plugin_loader_t*))destroy;
-
-	this->plugins = linked_list_create();
-	this->names = linked_list_create();
+	INIT(this,
+		.public = {
+			.load = _load_plugins,
+			.reload = _reload,
+			.unload = _unload,
+			.create_plugin_enumerator = _create_plugin_enumerator,
+			.destroy = _destroy,
+		},
+		.plugins = linked_list_create(),
+	);
 
 	return &this->public;
 }

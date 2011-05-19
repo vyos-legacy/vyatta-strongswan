@@ -17,6 +17,7 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
+#include <threading/rwlock.h>
 
 typedef struct private_sim_manager_t private_sim_manager_t;
 
@@ -44,65 +45,67 @@ struct private_sim_manager_t {
 	 * list of added hooks
 	 */
 	linked_list_t *hooks;
+
+	/**
+	 * lock for lists above
+	 */
+	rwlock_t *lock;
 };
 
-/**
- * Implementation of sim_manager_t.add_card
- */
-static void add_card(private_sim_manager_t *this, sim_card_t *card)
+METHOD(sim_manager_t, add_card, void,
+	private_sim_manager_t *this, sim_card_t *card)
 {
+	this->lock->write_lock(this->lock);
 	this->cards->insert_last(this->cards, card);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.remove_card
- */
-static void remove_card(private_sim_manager_t *this, sim_card_t *card)
+METHOD(sim_manager_t, remove_card, void,
+	private_sim_manager_t *this, sim_card_t *card)
 {
+	this->lock->write_lock(this->lock);
 	this->cards->remove(this->cards, card, NULL);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.card_get_triplet
- */
-static bool card_get_triplet(private_sim_manager_t *this, identification_t *id,
-							 char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN],
-							 char kc[SIM_KC_LEN])
+METHOD(sim_manager_t, card_get_triplet, bool,
+	private_sim_manager_t *this, identification_t *id,
+	char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
 	int tried = 0;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		if (card->get_triplet(card, id, rand, sres, kc))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 		tried++;
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_IKE, "tried %d SIM cards, but none has triplets for '%Y'",
 		 tried, id);
 	return FALSE;
 }
 
-/**
- * Implementation of sim_manager_t.card_get_quintuplet
- */
-static status_t card_get_quintuplet(private_sim_manager_t *this,
-								identification_t *id, char rand[AKA_RAND_LEN],
-								char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN],
-								char ik[AKA_IK_LEN], char res[AKA_RES_MAX],
-								int *res_len)
+METHOD(sim_manager_t, card_get_quintuplet, status_t,
+	private_sim_manager_t *this, identification_t *id, char rand[AKA_RAND_LEN],
+	char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
+	char res[AKA_RES_MAX], int *res_len)
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
 	status_t status = NOT_FOUND;
 	int tried = 0;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
@@ -112,6 +115,7 @@ static status_t card_get_quintuplet(private_sim_manager_t *this,
 			case SUCCESS:
 			case INVALID_STATE:
 				enumerator->destroy(enumerator);
+				this->lock->unlock(this->lock);
 				return status;
 			case NOT_SUPPORTED:
 			case FAILED:
@@ -121,62 +125,62 @@ static status_t card_get_quintuplet(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_IKE, "tried %d SIM cards, but none has quintuplets for '%Y'",
 		 tried, id);
 	return status;
 }
 
-/**
- * Implementation of sim_manager_t.card_resync
- */
-static bool card_resync(private_sim_manager_t *this, identification_t *id,
-						char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN])
+METHOD(sim_manager_t, card_resync, bool,
+	private_sim_manager_t *this, identification_t *id,
+	char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN])
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		if (card->resync(card, id, rand, auts))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return FALSE;
 }
 
-/**
- * Implementation of sim_manager_t.card_set_pseudonym
- */
-static void card_set_pseudonym(private_sim_manager_t *this,
-							identification_t *id, identification_t *pseudonym)
+METHOD(sim_manager_t, card_set_pseudonym, void,
+	private_sim_manager_t *this, identification_t *id,
+	identification_t *pseudonym)
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
 
 	DBG1(DBG_IKE, "storing pseudonym '%Y' for '%Y'", pseudonym, id);
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		card->set_pseudonym(card, id, pseudonym);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.card_get_pseudonym
- */
-static identification_t* card_get_pseudonym(private_sim_manager_t *this,
-											identification_t *id)
+METHOD(sim_manager_t, card_get_pseudonym, identification_t*,
+	private_sim_manager_t *this, identification_t *id)
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
 	identification_t *pseudonym = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
@@ -189,15 +193,13 @@ static identification_t* card_get_pseudonym(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return pseudonym;
 }
 
-/**
- * Implementation of sim_manager_t.card_set_reauth
- */
-static void card_set_reauth(private_sim_manager_t *this, identification_t *id,
-							identification_t *next, char mk[HASH_SIZE_SHA1],
-							u_int16_t counter)
+METHOD(sim_manager_t, card_set_reauth, void,
+	private_sim_manager_t *this, identification_t *id, identification_t *next,
+	char mk[HASH_SIZE_SHA1], u_int16_t counter)
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
@@ -205,25 +207,25 @@ static void card_set_reauth(private_sim_manager_t *this, identification_t *id,
 	DBG1(DBG_IKE, "storing next reauthentication identity '%Y' for '%Y'",
 		 next, id);
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
 		card->set_reauth(card, id, next, mk, counter);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.card_get_reauth
- */
-static identification_t* card_get_reauth(private_sim_manager_t *this,
-								identification_t *id, char mk[HASH_SIZE_SHA1],
-								u_int16_t *counter)
+METHOD(sim_manager_t, card_get_reauth, identification_t*,
+	private_sim_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1],
+	u_int16_t *counter)
 {
 	enumerator_t *enumerator;
 	sim_card_t *card;
 	identification_t *reauth = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->cards->create_enumerator(this->cards);
 	while (enumerator->enumerate(enumerator, &card))
 	{
@@ -236,66 +238,63 @@ static identification_t* card_get_reauth(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return reauth;
 }
 
-/**
- * Implementation of sim_manager_t.add_provider
- */
-static void add_provider(private_sim_manager_t *this, sim_provider_t *provider)
+METHOD(sim_manager_t, add_provider, void,
+	private_sim_manager_t *this, sim_provider_t *provider)
 {
+	this->lock->write_lock(this->lock);
 	this->providers->insert_last(this->providers, provider);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.remove_provider
- */
-static void remove_provider(private_sim_manager_t *this,
-							sim_provider_t *provider)
+METHOD(sim_manager_t, remove_provider, void,
+	private_sim_manager_t *this, sim_provider_t *provider)
 {
+	this->lock->write_lock(this->lock);
 	this->providers->remove(this->providers, provider, NULL);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.provider_get_triplet
- */
-static bool provider_get_triplet(private_sim_manager_t *this,
-								 identification_t *id, char rand[SIM_RAND_LEN],
-								 char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
+METHOD(sim_manager_t, provider_get_triplet, bool,
+	private_sim_manager_t *this, identification_t *id, char rand[SIM_RAND_LEN],
+	char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN])
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
 	int tried = 0;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
 		if (provider->get_triplet(provider, id, rand, sres, kc))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 		tried++;
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_IKE, "tried %d SIM providers, but none had a triplet for '%Y'",
 		 tried, id);
 	return FALSE;
 }
 
-/**
- * Implementation of sim_manager_t.provider_get_quintuplet
- */
-static bool provider_get_quintuplet(private_sim_manager_t *this,
-								identification_t *id, char rand[AKA_RAND_LEN],
-								char xres[AKA_RES_MAX], int *xres_len,
-								char ck[AKA_CK_LEN], char ik[AKA_IK_LEN],
-								char autn[AKA_AUTN_LEN])
+METHOD(sim_manager_t, provider_get_quintuplet, bool,
+	private_sim_manager_t *this, identification_t *id, char rand[AKA_RAND_LEN],
+	char xres[AKA_RES_MAX], int *xres_len, char ck[AKA_CK_LEN],
+	char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN])
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
 	int tried = 0;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -303,47 +302,48 @@ static bool provider_get_quintuplet(private_sim_manager_t *this,
 									 ck, ik, autn))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	DBG1(DBG_IKE, "tried %d SIM providers, but none had a quintuplet for '%Y'",
 		 tried, id);
 	return FALSE;
 }
 
-/**
- * Implementation of sim_manager_t.provider_resync
- */
-static bool provider_resync(private_sim_manager_t *this, identification_t *id,
-							char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN])
+METHOD(sim_manager_t, provider_resync, bool,
+	private_sim_manager_t *this, identification_t *id,
+	char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN])
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
 		if (provider->resync(provider, id, rand, auts))
 		{
 			enumerator->destroy(enumerator);
+			this->lock->unlock(this->lock);
 			return TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return FALSE;
 }
 
-/**
- * Implementation of sim_manager_t.provider_is_pseudonym
- */
-static identification_t* provider_is_pseudonym(private_sim_manager_t *this,
-											   identification_t *id)
+METHOD(sim_manager_t, provider_is_pseudonym, identification_t*,
+	private_sim_manager_t *this, identification_t *id)
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
 	identification_t *permanent = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -356,19 +356,18 @@ static identification_t* provider_is_pseudonym(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return permanent;
 }
 
-/**
- * Implementation of sim_manager_t.provider_gen_pseudonym
- */
-static identification_t* provider_gen_pseudonym(private_sim_manager_t *this,
-												identification_t *id)
+METHOD(sim_manager_t, provider_gen_pseudonym, identification_t*,
+	private_sim_manager_t *this, identification_t *id)
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
 	identification_t *pseudonym = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -380,20 +379,19 @@ static identification_t* provider_gen_pseudonym(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return pseudonym;
 }
 
-/**
- * Implementation of sim_manager_t.provider_is_reauth
- */
-static identification_t* provider_is_reauth(private_sim_manager_t *this,
-								identification_t *id, char mk[HASH_SIZE_SHA1],
-								u_int16_t *counter)
+METHOD(sim_manager_t, provider_is_reauth, identification_t*,
+	private_sim_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1],
+	u_int16_t *counter)
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
 	identification_t *permanent = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -406,19 +404,18 @@ static identification_t* provider_is_reauth(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return permanent;
 }
 
-/**
- * Implementation of sim_manager_t.provider_gen_reauth
- */
-static identification_t* provider_gen_reauth(private_sim_manager_t *this,
-								identification_t *id, char mk[HASH_SIZE_SHA1])
+METHOD(sim_manager_t, provider_gen_reauth, identification_t*,
+	private_sim_manager_t *this, identification_t *id, char mk[HASH_SIZE_SHA1])
 {
 	enumerator_t *enumerator;
 	sim_provider_t *provider;
 	identification_t *reauth = NULL;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->providers->create_enumerator(this->providers);
 	while (enumerator->enumerate(enumerator, &provider))
 	{
@@ -430,67 +427,66 @@ static identification_t* provider_gen_reauth(private_sim_manager_t *this,
 		}
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 	return reauth;
 }
 
-/**
- * Implementation of sim_manager_t.add_hooks
- */
-static void add_hooks(private_sim_manager_t *this, sim_hooks_t *hooks)
+METHOD(sim_manager_t, add_hooks, void,
+	private_sim_manager_t *this, sim_hooks_t *hooks)
 {
+	this->lock->write_lock(this->lock);
 	this->hooks->insert_last(this->hooks, hooks);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.remove_hooks
- */
-static void remove_hooks(private_sim_manager_t *this, sim_hooks_t *hooks)
+METHOD(sim_manager_t, remove_hooks, void,
+	private_sim_manager_t *this, sim_hooks_t *hooks)
 {
+	this->lock->write_lock(this->lock);
 	this->hooks->remove(this->hooks, hooks, NULL);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.message_hook
- */
-static void message_hook(private_sim_manager_t *this,
-						 simaka_message_t *message, bool inbound, bool decrypted)
+METHOD(sim_manager_t, message_hook, void,
+	private_sim_manager_t *this, simaka_message_t *message,
+	bool inbound, bool decrypted)
 {
 	enumerator_t *enumerator;
 	sim_hooks_t *hooks;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->hooks->create_enumerator(this->hooks);
 	while (enumerator->enumerate(enumerator, &hooks))
 	{
 		hooks->message(hooks, message, inbound, decrypted);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.key_hook
- */
-static void key_hook(private_sim_manager_t *this,
-					 chunk_t k_encr, chunk_t k_auth)
+METHOD(sim_manager_t, key_hook, void,
+	private_sim_manager_t *this, chunk_t k_encr, chunk_t k_auth)
 {
 	enumerator_t *enumerator;
 	sim_hooks_t *hooks;
 
+	this->lock->read_lock(this->lock);
 	enumerator = this->hooks->create_enumerator(this->hooks);
 	while (enumerator->enumerate(enumerator, &hooks))
 	{
 		hooks->keys(hooks, k_encr, k_auth);
 	}
 	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of sim_manager_t.destroy.
- */
-static void destroy(private_sim_manager_t *this)
+METHOD(sim_manager_t, destroy, void,
+	private_sim_manager_t *this)
 {
 	this->cards->destroy(this->cards);
 	this->providers->destroy(this->providers);
 	this->hooks->destroy(this->hooks);
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -499,35 +495,39 @@ static void destroy(private_sim_manager_t *this)
  */
 sim_manager_t *sim_manager_create()
 {
-	private_sim_manager_t *this = malloc_thing(private_sim_manager_t);
+	private_sim_manager_t *this;
 
-	this->public.add_card = (void(*)(sim_manager_t*, sim_card_t *card))add_card;
-	this->public.remove_card = (void(*)(sim_manager_t*, sim_card_t *card))remove_card;
-	this->public.card_get_triplet = (bool(*)(sim_manager_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))card_get_triplet;
-	this->public.card_get_quintuplet = (status_t(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char autn[AKA_AUTN_LEN], char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char res[AKA_RES_MAX], int *res_len))card_get_quintuplet;
-	this->public.card_resync = (bool(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))card_resync;
-	this->public.card_set_pseudonym = (void(*)(sim_manager_t*, identification_t *id, identification_t *pseudonym))card_set_pseudonym;
-	this->public.card_get_pseudonym = (identification_t*(*)(sim_manager_t*, identification_t *id))card_get_pseudonym;
-	this->public.card_set_reauth = (void(*)(sim_manager_t*, identification_t *id, identification_t *next, char mk[HASH_SIZE_SHA1], u_int16_t counter))card_set_reauth;
-	this->public.card_get_reauth = (identification_t*(*)(sim_manager_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))card_get_reauth;
-	this->public.add_provider = (void(*)(sim_manager_t*, sim_provider_t *provider))add_provider;
-	this->public.remove_provider = (void(*)(sim_manager_t*, sim_provider_t *provider))remove_provider;
-	this->public.provider_get_triplet = (bool(*)(sim_manager_t*, identification_t *id, char rand[SIM_RAND_LEN], char sres[SIM_SRES_LEN], char kc[SIM_KC_LEN]))provider_get_triplet;
-	this->public.provider_get_quintuplet = (bool(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char xres[AKA_RES_MAX], int *xres_len, char ck[AKA_CK_LEN], char ik[AKA_IK_LEN], char autn[AKA_AUTN_LEN]))provider_get_quintuplet;
-	this->public.provider_resync = (bool(*)(sim_manager_t*, identification_t *id, char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]))provider_resync;
-	this->public.provider_is_pseudonym = (identification_t*(*)(sim_manager_t*, identification_t *id))provider_is_pseudonym;
-	this->public.provider_gen_pseudonym = (identification_t*(*)(sim_manager_t*, identification_t *id))provider_gen_pseudonym;
-	this->public.provider_is_reauth = (identification_t*(*)(sim_manager_t*, identification_t *id, char mk[HASH_SIZE_SHA1], u_int16_t *counter))provider_is_reauth;
-	this->public.provider_gen_reauth = (identification_t*(*)(sim_manager_t*, identification_t *id, char mk[HASH_SIZE_SHA1]))provider_gen_reauth;
-	this->public.add_hooks = (void(*)(sim_manager_t*, sim_hooks_t *hooks))add_hooks;
-	this->public.remove_hooks = (void(*)(sim_manager_t*, sim_hooks_t *hooks))remove_hooks;
-	this->public.message_hook = (void(*)(sim_manager_t*, simaka_message_t *message, bool inbound, bool decrypted))message_hook;
-	this->public.key_hook = (void(*)(sim_manager_t*, chunk_t k_encr, chunk_t k_auth))key_hook;
-	this->public.destroy = (void(*)(sim_manager_t*))destroy;
-
-	this->cards = linked_list_create();
-	this->providers = linked_list_create();
-	this->hooks = linked_list_create();
+	INIT(this,
+		.public = {
+			.add_card = _add_card,
+			.remove_card = _remove_card,
+			.card_get_triplet = _card_get_triplet,
+			.card_get_quintuplet = _card_get_quintuplet,
+			.card_resync = _card_resync,
+			.card_set_pseudonym = _card_set_pseudonym,
+			.card_get_pseudonym = _card_get_pseudonym,
+			.card_set_reauth = _card_set_reauth,
+			.card_get_reauth = _card_get_reauth,
+			.add_provider = _add_provider,
+			.remove_provider = _remove_provider,
+			.provider_get_triplet = _provider_get_triplet,
+			.provider_get_quintuplet = _provider_get_quintuplet,
+			.provider_resync = _provider_resync,
+			.provider_is_pseudonym = _provider_is_pseudonym,
+			.provider_gen_pseudonym = _provider_gen_pseudonym,
+			.provider_is_reauth = _provider_is_reauth,
+			.provider_gen_reauth = _provider_gen_reauth,
+			.add_hooks = _add_hooks,
+			.remove_hooks = _remove_hooks,
+			.message_hook = _message_hook,
+			.key_hook = _key_hook,
+			.destroy = _destroy,
+		},
+		.cards = linked_list_create(),
+		.providers = linked_list_create(),
+		.hooks = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+	);
 
 	return &this->public;
 }

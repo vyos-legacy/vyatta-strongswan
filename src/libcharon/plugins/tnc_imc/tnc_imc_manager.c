@@ -77,7 +77,7 @@ METHOD(imc_manager_t, remove_, imc_t*,
 	private_tnc_imc_manager_t *this, TNC_IMCID id)
 {
 	enumerator_t *enumerator;
-	imc_t *imc;
+	imc_t *imc, *removed_imc = NULL;
 
 	enumerator = this->imcs->create_enumerator(this->imcs);
 	while (enumerator->enumerate(enumerator, &imc))
@@ -85,11 +85,34 @@ METHOD(imc_manager_t, remove_, imc_t*,
 		if (id == imc->get_id(imc))
 		{
 			this->imcs->remove_at(this->imcs, enumerator);
-			return imc;
+			removed_imc = imc;
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return NULL;
+
+	return removed_imc;
+}
+
+METHOD(imc_manager_t, is_registered, bool,
+	private_tnc_imc_manager_t *this, TNC_IMCID id)
+{
+	enumerator_t *enumerator;
+	imc_t *imc;
+	bool found = FALSE;
+
+	enumerator = this->imcs->create_enumerator(this->imcs);
+	while (enumerator->enumerate(enumerator, &imc))
+	{
+		if (id == imc->get_id(imc))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
 }
 
 METHOD(imc_manager_t, get_preferred_language, char*,
@@ -160,6 +183,7 @@ METHOD(imc_manager_t, receive_message, void,
 									 TNC_UInt32 message_len,
 									 TNC_MessageType message_type)
 {
+	bool type_supported = FALSE;
 	enumerator_t *enumerator;
 	imc_t *imc;
 
@@ -168,11 +192,16 @@ METHOD(imc_manager_t, receive_message, void,
 	{
 		if (imc->receive_message && imc->type_supported(imc, message_type))
 		{
+			type_supported = TRUE;
 			imc->receive_message(imc->get_id(imc), connection_id,
 								 message, message_len, message_type);
 		}
 	}
 	enumerator->destroy(enumerator);
+	if (!type_supported)
+	{
+		DBG2(DBG_TNC, "message type 0x%08x not supported by any IMC", message_type);
+	}
 }
 
 METHOD(imc_manager_t, batch_ending, void,
@@ -222,6 +251,7 @@ imc_manager_t* tnc_imc_manager_create(void)
 		.public = {
 			.add = _add,
 			.remove = _remove_, /* avoid name conflict with stdio.h */
+			.is_registered = _is_registered,
 			.get_preferred_language = _get_preferred_language,
 			.notify_connection_change = _notify_connection_change,
 			.begin_handshake = _begin_handshake,

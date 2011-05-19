@@ -502,8 +502,6 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 	{
 		DBG1(DBG_TLS, "server requested a certificate, but client "
 			 "authentication disabled");
-		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
-		return NEED_MORE;
 	}
 	this->crypto->append_handshake(this->crypto,
 								TLS_CERTIFICATE_REQUEST, reader->peek(reader));
@@ -541,19 +539,22 @@ static status_t process_certreq(private_tls_peer_t *this, tls_reader_t *reader)
 			authorities->destroy(authorities);
 			return NEED_MORE;
 		}
-		id = identification_create_from_encoding(ID_DER_ASN1_DN, data);
-		cert = lib->credmgr->get_cert(lib->credmgr,
-									  CERT_X509, KEY_ANY, id, TRUE);
-		if (cert)
+		if (this->peer)
 		{
-			DBG1(DBG_TLS, "received TLS cert request for '%Y", id);
-			this->peer_auth->add(this->peer_auth, AUTH_RULE_CA_CERT, cert);
+			id = identification_create_from_encoding(ID_DER_ASN1_DN, data);
+			cert = lib->credmgr->get_cert(lib->credmgr,
+										  CERT_X509, KEY_ANY, id, TRUE);
+			if (cert)
+			{
+				DBG1(DBG_TLS, "received TLS cert request for '%Y", id);
+				this->peer_auth->add(this->peer_auth, AUTH_RULE_CA_CERT, cert);
+			}
+			else
+			{
+				DBG1(DBG_TLS, "received TLS cert request for unknown CA '%Y'", id);
+			}
+			id->destroy(id);
 		}
-		else
-		{
-			DBG1(DBG_TLS, "received TLS cert request for unknown CA '%Y'", id);
-		}
-		id->destroy(id);
 	}
 	authorities->destroy(authorities);
 	this->state = STATE_CERTREQ_RECEIVED;
@@ -738,6 +739,20 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		extensions->write_uint8(extensions, 1);
 		extensions->write_uint8(extensions, TLS_EC_POINT_UNCOMPRESSED);
 	}
+	if (this->server->get_type(this->server) == ID_FQDN)
+	{
+		tls_writer_t *names;
+
+		DBG2(DBG_TLS, "sending Server Name Indication for '%Y'", this->server);
+
+		names = tls_writer_create(8);
+		names->write_uint8(names, TLS_NAME_TYPE_HOST_NAME);
+		names->write_data16(names, this->server->get_encoding(this->server));
+		names->wrap16(names);
+		extensions->write_uint16(extensions, TLS_EXT_SERVER_NAME);
+		extensions->write_data16(extensions, names->get_buf(names));
+		names->destroy(names);
+	}
 
 	writer->write_data16(writer, extensions->get_buf(extensions));
 	extensions->destroy(extensions);
@@ -802,39 +817,42 @@ static status_t send_certificate(private_tls_peer_t *this,
 	this->private = find_private_key(this);
 	if (!this->private)
 	{
-		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y'", this->peer);
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return NEED_MORE;
+		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y', "
+			 "skipping client authentication", this->peer);
+		this->peer = NULL;
 	}
 
 	/* generate certificate payload */
 	certs = tls_writer_create(256);
-	cert = this->peer_auth->get(this->peer_auth, AUTH_RULE_SUBJECT_CERT);
-	if (cert)
+	if (this->peer)
 	{
-		if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
-		{
-			DBG1(DBG_TLS, "sending TLS peer certificate '%Y'",
-				 cert->get_subject(cert));
-			certs->write_data24(certs, data);
-			free(data.ptr);
-		}
-	}
-	enumerator = this->peer_auth->create_enumerator(this->peer_auth);
-	while (enumerator->enumerate(enumerator, &rule, &cert))
-	{
-		if (rule == AUTH_RULE_IM_CERT)
+		cert = this->peer_auth->get(this->peer_auth, AUTH_RULE_SUBJECT_CERT);
+		if (cert)
 		{
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
 			{
-				DBG1(DBG_TLS, "sending TLS intermediate certificate '%Y'",
+				DBG1(DBG_TLS, "sending TLS peer certificate '%Y'",
 					 cert->get_subject(cert));
 				certs->write_data24(certs, data);
 				free(data.ptr);
 			}
 		}
+		enumerator = this->peer_auth->create_enumerator(this->peer_auth);
+		while (enumerator->enumerate(enumerator, &rule, &cert))
+		{
+			if (rule == AUTH_RULE_IM_CERT)
+			{
+				if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
+				{
+					DBG1(DBG_TLS, "sending TLS intermediate certificate '%Y'",
+						 cert->get_subject(cert));
+					certs->write_data24(certs, data);
+					free(data.ptr);
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 
 	writer->write_data24(writer, certs->get_buf(certs));
 	certs->destroy(certs);

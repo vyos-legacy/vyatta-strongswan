@@ -55,6 +55,11 @@ struct private_eap_radius_t {
 	u_int32_t vendor;
 
 	/**
+	 * EAP message identifier
+	 */
+	u_int8_t identifier;
+
+	/**
 	 * RADIUS client instance
 	 */
 	radius_client_t *client;
@@ -107,7 +112,7 @@ static void add_eap_identity(private_eap_radius_t *this,
 
 	hdr = alloca(len);
 	hdr->code = EAP_RESPONSE;
-	hdr->identifier = 0;
+	hdr->identifier = this->identifier;
 	hdr->length = htons(len);
 	hdr->type = EAP_IDENTITY;
 	memcpy(hdr->data, prefix.ptr, prefix.len);
@@ -139,9 +144,12 @@ static bool radius2ike(private_eap_radius_t *this,
 	if (message.len)
 	{
 		*out = payload = eap_payload_create_data(message);
-		free(message.ptr);
+
 		/* apply EAP method selected by RADIUS server */
 		this->type = payload->get_type(payload, &this->vendor);
+
+		DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &message);
+		free(message.ptr);
 		return TRUE;
 	}
 	return FALSE;
@@ -284,6 +292,8 @@ METHOD(eap_method_t, process, status_t,
 	request = radius_message_create_request();
 	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
 	data = in->get_data(in);
+	DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &data);
+ 
 	/* fragment data suitable for RADIUS (not more than 253 bytes) */
 	while (data.len > 253)
 	{
@@ -351,6 +361,18 @@ METHOD(eap_method_t, get_msk, status_t,
 	return FAILED;
 }
 
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_radius_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_radius_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
+}
+
 METHOD(eap_method_t, is_mutual, bool,
 	private_eap_radius_t *this)
 {
@@ -388,6 +410,8 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 				.get_type = _get_type,
 				.is_mutual = _is_mutual,
 				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
 				.destroy = _destroy,
 			},
 		},

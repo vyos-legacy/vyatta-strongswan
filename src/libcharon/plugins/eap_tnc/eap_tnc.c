@@ -92,6 +92,18 @@ METHOD(eap_method_t, get_msk, status_t,
 	return FAILED;
 }
 
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_tnc_t *this)
+{
+	return this->tls_eap->get_identifier(this->tls_eap);
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_tnc_t *this, u_int8_t identifier)
+{
+	this->tls_eap->set_identifier(this->tls_eap, identifier);
+}
+
 METHOD(eap_method_t, is_mutual, bool,
 	private_eap_tnc_t *this)
 {
@@ -114,6 +126,7 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 	private_eap_tnc_t *this;
 	size_t frag_size;
 	int max_msg_count;
+	bool include_length;
 	char* protocol;
 	tnccs_type_t type;
 	tnccs_t *tnccs;
@@ -126,6 +139,8 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 				.get_type = _get_type,
 				.is_mutual = _is_mutual,
 				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
 				.destroy = _destroy,
 			},
 		},
@@ -135,7 +150,9 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 					"charon.plugins.eap-tnc.fragment_size", MAX_FRAGMENT_LEN);
 	max_msg_count = lib->settings->get_int(lib->settings,
 					"charon.plugins.eap-tnc.max_message_count", MAX_MESSAGE_COUNT);
-	protocol = lib->settings->get_str(lib->settings,
+	include_length = lib->settings->get_bool(lib->settings,
+					"charon.plugins.eap-tnc.include_length", TRUE);
+ 	protocol = lib->settings->get_str(lib->settings,
 					"charon.plugins.eap-tnc.protocol", "tnccs-1.1");
 	if (strcaseeq(protocol, "tnccs-2.0"))
 	{
@@ -156,7 +173,8 @@ static eap_tnc_t *eap_tnc_create(identification_t *server,
 		return NULL;
 	}
 	tnccs = charon->tnccs->create_instance(charon->tnccs, type, is_server);
-	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs, frag_size, max_msg_count);
+	this->tls_eap = tls_eap_create(EAP_TNC, (tls_t*)tnccs, frag_size,
+											 max_msg_count, include_length);
 	if (!this->tls_eap)
 	{
 		free(this);

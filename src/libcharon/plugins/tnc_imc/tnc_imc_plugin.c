@@ -130,6 +130,12 @@ static bool load_imcs(char *filename)
 		}
 		if (!charon->imcs->add(charon->imcs, imc))
 		{
+			if (imc->terminate &&
+				imc->terminate(imc->get_id(imc)) != TNC_RESULT_SUCCESS)
+			{
+				DBG1(DBG_TNC, "IMC \"%s\" not terminated successfully",
+							   imc->get_name(imc));
+			}
 			imc->destroy(imc);
 			return FALSE;
 		}
@@ -139,6 +145,12 @@ static bool load_imcs(char *filename)
 	munmap(addr, sb.st_size);
 	close(fd);
 	return TRUE;
+}
+
+METHOD(plugin_t, get_name, char*,
+	tnc_imc_plugin_t *this)
+{
+	return "tnc-imc";
 }
 
 METHOD(plugin_t, destroy, void,
@@ -158,6 +170,8 @@ plugin_t *tnc_imc_plugin_create()
 
 	INIT(this,
 		.plugin = {
+			.get_name = _get_name,
+				.reload = (void*)return_false,
 			.destroy = _destroy,
 		},
 	);

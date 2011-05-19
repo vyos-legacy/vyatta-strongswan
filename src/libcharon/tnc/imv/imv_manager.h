@@ -50,6 +50,15 @@ struct imv_manager_t {
 	imv_t* (*remove)(imv_manager_t *this, TNC_IMVID id);
 
 	/**
+	 * Check if an IMV with a given ID is registered with the IMV manager
+	 *
+	 * @param id				ID of IMV instance
+	 * @return					TRUE if registered
+	 */
+	bool (*is_registered)(imv_manager_t *this, TNC_IMVID id);
+
+
+	/**
 	 * Get the configured recommendation policy
 	 *
 	 * @return					configured recommendation policy
@@ -67,11 +76,13 @@ struct imv_manager_t {
 	 * Enforce the TNC recommendation on the IKE_SA by either inserting an
 	 * allow|isolate group membership rule (TRUE) or by blocking access (FALSE)
 	 *
-	 * @param void				TNC action recommendation
+	 * @param rec				TNC action recommendation
+	 * @param eval				TNC evaluation result
 	 * @return					TRUE for allow|isolate, FALSE for none
 	 */
 	bool (*enforce_recommendation)(imv_manager_t *this,
-								   TNC_IMV_Action_Recommendation rec);
+								   TNC_IMV_Action_Recommendation rec,
+								   TNC_IMV_Evaluation_Result eval);
 
 	/**
 	 * Notify all IMV instances
