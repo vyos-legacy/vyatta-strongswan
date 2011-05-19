@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 strongswan-4.5.1
 ----------------
 
@@ -74,7 +72,6 @@ strongswan-4.5.1
 - The revocation and x509 libstrongswan plugins and the pki tool gained basic
   support for delta CRLs.
 
->>>>>>> upstream/4.5.1
 
 strongswan-4.5.0
 ----------------
