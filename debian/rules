@@ -93,14 +93,15 @@ install: build-stamp
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 
-	# install files from debian/tmp into proper package dirs
-	dh_install --fail-missing
 	# special handling for padlock, as it is only built on i386
 ifeq ($(DEB_BUILD_ARCH_CPU),i386)
 	  install $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-padlock.so* $(CURDIR)/debian/libstrongswan/usr/lib/ipsec/plugins/
 endif
 	# and special handling for network-manager files - only install when built
 	install $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-nm.so* $(CURDIR)/debian/strongswan-nm/usr/lib/ipsec/plugins/
+
+	# install files from debian/tmp into proper package dirs
+	dh_install --fail-missing -X\.la -X\.a -Xmedsrv -Xman3
 
 	# and additional files not covered by upstream makefile...
 	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
