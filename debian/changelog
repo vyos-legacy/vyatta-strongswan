@@ -1,11 +1,15 @@
 strongswan (4.5.2-1) unstable; urgency=low
 
-  * New upstream version 4.5.2
+  * New upstream version 4.5.2. This removes a lot of old manpages that were
+    not properly updated since freeswan.
     Closes: #616482: strongswan-ikev1: virtual ips not released if xauth name 
                      does not match id
     Closes: #626169: strongswan: ipsec tunnels fail because charon segfaults
     Closes: #625228: strongswan-starter: left-/rightnexthop options are broken
     Closes: #614105: strongswan-ikev2: charon continually respawns
+  * Fix typo in debian/rules that precluded --enable-nm from being passed to
+    configure (LP: #771778).
+    
 
  -- Rene Mayrhofer <rmayr@debian.org>  Thu, 19 May 2011 13:42:21 +0200
 

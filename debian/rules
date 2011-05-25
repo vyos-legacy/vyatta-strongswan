@@ -54,7 +54,7 @@ endif
 # to do backports where the network-manager libs can not be installed, and 
 # thus to just ignore build-deps).
 ifeq ($(shell test -d /usr/include/libnm-glib/ && echo yes),yes)
-  CONFIGUREARS += --enable-nm
+  CONFIGUREARGS += --enable-nm
 endif
 
 build: build-stamp
@@ -99,7 +99,7 @@ install: build-stamp
 ifeq ($(DEB_BUILD_ARCH_CPU),i386)
 	  install $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-padlock.so* $(CURDIR)/debian/libstrongswan/usr/lib/ipsec/plugins/
 endif
-	# and special handling for network-manager files - only install when build
+	# and special handling for network-manager files - only install when built
 	install -d $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-nm.so* $(CURDIR)/debian/strongswan-nm/usr/lib/ipsec/plugins/
 
 	# and additional files not covered by upstream makefile...
