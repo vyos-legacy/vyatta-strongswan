@@ -9,7 +9,7 @@ strongswan (4.5.2-1) unstable; urgency=low
     Closes: #614105: strongswan-ikev2: charon continually respawns
   * Fix typo in debian/rules that precluded --enable-nm from being passed to
     configure (LP: #771778).
-    
+    Closes: #627775
 
  -- Rene Mayrhofer <rmayr@debian.org>  Thu, 19 May 2011 13:42:21 +0200
 
