@@ -1,3 +1,9 @@
+strongswan (4.4.1-5.1-vyatta1+napa1) unstable; urgency=low
+
+  * new branch
+
+ -- Deepti Kulkarni <deepti@vyatta.com>  Thu, 07 Jul 2011 20:51:02 -0700
+
 strongswan (4.4.1-5.1-vyatta1) unstable; urgency=low
 
   * fake commit to force package release
