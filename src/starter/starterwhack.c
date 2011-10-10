@@ -418,3 +418,12 @@ int starter_whack_del_ca(starter_ca_t *ca)
 
 	return send_whack_msg(&msg);
 }
+
+int starter_whack_reread_secrets(){
+       whack_message_t msg;
+
+       init_whack_msg(&msg);
+
+       msg.whack_reread = REREAD_ALL;
+       return send_whack_msg(&msg);
+}

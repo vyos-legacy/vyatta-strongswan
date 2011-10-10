@@ -520,6 +520,9 @@ int main (int argc, char **argv)
 				}
 				else
 				{
+                                       if (starter_pluto_pid) {
+                                               starter_whack_reread_secrets();
+                                       }
 					/* Only reload conn and ca sections if pluto is not killed */
 
 					/* Look for new connections that are already loaded */

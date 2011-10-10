@@ -21,6 +21,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdio.h>
+#include <netdb.h>
 
 #include "identification.h"
 
@@ -873,6 +874,17 @@ static private_identification_t *identification_create(id_type_t type)
 	return this;
 }
 
+
+bool resolve_address(char *string, char *address){
+       struct hostent *h;
+       h = gethostbyname(string);
+       if (h != NULL){
+               char * addr = inet_ntoa(*((struct in_addr *)h->h_addr));
+               strcpy(address, addr);
+               return true;
+       }
+       return false;
+}
 /*
  * Described in header.
  */
@@ -922,6 +934,10 @@ identification_t *identification_create_from_string(char *string)
 				struct in_addr address;
 				chunk_t chunk = {(void*)&address, sizeof(address)};
 
+                                char * addr_string;
+				addr_string = (char *) malloc(40);
+				bzero(addr_string, 40);
+
 				if (inet_pton(AF_INET, string, &address) > 0)
 				{	/* is IPv4 */
 					this = identification_create(ID_IPV4_ADDR);
@@ -929,8 +945,21 @@ identification_t *identification_create_from_string(char *string)
 				}
 				else
 				{	/* not IPv4, mostly FQDN */
-					this = identification_create(ID_FQDN);
-					this->encoded = chunk_create(strdup(string), strlen(string));
+                                       if (resolve_address(string, addr_string)) {
+                                               if (inet_pton(AF_INET, addr_string, &address) > 0)
+                                               {        /* is IPv4 */
+                                                       this = identification_create(ID_IPV4_ADDR);
+                                                       this->encoded = chunk_clone(chunk);
+                                               } 
+                                               else {
+                                                       this = identification_create(ID_FQDN);
+                                                       this->encoded = chunk_create(strdup(string), strlen(string));
+                                               }
+                                       }
+                                       else {
+                                               this = identification_create(ID_FQDN);
+                                               this->encoded = chunk_create(strdup(string), strlen(string));
+                                       }
 				}
 				return &this->public;
 			}
