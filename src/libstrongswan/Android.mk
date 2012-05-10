@@ -23,6 +23,7 @@ crypto/signers/signer.c crypto/signers/signer.h \
 crypto/crypto_factory.c crypto/crypto_factory.h \
 crypto/crypto_tester.c crypto/crypto_tester.h \
 crypto/diffie_hellman.c crypto/diffie_hellman.h \
+crypto/aead.c crypto/aead.h \
 crypto/transform.c crypto/transform.h \
 credentials/credential_factory.c credentials/credential_factory.h \
 credentials/builder.c credentials/builder.h \
@@ -31,8 +32,7 @@ credentials/keys/private_key.c credentials/keys/private_key.h \
 credentials/keys/public_key.c credentials/keys/public_key.h \
 credentials/keys/shared_key.c credentials/keys/shared_key.h \
 credentials/certificates/certificate.c credentials/certificates/certificate.h \
-credentials/certificates/x509.h credentials/certificates/x509.c \
-credentials/certificates/ac.h \
+credentials/certificates/x509.h credentials/certificates/ac.h \
 credentials/certificates/crl.h credentials/certificates/crl.c \
 credentials/certificates/pkcs10.h \
 credentials/certificates/ocsp_request.h \
@@ -43,10 +43,18 @@ credentials/credential_manager.c credentials/credential_manager.h \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/auth_cfg_wrapper.h \
 credentials/sets/ocsp_response_wrapper.c credentials/sets/ocsp_response_wrapper.h \
 credentials/sets/cert_cache.c credentials/sets/cert_cache.h \
+credentials/sets/mem_cred.c credentials/sets/mem_cred.h \
+credentials/sets/callback_cred.c credentials/sets/callback_cred.h \
 credentials/auth_cfg.c credentials/auth_cfg.h credentials/credential_set.h \
 credentials/cert_validator.h \
 database/database.h database/database_factory.h database/database_factory.c \
-fetcher/fetcher.h fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
+fetcher/fetcher.h fetcher/fetcher.c fetcher/fetcher_manager.h fetcher/fetcher_manager.c \
+eap/eap.h eap/eap.c \
+plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h \
+processing/jobs/job.h \
+processing/jobs/callback_job.c processing/jobs/callback_job.h \
+processing/processor.c processing/processor.h \
+processing/scheduler.c processing/scheduler.h \
 selectors/traffic_selector.c selectors/traffic_selector.h \
 threading/thread.h threading/thread.c \
 threading/thread_value.h threading/thread_value.c \
@@ -62,8 +70,7 @@ utils/linked_list.c utils/linked_list.h \
 utils/hashtable.c utils/hashtable.h \
 utils/enumerator.c utils/enumerator.h \
 utils/optionsfrom.c utils/optionsfrom.h \
-utils/backtrace.c utils/backtrace.h \
-plugins/plugin_loader.c plugins/plugin_loader.h plugins/plugin.h
+utils/backtrace.c utils/backtrace.h
 
 # adding the plugin source files
 

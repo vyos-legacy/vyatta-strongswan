@@ -234,7 +234,7 @@ out_attr(int type
 				, val, enum_show(d, val)));
 	return TRUE;
 }
-#define return_on(var, val) do { var=val;goto return_out; } while(0);
+#define return_on(var, val) do { var=val;goto return_out; } while(0)
 /* Output an SA, as described by a db_sa.
  * This has the side-effect of allocating SPIs for us.
  */
@@ -448,7 +448,7 @@ out_sa(pb_stream *outs
 							, &st->st_connection->spd
 							, tunnel_mode);
 						if (*spi_ptr == 0)
-							return FALSE;
+							return_on(ret, FALSE);
 						*spi_generated = TRUE;
 					}
 					if (!out_raw((u_char *)spi_ptr, IPSEC_DOI_SPI_SIZE
@@ -591,7 +591,7 @@ static u_int32_t decode_long_duration(pb_stream *pbs)
 	if (pbs_left(pbs) > sizeof(val))
 	{
 		/* "clamp" too large value to max representable value */
-		val -= 1;       /* portable way to get to maximum value */
+		val = UINT32_MAX;
 		DBG(DBG_PARSING, DBG_log("   too large duration clamped to: %lu"
 			, (unsigned long)val));
 	}
@@ -881,7 +881,7 @@ notification_t parse_isakmp_sa_body(u_int32_t ipsecdoisit,
 		lset_t seen_attrs = 0;
 		lset_t seen_durations = 0;
 		u_int16_t life_type = 0;
-		struct oakley_trans_attrs ta;
+		struct oakley_trans_attrs ta = { .encrypter = NULL };
 		err_t ugh = NULL;       /* set to diagnostic when problem detected */
 
 		/* initialize only optional field in ta */
@@ -2176,7 +2176,7 @@ parse_ipsec_sa_body(
 #endif
 			if (!can_do_IPcomp)
 			{
-				plog("compression proposed by %s, but KLIPS is not configured with IPCOMP"
+				plog("compression proposed by %s, but kernel does not support IPCOMP"
 					, ip_str(&c->spd.that.host_addr));
 				continue;
 			}

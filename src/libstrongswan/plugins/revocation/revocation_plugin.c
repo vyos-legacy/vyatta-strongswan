@@ -36,6 +36,12 @@ struct private_revocation_plugin_t {
 	revocation_validator_t *validator;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_revocation_plugin_t *this)
+{
+	return "revocation";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_revocation_plugin_t *this)
 {
@@ -52,7 +58,13 @@ plugin_t *revocation_plugin_create()
 	private_revocation_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
 		.validator = revocation_validator_create(),
 	);
 	lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);

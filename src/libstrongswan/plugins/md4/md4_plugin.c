@@ -31,10 +31,14 @@ struct private_md4_plugin_t {
 	md4_plugin_t public;
 };
 
-/**
- * Implementation of md4_plugin_t.destroy
- */
-static void destroy(private_md4_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_md4_plugin_t *this)
+{
+	return "md4";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_md4_plugin_t *this)
 {
 	lib->crypto->remove_hasher(lib->crypto,
 							   (hasher_constructor_t)md4_hasher_create);
@@ -46,11 +50,19 @@ static void destroy(private_md4_plugin_t *this)
  */
 plugin_t *md4_plugin_create()
 {
-	private_md4_plugin_t *this = malloc_thing(private_md4_plugin_t);
+	private_md4_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
 
-	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4, get_name(this),
 							(hasher_constructor_t)md4_hasher_create);
 
 	return &this->public.plugin;

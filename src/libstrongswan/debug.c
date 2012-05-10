@@ -27,6 +27,8 @@ ENUM(debug_names, DBG_DMN, DBG_LIB,
 	"KNL",
 	"NET",
 	"ENC",
+	"TNC",
+	"TLS",
 	"LIB",
 );
 
@@ -40,6 +42,8 @@ ENUM(debug_lower_names, DBG_DMN, DBG_LIB,
 	"knl",
 	"net",
 	"enc",
+	"tnc",
+	"tls",
 	"lib",
 );
 

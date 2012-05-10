@@ -35,8 +35,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 noinst_PROGRAMS = bin2array$(EXEEXT) bin2sql$(EXEEXT) id2sql$(EXEEXT) \
-	key2keyid$(EXEEXT) keyid2sql$(EXEEXT) thread_analysis$(EXEEXT) \
-	dh_speed$(EXEEXT) pubkey_speed$(EXEEXT)
+	key2keyid$(EXEEXT) keyid2sql$(EXEEXT) oid2der$(EXEEXT) \
+	thread_analysis$(EXEEXT) dh_speed$(EXEEXT) \
+	pubkey_speed$(EXEEXT) crypt_burn$(EXEEXT) fetch$(EXEEXT)
 subdir = scripts
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -47,6 +48,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
 	$(top_srcdir)/m4/config/lt~obsolete.m4 \
 	$(top_srcdir)/m4/macros/with.m4 \
 	$(top_srcdir)/m4/macros/enable-disable.m4 \
+	$(top_srcdir)/m4/macros/add-plugin.m4 \
 	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -60,9 +62,17 @@ bin2array_LDADD = $(LDADD)
 am_bin2sql_OBJECTS = bin2sql.$(OBJEXT)
 bin2sql_OBJECTS = $(am_bin2sql_OBJECTS)
 bin2sql_LDADD = $(LDADD)
+am_crypt_burn_OBJECTS = crypt_burn.$(OBJEXT)
+crypt_burn_OBJECTS = $(am_crypt_burn_OBJECTS)
+crypt_burn_DEPENDENCIES =  \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la
 am_dh_speed_OBJECTS = dh_speed.$(OBJEXT)
 dh_speed_OBJECTS = $(am_dh_speed_OBJECTS)
 dh_speed_DEPENDENCIES =  \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la
+am_fetch_OBJECTS = fetch.$(OBJEXT)
+fetch_OBJECTS = $(am_fetch_OBJECTS)
+fetch_DEPENDENCIES =  \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
 am_id2sql_OBJECTS = id2sql.$(OBJEXT)
 id2sql_OBJECTS = $(am_id2sql_OBJECTS)
@@ -75,6 +85,10 @@ key2keyid_DEPENDENCIES =  \
 am_keyid2sql_OBJECTS = keyid2sql.$(OBJEXT)
 keyid2sql_OBJECTS = $(am_keyid2sql_OBJECTS)
 keyid2sql_DEPENDENCIES =  \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la
+am_oid2der_OBJECTS = oid2der.$(OBJEXT)
+oid2der_OBJECTS = $(am_oid2der_OBJECTS)
+oid2der_DEPENDENCIES =  \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
 am_pubkey_speed_OBJECTS = pubkey_speed.$(OBJEXT)
 pubkey_speed_OBJECTS = $(am_pubkey_speed_OBJECTS)
@@ -96,12 +110,15 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(bin2array_SOURCES) $(bin2sql_SOURCES) $(dh_speed_SOURCES) \
+SOURCES = $(bin2array_SOURCES) $(bin2sql_SOURCES) \
+	$(crypt_burn_SOURCES) $(dh_speed_SOURCES) $(fetch_SOURCES) \
 	$(id2sql_SOURCES) $(key2keyid_SOURCES) $(keyid2sql_SOURCES) \
-	$(pubkey_speed_SOURCES) $(thread_analysis_SOURCES)
+	$(oid2der_SOURCES) $(pubkey_speed_SOURCES) \
+	$(thread_analysis_SOURCES)
 DIST_SOURCES = $(bin2array_SOURCES) $(bin2sql_SOURCES) \
-	$(dh_speed_SOURCES) $(id2sql_SOURCES) $(key2keyid_SOURCES) \
-	$(keyid2sql_SOURCES) $(pubkey_speed_SOURCES) \
+	$(crypt_burn_SOURCES) $(dh_speed_SOURCES) $(fetch_SOURCES) \
+	$(id2sql_SOURCES) $(key2keyid_SOURCES) $(keyid2sql_SOURCES) \
+	$(oid2der_SOURCES) $(pubkey_speed_SOURCES) \
 	$(thread_analysis_SOURCES)
 ETAGS = etags
 CTAGS = ctags
@@ -171,6 +188,8 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PTHREADLIB = @PTHREADLIB@
 RANLIB = @RANLIB@
 RTLIB = @RTLIB@
@@ -202,14 +221,17 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 builddir = @builddir@
+c_plugins = @c_plugins@
 datadir = @datadir@
 datarootdir = @datarootdir@
+dbusservicedir = @dbusservicedir@
 default_pkcs11 = @default_pkcs11@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 gtk_CFLAGS = @gtk_CFLAGS@
 gtk_LIBS = @gtk_LIBS@
+h_plugins = @h_plugins@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -220,28 +242,35 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
+libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
 libexecdir = @libexecdir@
-libhydra_plugins = @libhydra_plugins@
-libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
 localstatedir = @localstatedir@
 lt_ECHO = @lt_ECHO@
+maemo_CFLAGS = @maemo_CFLAGS@
+maemo_LIBS = @maemo_LIBS@
+manager_plugins = @manager_plugins@
 mandir = @mandir@
+medsrv_plugins = @medsrv_plugins@
 mkdir_p = @mkdir_p@
 nm_CFLAGS = @nm_CFLAGS@
 nm_LIBS = @nm_LIBS@
 nm_ca_dir = @nm_ca_dir@
 oldincludedir = @oldincludedir@
+openac_plugins = @openac_plugins@
+p_plugins = @p_plugins@
+pcsclite_CFLAGS = @pcsclite_CFLAGS@
+pcsclite_LIBS = @pcsclite_LIBS@
 pdfdir = @pdfdir@
 piddir = @piddir@
+pki_plugins = @pki_plugins@
 plugindir = @plugindir@
 pluto_plugins = @pluto_plugins@
+pool_plugins = @pool_plugins@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -249,11 +278,17 @@ random_device = @random_device@
 resolv_conf = @resolv_conf@
 routing_table = @routing_table@
 routing_table_prio = @routing_table_prio@
+s_plugins = @s_plugins@
 sbindir = @sbindir@
+scepclient_plugins = @scepclient_plugins@
+scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
+systemdsystemunitdir = @systemdsystemunitdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
@@ -261,23 +296,29 @@ top_srcdir = @top_srcdir@
 urandom_device = @urandom_device@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
-INCLUDES = -I$(top_srcdir)/src/libstrongswan
+INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/libtls
 AM_CFLAGS = \
--DPLUGINS="\"${libstrongswan_plugins}\""
+-DPLUGINS="\"${scripts_plugins}\""
 
 bin2array_SOURCES = bin2array.c
 bin2sql_SOURCES = bin2sql.c
 id2sql_SOURCES = id2sql.c
 key2keyid_SOURCES = key2keyid.c
 keyid2sql_SOURCES = keyid2sql.c
+oid2der_SOURCES = oid2der.c
 thread_analysis_SOURCES = thread_analysis.c
 dh_speed_SOURCES = dh_speed.c
 pubkey_speed_SOURCES = pubkey_speed.c
+crypt_burn_SOURCES = crypt_burn.c
+fetch_SOURCES = fetch.c
 id2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 key2keyid_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 keyid2sql_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+oid2der_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 dh_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
 pubkey_speed_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lrt
+crypt_burn_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+fetch_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 all: all-am
 
 .SUFFIXES:
@@ -327,9 +368,15 @@ bin2array$(EXEEXT): $(bin2array_OBJECTS) $(bin2array_DEPENDENCIES)
 bin2sql$(EXEEXT): $(bin2sql_OBJECTS) $(bin2sql_DEPENDENCIES) 
 	@rm -f bin2sql$(EXEEXT)
 	$(LINK) $(bin2sql_OBJECTS) $(bin2sql_LDADD) $(LIBS)
+crypt_burn$(EXEEXT): $(crypt_burn_OBJECTS) $(crypt_burn_DEPENDENCIES) 
+	@rm -f crypt_burn$(EXEEXT)
+	$(LINK) $(crypt_burn_OBJECTS) $(crypt_burn_LDADD) $(LIBS)
 dh_speed$(EXEEXT): $(dh_speed_OBJECTS) $(dh_speed_DEPENDENCIES) 
 	@rm -f dh_speed$(EXEEXT)
 	$(LINK) $(dh_speed_OBJECTS) $(dh_speed_LDADD) $(LIBS)
+fetch$(EXEEXT): $(fetch_OBJECTS) $(fetch_DEPENDENCIES) 
+	@rm -f fetch$(EXEEXT)
+	$(LINK) $(fetch_OBJECTS) $(fetch_LDADD) $(LIBS)
 id2sql$(EXEEXT): $(id2sql_OBJECTS) $(id2sql_DEPENDENCIES) 
 	@rm -f id2sql$(EXEEXT)
 	$(LINK) $(id2sql_OBJECTS) $(id2sql_LDADD) $(LIBS)
@@ -339,6 +386,9 @@ key2keyid$(EXEEXT): $(key2keyid_OBJECTS) $(key2keyid_DEPENDENCIES)
 keyid2sql$(EXEEXT): $(keyid2sql_OBJECTS) $(keyid2sql_DEPENDENCIES) 
 	@rm -f keyid2sql$(EXEEXT)
 	$(LINK) $(keyid2sql_OBJECTS) $(keyid2sql_LDADD) $(LIBS)
+oid2der$(EXEEXT): $(oid2der_OBJECTS) $(oid2der_DEPENDENCIES) 
+	@rm -f oid2der$(EXEEXT)
+	$(LINK) $(oid2der_OBJECTS) $(oid2der_LDADD) $(LIBS)
 pubkey_speed$(EXEEXT): $(pubkey_speed_OBJECTS) $(pubkey_speed_DEPENDENCIES) 
 	@rm -f pubkey_speed$(EXEEXT)
 	$(LINK) $(pubkey_speed_OBJECTS) $(pubkey_speed_LDADD) $(LIBS)
@@ -354,10 +404,13 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bin2array.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bin2sql.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crypt_burn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dh_speed.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fetch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/id2sql.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/key2keyid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keyid2sql.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/oid2der.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pubkey_speed.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread_analysis.Po@am__quote@
 
@@ -585,6 +638,11 @@ uninstall-am:
 	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
 	pdf pdf-am ps ps-am tags uninstall uninstall-am
 
+
+@USE_TLS_TRUE@	noinst_PROGRAMS += tls_test
+@USE_TLS_TRUE@	tls_test_SOURCES = tls_test.c
+@USE_TLS_TRUE@	tls_test_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la \
+@USE_TLS_TRUE@			$(top_builddir)/src/libtls/libtls.la
 
 key2keyid.o :	$(top_builddir)/config.status
 

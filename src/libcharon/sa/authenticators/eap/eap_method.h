@@ -23,10 +23,10 @@
 
 typedef struct eap_method_t eap_method_t;
 typedef enum eap_role_t eap_role_t;
-typedef enum eap_code_t eap_code_t;
 
 #include <library.h>
 #include <utils/identification.h>
+#include <eap/eap.h>
 #include <encoding/payloads/eap_payload.h>
 
 /**
@@ -40,34 +40,6 @@ enum eap_role_t {
  * enum names for eap_role_t.
  */
 extern enum_name_t *eap_role_names;
-
-/**
- * Lookup the EAP method type from a string.
- *
- * @param name		EAP method name (such as "md5", "aka")
- * @return			method type, 0 if unkown
- */
-eap_type_t eap_type_from_string(char *name);
-
-/**
- * EAP code, type of an EAP message
- */
-enum eap_code_t {
-	EAP_REQUEST = 1,
-	EAP_RESPONSE = 2,
-	EAP_SUCCESS = 3,
-	EAP_FAILURE = 4,
-};
-
-/**
- * enum names for eap_code_t.
- */
-extern enum_name_t *eap_code_names;
-
-/**
- * short string enum names for eap_code_t.
- */
-extern enum_name_t *eap_code_short_names;
 
 /**
  * Interface of an EAP method for server and client side.
@@ -141,12 +113,27 @@ struct eap_method_t {
 	 * Not all EAP methods establish a shared secret. For implementations of
 	 * the EAP-Identity method, get_msk() returns the received identity.
 	 *
-	 * @param msk		chunk receiving internal stored MSK
+	 * @param msk			chunk receiving internal stored MSK
 	 * @return
-	 *					- SUCCESS, or
-	 * 					- FAILED, if MSK not established (yet)
+	 *						- SUCCESS, or
+	 * 						- FAILED, if MSK not established (yet)
 	 */
 	status_t (*get_msk) (eap_method_t *this, chunk_t *msk);
+
+	/**
+	 * Get the current EAP identifier.
+	 *
+	 * @return				current EAP identifier
+	 */
+	u_int8_t (*get_identifier) (eap_method_t *this);
+
+	/**
+	 * Set the EAP identifier to a deterministic value, overwriting
+	 * the randomly initialized default value.
+	 *
+	 * @param identifier	current EAP identifier
+	 */
+	void (*set_identifier) (eap_method_t *this, u_int8_t identifier);
 
 	/**
 	 * Destroys a eap_method_t object.

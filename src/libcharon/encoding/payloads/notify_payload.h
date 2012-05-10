@@ -64,6 +64,9 @@ enum notify_type_t {
 	UNEXPECTED_NAT_DETECTED = 41,
 	/* mobile IPv6 bootstrapping, RFC 5026 */
 	USE_ASSIGNED_HoA = 42,
+	/* IKEv2 RFC 5996 */
+	TEMPORARY_FAILURE = 43,
+	CHILD_SA_NOT_FOUND = 44,
 
 	/* IKE-ME, private use */
 	ME_CONNECT_FAILED = 8192,
@@ -98,16 +101,21 @@ enum notify_type_t {
 	REDIRECT_SUPPORTED = 16406,
 	REDIRECT = 16407,
 	REDIRECTED_FROM = 16408,
-	/* draft-ietf-ipsecme-ikev2-resumption, assigned by IANA */
+	/* session resumption, RFC 5723 */
 	TICKET_LT_OPAQUE = 16409,
 	TICKET_REQUEST = 16410,
 	TICKET_ACK = 16411,
 	TICKET_NACK = 16412,
 	TICKET_OPAQUE = 16413,
+	/* IPv6 configuration, RFC 5739 */
 	LINK_ID = 16414,
+	/* wrapped esp, RFC 5840 */
+	USE_WESP_MODE = 16415,
+	/* robust header compression, RFC 5857 */
+	ROHC_SUPPORTED = 16416,
+	/* EAP-only authentication, RFC 5998 */
+	EAP_ONLY_AUTHENTICATION = 16417,
 
-	/* draft-eronen-ipsec-ikev2-eap-auth, not assigned by IANA yet */
-	EAP_ONLY_AUTHENTICATION = 40960,
 	/* BEET mode, not even a draft yet. private use */
 	USE_BEET_MODE = 40961,
 	/* IKE-ME, private use */
@@ -144,7 +152,7 @@ struct notify_payload_t {
 	/**
 	 * Gets the protocol id of this payload.
 	 *
-	 * @return 			protocol id of this payload
+	 * @return			protocol id of this payload
 	 */
 	u_int8_t (*get_protocol_id) (notify_payload_t *this);
 
@@ -158,7 +166,7 @@ struct notify_payload_t {
 	/**
 	 * Gets the notify message type of this payload.
 	 *
-	 * @return 			notify message type of this payload
+	 * @return			notify message type of this payload
 	 */
 	notify_type_t (*get_notify_type) (notify_payload_t *this);
 
@@ -174,7 +182,7 @@ struct notify_payload_t {
 	 *
 	 * This is only valid for notifys with protocol AH|ESP
 	 *
-	 * @return 		SPI value
+	 * @return		SPI value
 	 */
 	u_int32_t (*get_spi) (notify_payload_t *this);
 
@@ -192,7 +200,7 @@ struct notify_payload_t {
 	 *
 	 * Returned data are not copied.
 	 *
-	 * @return 		chunk_t pointing to the value
+	 * @return		chunk_t pointing to the value
 	 */
 	chunk_t (*get_notification_data) (notify_payload_t *this);
 
@@ -201,7 +209,7 @@ struct notify_payload_t {
 	 *
 	 * @warning Value is getting copied.
 	 *
-	 * @param notification_data 	chunk_t pointing to the value to set
+	 * @param notification_data	chunk_t pointing to the value to set
 	 */
 	void (*set_notification_data) (notify_payload_t *this,
 								   chunk_t notification_data);

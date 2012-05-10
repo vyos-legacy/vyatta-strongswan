@@ -84,7 +84,7 @@ struct private_openssl_x509_t {
 	/**
 	 * Pathlen constraint
 	 */
-	int pathlen;
+	u_char pathlen;
 
 	/**
 	 * certificate subject
@@ -137,7 +137,7 @@ struct private_openssl_x509_t {
 	linked_list_t *issuerAltNames;
 
 	/**
-	 * List of CRL URIs
+	 * List of CRL URIs, as x509_cdp_t
 	 */
 	linked_list_t *crl_uris;
 
@@ -151,6 +151,16 @@ struct private_openssl_x509_t {
 	 */
 	refcount_t ref;
 };
+
+/**
+ * Destroy a CRL URI struct
+ */
+static void crl_uri_destroy(x509_cdp_t *this)
+{
+	free(this->uri);
+	DESTROY_IF(this->issuer);
+	free(this);
+}
 
 /**
  * Convert a GeneralName to an identification_t.
@@ -187,6 +197,15 @@ static identification_t *general_name2id(GENERAL_NAME *name)
 		}
 		case GEN_DIRNAME :
 			return openssl_x509_name2id(name->d.directoryName);
+		case GEN_OTHERNAME:
+			if (OBJ_obj2nid(name->d.otherName->type_id) == NID_ms_upn &&
+				name->d.otherName->value->type == V_ASN1_UTF8STRING)
+			{
+				return identification_create_from_encoding(ID_RFC822_ADDR,
+							openssl_asn1_str2chunk(
+								name->d.otherName->value->value.utf8string));
+			}
+			return NULL;
 		default:
 			return NULL;
 	}
@@ -231,10 +250,16 @@ METHOD(x509_t, get_authKeyIdentifier, chunk_t,
 	return chunk_empty;
 }
 
-METHOD(x509_t, get_pathLenConstraint, int,
-	private_openssl_x509_t *this)
+METHOD(x509_t, get_constraint, u_int,
+	private_openssl_x509_t *this, x509_constraint_t type)
 {
-	return this->pathlen;
+	switch (type)
+	{
+		case X509_PATH_LEN:
+			return this->pathlen;
+		default:
+			return X509_NO_CONSTRAINT;
+	}
 }
 
 METHOD(x509_t, create_subjectAltName_enumerator, enumerator_t*,
@@ -253,13 +278,6 @@ METHOD(x509_t, create_ocsp_uri_enumerator, enumerator_t*,
 	private_openssl_x509_t *this)
 {
 	return this->ocsp_uris->create_enumerator(this->ocsp_uris);
-}
-
-METHOD(x509_t, create_ipAddrBlock_enumerator, enumerator_t*,
-	private_openssl_x509_t *this)
-{
-	/* TODO */
-	return enumerator_create_empty();
 }
 
 METHOD(certificate_t, get_type, certificate_type_t,
@@ -286,10 +304,23 @@ METHOD(certificate_t, has_subject, id_match_t,
 	identification_t *current;
 	enumerator_t *enumerator;
 	id_match_t match, best;
+	chunk_t encoding;
 
 	if (subject->get_type(subject) == ID_KEY_ID)
 	{
-		if (chunk_equals(this->hash, subject->get_encoding(subject)))
+		encoding = subject->get_encoding(subject);
+
+		if (chunk_equals(this->hash, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
+		if (this->subjectKeyIdentifier.len &&
+			chunk_equals(this->subjectKeyIdentifier, encoding))
+		{
+			return ID_MATCH_PERFECT;
+		}
+		if (this->pubkey &&
+			this->pubkey->has_fingerprint(this->pubkey, encoding))
 		{
 			return ID_MATCH_PERFECT;
 		}
@@ -461,7 +492,7 @@ METHOD(certificate_t, destroy, void,
 										offsetof(identification_t, destroy));
 		this->issuerAltNames->destroy_offset(this->issuerAltNames,
 										offsetof(identification_t, destroy));
-		this->crl_uris->destroy_function(this->crl_uris, free);
+		this->crl_uris->destroy_function(this->crl_uris, (void*)crl_uri_destroy);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
 		free(this);
 	}
@@ -495,18 +526,21 @@ static private_openssl_x509_t *create_empty()
 				.get_serial = _get_serial,
 				.get_subjectKeyIdentifier = _get_subjectKeyIdentifier,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
-				.get_pathLenConstraint = _get_pathLenConstraint,
+				.get_constraint = _get_constraint,
 				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
 				.create_crl_uri_enumerator = _create_crl_uri_enumerator,
 				.create_ocsp_uri_enumerator = _create_ocsp_uri_enumerator,
-				.create_ipAddrBlock_enumerator = _create_ipAddrBlock_enumerator,
+				.create_ipAddrBlock_enumerator = (void*)enumerator_create_empty,
+				.create_name_constraint_enumerator = (void*)enumerator_create_empty,
+				.create_cert_policy_enumerator = (void*)enumerator_create_empty,
+				.create_policy_mapping_enumerator = (void*)enumerator_create_empty,
 			},
 		},
 		.subjectAltNames = linked_list_create(),
 		.issuerAltNames = linked_list_create(),
 		.crl_uris = linked_list_create(),
 		.ocsp_uris = linked_list_create(),
-		.pathlen = X509_NO_PATH_LEN_CONSTRAINT,
+		.pathlen = X509_NO_CONSTRAINT,
 		.ref = 1,
 	);
 
@@ -552,6 +586,7 @@ static bool parse_basicConstraints_ext(private_openssl_x509_t *this,
 									   X509_EXTENSION *ext)
 {
 	BASIC_CONSTRAINTS *constraints;
+	long pathlen;
 
 	constraints = (BASIC_CONSTRAINTS*)X509V3_EXT_d2i(ext);
 	if (constraints)
@@ -562,7 +597,10 @@ static bool parse_basicConstraints_ext(private_openssl_x509_t *this,
 		}
 		if (constraints->pathlen)
 		{
-			this->pathlen = ASN1_INTEGER_get(constraints->pathlen);
+			
+			pathlen = ASN1_INTEGER_get(constraints->pathlen);
+			this->pathlen = (pathlen >= 0 && pathlen < 128) ?
+							 pathlen : X509_NO_CONSTRAINT;
 		}
 		BASIC_CONSTRAINTS_free(constraints);
 		return TRUE;
@@ -578,9 +616,10 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 {
 	CRL_DIST_POINTS *cdps;
 	DIST_POINT *cdp;
-	identification_t *id;
+	identification_t *id, *issuer;
+	x509_cdp_t *entry;
 	char *uri;
-	int i, j, point_num, name_num;
+	int i, j, k, point_num, name_num, issuer_num;
 
 	cdps = X509V3_EXT_d2i(ext);
 	if (!cdps)
@@ -605,12 +644,38 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 					{
 						if (asprintf(&uri, "%Y", id) > 0)
 						{
-							this->crl_uris->insert_first(this->crl_uris, uri);
+							if (cdp->CRLissuer)
+							{
+								issuer_num = sk_GENERAL_NAME_num(cdp->CRLissuer);
+								for (k = 0; k < issuer_num; k++)
+								{
+									issuer = general_name2id(
+										sk_GENERAL_NAME_value(cdp->CRLissuer, k));
+									if (issuer)
+									{
+										INIT(entry,
+											.uri = strdup(uri),
+											.issuer = issuer,
+										);
+										this->crl_uris->insert_last(
+														this->crl_uris, entry);
+									}
+								}
+								free(uri);
+							}
+							else
+							{
+								INIT(entry,
+									.uri = uri,
+								);
+								this->crl_uris->insert_last(this->crl_uris, entry);
+							}
 						}
 						id->destroy(id);
 					}
 				}
 			}
+
 			DIST_POINT_free(cdp);
 		}
 	}
@@ -743,7 +808,13 @@ static bool parse_extensions(private_openssl_x509_t *this)
 					ok = parse_crlDistributionPoints_ext(this, ext);
 					break;
 				default:
-					ok = TRUE;
+					ok = X509_EXTENSION_get_critical(ext) == 0 ||
+						 !lib->settings->get_bool(lib->settings,
+								"libstrongswan.x509.enforce_critical", TRUE);
+					if (!ok)
+					{
+						DBG1(DBG_LIB, "found unsupported critical X.509 extension");
+					}
 					break;
 			}
 			if (!ok)
@@ -753,6 +824,38 @@ static bool parse_extensions(private_openssl_x509_t *this)
 		}
 	}
 	return TRUE;
+}
+
+/**
+ * Parse ExtendedKeyUsage
+ */
+static void parse_extKeyUsage(private_openssl_x509_t *this)
+{
+	EXTENDED_KEY_USAGE *usage;
+	int i;
+
+	usage = X509_get_ext_d2i(this->x509, NID_ext_key_usage, NULL, NULL);
+	if (usage)
+	{
+		for (i = 0; i < sk_ASN1_OBJECT_num(usage); i++)
+		{
+			switch (OBJ_obj2nid(sk_ASN1_OBJECT_value(usage, i)))
+			{
+				case NID_server_auth:
+					this->flags |= X509_SERVER_AUTH;
+					break;
+				case NID_client_auth:
+					this->flags |= X509_CLIENT_AUTH;
+					break;
+				case NID_OCSP_sign:
+					this->flags |= X509_OCSP_SIGNER;
+					break;
+				default:
+					break;
+			}
+		}
+		sk_ASN1_OBJECT_pop_free(usage, ASN1_OBJECT_free);
+	}
 }
 
 /**
@@ -769,6 +872,13 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	{
 		return FALSE;
 	}
+	if (X509_get_version(this->x509) < 0 || X509_get_version(this->x509) > 2)
+	{
+		DBG1(DBG_LIB, "unsupported x509 version: %d",
+			 X509_get_version(this->x509) + 1);
+		return FALSE;
+	}
+
 	this->subject = openssl_x509_name2id(X509_get_subject_name(this->x509));
 	this->issuer = openssl_x509_name2id(X509_get_issuer_name(this->x509));
 
@@ -812,8 +922,9 @@ static bool parse_certificate(private_openssl_x509_t *this)
 
 	if (!parse_extensions(this))
 	{
-		return TRUE;
+		return FALSE;
 	}
+	parse_extKeyUsage(this);
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher)

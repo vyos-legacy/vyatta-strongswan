@@ -58,10 +58,14 @@ struct private_uci_plugin_t {
 	uci_control_t *control;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_uci_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_uci_plugin_t *this)
+{
+	return "uci";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_uci_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
@@ -77,14 +81,22 @@ static void destroy(private_uci_plugin_t *this)
  */
 plugin_t *uci_plugin_create()
 {
-	private_uci_plugin_t *this = malloc_thing(private_uci_plugin_t);
+	private_uci_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+		.parser = uci_parser_create(UCI_PACKAGE),
+		.config = uci_config_create(this->parser),
+		.creds = uci_creds_create(this->parser),
+		.control = uci_control_create(),
+	);
 
-	this->parser = uci_parser_create(UCI_PACKAGE);
-	this->config = uci_config_create(this->parser);
-	this->creds = uci_creds_create(this->parser);
-	this->control = uci_control_create();
 	charon->backends->add_backend(charon->backends, &this->config->backend);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
 

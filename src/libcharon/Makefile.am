@@ -38,16 +38,12 @@ encoding/payloads/transform_substructure.c encoding/payloads/transform_substruct
 encoding/payloads/ts_payload.c encoding/payloads/ts_payload.h \
 encoding/payloads/unknown_payload.c encoding/payloads/unknown_payload.h \
 encoding/payloads/vendor_id_payload.c encoding/payloads/vendor_id_payload.h \
-kernel/kernel_interface.c kernel/kernel_interface.h \
-kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
-kernel/kernel_net.h \
+kernel/kernel_handler.c kernel/kernel_handler.h \
 network/packet.c network/packet.h \
 network/receiver.c network/receiver.h \
 network/sender.c network/sender.h \
 network/socket_manager.c network/socket_manager.h network/socket.h \
-processing/jobs/job.h \
 processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
-processing/jobs/callback_job.c processing/jobs/callback_job.h \
 processing/jobs/delete_child_sa_job.c processing/jobs/delete_child_sa_job.h \
 processing/jobs/delete_ike_sa_job.c processing/jobs/delete_ike_sa_job.h \
 processing/jobs/migrate_job.c processing/jobs/migrate_job.h \
@@ -57,16 +53,17 @@ processing/jobs/rekey_ike_sa_job.c processing/jobs/rekey_ike_sa_job.h \
 processing/jobs/retransmit_job.c processing/jobs/retransmit_job.h \
 processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 processing/jobs/send_keepalive_job.c processing/jobs/send_keepalive_job.h \
+processing/jobs/start_action_job.c processing/jobs/start_action_job.h \
 processing/jobs/roam_job.c processing/jobs/roam_job.h \
 processing/jobs/update_sa_job.c processing/jobs/update_sa_job.h \
 processing/jobs/inactivity_job.c processing/jobs/inactivity_job.h \
-processing/scheduler.c processing/scheduler.h \
-processing/processor.c processing/processor.h  \
 sa/authenticators/authenticator.c sa/authenticators/authenticator.h \
 sa/authenticators/eap_authenticator.c sa/authenticators/eap_authenticator.h \
 sa/authenticators/eap/eap_method.c sa/authenticators/eap/eap_method.h \
 sa/authenticators/eap/eap_manager.c sa/authenticators/eap/eap_manager.h \
 sa/authenticators/eap/sim_manager.c sa/authenticators/eap/sim_manager.h \
+sa/authenticators/eap/sim_card.h sa/authenticators/eap/sim_provider.h \
+sa/authenticators/eap/sim_hooks.h \
 sa/authenticators/psk_authenticator.c sa/authenticators/psk_authenticator.h \
 sa/authenticators/pubkey_authenticator.c sa/authenticators/pubkey_authenticator.h \
 sa/child_sa.c sa/child_sa.h \
@@ -92,7 +89,13 @@ sa/tasks/ike_rekey.c sa/tasks/ike_rekey.h \
 sa/tasks/ike_reauth.c sa/tasks/ike_reauth.h \
 sa/tasks/ike_auth_lifetime.c sa/tasks/ike_auth_lifetime.h \
 sa/tasks/ike_vendor.c sa/tasks/ike_vendor.h \
-sa/tasks/task.c sa/tasks/task.h
+sa/tasks/task.c sa/tasks/task.h \
+tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+tnc/imc/imc.h tnc/imc/imc_manager.h \
+tnc/imv/imv.h tnc/imv/imv_manager.h \
+tnc/imv/imv_recommendations.c tnc/imv/imv_recommendations.h \
+tnc/tnccs/tnccs.c tnc/tnccs/tnccs.h \
+tnc/tnccs/tnccs_manager.c tnc/tnccs/tnccs_manager.h
 
 daemon.lo :		$(top_builddir)/config.status
 
@@ -104,7 +107,8 @@ INCLUDES = \
 
 AM_CFLAGS = \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
-	-DIPSEC_PIDDIR=\"${piddir}\"
+	-DIPSEC_PIDDIR=\"${piddir}\" \
+	-DPLUGINS=\""${libcharon_plugins}\""
 
 libcharon_la_LIBADD = -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
 
@@ -135,51 +139,15 @@ else
 SUBDIRS = .
 endif
 
-PLUGINS = ${libstrongswan_plugins} ${libhydra_plugins}
-
 if USE_LOAD_TESTER
   SUBDIRS += plugins/load_tester
-  PLUGINS += load-tester
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/load_tester/libstrongswan-load-tester.la
 endif
 endif
 
-if USE_KERNEL_PFKEY
-  SUBDIRS += plugins/kernel_pfkey
-  PLUGINS += kernel-pfkey
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/kernel_pfkey/libstrongswan-kernel-pfkey.la
-endif
-endif
-
-if USE_KERNEL_PFROUTE
-  SUBDIRS += plugins/kernel_pfroute
-  PLUGINS += kernel-pfroute
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/kernel_pfroute/libstrongswan-kernel-pfroute.la
-endif
-endif
-
-if USE_KERNEL_KLIPS
-  SUBDIRS += plugins/kernel_klips
-  PLUGINS += kernel-klips
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/kernel_klips/libstrongswan-kernel-klips.la
-endif
-endif
-
-if USE_KERNEL_NETLINK
-  SUBDIRS += plugins/kernel_netlink
-  PLUGINS += kernel-netlink
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/kernel_netlink/libstrongswan-kernel-netlink.la
-endif
-endif
-
 if USE_SOCKET_DEFAULT
   SUBDIRS += plugins/socket_default
-  PLUGINS += socket-default
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/socket_default/libstrongswan-socket-default.la
 endif
@@ -187,7 +155,6 @@ endif
 
 if USE_SOCKET_RAW
   SUBDIRS += plugins/socket_raw
-  PLUGINS += socket-raw
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/socket_raw/libstrongswan-socket-raw.la
 endif
@@ -195,7 +162,6 @@ endif
 
 if USE_SOCKET_DYNAMIC
   SUBDIRS += plugins/socket_dynamic
-  PLUGINS += socket-dynamic
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/socket_dynamic/libstrongswan-socket-dynamic.la
 endif
@@ -203,7 +169,6 @@ endif
 
 if USE_FARP
   SUBDIRS += plugins/farp
-  PLUGINS += farp
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/farp/libstrongswan-farp.la
 endif
@@ -211,7 +176,6 @@ endif
 
 if USE_STROKE
   SUBDIRS += plugins/stroke
-  PLUGINS += stroke
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/stroke/libstrongswan-stroke.la
 endif
@@ -219,7 +183,6 @@ endif
 
 if USE_SMP
   SUBDIRS += plugins/smp
-  PLUGINS += smp
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/smp/libstrongswan-smp.la
 endif
@@ -227,7 +190,6 @@ endif
 
 if USE_SQL
   SUBDIRS += plugins/sql
-  PLUGINS += sql
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/sql/libstrongswan-sql.la
 endif
@@ -235,7 +197,6 @@ endif
 
 if USE_UPDOWN
   SUBDIRS += plugins/updown
-  PLUGINS += updown
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/updown/libstrongswan-updown.la
 endif
@@ -243,7 +204,6 @@ endif
 
 if USE_EAP_IDENTITY
   SUBDIRS += plugins/eap_identity
-  PLUGINS += eap-identity
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_identity/libstrongswan-eap-identity.la
 endif
@@ -251,7 +211,6 @@ endif
 
 if USE_EAP_SIM
   SUBDIRS += plugins/eap_sim
-  PLUGINS += eap-sim
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_sim/libstrongswan-eap-sim.la
 endif
@@ -259,15 +218,20 @@ endif
 
 if USE_EAP_SIM_FILE
   SUBDIRS += plugins/eap_sim_file
-  PLUGINS += eap-sim-file
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_sim_file/libstrongswan-eap-sim-file.la
 endif
 endif
 
+if USE_EAP_SIM_PCSC
+  SUBDIRS += plugins/eap_sim_pcsc
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_sim_pcsc/libstrongswan-eap-sim-pcsc.la
+endif
+endif
+
 if USE_EAP_SIMAKA_SQL
   SUBDIRS += plugins/eap_simaka_sql
-  PLUGINS += eap-simaka-sql
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_simaka_sql/libstrongswan-eap-simaka-sql.la
 endif
@@ -275,7 +239,6 @@ endif
 
 if USE_EAP_SIMAKA_PSEUDONYM
   SUBDIRS += plugins/eap_simaka_pseudonym
-  PLUGINS += eap-simaka-pseudonym
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_simaka_pseudonym/libstrongswan-eap-simaka-pseudonym.la
 endif
@@ -283,7 +246,6 @@ endif
 
 if USE_EAP_SIMAKA_REAUTH
   SUBDIRS += plugins/eap_simaka_reauth
-  PLUGINS += eap-simaka-reauth
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_simaka_reauth/libstrongswan-eap-simaka-reauth.la
 endif
@@ -291,7 +253,6 @@ endif
 
 if USE_EAP_AKA
   SUBDIRS += plugins/eap_aka
-  PLUGINS += eap-aka
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_aka/libstrongswan-eap-aka.la
 endif
@@ -299,7 +260,6 @@ endif
 
 if USE_EAP_AKA_3GPP2
   SUBDIRS += plugins/eap_aka_3gpp2
-  PLUGINS += eap-aka-3gpp2
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_aka_3gpp2/libstrongswan-eap-aka-3gpp2.la
 endif
@@ -314,7 +274,6 @@ endif
 
 if USE_EAP_MD5
   SUBDIRS += plugins/eap_md5
-  PLUGINS += eap-md5
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_md5/libstrongswan-eap-md5.la
 endif
@@ -322,7 +281,6 @@ endif
 
 if USE_EAP_GTC
   SUBDIRS += plugins/eap_gtc
-  PLUGINS += eap-gtc
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_gtc/libstrongswan-eap-gtc.la
 endif
@@ -330,7 +288,6 @@ endif
 
 if USE_EAP_MSCHAPV2
   SUBDIRS += plugins/eap_mschapv2
-  PLUGINS += eap-mschapv2
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_mschapv2/libstrongswan-eap-mschapv2.la
 endif
@@ -338,15 +295,83 @@ endif
 
 if USE_EAP_RADIUS
   SUBDIRS += plugins/eap_radius
-  PLUGINS += eap-radius
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/eap_radius/libstrongswan-eap-radius.la
 endif
 endif
 
+if USE_EAP_TLS
+  SUBDIRS += plugins/eap_tls
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_tls/libstrongswan-eap-tls.la
+endif
+endif
+
+if USE_EAP_TTLS
+  SUBDIRS += plugins/eap_ttls
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_ttls/libstrongswan-eap-ttls.la
+endif
+endif
+
+if USE_EAP_PEAP
+  SUBDIRS += plugins/eap_peap
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_peap/libstrongswan-eap-peap.la
+endif
+endif
+
+if USE_EAP_TNC
+  SUBDIRS += plugins/eap_tnc
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_tnc/libstrongswan-eap-tnc.la
+endif
+endif
+
+if USE_TLS
+if MONOLITHIC
+  # otherwise this library is linked to eap_tls
+  libcharon_la_LIBADD += $(top_builddir)/src/libtls/libtls.la
+endif
+endif
+
+if USE_TNC_IMC
+  SUBDIRS += plugins/tnc_imc
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnc_imc/libstrongswan-tnc-imc.la
+endif
+endif
+
+if USE_TNC_IMV
+  SUBDIRS += plugins/tnc_imv
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnc_imv/libstrongswan-tnc-imv.la
+endif
+endif
+
+if USE_TNCCS_11
+  SUBDIRS += plugins/tnccs_11
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnccs_11/libstrongswan-tnccs-11.la
+endif
+endif
+
+if USE_TNCCS_20
+  SUBDIRS += plugins/tnccs_20
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnccs_20/libstrongswan-tnccs-20.la
+endif
+endif
+
+if USE_TNCCS_DYNAMIC
+  SUBDIRS += plugins/tnccs_dynamic
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
+endif
+endif
+
 if USE_MEDSRV
   SUBDIRS += plugins/medsrv
-  PLUGINS += medsrv
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/medsrv/libstrongswan-medsrv.la
 endif
@@ -354,7 +379,6 @@ endif
 
 if USE_MEDCLI
   SUBDIRS += plugins/medcli
-  PLUGINS += medcli
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/medcli/libstrongswan-medcli.la
 endif
@@ -362,7 +386,6 @@ endif
 
 if USE_NM
   SUBDIRS += plugins/nm
-  PLUGINS += nm
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/nm/libstrongswan-nm.la
 endif
@@ -370,7 +393,6 @@ endif
 
 if USE_DHCP
   SUBDIRS += plugins/dhcp
-  PLUGINS += dhcp
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/dhcp/libstrongswan-dhcp.la
 endif
@@ -378,23 +400,55 @@ endif
 
 if USE_ANDROID
   SUBDIRS += plugins/android
-  PLUGINS += android
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/android/libstrongswan-android.la
 endif
 endif
 
+if USE_MAEMO
+  SUBDIRS += plugins/maemo
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/maemo/libstrongswan-maemo.la
+endif
+endif
+
 if USE_HA
   SUBDIRS += plugins/ha
-  PLUGINS += ha
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/ha/libstrongswan-ha.la
 endif
 endif
 
+if USE_WHITELIST
+  SUBDIRS += plugins/whitelist
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/whitelist/libstrongswan-whitelist.la
+endif
+endif
+
+if USE_LED
+  SUBDIRS += plugins/led
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/led/libstrongswan-led.la
+endif
+endif
+
+if USE_DUPLICHECK
+  SUBDIRS += plugins/duplicheck
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/duplicheck/libstrongswan-duplicheck.la
+endif
+endif
+
+if USE_COUPLING
+  SUBDIRS += plugins/coupling
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/coupling/libstrongswan-coupling.la
+endif
+endif
+
 if USE_UCI
   SUBDIRS += plugins/uci
-  PLUGINS += uci
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/uci/libstrongswan-uci.la
 endif
@@ -402,7 +456,6 @@ endif
 
 if USE_ADDRBLOCK
   SUBDIRS += plugins/addrblock
-  PLUGINS += addrblock
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/uci/libstrongswan-addrblock.la
 endif
@@ -410,11 +463,8 @@ endif
 
 if USE_UNIT_TESTS
   SUBDIRS += plugins/unit_tester
-  PLUGINS += unit-tester
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/unit_tester/libstrongswan-unit-tester.la
 endif
 endif
-
-AM_CFLAGS += -DPLUGINS=\""${PLUGINS}\""
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -37,6 +38,7 @@ struct private_sql_cred_t {
 	database_t *db;
 };
 
+
 /**
  * enumerator over private keys
  */
@@ -49,11 +51,8 @@ typedef struct {
 	private_key_t *current;
 } private_enumerator_t;
 
-/**
- * Implementation of private_enumerator_t.public.enumerate
- */
-static bool private_enumerator_enumerate(private_enumerator_t *this,
-										 private_key_t **key)
+METHOD(enumerator_t, private_enumerator_enumerate, bool,
+	   private_enumerator_t *this, private_key_t **key)
 {
 	chunk_t blob;
 	int type;
@@ -62,7 +61,7 @@ static bool private_enumerator_enumerate(private_enumerator_t *this,
 	while (this->inner->enumerate(this->inner, &type, &blob))
 	{
 		this->current = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-										   BUILD_BLOB_ASN1_DER, blob,
+										   BUILD_BLOB_PEM, blob,
 										   BUILD_END);
 		if (this->current)
 		{
@@ -74,29 +73,25 @@ static bool private_enumerator_enumerate(private_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of private_enumerator_t.public.destroy
- */
-static void private_enumerator_destroy(private_enumerator_t *this)
+METHOD(enumerator_t, private_enumerator_destroy, void,
+	   private_enumerator_t *this)
 {
 	DESTROY_IF(this->current);
 	this->inner->destroy(this->inner);
 	free(this);
 }
 
-/**
- * Implementation of credential_set_t.create_private_enumerator.
- */
-static enumerator_t* create_private_enumerator(private_sql_cred_t *this,
-											   key_type_t type,
-											   identification_t *id)
+METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
+	   private_sql_cred_t *this, key_type_t type, identification_t *id)
 {
 	private_enumerator_t *e;
 
-	e = malloc_thing(private_enumerator_t);
-	e->current = NULL;
-	e->public.enumerate = (void*)private_enumerator_enumerate;
-	e->public.destroy = (void*)private_enumerator_destroy;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_private_enumerator_enumerate,
+			.destroy = _private_enumerator_destroy,
+		},
+	);
 	if (id && id->get_type(id) != ID_ANY)
 	{
 		e->inner = this->db->query(this->db,
@@ -123,6 +118,7 @@ static enumerator_t* create_private_enumerator(private_sql_cred_t *this,
 	return &e->public;
 }
 
+
 /**
  * enumerator over certificates
  */
@@ -135,11 +131,8 @@ typedef struct {
 	certificate_t *current;
 } cert_enumerator_t;
 
-/**
- * Implementation of cert_enumerator_t.public.enumerate
- */
-static bool cert_enumerator_enumerate(cert_enumerator_t *this,
-									  certificate_t **cert)
+METHOD(enumerator_t, cert_enumerator_enumerate, bool,
+	   cert_enumerator_t *this, certificate_t **cert)
 {
 	chunk_t blob;
 	int type;
@@ -148,7 +141,7 @@ static bool cert_enumerator_enumerate(cert_enumerator_t *this,
 	while (this->inner->enumerate(this->inner, &type, &blob))
 	{
 		this->current = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
-										   BUILD_BLOB_ASN1_DER, blob,
+										   BUILD_BLOB_PEM, blob,
 										   BUILD_END);
 		if (this->current)
 		{
@@ -160,29 +153,26 @@ static bool cert_enumerator_enumerate(cert_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of cert_enumerator_t.public.destroy
- */
-static void cert_enumerator_destroy(cert_enumerator_t *this)
+METHOD(enumerator_t, cert_enumerator_destroy, void,
+	   cert_enumerator_t *this)
 {
 	DESTROY_IF(this->current);
 	this->inner->destroy(this->inner);
 	free(this);
 }
 
-/**
- * Implementation of credential_set_t.create_cert_enumerator.
- */
-static enumerator_t* create_cert_enumerator(private_sql_cred_t *this,
-										certificate_type_t cert, key_type_t key,
-										identification_t *id, bool trusted)
+METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
+	   private_sql_cred_t *this, certificate_type_t cert, key_type_t key,
+	   identification_t *id, bool trusted)
 {
 	cert_enumerator_t *e;
 
-	e = malloc_thing(cert_enumerator_t);
-	e->current = NULL;
-	e->public.enumerate = (void*)cert_enumerator_enumerate;
-	e->public.destroy = (void*)cert_enumerator_destroy;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_cert_enumerator_enumerate,
+			.destroy = _cert_enumerator_destroy,
+		},
+	);
 	if (id && id->get_type(id) != ID_ANY)
 	{
 		e->inner = this->db->query(this->db,
@@ -213,6 +203,7 @@ static enumerator_t* create_cert_enumerator(private_sql_cred_t *this,
 	return &e->public;
 }
 
+
 /**
  * enumerator over shared keys
  */
@@ -229,12 +220,9 @@ typedef struct {
 	shared_key_t *current;
 } shared_enumerator_t;
 
-/**
- * Implementation of shared_enumerator_t.public.enumerate
- */
-static bool shared_enumerator_enumerate(shared_enumerator_t *this,
-										shared_key_t **shared,
-										id_match_t *me, id_match_t *other)
+METHOD(enumerator_t, shared_enumerator_enumerate, bool,
+	   shared_enumerator_t *this, shared_key_t **shared,
+	   id_match_t *me, id_match_t *other)
 {
 	chunk_t blob;
 	int type;
@@ -261,31 +249,28 @@ static bool shared_enumerator_enumerate(shared_enumerator_t *this,
 	return FALSE;
 }
 
-/**
- * Implementation of shared_enumerator_t.public.destroy
- */
-static void shared_enumerator_destroy(shared_enumerator_t *this)
+METHOD(enumerator_t, shared_enumerator_destroy, void,
+	   shared_enumerator_t *this)
 {
 	DESTROY_IF(this->current);
 	this->inner->destroy(this->inner);
 	free(this);
 }
 
-/**
- * Implementation of credential_set_t.create_shared_enumerator.
- */
-static enumerator_t* create_shared_enumerator(private_sql_cred_t *this,
-								  shared_key_type_t type,
-								  identification_t *me, identification_t *other)
+METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
+	   private_sql_cred_t *this, shared_key_type_t type,
+	   identification_t *me, identification_t *other)
 {
 	shared_enumerator_t *e;
 
-	e = malloc_thing(shared_enumerator_t);
-	e->me = me;
-	e->other = other;
-	e->current = NULL;
-	e->public.enumerate = (void*)shared_enumerator_enumerate;
-	e->public.destroy = (void*)shared_enumerator_destroy;
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_shared_enumerator_enumerate,
+			.destroy = _shared_enumerator_destroy,
+		},
+		.me = me,
+		.other = other,
+	);
 	if (!me && !other)
 	{
 		e->inner = this->db->query(this->db,
@@ -329,36 +314,141 @@ static enumerator_t* create_shared_enumerator(private_sql_cred_t *this,
 	return &e->public;
 }
 
+
 /**
- * Implementation of credential_set_t.cache_cert.
+ * enumerator over CDPs
  */
-static void cache_cert(private_sql_cred_t *this, certificate_t *cert)
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** inner SQL enumerator */
+	enumerator_t *inner;
+	/** currently enumerated string */
+	char *current;
+} cdp_enumerator_t;
+
+/**
+ * types of CDPs
+ */
+typedef enum {
+	/** any available CDP */
+	CDP_TYPE_ANY = 0,
+	/** CRL */
+	CDP_TYPE_CRL,
+	/** OCSP Responder */
+	CDP_TYPE_OCSP,
+} cdp_type_t;
+
+METHOD(enumerator_t, cdp_enumerator_enumerate, bool,
+	   cdp_enumerator_t *this, char **uri)
+{
+	char *text;
+
+	free(this->current);
+	while (this->inner->enumerate(this->inner, &text))
+	{
+		*uri = this->current = strdup(text);
+		return TRUE;
+	}
+	this->current = NULL;
+	return FALSE;
+}
+
+METHOD(enumerator_t, cdp_enumerator_destroy, void,
+	   cdp_enumerator_t *this)
+{
+	free(this->current);
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
+METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
+	   private_sql_cred_t *this, certificate_type_t type, identification_t *id)
+{
+	cdp_enumerator_t *e;
+	cdp_type_t cdp_type;
+
+	switch (type)
+	{	/* we serve CRLs and OCSP responders */
+		case CERT_X509_CRL:
+			cdp_type = CDP_TYPE_CRL;
+			break;
+		case CERT_X509_OCSP_RESPONSE:
+			cdp_type = CDP_TYPE_OCSP;
+			break;
+		case CERT_ANY:
+			cdp_type = CDP_TYPE_ANY;
+			break;
+		default:
+			return NULL;
+	}
+	INIT(e,
+		.public = {
+			.enumerate = (void*)_cdp_enumerator_enumerate,
+			.destroy = _cdp_enumerator_destroy,
+		},
+	);
+	if (id && id->get_type(id) != ID_ANY)
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT dp.uri FROM certificate_distribution_points AS dp "
+				"JOIN certificate_authorities AS ca ON ca.id = dp.ca "
+				"JOIN certificates AS c ON c.id = ca.certificate "
+				"JOIN certificate_identity AS ci ON c.id = ci.certificate "
+				"JOIN identities AS i ON ci.identity = i.id "
+				"WHERE i.type = ? AND i.data = ? AND (? OR dp.type = ?)",
+				DB_INT, id->get_type(id), DB_BLOB, id->get_encoding(id),
+				DB_INT, cdp_type == CDP_TYPE_ANY, DB_INT, cdp_type,
+				DB_TEXT);
+	}
+	else
+	{
+		e->inner = this->db->query(this->db,
+				"SELECT dp.uri FROM certificate_distribution_points AS dp "
+				"WHERE (? OR dp.type = ?)",
+				DB_INT, cdp_type == CDP_TYPE_ANY, DB_INT, cdp_type,
+				DB_TEXT);
+	}
+	if (!e->inner)
+	{
+		free(e);
+		return NULL;
+	}
+	return &e->public;
+}
+
+METHOD(credential_set_t, cache_cert, void,
+	   private_sql_cred_t *this, certificate_t *cert)
 {
 	/* TODO: implement CRL caching to database */
 }
 
-/**
- * Implementation of sql_cred_t.destroy.
- */
-static void destroy(private_sql_cred_t *this)
+METHOD(sql_cred_t, destroy, void,
+	   private_sql_cred_t *this)
 {
 	free(this);
 }
+
 /**
  * Described in header.
  */
 sql_cred_t *sql_cred_create(database_t *db)
 {
-	private_sql_cred_t *this = malloc_thing(private_sql_cred_t);
+	private_sql_cred_t *this;
 
-	this->public.set.create_private_enumerator = (void*)create_private_enumerator;
-	this->public.set.create_cert_enumerator = (void*)create_cert_enumerator;
-	this->public.set.create_shared_enumerator = (void*)create_shared_enumerator;
-	this->public.set.create_cdp_enumerator = (void*)return_null;
-	this->public.set.cache_cert = (void*)cache_cert;
-	this->public.destroy = (void(*)(sql_cred_t*))destroy;
-
-	this->db = db;
+	INIT(this,
+		.public = {
+			.set = {
+				.create_private_enumerator = _create_private_enumerator,
+				.create_cert_enumerator = _create_cert_enumerator,
+				.create_shared_enumerator = _create_shared_enumerator,
+				.create_cdp_enumerator = _create_cdp_enumerator,
+				.cache_cert = _cache_cert,
+			},
+			.destroy = _destroy,
+		},
+		.db = db,
+	);
 
 	return &this->public;
 }

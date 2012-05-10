@@ -51,19 +51,6 @@ enum protocol_id_t {
 extern enum_name_t *protocol_id_names;
 
 /**
- * Extended sequence numbers, as in IKEv2 RFC 3.3.2.
- */
-enum extended_sequence_numbers_t {
-	NO_EXT_SEQ_NUMBERS = 0,
-	EXT_SEQ_NUMBERS = 1
-};
-
-/**
- * enum strings for extended_sequence_numbers_t.
- */
-extern enum_name_t *extended_sequence_numbers_names;
-
-/**
  * Stores a set of algorithms used for an SA.
  *
  * A proposal stores algorithms for a specific
@@ -161,6 +148,13 @@ struct proposal_t {
 	void (*set_spi) (proposal_t *this, u_int64_t spi);
 
 	/**
+	 * Get the proposal number, as encoded in SA payload
+	 *
+	 * @return				proposal number
+	 */
+	u_int (*get_number)(proposal_t *this);
+
+	/**
 	 * Check for the eqality of two proposals.
 	 *
 	 * @param other			other proposal to check for equality
@@ -185,9 +179,10 @@ struct proposal_t {
  * Create a child proposal for AH, ESP or IKE.
  *
  * @param protocol			protocol, such as PROTO_ESP
+ * @param number			proposal number, as encoded in SA payload
  * @return 					proposal_t object
  */
-proposal_t *proposal_create(protocol_id_t protocol);
+proposal_t *proposal_create(protocol_id_t protocol, u_int number);
 
 /**
  * Create a default proposal if nothing further specified.

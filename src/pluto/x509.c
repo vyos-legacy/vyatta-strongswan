@@ -255,8 +255,8 @@ bool verify_x509cert(cert_t *cert, bool strict, time_t *until)
 		unlock_authcert_list("verify_x509cert");
 
 		/* check path length constraint */
-		pathlen_constraint = x509->get_pathLenConstraint(x509);
-		if (pathlen_constraint != X509_NO_PATH_LEN_CONSTRAINT &&
+		pathlen_constraint = x509->get_constraint(x509, X509_PATH_LEN);
+		if (pathlen_constraint != X509_NO_CONSTRAINT &&
 			pathlen > pathlen_constraint)
 		{
 			plog("path length of %d violates constraint of %d",
@@ -427,7 +427,7 @@ void list_x509cert_chain(const char *caption, cert_t* cert,
 			{
 				whack_log(RC_COMMENT, "  pubkey:    %N %4d bits%s",
 					key_type_names, key->get_type(key),
-					key->get_keysize(key) * BITS_PER_BYTE,
+					key->get_keysize(key),
 					cert->smartcard ? ", on smartcard" :
 					(has_private_key(cert)? ", has private key" : ""));
 
@@ -450,8 +450,8 @@ void list_x509cert_chain(const char *caption, cert_t* cert,
 			}
 
 			/* list optional pathLenConstraint */
-			pathlen = x509->get_pathLenConstraint(x509);
-			if (pathlen != X509_NO_PATH_LEN_CONSTRAINT)
+			pathlen = x509->get_constraint(x509, X509_PATH_LEN);
+			if (pathlen != X509_NO_CONSTRAINT)
 			{
 				whack_log(RC_COMMENT, "  pathlen:   %d", pathlen);
 			}

@@ -414,7 +414,7 @@ struct alg_info_esp *alg_info_esp_create_from_str(char *alg_str)
 	alg_info_esp = malloc_thing (struct alg_info_esp);
 	zero(alg_info_esp);
 
-	pfs_name=index (alg_str, ';');
+	pfs_name=strchr(alg_str, ';');
 	if (pfs_name)
 	{
 		memcpy(esp_buf, alg_str, pfs_name-alg_str);
@@ -539,7 +539,7 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 				buflen -= np;
 				if (esp_info->esp_ealg_keylen)
 				{
-					np = snprintf(ptr, buflen, "_%u", esp_info->esp_ealg_keylen);
+					np = snprintf(ptr, buflen, "_%zu", esp_info->esp_ealg_keylen);
 					ptr += np;
 					buflen -= np;
 				}
@@ -571,7 +571,7 @@ alg_info_snprint(char *buf, int buflen, struct alg_info *alg_info)
 			buflen -= np;
 			if (ike_info->ike_eklen)
 			{
-				np = snprintf(ptr, buflen, "_%u", ike_info->ike_eklen);
+				np = snprintf(ptr, buflen, "_%zu", ike_info->ike_eklen);
 				ptr += np;
 				buflen -= np;
 			}

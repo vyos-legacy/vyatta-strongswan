@@ -93,10 +93,14 @@ static struct gcry_thread_cbs thread_functions = {
 	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-/**
- * Implementation of gcrypt_plugin_t.destroy
- */
-static void destroy(private_gcrypt_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_gcrypt_plugin_t *this)
+{
+	return "gcrypt";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_gcrypt_plugin_t *this)
 {
 	lib->crypto->remove_hasher(lib->crypto,
 					(hasher_constructor_t)gcrypt_hasher_create);
@@ -106,6 +110,8 @@ static void destroy(private_gcrypt_plugin_t *this)
 					(rng_constructor_t)gcrypt_rng_create);
 	lib->crypto->remove_dh(lib->crypto,
 					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->remove_dh(lib->crypto,
+					(dh_constructor_t)gcrypt_dh_create_custom);
 	lib->creds->remove_builder(lib->creds,
 					(builder_function_t)gcrypt_rsa_private_key_gen);
 	lib->creds->remove_builder(lib->creds,
@@ -139,84 +145,98 @@ plugin_t *gcrypt_plugin_create()
 	}
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
-	this = malloc_thing(private_gcrypt_plugin_t);
-
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	/* hashers */
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA1, get_name(this),
 					(hasher_constructor_t)gcrypt_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4, get_name(this),
 					(hasher_constructor_t)gcrypt_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+	lib->crypto->add_hasher(lib->crypto, HASH_MD5, get_name(this),
 					(hasher_constructor_t)gcrypt_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224, get_name(this),
 					(hasher_constructor_t)gcrypt_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA256, get_name(this),
 					(hasher_constructor_t)gcrypt_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA384, get_name(this),
 					(hasher_constructor_t)gcrypt_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA512, get_name(this),
 					(hasher_constructor_t)gcrypt_hasher_create);
 
 	/* crypters */
-	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
+	lib->crypto->add_crypter(lib->crypto, ENCR_3DES, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAST,
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAST, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
+	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB,
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC,
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CTR, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_SERPENT_CBC,
+#ifdef HAVE_GCRY_CIPHER_CAMELLIA
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_TWOFISH_CBC,
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CTR, get_name(this),
+					(crypter_constructor_t)gcrypt_crypter_create);
+#endif /* HAVE_GCRY_CIPHER_CAMELLIA */
+	lib->crypto->add_crypter(lib->crypto, ENCR_SERPENT_CBC, get_name(this),
+					(crypter_constructor_t)gcrypt_crypter_create);
+	lib->crypto->add_crypter(lib->crypto, ENCR_TWOFISH_CBC, get_name(this),
 					(crypter_constructor_t)gcrypt_crypter_create);
 
 	/* random numbers */
-	lib->crypto->add_rng(lib->crypto, RNG_WEAK,
+	lib->crypto->add_rng(lib->crypto, RNG_WEAK, get_name(this),
 						 (rng_constructor_t)gcrypt_rng_create);
-	lib->crypto->add_rng(lib->crypto, RNG_STRONG,
+	lib->crypto->add_rng(lib->crypto, RNG_STRONG, get_name(this),
 						 (rng_constructor_t)gcrypt_rng_create);
-	lib->crypto->add_rng(lib->crypto, RNG_TRUE,
+	lib->crypto->add_rng(lib->crypto, RNG_TRUE, get_name(this),
 						 (rng_constructor_t)gcrypt_rng_create);
 
 	/* diffie hellman groups, using modp */
-	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_2048_224,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_224, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_2048_256,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_256, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_160,
+	lib->crypto->add_dh(lib->crypto, MODP_1024_160, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
-	lib->crypto->add_dh(lib->crypto, MODP_768_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, get_name(this),
 					(dh_constructor_t)gcrypt_dh_create);
+	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM, get_name(this),
+					(dh_constructor_t)gcrypt_dh_create_custom);
 
 	/* RSA */
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 					(builder_function_t)gcrypt_rsa_private_key_gen);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, TRUE,
 					(builder_function_t)gcrypt_rsa_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
 					(builder_function_t)gcrypt_rsa_public_key_load);
 
 	return &this->public.plugin;

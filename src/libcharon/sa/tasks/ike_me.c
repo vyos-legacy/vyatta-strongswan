@@ -17,6 +17,7 @@
 
 #include <string.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <config/peer_cfg.h>
 #include <encoding/payloads/id_payload.h>
@@ -134,8 +135,8 @@ static void gather_and_add_endpoints(private_ike_me_t *this, message_t *message)
 	host = this->ike_sa->get_my_host(this->ike_sa);
 	port = host->get_port(host);
 
-	enumerator = charon->kernel_interface->create_address_enumerator(
-										charon->kernel_interface, FALSE, FALSE);
+	enumerator = hydra->kernel_interface->create_address_enumerator(
+										hydra->kernel_interface, FALSE, FALSE);
 	while (enumerator->enumerate(enumerator, (void**)&addr))
 	{
 		host = addr->clone(addr);
@@ -454,6 +455,9 @@ static status_t process_i(private_ike_me_t *this, message_t *message)
 				DBG1(DBG_IKE, "server did not return a ME_MEDIATION, aborting");
 				return FAILED;
 			}
+			/* if we are on a mediation connection we switch to port 4500 even
+			 * if no NAT is detected. */
+			this->ike_sa->float_ports(this->ike_sa);
 			return NEED_MORE;
 		}
 		case IKE_AUTH:
@@ -689,7 +693,7 @@ static status_t build_r_ms(private_ike_me_t *this, message_t *message)
 			job_t *job = (job_t*)mediation_job_create(this->peer_id,
 					this->ike_sa->get_other_id(this->ike_sa), this->connect_id,
 					this->connect_key, this->remote_endpoints, this->response);
-			charon->processor->queue_job(charon->processor, job);
+			lib->processor->queue_job(lib->processor, job);
 			break;
 		}
 		default:

@@ -770,7 +770,7 @@ check_msg_errqueue(const struct iface *ifp, short interest)
 					/* note dirty trick to suppress ~ at start of format
 					 * if we know what state to blame.
 					 */
-					if ((packet_len == 1) && (buffer[0] = 0xff)
+					if ((packet_len == 1) && (buffer[0] == 0xff)
 #ifdef DEBUG
 						&& ((cur_debugging & DBG_NATT) == 0)
 #endif
@@ -966,7 +966,9 @@ malloc_md(void)
 	 * - .note = NOTHING_WRONG
 	 * - .encrypted = FALSE
 	 */
-	static const struct msg_digest blank_md;
+	static const struct msg_digest blank_md = {
+		.next = NULL,
+	};
 
 	if (md == NULL)
 	{
@@ -1142,13 +1144,14 @@ read_packet(struct msg_digest *md)
 				, ifp->rname
 				, ip_str(&md->sender), (unsigned)md->sender_port));
 		}
-
+		free(buffer);
 		return FALSE;
 	}
 	else if (from_ugh != NULL)
 	{
-		plog("recvfrom on %s returned misformed source sockaddr: %s"
+		plog("recvfrom on %s returned malformed source sockaddr: %s"
 			, ifp->rname, from_ugh);
+		free(buffer);
 		return FALSE;
 	}
 	cur_from = &md->sender;
@@ -1162,6 +1165,7 @@ read_packet(struct msg_digest *md)
 		{
 			plog("recvfrom %s:%u too small packet (%d)"
 				, ip_str(cur_from), (unsigned) cur_from_port, packet_len);
+			free(buffer);
 			return FALSE;
 		}
 		memcpy(&non_esp, buffer, sizeof(u_int32_t));
@@ -1169,6 +1173,7 @@ read_packet(struct msg_digest *md)
 		{
 			plog("recvfrom %s:%u has no Non-ESP marker"
 				, ip_str(cur_from), (unsigned) cur_from_port);
+			free(buffer);
 			return FALSE;
 		}
 		packet_len -= sizeof(u_int32_t);
@@ -1661,7 +1666,7 @@ process_packet(struct msg_digest **mdp)
 	 * Look up the appropriate microcode based on state and
 	 * possibly Oakley Auth type.
 	 */
-	passert(STATE_IKE_FLOOR <= from_state && from_state <= STATE_IKE_ROOF);
+	passert(STATE_IKE_FLOOR <= from_state && from_state < STATE_IKE_ROOF);
 	smc = ike_microcode_index[from_state - STATE_IKE_FLOOR];
 
 	if (st != NULL)
@@ -1782,7 +1787,7 @@ process_packet(struct msg_digest **mdp)
 		 * the last phase 1 block, not the last block sent.
 		 */
 		{
-			size_t crypter_block_size;
+			size_t crypter_block_size, crypter_iv_size;
 			encryption_algorithm_t enc_alg;
 			crypter_t *crypter;
 			chunk_t data, iv;
@@ -1791,6 +1796,7 @@ process_packet(struct msg_digest **mdp)
 			enc_alg = oakley_to_encryption_algorithm(st->st_oakley.encrypt);
 			crypter = lib->crypto->create_crypter(lib->crypto, enc_alg, st->st_enc_key.len);
 			crypter_block_size = crypter->get_block_size(crypter);
+			crypter_iv_size = crypter->get_iv_size(crypter);
 
 			if (pbs_left(&md->message_pbs) % crypter_block_size != 0)
 			{
@@ -1817,17 +1823,17 @@ process_packet(struct msg_digest **mdp)
 			}
 
 			/* form iv by truncation */
-			st->st_new_iv_len = crypter_block_size;
+			st->st_new_iv_len = crypter_iv_size;
 			iv = chunk_create(st->st_new_iv, st->st_new_iv_len);
-			new_iv = alloca(crypter_block_size);
-			memcpy(new_iv, data.ptr + data.len - crypter_block_size,
-				   crypter_block_size);
+			new_iv = alloca(crypter_iv_size);
+			memcpy(new_iv, data.ptr + data.len - crypter_iv_size,
+				   crypter_iv_size);
 
 			crypter->set_key(crypter, st->st_enc_key);
 			crypter->decrypt(crypter, data, iv, NULL);
 			crypter->destroy(crypter);
 
-		memcpy(st->st_new_iv, new_iv, crypter_block_size);
+			memcpy(st->st_new_iv, new_iv, crypter_iv_size);
 			if (restore_iv)
 			{
 				memcpy(st->st_new_iv, new_iv, new_iv_len);
@@ -2307,7 +2313,7 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 
 			/* tell whack and log of progress */
 			{
-				const char *story = state_story[st->st_state - STATE_MAIN_R0];
+				const char *story = state_story[st->st_state];
 				enum rc_type w = RC_NEW_STATE + st->st_state;
 				char sadetails[128];
 

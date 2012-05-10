@@ -136,7 +136,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		diffie_hellman_t dh = { .get_shared_secret = get_shared_secret,
 								.destroy = (void*)&secret };
 
-		proposal = proposal_create(PROTO_IKE);
+		proposal = proposal_create(PROTO_IKE, 0);
 		keymat = ike_sa->get_keymat(ike_sa);
 		if (integ)
 		{
@@ -462,6 +462,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	u_int16_t inbound_cpi = 0, outbound_cpi = 0;
 	u_int8_t mode = MODE_TUNNEL, ipcomp = 0;
 	u_int16_t encr = ENCR_UNDEFINED, integ = AUTH_UNDEFINED, len = 0;
+	u_int16_t esn = NO_EXT_SEQ_NUMBERS;
 	u_int seg_i, seg_o;
 	chunk_t nonce_i = chunk_empty, nonce_r = chunk_empty, secret = chunk_empty;
 	chunk_t encr_i, integ_i, encr_r, integ_r;
@@ -512,6 +513,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 			case HA_ALG_INTEG:
 				integ = value.u16;
 				break;
+			case HA_ESN:
+				esn = value.u16;
+				break;
 			case HA_NONCE_I:
 				nonce_i = value.chunk;
 				break;
@@ -549,7 +553,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	child_sa->set_protocol(child_sa, PROTO_ESP);
 	child_sa->set_ipcomp(child_sa, ipcomp);
 
-	proposal = proposal_create(PROTO_ESP);
+	proposal = proposal_create(PROTO_ESP, 0);
 	if (integ)
 	{
 		proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, integ, 0);
@@ -558,6 +562,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	{
 		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, len);
 	}
+	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
 	keymat = ike_sa->get_keymat(ike_sa);
 
 	if (!keymat->derive_child_keys(keymat, proposal, secret.ptr ? &dh : NULL,
@@ -596,9 +601,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	if (initiator)
 	{
 		if (child_sa->install(child_sa, encr_r, integ_r, inbound_spi,
-						inbound_cpi, TRUE, local_ts, remote_ts) != SUCCESS ||
+					inbound_cpi, TRUE, TRUE, local_ts, remote_ts) != SUCCESS ||
 			child_sa->install(child_sa, encr_i, integ_i, outbound_spi,
-						outbound_cpi, FALSE, local_ts, remote_ts) != SUCCESS)
+					outbound_cpi, FALSE, TRUE, local_ts, remote_ts) != SUCCESS)
 		{
 			failed = TRUE;
 		}
@@ -606,9 +611,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	else
 	{
 		if (child_sa->install(child_sa, encr_i, integ_i, inbound_spi,
-						inbound_cpi, TRUE, local_ts, remote_ts) != SUCCESS ||
+					inbound_cpi, TRUE, TRUE, local_ts, remote_ts) != SUCCESS ||
 			child_sa->install(child_sa, encr_r, integ_r, outbound_spi,
-						outbound_cpi, FALSE, local_ts, remote_ts) != SUCCESS)
+					outbound_cpi, FALSE, TRUE, local_ts, remote_ts) != SUCCESS)
 		{
 			failed = TRUE;
 		}
@@ -869,7 +874,7 @@ ha_dispatcher_t *ha_dispatcher_create(ha_socket_t *socket,
 	);
 	this->job = callback_job_create((callback_job_cb_t)dispatch,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

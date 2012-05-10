@@ -47,7 +47,7 @@ struct private_eap_md5_t {
 	chunk_t challenge;
 
 	/**
-	 * EAP message identififier
+	 * EAP message identifier
 	 */
 	u_int8_t identifier;
 };
@@ -105,19 +105,15 @@ static status_t hash_challenge(private_eap_md5_t *this, chunk_t *response,
 	return SUCCESS;
 }
 
-/**
- * Implementation of eap_method_t.initiate for the peer
- */
-static status_t initiate_peer(private_eap_md5_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate_peer, status_t,
+	private_eap_md5_t *this, eap_payload_t **out)
 {
 	/* peer never initiates */
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.initiate for the server
- */
-static status_t initiate_server(private_eap_md5_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate_server, status_t,
+	private_eap_md5_t *this, eap_payload_t **out)
 {
 	rng_t *rng;
 	eap_md5_header_t *req;
@@ -142,11 +138,8 @@ static status_t initiate_server(private_eap_md5_t *this, eap_payload_t **out)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of eap_method_t.process for the peer
- */
-static status_t process_peer(private_eap_md5_t *this,
-							 eap_payload_t *in, eap_payload_t **out)
+METHOD(eap_method_t, process_peer, status_t,
+	private_eap_md5_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t response;
 	chunk_t data;
@@ -154,12 +147,12 @@ static status_t process_peer(private_eap_md5_t *this,
 
 	this->identifier = in->get_identifier(in);
 	data = in->get_data(in);
-	this->challenge = chunk_clone(chunk_skip(data, 6));
-	if (data.len < 6 || this->challenge.len < *(data.ptr + 5))
+	if (data.len < 6 || data.ptr[5] + 6 > data.len)
 	{
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
 	}
+	this->challenge = chunk_clone(chunk_create(data.ptr + 6, data.ptr[5]));
 	if (hash_challenge(this, &response, this->peer, this->server) != SUCCESS)
 	{
 		return FAILED;
@@ -177,16 +170,15 @@ static status_t process_peer(private_eap_md5_t *this,
 	return NEED_MORE;
 }
 
-/**
- * Implementation of eap_method_t.process for the server
- */
-static status_t process_server(private_eap_md5_t *this,
-							   eap_payload_t *in, eap_payload_t **out)
+METHOD(eap_method_t, process_server, status_t,
+	private_eap_md5_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t response, expected;
 	chunk_t data;
 
-	if (this->identifier != in->get_identifier(in))
+	data = in->get_data(in);
+	if (this->identifier != in->get_identifier(in) ||
+		data.len < 6 || data.ptr[5] + 6 > data.len)
 	{
 		DBG1(DBG_IKE, "received invalid EAP-MD5 message");
 		return FAILED;
@@ -195,9 +187,7 @@ static status_t process_server(private_eap_md5_t *this,
 	{
 		return FAILED;
 	}
-	data = in->get_data(in);
-	response = chunk_skip(data, 6);
-
+	response = chunk_create(data.ptr + 6, data.ptr[5]);
 	if (response.len < expected.len ||
 		!memeq(response.ptr, expected.ptr, expected.len))
 	{
@@ -209,35 +199,39 @@ static status_t process_server(private_eap_md5_t *this,
 	return SUCCESS;
 }
 
-/**
- * Implementation of eap_method_t.get_type.
- */
-static eap_type_t get_type(private_eap_md5_t *this, u_int32_t *vendor)
+METHOD(eap_method_t, get_type, eap_type_t,
+	private_eap_md5_t *this, u_int32_t *vendor)
 {
 	*vendor = 0;
 	return EAP_MD5;
 }
 
-/**
- * Implementation of eap_method_t.get_msk.
- */
-static status_t get_msk(private_eap_md5_t *this, chunk_t *msk)
+METHOD(eap_method_t, get_msk, status_t,
+	private_eap_md5_t *this, chunk_t *msk)
 {
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.is_mutual.
- */
-static bool is_mutual(private_eap_md5_t *this)
+METHOD(eap_method_t, is_mutual, bool,
+	private_eap_md5_t *this)
 {
 	return FALSE;
 }
 
-/**
- * Implementation of eap_method_t.destroy.
- */
-static void destroy(private_eap_md5_t *this)
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_md5_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_md5_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
+}
+
+METHOD(eap_method_t, destroy, void,
+	private_eap_md5_t *this)
 {
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
@@ -245,39 +239,29 @@ static void destroy(private_eap_md5_t *this)
 	free(this);
 }
 
-/**
- * Generic constructor
- */
-static private_eap_md5_t *eap_md5_create_generic(identification_t *server,
-												 identification_t *peer)
-{
-	private_eap_md5_t *this = malloc_thing(private_eap_md5_t);
-
-	this->public.eap_method_interface.initiate = NULL;
-	this->public.eap_method_interface.process = NULL;
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
-	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
-	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
-	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-
-	/* private data */
-	this->peer = peer->clone(peer);
-	this->server = server->clone(server);
-	this->challenge = chunk_empty;
-	this->identifier = 0;
-
-	return this;
-}
-
 /*
- * see header
+ * See header
  */
 eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *peer)
 {
-	private_eap_md5_t *this = eap_md5_create_generic(server, peer);
+	private_eap_md5_t *this;
 
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_server;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_server;
+	INIT(this,
+		.public = {
+			.eap_method = {
+				.initiate = _initiate_server,
+				.process = _process_server,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
+				.destroy = _destroy,
+			},
+		},
+		.peer = peer->clone(peer),
+		.server = server->clone(server),
+	);
 
 	/* generate a non-zero identifier */
 	do {
@@ -288,14 +272,26 @@ eap_md5_t *eap_md5_create_server(identification_t *server, identification_t *pee
 }
 
 /*
- * see header
+ * See header
  */
 eap_md5_t *eap_md5_create_peer(identification_t *server, identification_t *peer)
 {
-	private_eap_md5_t *this = eap_md5_create_generic(server, peer);
+	private_eap_md5_t *this;
 
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_peer;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*,eap_payload_t**))process_peer;
+	INIT(this,
+		.public = {
+			.eap_method = {
+				.initiate = _initiate_peer,
+				.process = _process_peer,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.destroy = _destroy,
+			},
+		},
+		.peer = peer->clone(peer),
+		.server = server->clone(server),
+	);
 
 	return &this->public;
 }

@@ -71,14 +71,14 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
 	$(top_srcdir)/m4/config/lt~obsolete.m4 \
 	$(top_srcdir)/m4/macros/with.m4 \
 	$(top_srcdir)/m4/macros/enable-disable.m4 \
+	$(top_srcdir)/m4/macros/add-plugin.m4 \
 	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-am__installdirs = "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(man5dir)" \
-	"$(DESTDIR)$(man8dir)"
+am__installdirs = "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(ipsec_PROGRAMS)
 am__pluto_adns_OBJECTS = adns.$(OBJEXT)
 _pluto_adns_OBJECTS = $(am__pluto_adns_OBJECTS)
@@ -89,17 +89,17 @@ am_pluto_OBJECTS = ac.$(OBJEXT) alg_info.$(OBJEXT) ca.$(OBJEXT) \
 	certs.$(OBJEXT) connections.$(OBJEXT) constants.$(OBJEXT) \
 	cookie.$(OBJEXT) crl.$(OBJEXT) crypto.$(OBJEXT) \
 	db_ops.$(OBJEXT) defs.$(OBJEXT) demux.$(OBJEXT) \
-	dnskey.$(OBJEXT) fetch.$(OBJEXT) foodgroups.$(OBJEXT) \
-	ike_alg.$(OBJEXT) ipsec_doi.$(OBJEXT) kernel.$(OBJEXT) \
-	kernel_alg.$(OBJEXT) kernel_netlink.$(OBJEXT) \
-	kernel_noklips.$(OBJEXT) kernel_pfkey.$(OBJEXT) keys.$(OBJEXT) \
-	lex.$(OBJEXT) log.$(OBJEXT) myid.$(OBJEXT) modecfg.$(OBJEXT) \
-	nat_traversal.$(OBJEXT) ocsp.$(OBJEXT) packet.$(OBJEXT) \
-	pkcs7.$(OBJEXT) pluto.$(OBJEXT) plutomain.$(OBJEXT) \
-	rcv_whack.$(OBJEXT) server.$(OBJEXT) smartcard.$(OBJEXT) \
-	spdb.$(OBJEXT) state.$(OBJEXT) timer.$(OBJEXT) \
-	vendor.$(OBJEXT) virtual.$(OBJEXT) whack_attribute.$(OBJEXT) \
-	xauth_manager.$(OBJEXT) x509.$(OBJEXT) builder.$(OBJEXT)
+	dnskey.$(OBJEXT) event_queue.$(OBJEXT) fetch.$(OBJEXT) \
+	foodgroups.$(OBJEXT) ike_alg.$(OBJEXT) ipsec_doi.$(OBJEXT) \
+	kernel.$(OBJEXT) kernel_alg.$(OBJEXT) kernel_pfkey.$(OBJEXT) \
+	keys.$(OBJEXT) lex.$(OBJEXT) log.$(OBJEXT) myid.$(OBJEXT) \
+	modecfg.$(OBJEXT) nat_traversal.$(OBJEXT) ocsp.$(OBJEXT) \
+	packet.$(OBJEXT) pkcs7.$(OBJEXT) pluto.$(OBJEXT) \
+	plutomain.$(OBJEXT) rcv_whack.$(OBJEXT) server.$(OBJEXT) \
+	smartcard.$(OBJEXT) spdb.$(OBJEXT) state.$(OBJEXT) \
+	timer.$(OBJEXT) vendor.$(OBJEXT) virtual.$(OBJEXT) \
+	whack_attribute.$(OBJEXT) xauth_manager.$(OBJEXT) \
+	x509.$(OBJEXT) builder.$(OBJEXT)
 pluto_OBJECTS = $(am_pluto_OBJECTS)
 pluto_DEPENDENCIES = $(LIBSTRONGSWANDIR)/libstrongswan.la \
 	$(LIBFREESWANDIR)/libfreeswan.a $(LIBHYDRADIR)/libhydra.la \
@@ -148,7 +148,6 @@ am__nobase_list = $(am__nobase_strip_setup); \
 am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
-man5dir = $(mandir)/man5
 man8dir = $(mandir)/man8
 NROFF = nroff
 MANS = $(dist_man_MANS)
@@ -251,6 +250,8 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
 PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PTHREADLIB = @PTHREADLIB@
 RANLIB = @RANLIB@
 RTLIB = @RTLIB@
@@ -282,14 +283,17 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 builddir = @builddir@
+c_plugins = @c_plugins@
 datadir = @datadir@
 datarootdir = @datarootdir@
+dbusservicedir = @dbusservicedir@
 default_pkcs11 = @default_pkcs11@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 gtk_CFLAGS = @gtk_CFLAGS@
 gtk_LIBS = @gtk_LIBS@
+h_plugins = @h_plugins@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -300,28 +304,35 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
+libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
 libexecdir = @libexecdir@
-libhydra_plugins = @libhydra_plugins@
-libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 localedir = @localedir@
 localstatedir = @localstatedir@
 lt_ECHO = @lt_ECHO@
+maemo_CFLAGS = @maemo_CFLAGS@
+maemo_LIBS = @maemo_LIBS@
+manager_plugins = @manager_plugins@
 mandir = @mandir@
+medsrv_plugins = @medsrv_plugins@
 mkdir_p = @mkdir_p@
 nm_CFLAGS = @nm_CFLAGS@
 nm_LIBS = @nm_LIBS@
 nm_ca_dir = @nm_ca_dir@
 oldincludedir = @oldincludedir@
+openac_plugins = @openac_plugins@
+p_plugins = @p_plugins@
+pcsclite_CFLAGS = @pcsclite_CFLAGS@
+pcsclite_LIBS = @pcsclite_LIBS@
 pdfdir = @pdfdir@
 piddir = @piddir@
+pki_plugins = @pki_plugins@
 plugindir = @plugindir@
 pluto_plugins = @pluto_plugins@
+pool_plugins = @pool_plugins@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -329,11 +340,17 @@ random_device = @random_device@
 resolv_conf = @resolv_conf@
 routing_table = @routing_table@
 routing_table_prio = @routing_table_prio@
+s_plugins = @s_plugins@
 sbindir = @sbindir@
+scepclient_plugins = @scepclient_plugins@
+scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
+systemdsystemunitdir = @systemdsystemunitdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
@@ -355,6 +372,7 @@ db_ops.c db_ops.h \
 defs.c defs.h \
 demux.c demux.h \
 dnskey.c dnskey.h \
+event_queue.c event_queue.h \
 fetch.c fetch.h \
 foodgroups.c foodgroups.h \
 ike_alg.c ike_alg.h \
@@ -362,8 +380,6 @@ ipsec_doi.c ipsec_doi.h \
 kameipsec.h \
 kernel.c kernel.h \
 kernel_alg.c kernel_alg.h \
-kernel_netlink.c kernel_netlink.h \
-kernel_noklips.c kernel_noklips.h \
 kernel_pfkey.c kernel_pfkey.h \
 keys.c keys.h \
 lex.c lex.h \
@@ -405,11 +421,11 @@ INCLUDES = \
 AM_CFLAGS = -rdynamic -DIPSEC_DIR=\"${ipsecdir}\" \
 	-DIPSEC_CONFDIR=\"${sysconfdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
 	-DSHARED_SECRETS_FILE=\"${sysconfdir}/ipsec.secrets\" \
-	-DPLUGINS=\""${pluto_plugins} ${libhydra_plugins}\"" \
+	-DPLUGINS=\""${pluto_plugins}\"" \
 	-DPKCS11_DEFAULT_LIB=\"${default_pkcs11}\" -DKERNEL26_SUPPORT \
-	-DKERNEL26_HAS_KAME_DUPLICATES -DPLUTO -DKLIPS -DDEBUG \
-	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5) $(am__append_7)
+	-DKERNEL26_HAS_KAME_DUPLICATES -DPLUTO -DDEBUG $(am__append_1) \
+	$(am__append_2) $(am__append_3) $(am__append_4) \
+	$(am__append_5) $(am__append_7)
 pluto_LDADD = $(LIBSTRONGSWANDIR)/libstrongswan.la \
 	$(LIBFREESWANDIR)/libfreeswan.a $(LIBHYDRADIR)/libhydra.la \
 	-lresolv $(PTHREADLIB) $(DLLIB) $(am__append_6)
@@ -417,9 +433,7 @@ _pluto_adns_LDADD = \
 $(LIBFREESWANDIR)/libfreeswan.a \
 -lresolv $(DLLIB)
 
-CLEANFILES = ipsec.secrets.5
-dist_man_MANS = pluto.8 ipsec.secrets.5
-EXTRA_DIST = ipsec.secrets.5.in
+dist_man_MANS = pluto.8
 
 # build optional plugins
 ########################
@@ -529,14 +543,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/defs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/demux.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnskey.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/event_queue.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fetch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/foodgroups.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_alg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ipsec_doi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_alg.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_netlink.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_noklips.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_pfkey.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keys.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lex.Po@am__quote@
@@ -601,44 +614,6 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
-install-man5: $(dist_man_MANS)
-	@$(NORMAL_INSTALL)
-	test -z "$(man5dir)" || $(MKDIR_P) "$(DESTDIR)$(man5dir)"
-	@list=''; test -n "$(man5dir)" || exit 0; \
-	{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
-	  sed -n '/\.5[a-z]*$$/p'; \
-	} | while read p; do \
-	  if test -f $$p; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; echo "$$p"; \
-	done | \
-	sed -e 'n;s,.*/,,;p;h;s,.*\.,,;s,^[^5][0-9a-z]*$$,5,;x' \
-	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,' | \
-	sed 'N;N;s,\n, ,g' | { \
-	list=; while read file base inst; do \
-	  if test "$$base" = "$$inst"; then list="$$list $$file"; else \
-	    echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man5dir)/$$inst'"; \
-	    $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man5dir)/$$inst" || exit $$?; \
-	  fi; \
-	done; \
-	for i in $$list; do echo "$$i"; done | $(am__base_list) | \
-	while read files; do \
-	  test -z "$$files" || { \
-	    echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(man5dir)'"; \
-	    $(INSTALL_DATA) $$files "$(DESTDIR)$(man5dir)" || exit $$?; }; \
-	done; }
-
-uninstall-man5:
-	@$(NORMAL_UNINSTALL)
-	@list=''; test -n "$(man5dir)" || exit 0; \
-	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
-	  sed -n '/\.5[a-z]*$$/p'; \
-	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^5][0-9a-z]*$$,5,;x' \
-	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
-	test -z "$$files" || { \
-	  echo " ( cd '$(DESTDIR)$(man5dir)' && rm -f" $$files ")"; \
-	  cd "$(DESTDIR)$(man5dir)" && rm -f $$files; }
 install-man8: $(dist_man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man8dir)" || $(MKDIR_P) "$(DESTDIR)$(man8dir)"
@@ -889,7 +864,7 @@ check: check-recursive
 all-am: Makefile $(PROGRAMS) $(MANS)
 installdirs: installdirs-recursive
 installdirs-am:
-	for dir in "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man8dir)"; do \
+	for dir in "$(DESTDIR)$(ipsecdir)" "$(DESTDIR)$(man8dir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-recursive
@@ -909,7 +884,6 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
-	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -957,7 +931,7 @@ install-info: install-info-recursive
 
 install-info-am:
 
-install-man: install-man5 install-man8
+install-man: install-man8
 
 install-pdf: install-pdf-recursive
 
@@ -989,7 +963,7 @@ ps-am:
 
 uninstall-am: uninstall-ipsecPROGRAMS uninstall-man
 
-uninstall-man: uninstall-man5 uninstall-man8
+uninstall-man: uninstall-man8
 
 .MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) ctags-recursive \
 	install-am install-strip tags-recursive
@@ -1002,23 +976,17 @@ uninstall-man: uninstall-man5 uninstall-man8
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
 	install-exec-am install-html install-html-am install-info \
-	install-info-am install-ipsecPROGRAMS install-man install-man5 \
-	install-man8 install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs installdirs-am maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-recursive uninstall uninstall-am \
-	uninstall-ipsecPROGRAMS uninstall-man uninstall-man5 \
+	install-info-am install-ipsecPROGRAMS install-man install-man8 \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	installdirs-am maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-recursive \
+	uninstall uninstall-am uninstall-ipsecPROGRAMS uninstall-man \
 	uninstall-man8
 
 
 plutomain.o :	$(top_builddir)/config.status
-
-ipsec.secrets.5 : ipsec.secrets.5.in
-	sed \
-	-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
-	$(srcdir)/$@.in > $@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

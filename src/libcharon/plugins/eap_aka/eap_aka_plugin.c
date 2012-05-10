@@ -20,10 +20,14 @@
 
 #include <daemon.h>
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(eap_aka_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	eap_aka_plugin_t *this)
+{
+	return "eap-aka";
+}
+
+METHOD(plugin_t, destroy, void,
+	eap_aka_plugin_t *this)
 {
 	charon->eap->remove_method(charon->eap,
 							   (eap_constructor_t)eap_aka_server_create);
@@ -37,9 +41,15 @@ static void destroy(eap_aka_plugin_t *this)
  */
 plugin_t *eap_aka_plugin_create()
 {
-	eap_aka_plugin_t *this = malloc_thing(eap_aka_plugin_t);
+	eap_aka_plugin_t *this;
 
-	this->plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.plugin = {
+			.get_name = _get_name,
+			.reload = (void*)return_false,
+			.destroy = _destroy,
+		},
+	);
 
 	charon->eap->add_method(charon->eap, EAP_AKA, 0, EAP_SERVER,
 							(eap_constructor_t)eap_aka_server_create);

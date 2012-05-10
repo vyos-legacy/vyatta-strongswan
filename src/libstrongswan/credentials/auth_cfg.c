@@ -20,6 +20,7 @@
 #include <debug.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <eap/eap.h>
 #include <credentials/certificates/certificate.h>
 
 ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_EAP,
@@ -27,62 +28,6 @@ ENUM(auth_class_names, AUTH_CLASS_ANY, AUTH_CLASS_EAP,
 	"public key",
 	"pre-shared key",
 	"EAP",
-);
-
-ENUM_BEGIN(eap_type_names, EAP_IDENTITY, EAP_GTC,
-	"EAP_IDENTITY",
-	"EAP_NOTIFICATION",
-	"EAP_NAK",
-	"EAP_MD5",
-	"EAP_OTP",
-	"EAP_GTC");
-ENUM_NEXT(eap_type_names, EAP_SIM, EAP_SIM, EAP_GTC,
-	"EAP_SIM");
-ENUM_NEXT(eap_type_names, EAP_AKA, EAP_AKA, EAP_SIM,
-	"EAP_AKA");
-ENUM_NEXT(eap_type_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
-	"EAP_MSCHAPV2");
-ENUM_NEXT(eap_type_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
-	"EAP_RADIUS",
-	"EAP_EXPANDED",
-	"EAP_EXPERIMENTAL");
-ENUM_END(eap_type_names, EAP_EXPERIMENTAL);
-
-ENUM_BEGIN(eap_type_short_names, EAP_IDENTITY, EAP_GTC,
-	"ID",
-	"NTF",
-	"NAK",
-	"MD5",
-	"OTP",
-	"GTC");
-ENUM_NEXT(eap_type_short_names, EAP_SIM, EAP_SIM, EAP_GTC,
-	"SIM");
-ENUM_NEXT(eap_type_short_names, EAP_AKA, EAP_AKA, EAP_SIM,
-	"AKA");
-ENUM_NEXT(eap_type_short_names, EAP_MSCHAPV2, EAP_MSCHAPV2, EAP_AKA,
-	"MSCHAPV2");
-ENUM_NEXT(eap_type_short_names, EAP_RADIUS, EAP_EXPERIMENTAL, EAP_MSCHAPV2,
-	"RAD",
-	"EXP",
-	"XP");
-ENUM_END(eap_type_short_names, EAP_EXPERIMENTAL);
-
-ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_SUBJECT_HASH_URL,
-	"RULE_IDENTITY",
-	"RULE_AUTH_CLASS",
-	"RULE_EAP_IDENTITY",
-	"RULE_EAP_TYPE",
-	"RULE_EAP_VENDOR",
-	"RULE_CA_CERT",
-	"RULE_IM_CERT",
-	"RULE_SUBJECT_CERT",
-	"RULE_CRL_VALIDATION",
-	"RULE_OCSP_VALIDATION",
-	"RULE_GROUP",
-	"HELPER_IM_CERT",
-	"HELPER_SUBJECT_CERT",
-	"HELPER_IM_HASH_URL",
-	"HELPER_SUBJECT_HASH_URL",
 );
 
 typedef struct private_auth_cfg_t private_auth_cfg_t;
@@ -174,6 +119,7 @@ static void destroy_entry_value(entry_t *entry)
 	{
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
+		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_GROUP:
 		{
 			identification_t *id = (identification_t*)entry->value;
@@ -185,11 +131,13 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
+		case AUTH_HELPER_REVOCATION_CERT:
 		{
 			certificate_t *cert = (certificate_t*)entry->value;
 			cert->destroy(cert);
 			break;
 		}
+		case AUTH_RULE_CERT_POLICY:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		{
@@ -201,6 +149,8 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_EAP_VENDOR:
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
 			break;
 	}
 }
@@ -226,19 +176,24 @@ static void replace(auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_EAP_VENDOR:
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
+			case AUTH_RULE_RSA_STRENGTH:
+			case AUTH_RULE_ECDSA_STRENGTH:
 				/* integer type */
 				enumerator->current->value = (void*)(uintptr_t)va_arg(args, u_int);
 				break;
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
+			case AUTH_RULE_AAA_IDENTITY:
 			case AUTH_RULE_GROUP:
 			case AUTH_RULE_CA_CERT:
 			case AUTH_RULE_IM_CERT:
 			case AUTH_RULE_SUBJECT_CERT:
+			case AUTH_RULE_CERT_POLICY:
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
+			case AUTH_HELPER_REVOCATION_CERT:
 				/* pointer type */
 				enumerator->current->value = va_arg(args, void*);
 				break;
@@ -290,20 +245,25 @@ static void* get(private_auth_cfg_t *this, auth_rule_t type)
 		case AUTH_RULE_EAP_TYPE:
 			return (void*)EAP_NAK;
 		case AUTH_RULE_EAP_VENDOR:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
 			return (void*)0;
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
 			return (void*)VALIDATION_FAILED;
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
+		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_GROUP:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
+		case AUTH_RULE_CERT_POLICY:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
+		case AUTH_HELPER_REVOCATION_CERT:
 		default:
 			return NULL;
 	}
@@ -326,19 +286,24 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 		case AUTH_RULE_EAP_VENDOR:
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
 			/* integer type */
 			entry->value = (void*)(uintptr_t)va_arg(args, u_int);
 			break;
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
+		case AUTH_RULE_AAA_IDENTITY:
 		case AUTH_RULE_GROUP:
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
+		case AUTH_RULE_CERT_POLICY:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
 		case AUTH_HELPER_SUBJECT_HASH_URL:
+		case AUTH_HELPER_REVOCATION_CERT:
 			/* pointer type */
 			entry->value = va_arg(args, void*);
 			break;
@@ -409,42 +374,50 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
 			{
-				cert_validation_t validated, required;
+				uintptr_t validated;
 
-				required = (uintptr_t)value;
-				validated = (uintptr_t)get(this, t1);
-				switch (required)
+				e2 = create_enumerator(this);
+				while (e2->enumerate(e2, &t2, &validated))
 				{
-					case VALIDATION_FAILED:
-						/* no constraint */
-						break;
-					case VALIDATION_SKIPPED:
-						if (validated == VALIDATION_SKIPPED)
+					if (t2 == t1)
+					{
+						switch ((uintptr_t)value)
 						{
-							break;
+							case VALIDATION_FAILED:
+								/* no constraint */
+								break;
+							case VALIDATION_SKIPPED:
+								if (validated == VALIDATION_SKIPPED)
+								{
+									break;
+								}
+								/* FALL */
+							case VALIDATION_GOOD:
+								if (validated == VALIDATION_GOOD)
+								{
+									break;
+								}
+								/* FALL */
+							default:
+								success = FALSE;
+								if (log_error)
+								{
+									DBG1(DBG_CFG, "constraint check failed: "
+										 "%N is %N, but requires at least %N",
+										 auth_rule_names, t1,
+										 cert_validation_names, validated,
+										 cert_validation_names, (uintptr_t)value);
+								}
+								break;
 						}
-						/* FALL */
-					case VALIDATION_GOOD:
-						if (validated == VALIDATION_GOOD)
-						{
-							break;
-						}
-						/* FALL */
-					default:
-						success = FALSE;
-						if (log_error)
-						{
-							DBG1(DBG_CFG, "constraint check failed: %N is %N, "
-								 "but requires at least %N", auth_rule_names,
-								 t1, cert_validation_names, validated,
-								 cert_validation_names, required);
-						}
-						break;
+					}
 				}
+				e2->destroy(e2);
 				break;
 			}
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
+			case AUTH_RULE_AAA_IDENTITY:
 			{
 				identification_t *id1, *id2;
 
@@ -523,10 +496,76 @@ static bool complies(private_auth_cfg_t *this, auth_cfg_t *constraints,
 				e2->destroy(e2);
 				break;
 			}
+			case AUTH_RULE_RSA_STRENGTH:
+			case AUTH_RULE_ECDSA_STRENGTH:
+			{
+				uintptr_t strength;
+
+				e2 = create_enumerator(this);
+				while (e2->enumerate(e2, &t2, &strength))
+				{
+					if (t2 == t1)
+					{
+						if ((uintptr_t)value > strength)
+						{
+							success = FALSE;
+							if (log_error)
+							{
+								DBG1(DBG_CFG, "constraint requires %d bit "
+									 "public keys, but %d bit key used",
+									 (uintptr_t)value, strength);
+							}
+						}
+					}
+					else if (t2 == AUTH_RULE_RSA_STRENGTH)
+					{
+						success = FALSE;
+						if (log_error)
+						{
+							DBG1(DBG_CFG, "constraint requires %d bit ECDSA, "
+								 "but RSA used", (uintptr_t)value);
+						}
+					}
+					else if (t2 == AUTH_RULE_ECDSA_STRENGTH)
+					{
+						success = FALSE;
+						if (log_error)
+						{
+							DBG1(DBG_CFG, "constraint requires %d bit RSA, "
+								 "but ECDSA used", (uintptr_t)value);
+						}
+					}
+				}
+				e2->destroy(e2);
+				break;
+			}
+			case AUTH_RULE_CERT_POLICY:
+			{
+				char *oid1, *oid2;
+
+				oid1 = (char*)value;
+				success = FALSE;
+				e2 = create_enumerator(this);
+				while (e2->enumerate(e2, &t2, &oid2))
+				{
+					if (t2 == t1 && streq(oid1, oid2))
+					{
+						success = TRUE;
+						break;
+					}
+				}
+				e2->destroy(e2);
+				if (!success && log_error)
+				{
+					DBG1(DBG_CFG, "constraint requires cert policy %s", oid1);
+				}
+				break;
+			}
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
+			case AUTH_HELPER_REVOCATION_CERT:
 				/* skip helpers */
 				continue;
 		}
@@ -573,6 +612,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_SUBJECT_CERT:
 				case AUTH_HELPER_IM_CERT:
 				case AUTH_HELPER_SUBJECT_CERT:
+				case AUTH_HELPER_REVOCATION_CERT:
 				{
 					certificate_t *cert = (certificate_t*)value;
 
@@ -584,12 +624,15 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_AUTH_CLASS:
 				case AUTH_RULE_EAP_TYPE:
 				case AUTH_RULE_EAP_VENDOR:
+				case AUTH_RULE_RSA_STRENGTH:
+				case AUTH_RULE_ECDSA_STRENGTH:
 				{
 					add(this, type, (uintptr_t)value);
 					break;
 				}
 				case AUTH_RULE_IDENTITY:
 				case AUTH_RULE_EAP_IDENTITY:
+				case AUTH_RULE_AAA_IDENTITY:
 				case AUTH_RULE_GROUP:
 				{
 					identification_t *id = (identification_t*)value;
@@ -597,6 +640,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 					add(this, type, id->clone(id));
 					break;
 				}
+				case AUTH_RULE_CERT_POLICY:
 				case AUTH_HELPER_IM_HASH_URL:
 				case AUTH_HELPER_SUBJECT_HASH_URL:
 				{
@@ -649,6 +693,8 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_RULE_EAP_VENDOR:
 					case AUTH_RULE_CRL_VALIDATION:
 					case AUTH_RULE_OCSP_VALIDATION:
+					case AUTH_RULE_RSA_STRENGTH:
+					case AUTH_RULE_ECDSA_STRENGTH:
 					{
 						if (i1->value == i2->value)
 						{
@@ -662,6 +708,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					case AUTH_RULE_SUBJECT_CERT:
 					case AUTH_HELPER_IM_CERT:
 					case AUTH_HELPER_SUBJECT_CERT:
+					case AUTH_HELPER_REVOCATION_CERT:
 					{
 						certificate_t *c1, *c2;
 
@@ -677,6 +724,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 					}
 					case AUTH_RULE_IDENTITY:
 					case AUTH_RULE_EAP_IDENTITY:
+					case AUTH_RULE_AAA_IDENTITY:
 					case AUTH_RULE_GROUP:
 					{
 						identification_t *id1, *id2;
@@ -691,6 +739,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 						}
 						continue;
 					}
+					case AUTH_RULE_CERT_POLICY:
 					case AUTH_HELPER_IM_HASH_URL:
 					case AUTH_HELPER_SUBJECT_HASH_URL:
 					{
@@ -761,6 +810,7 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 		{
 			case AUTH_RULE_IDENTITY:
 			case AUTH_RULE_EAP_IDENTITY:
+			case AUTH_RULE_AAA_IDENTITY:
 			case AUTH_RULE_GROUP:
 			{
 				identification_t *id = (identification_t*)entry->value;
@@ -772,11 +822,13 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 			case AUTH_RULE_SUBJECT_CERT:
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
+			case AUTH_HELPER_REVOCATION_CERT:
 			{
 				certificate_t *cert = (certificate_t*)entry->value;
 				clone->add(clone, entry->type, cert->get_ref(cert));
 				break;
 			}
+			case AUTH_RULE_CERT_POLICY:
 			case AUTH_HELPER_IM_HASH_URL:
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			{
@@ -788,6 +840,8 @@ static auth_cfg_t* clone_(private_auth_cfg_t *this)
 			case AUTH_RULE_EAP_VENDOR:
 			case AUTH_RULE_CRL_VALIDATION:
 			case AUTH_RULE_OCSP_VALIDATION:
+			case AUTH_RULE_RSA_STRENGTH:
+			case AUTH_RULE_ECDSA_STRENGTH:
 				clone->add(clone, entry->type, (uintptr_t)entry->value);
 				break;
 		}

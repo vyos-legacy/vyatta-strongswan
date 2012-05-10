@@ -16,6 +16,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/conf.h>
+#include <openssl/rand.h>
 #include <openssl/crypto.h>
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
@@ -24,6 +25,7 @@
 #include "openssl_plugin.h"
 
 #include <library.h>
+#include <debug.h>
 #include <threading/thread.h>
 #include <threading/mutex.h>
 #include "openssl_util.h"
@@ -151,6 +153,31 @@ static void threading_init()
 }
 
 /**
+ * Seed the OpenSSL RNG, if required
+ */
+static bool seed_rng()
+{
+	rng_t *rng = NULL;
+	char buf[32];
+
+	while (RAND_status() != 1)
+	{
+		if (!rng)
+		{
+			rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+			if (!rng)
+			{
+				return FALSE;
+			}
+		}
+		rng->get_bytes(rng, sizeof(buf), buf);
+		RAND_seed(buf, sizeof(buf));
+	}
+	DESTROY_IF(rng);
+	return TRUE;
+}
+
+/**
  * cleanup OpenSSL threading locks
  */
 static void threading_cleanup()
@@ -166,10 +193,14 @@ static void threading_cleanup()
 	mutex = NULL;
 }
 
-/**
- * Implementation of openssl_plugin_t.destroy
- */
-static void destroy(private_openssl_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_openssl_plugin_t *this)
+{
+	return "openssl";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_openssl_plugin_t *this)
 {
 	lib->crypto->remove_crypter(lib->crypto,
 					(crypter_constructor_t)openssl_crypter_create);
@@ -218,9 +249,17 @@ static void destroy(private_openssl_plugin_t *this)
  */
 plugin_t *openssl_plugin_create()
 {
-	private_openssl_plugin_t *this = malloc_thing(private_openssl_plugin_t);
+	private_openssl_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	threading_init();
 
@@ -233,112 +272,121 @@ plugin_t *openssl_plugin_create()
 	ENGINE_register_all_complete();
 #endif /* OPENSSL_NO_ENGINE */
 
+	if (!seed_rng())
+	{
+		DBG1(DBG_CFG, "no RNG found to seed OpenSSL");
+		destroy(this);
+		return NULL;
+	}
+
 	/* crypter */
-	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+	lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC,
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAMELLIA_CBC, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_3DES,
+	lib->crypto->add_crypter(lib->crypto, ENCR_3DES, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_RC5,
+	lib->crypto->add_crypter(lib->crypto, ENCR_RC5, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_IDEA,
+	lib->crypto->add_crypter(lib->crypto, ENCR_IDEA, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_CAST,
+	lib->crypto->add_crypter(lib->crypto, ENCR_CAST, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH,
+	lib->crypto->add_crypter(lib->crypto, ENCR_BLOWFISH, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES,
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB,
+	lib->crypto->add_crypter(lib->crypto, ENCR_DES_ECB, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
-	lib->crypto->add_crypter(lib->crypto, ENCR_NULL,
+	lib->crypto->add_crypter(lib->crypto, ENCR_NULL, get_name(this),
 					(crypter_constructor_t)openssl_crypter_create);
 
 	/* hasher */
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA1, get_name(this),
 					(hasher_constructor_t)openssl_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_MD2,
+	lib->crypto->add_hasher(lib->crypto, HASH_MD2, get_name(this),
 					(hasher_constructor_t)openssl_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_MD4,
+	lib->crypto->add_hasher(lib->crypto, HASH_MD4, get_name(this),
 					(hasher_constructor_t)openssl_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_MD5,
+	lib->crypto->add_hasher(lib->crypto, HASH_MD5, get_name(this),
 					(hasher_constructor_t)openssl_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA224,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA224, get_name(this),
 					(hasher_constructor_t)openssl_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA256,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA256, get_name(this),
 					(hasher_constructor_t)openssl_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA384,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA384, get_name(this),
 					(hasher_constructor_t)openssl_hasher_create);
-	lib->crypto->add_hasher(lib->crypto, HASH_SHA512,
+	lib->crypto->add_hasher(lib->crypto, HASH_SHA512, get_name(this),
 					(hasher_constructor_t)openssl_hasher_create);
 
 	/* prf */
-	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1,
+	lib->crypto->add_prf(lib->crypto, PRF_KEYED_SHA1, get_name(this),
 					(prf_constructor_t)openssl_sha1_prf_create);
 
 	/* (ec) diffie hellman */
-	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_BIT, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_2048_224,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_224, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_2048_256,
+	lib->crypto->add_dh(lib->crypto, MODP_2048_256, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_1536_BIT, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
 #ifndef OPENSSL_NO_EC
-	lib->crypto->add_dh(lib->crypto, ECP_256_BIT,
+	lib->crypto->add_dh(lib->crypto, ECP_256_BIT, get_name(this),
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, ECP_384_BIT,
+	lib->crypto->add_dh(lib->crypto, ECP_384_BIT, get_name(this),
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, ECP_521_BIT,
+	lib->crypto->add_dh(lib->crypto, ECP_521_BIT, get_name(this),
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, ECP_224_BIT,
+	lib->crypto->add_dh(lib->crypto, ECP_224_BIT, get_name(this),
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, ECP_192_BIT,
+	lib->crypto->add_dh(lib->crypto, ECP_192_BIT, get_name(this),
 						(dh_constructor_t)openssl_ec_diffie_hellman_create);
 #endif /* OPENSSL_NO_EC */
-	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_3072_BIT, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_4096_BIT, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_6144_BIT, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_8192_BIT, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_1024_BIT, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_1024_160,
+	lib->crypto->add_dh(lib->crypto, MODP_1024_160, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
-	lib->crypto->add_dh(lib->crypto, MODP_768_BIT,
+	lib->crypto->add_dh(lib->crypto, MODP_768_BIT, get_name(this),
+						(dh_constructor_t)openssl_diffie_hellman_create);
+	lib->crypto->add_dh(lib->crypto, MODP_CUSTOM, get_name(this),
 						(dh_constructor_t)openssl_diffie_hellman_create);
 
 	/* rsa */
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, TRUE,
 					(builder_function_t)openssl_rsa_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA, FALSE,
 					(builder_function_t)openssl_rsa_private_key_gen);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ANY, FALSE,
 					(builder_function_t)openssl_rsa_private_key_connect);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, TRUE,
 					(builder_function_t)openssl_rsa_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY, FALSE,
 					(builder_function_t)openssl_rsa_public_key_load);
 
 #ifndef OPENSSL_NO_EC
 	/* ecdsa */
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA, TRUE,
 					(builder_function_t)openssl_ec_private_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+	lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA, FALSE,
 					(builder_function_t)openssl_ec_private_key_gen);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA, TRUE,
 					(builder_function_t)openssl_ec_public_key_load);
 #endif /* OPENSSL_NO_EC */
 
 	/* X509 certificates */
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509, TRUE,
 					(builder_function_t)openssl_x509_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL, TRUE,
 					(builder_function_t)openssl_crl_load);
 
 	return &this->public.plugin;

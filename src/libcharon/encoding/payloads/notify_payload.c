@@ -1,7 +1,8 @@
 /*
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
  * Copyright (C) 2006-2008 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -41,7 +42,7 @@ ENUM_NEXT(notify_type_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PROPOSAL
 	"INVALID_KE_PAYLOAD");
 ENUM_NEXT(notify_type_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
 	"AUTHENTICATION_FAILED");
-ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, USE_ASSIGNED_HoA, AUTHENTICATION_FAILED,
+ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, CHILD_SA_NOT_FOUND, AUTHENTICATION_FAILED,
 	"SINGLE_PAIR_REQUIRED",
 	"NO_ADDITIONAL_SAS",
 	"INTERNAL_ADDRESS_FAILURE",
@@ -50,10 +51,12 @@ ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, USE_ASSIGNED_HoA, AUTHENTICAT
 	"INVALID_SELECTORS",
 	"UNACCEPTABLE_ADDRESSES",
 	"UNEXPECTED_NAT_DETECTED",
-	"USE_ASSIGNED_HoA");
-ENUM_NEXT(notify_type_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, USE_ASSIGNED_HoA,
+	"USE_ASSIGNED_HoA",
+	"TEMPORARY_FAILURE",
+	"CHILD_SA_NOT_FOUND");
+ENUM_NEXT(notify_type_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, CHILD_SA_NOT_FOUND,
 	"ME_CONNECT_FAILED");
-ENUM_NEXT(notify_type_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
+ENUM_NEXT(notify_type_names, INITIAL_CONTACT, EAP_ONLY_AUTHENTICATION, ME_CONNECT_FAILED,
 	"INITIAL_CONTACT",
 	"SET_WINDOW_SIZE",
 	"ADDITIONAL_TS_POSSIBLE",
@@ -84,8 +87,9 @@ ENUM_NEXT(notify_type_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
 	"TICKET_ACK",
 	"TICKET_NACK",
 	"TICKET_OPAQUE",
-	"LINK_ID");
-ENUM_NEXT(notify_type_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, LINK_ID,
+	"LINK_ID",
+	"USE_WESP_MODE",
+	"ROHC_SUPPORTED",
 	"EAP_ONLY_AUTHENTICATION");
 ENUM_NEXT(notify_type_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"USE_BEET_MODE");
@@ -117,7 +121,7 @@ ENUM_NEXT(notify_type_short_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PR
 	"INVAL_KE");
 ENUM_NEXT(notify_type_short_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
 	"AUTH_FAILED");
-ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, USE_ASSIGNED_HoA, AUTHENTICATION_FAILED,
+ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, CHILD_SA_NOT_FOUND, AUTHENTICATION_FAILED,
 	"SINGLE_PAIR",
 	"NO_ADD_SAS",
 	"INT_ADDR_FAIL",
@@ -126,10 +130,12 @@ ENUM_NEXT(notify_type_short_names, SINGLE_PAIR_REQUIRED, USE_ASSIGNED_HoA, AUTHE
 	"INVAL_SEL",
 	"UNACCEPT_ADDR",
 	"UNEXPECT_NAT",
-	"ASSIGNED_HoA");
-ENUM_NEXT(notify_type_short_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, USE_ASSIGNED_HoA,
+	"ASSIGNED_HoA",
+	"TEMP_FAIL",
+	"NO_CHILD_SA");
+ENUM_NEXT(notify_type_short_names, ME_CONNECT_FAILED, ME_CONNECT_FAILED, CHILD_SA_NOT_FOUND,
 	"ME_CONN_FAIL");
-ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
+ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, EAP_ONLY_AUTHENTICATION, ME_CONNECT_FAILED,
 	"INIT_CONTACT",
 	"SET_WINSIZE",
 	"ADD_TS_POSS",
@@ -160,8 +166,9 @@ ENUM_NEXT(notify_type_short_names, INITIAL_CONTACT, LINK_ID, ME_CONNECT_FAILED,
 	"TKT_ACK",
 	"TKT_NACK",
 	"TKT_OPAK",
-	"LINK_ID");
-ENUM_NEXT(notify_type_short_names, EAP_ONLY_AUTHENTICATION, EAP_ONLY_AUTHENTICATION, LINK_ID,
+	"LINK_ID",
+	"WESP_MODE",
+	"ROHC_SUP",
 	"EAP_ONLY");
 ENUM_NEXT(notify_type_short_names, USE_BEET_MODE, USE_BEET_MODE, EAP_ONLY_AUTHENTICATION,
 	"BEET_MODE");
@@ -180,9 +187,9 @@ typedef struct private_notify_payload_t private_notify_payload_t;
 
 /**
  * Private data of an notify_payload_t object.
- *
  */
 struct private_notify_payload_t {
+
 	/**
 	 * Public notify_payload_t interface.
 	 */
@@ -197,6 +204,11 @@ struct private_notify_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
+
+	/**
+	 * reserved bits
+	 */
+	bool reserved[7];
 
 	/**
 	 * Length of this payload.
@@ -234,33 +246,32 @@ struct private_notify_payload_t {
  *
  * The defined offsets are the positions in a object of type
  * private_notify_payload_t.
- *
  */
 encoding_rule_t notify_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload) 		},
+	{ U_INT_8,			offsetof(private_notify_payload_t, next_payload)		},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_notify_payload_t, critical) 			},
+	{ FLAG,				offsetof(private_notify_payload_t, critical)			},
 	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[0])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[1])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[2])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[3])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[4])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[5])			},
+	{ RESERVED_BIT,		offsetof(private_notify_payload_t, reserved[6])			},
 	/* Length of the whole payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length) 		},
+	{ PAYLOAD_LENGTH,	offsetof(private_notify_payload_t, payload_length)		},
 	/* Protocol ID as 8 bit field*/
-	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id) 			},
+	{ U_INT_8,			offsetof(private_notify_payload_t, protocol_id)			},
 	/* SPI Size as 8 bit field*/
-	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size) 			},
+	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size)			},
 	/* Notify message type as 16 bit field*/
-	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)	},
+	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)			},
 	/* SPI as variable length field*/
 	{ SPI,				offsetof(private_notify_payload_t, spi)					},
 	/* Key Exchange Data is from variable size */
-	{ NOTIFICATION_DATA,	offsetof(private_notify_payload_t, notification_data) 	}
+	{ NOTIFICATION_DATA,offsetof(private_notify_payload_t, notification_data)	}
 };
 
 /*
@@ -281,10 +292,8 @@ encoding_rule_t notify_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-/**
- * Implementation of payload_t.verify.
- */
-static status_t verify(private_notify_payload_t *this)
+METHOD(payload_t, verify, status_t,
+	private_notify_payload_t *this)
 {
 	bool bad_length = FALSE;
 
@@ -398,35 +407,27 @@ static status_t verify(private_notify_payload_t *this)
 	return SUCCESS;
 }
 
-/**
- * Implementation of payload_t.get_encoding_rules.
- */
-static void get_encoding_rules(private_notify_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, void,
+	private_notify_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = notify_payload_encodings;
-	*rule_count = sizeof(notify_payload_encodings) / sizeof(encoding_rule_t);
+	*rule_count = countof(notify_payload_encodings);
 }
 
-/**
- * Implementation of payload_t.get_type.
- */
-static payload_type_t get_type(private_notify_payload_t *this)
+METHOD(payload_t, get_type, payload_type_t,
+	private_notify_payload_t *this)
 {
 	return NOTIFY;
 }
 
-/**
- * Implementation of payload_t.get_next_type.
- */
-static payload_type_t get_next_type(private_notify_payload_t *this)
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_notify_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
-/**
- * Implementation of payload_t.set_next_type.
- */
-static void set_next_type(private_notify_payload_t *this,payload_type_t type)
+METHOD(payload_t, set_next_type, void,
+	private_notify_payload_t *this, payload_type_t type)
 {
 	this->next_payload = type;
 }
@@ -437,6 +438,7 @@ static void set_next_type(private_notify_payload_t *this,payload_type_t type)
 static void compute_length (private_notify_payload_t *this)
 {
 	size_t length = NOTIFY_PAYLOAD_HEADER_LENGTH;
+
 	if (this->notification_data.ptr != NULL)
 	{
 		length += this->notification_data.len;
@@ -448,51 +450,38 @@ static void compute_length (private_notify_payload_t *this)
 	this->payload_length = length;
 }
 
-/**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_notify_payload_t *this)
+METHOD(payload_t, get_length, size_t,
+	private_notify_payload_t *this)
 {
-	compute_length(this);
 	return this->payload_length;
 }
 
-/**
- * Implementation of notify_payload_t.get_protocol_id.
- */
-static u_int8_t get_protocol_id(private_notify_payload_t *this)
+METHOD(notify_payload_t, get_protocol_id, u_int8_t,
+	private_notify_payload_t *this)
 {
 	return this->protocol_id;
 }
 
-/**
- * Implementation of notify_payload_t.set_protocol_id.
- */
-static void set_protocol_id(private_notify_payload_t *this, u_int8_t protocol_id)
+METHOD(notify_payload_t, set_protocol_id, void,
+	private_notify_payload_t *this, u_int8_t protocol_id)
 {
 	this->protocol_id = protocol_id;
 }
 
-/**
- * Implementation of notify_payload_t.get_notify_type.
- */
-static notify_type_t get_notify_type(private_notify_payload_t *this)
+METHOD(notify_payload_t, get_notify_type, notify_type_t,
+	private_notify_payload_t *this)
 {
 	return this->notify_type;
 }
 
-/**
- * Implementation of notify_payload_t.set_notify_type.
- */
-static void set_notify_type(private_notify_payload_t *this, u_int16_t notify_type)
+METHOD(notify_payload_t, set_notify_type, void,
+	private_notify_payload_t *this, notify_type_t notify_type)
 {
 	this->notify_type = notify_type;
 }
 
-/**
- * Implementation of notify_payload_t.get_spi.
- */
-static u_int32_t get_spi(private_notify_payload_t *this)
+METHOD(notify_payload_t, get_spi, u_int32_t,
+	private_notify_payload_t *this)
 {
 	switch (this->protocol_id)
 	{
@@ -508,10 +497,8 @@ static u_int32_t get_spi(private_notify_payload_t *this)
 	return 0;
 }
 
-/**
- * Implementation of notify_payload_t.set_spi.
- */
-static void set_spi(private_notify_payload_t *this, u_int32_t spi)
+METHOD(notify_payload_t, set_spi, void,
+	private_notify_payload_t *this, u_int32_t spi)
 {
 	chunk_free(&this->spi);
 	switch (this->protocol_id)
@@ -528,37 +515,26 @@ static void set_spi(private_notify_payload_t *this, u_int32_t spi)
 	compute_length(this);
 }
 
-/**
- * Implementation of notify_payload_t.get_notification_data.
- */
-static chunk_t get_notification_data(private_notify_payload_t *this)
+METHOD(notify_payload_t, get_notification_data, chunk_t,
+	private_notify_payload_t *this)
 {
-	return (this->notification_data);
+	return this->notification_data;
 }
 
-/**
- * Implementation of notify_payload_t.set_notification_data.
- */
-static status_t set_notification_data(private_notify_payload_t *this, chunk_t notification_data)
+METHOD(notify_payload_t, set_notification_data, void,
+	private_notify_payload_t *this, chunk_t data)
 {
-	chunk_free(&this->notification_data);
-	if (notification_data.len > 0)
-	{
-		this->notification_data = chunk_clone(notification_data);
-	}
+	free(this->notification_data.ptr);
+	this->notification_data = chunk_clone(data);
 	compute_length(this);
-	return SUCCESS;
 }
 
-/**
- * Implementation of notify_payload_t.destroy and notify_payload_t.destroy.
- */
-static status_t destroy(private_notify_payload_t *this)
+METHOD2(payload_t, notify_payload_t, destroy, void,
+	private_notify_payload_t *this)
 {
-	chunk_free(&this->notification_data);
-	chunk_free(&this->spi);
+	free(this->notification_data.ptr);
+	free(this->spi.ptr);
 	free(this);
-	return SUCCESS;
 }
 
 /*
@@ -566,52 +542,45 @@ static status_t destroy(private_notify_payload_t *this)
  */
 notify_payload_t *notify_payload_create()
 {
-	private_notify_payload_t *this = malloc_thing(private_notify_payload_t);
+	private_notify_payload_t *this;
 
-	/* interface functions */
-	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
-	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-
-	/* public functions */
-	this->public.get_protocol_id = (u_int8_t (*) (notify_payload_t *)) get_protocol_id;
-	this->public.set_protocol_id  = (void (*) (notify_payload_t *,u_int8_t)) set_protocol_id;
-	this->public.get_notify_type = (notify_type_t (*) (notify_payload_t *)) get_notify_type;
-	this->public.set_notify_type = (void (*) (notify_payload_t *,notify_type_t)) set_notify_type;
-	this->public.get_spi = (u_int32_t (*) (notify_payload_t *)) get_spi;
-	this->public.set_spi = (void (*) (notify_payload_t *,u_int32_t)) set_spi;
-	this->public.get_notification_data = (chunk_t (*) (notify_payload_t *)) get_notification_data;
-	this->public.set_notification_data = (void (*) (notify_payload_t *,chunk_t)) set_notification_data;
-	this->public.destroy = (void (*) (notify_payload_t *)) destroy;
-
-	/* set default values of the fields */
-	this->critical = FALSE;
-	this->next_payload = NO_PAYLOAD;
-	this->payload_length = NOTIFY_PAYLOAD_HEADER_LENGTH;
-	this->protocol_id = 0;
-	this->notify_type = 0;
-	this->spi.ptr = NULL;
-	this->spi.len = 0;
-	this->spi_size = 0;
-	this->notification_data.ptr = NULL;
-	this->notification_data.len = 0;
-
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.get_protocol_id = _get_protocol_id,
+			.set_protocol_id  = _set_protocol_id,
+			.get_notify_type = _get_notify_type,
+			.set_notify_type = _set_notify_type,
+			.get_spi = _get_spi,
+			.set_spi = _set_spi,
+			.get_notification_data = _get_notification_data,
+			.set_notification_data = _set_notification_data,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = NOTIFY_PAYLOAD_HEADER_LENGTH,
+	);
 	return &this->public;
 }
 
 /*
  * Described in header.
  */
-notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_type_t notify_type)
+notify_payload_t *notify_payload_create_from_protocol_and_type(
+						protocol_id_t protocol_id, notify_type_t notify_type)
 {
 	notify_payload_t *notify = notify_payload_create();
 
-	notify->set_notify_type(notify,notify_type);
-	notify->set_protocol_id(notify,protocol_id);
+	notify->set_notify_type(notify, notify_type);
+	notify->set_protocol_id(notify, protocol_id);
 
 	return notify;
 }

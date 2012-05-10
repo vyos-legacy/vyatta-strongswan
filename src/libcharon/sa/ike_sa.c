@@ -24,8 +24,8 @@
 #include "ike_sa.h"
 
 #include <library.h>
-#include <daemon.h>
 #include <hydra.h>
+#include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/lexparser.h>
 #include <sa/task_manager.h>
@@ -50,6 +50,7 @@
 #include <processing/jobs/send_dpd_job.h>
 #include <processing/jobs/send_keepalive_job.h>
 #include <processing/jobs/rekey_ike_sa_job.h>
+#include <encoding/payloads/unknown_payload.h>
 
 #ifdef ME
 #include <sa/tasks/ike_me.h>
@@ -470,8 +471,8 @@ METHOD(ike_sa_t, send_keepalive, void,
 		diff = 0;
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
-	charon->scheduler->schedule_job(charon->scheduler, (job_t*)job,
-									this->keepalive_interval - diff);
+	lib->scheduler->schedule_job(lib->scheduler, (job_t*)job,
+								 this->keepalive_interval - diff);
 }
 
 METHOD(ike_sa_t, get_ike_cfg, ike_cfg_t*,
@@ -559,13 +560,6 @@ METHOD(ike_sa_t, send_dpd, status_t,
 	time_t diff, delay;
 
 	delay = this->peer_cfg->get_dpd(this->peer_cfg);
-
-	if (delay == 0)
-	{
-		/* DPD disabled */
-		return SUCCESS;
-	}
-
 	if (this->task_manager->busy(this->task_manager))
 	{
 		/* an exchange is in the air, no need to start a DPD check */
@@ -578,7 +572,7 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		last_in = get_use_time(this, TRUE);
 		now = time_monotonic(NULL);
 		diff = now - last_in;
-		if (diff >= delay)
+		if (!delay || diff >= delay)
 		{
 			/* to long ago, initiate dead peer detection */
 			task_t *task;
@@ -604,8 +598,11 @@ METHOD(ike_sa_t, send_dpd, status_t,
 		}
 	}
 	/* recheck in "interval" seconds */
-	job = (job_t*)send_dpd_job_create(this->ike_sa_id);
-	charon->scheduler->schedule_job(charon->scheduler, job, delay - diff);
+	if (delay)
+	{
+		job = (job_t*)send_dpd_job_create(this->ike_sa_id);
+		lib->scheduler->schedule_job(lib->scheduler, job, delay - diff);
+	}
 	return SUCCESS;
 }
 
@@ -644,7 +641,7 @@ METHOD(ike_sa_t, set_state, void,
 				{
 					this->stats[STAT_REKEY] = t + this->stats[STAT_ESTABLISHED];
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, FALSE);
-					charon->scheduler->schedule_job(charon->scheduler, job, t);
+					lib->scheduler->schedule_job(lib->scheduler, job, t);
 					DBG1(DBG_IKE, "scheduling rekeying in %ds", t);
 				}
 				t = this->peer_cfg->get_reauth_time(this->peer_cfg);
@@ -653,7 +650,7 @@ METHOD(ike_sa_t, set_state, void,
 				{
 					this->stats[STAT_REAUTH] = t + this->stats[STAT_ESTABLISHED];
 					job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE);
-					charon->scheduler->schedule_job(charon->scheduler, job, t);
+					lib->scheduler->schedule_job(lib->scheduler, job, t);
 					DBG1(DBG_IKE, "scheduling reauthentication in %ds", t);
 				}
 				t = this->peer_cfg->get_over_time(this->peer_cfg);
@@ -675,12 +672,15 @@ METHOD(ike_sa_t, set_state, void,
 					this->stats[STAT_DELETE] += t;
 					t = this->stats[STAT_DELETE] - this->stats[STAT_ESTABLISHED];
 					job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-					charon->scheduler->schedule_job(charon->scheduler, job, t);
+					lib->scheduler->schedule_job(lib->scheduler, job, t);
 					DBG1(DBG_IKE, "maximum IKE_SA lifetime %ds", t);
 				}
 
 				/* start DPD checks */
-				send_dpd(this);
+				if (this->peer_cfg->get_dpd(this->peer_cfg))
+				{
+					send_dpd(this);
+				}
 			}
 			break;
 		}
@@ -688,8 +688,8 @@ METHOD(ike_sa_t, set_state, void,
 		{
 			/* delete may fail if a packet gets lost, so set a timeout */
 			job_t *job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
-			charon->scheduler->schedule_job(charon->scheduler, job,
-											HALF_OPEN_IKE_SA_TIMEOUT);
+			lib->scheduler->schedule_job(lib->scheduler, job,
+										 HALF_OPEN_IKE_SA_TIMEOUT);
 			break;
 		}
 		default:
@@ -730,14 +730,14 @@ METHOD(ike_sa_t, set_virtual_ip, void,
 	if (local)
 	{
 		DBG1(DBG_IKE, "installing new virtual IP %H", ip);
-		if (charon->kernel_interface->add_ip(charon->kernel_interface, ip,
-											 this->my_host) == SUCCESS)
+		if (hydra->kernel_interface->add_ip(hydra->kernel_interface, ip,
+											this->my_host) == SUCCESS)
 		{
 			if (this->my_virtual_ip)
 			{
 				DBG1(DBG_IKE, "removing old virtual IP %H", this->my_virtual_ip);
-				charon->kernel_interface->del_ip(charon->kernel_interface,
-												 this->my_virtual_ip);
+				hydra->kernel_interface->del_ip(hydra->kernel_interface,
+												this->my_virtual_ip);
 			}
 			DESTROY_IF(this->my_virtual_ip);
 			this->my_virtual_ip = ip->clone(ip);
@@ -810,8 +810,22 @@ METHOD(ike_sa_t, get_pending_updates, u_int32_t,
 	return this->pending_updates;
 }
 
+METHOD(ike_sa_t, float_ports, void,
+	   private_ike_sa_t *this)
+{
+	/* do not switch if we have a custom port from MOBIKE/NAT */
+	if (this->my_host->get_port(this->my_host) == IKEV2_UDP_PORT)
+	{
+		this->my_host->set_port(this->my_host, IKEV2_NATT_PORT);
+	}
+	if (this->other_host->get_port(this->other_host) == IKEV2_UDP_PORT)
+	{
+		this->other_host->set_port(this->other_host, IKEV2_NATT_PORT);
+	}
+}
+
 METHOD(ike_sa_t, update_hosts, void,
-	private_ike_sa_t *this, host_t *me, host_t *other)
+	private_ike_sa_t *this, host_t *me, host_t *other, bool force)
 {
 	bool update = FALSE;
 
@@ -843,10 +857,8 @@ METHOD(ike_sa_t, update_hosts, void,
 
 		if (!other->equals(other, this->other_host))
 		{
-			/* update others adress if we are NOT NATed,
-			 * and allow port changes if we are NATed */
-			if (!has_condition(this, COND_NAT_HERE) ||
-				other->ip_equals(other, this->other_host))
+			/* update others adress if we are NOT NATed */
+			if (force || !has_condition(this, COND_NAT_HERE))
 			{
 				set_other_host(this, other->clone(other));
 				update = TRUE;
@@ -879,18 +891,23 @@ METHOD(ike_sa_t, update_hosts, void,
 METHOD(ike_sa_t, generate_message, status_t,
 	private_ike_sa_t *this, message_t *message, packet_t **packet)
 {
+	if (message->is_encoded(message))
+	{	/* already done */
+		*packet = message->get_packet(message);
+		return SUCCESS;
+	}
 	this->stats[STAT_OUTBOUND] = time_monotonic(NULL);
 	message->set_ike_sa_id(message, this->ike_sa_id);
+	charon->bus->message(charon->bus, message, FALSE);
 	return message->generate(message,
-				this->keymat->get_crypter(this->keymat, FALSE),
-				this->keymat->get_signer(this->keymat, FALSE), packet);
+				this->keymat->get_aead(this->keymat, FALSE), packet);
 }
 
 /**
  * send a notify back to the sender
  */
 static void send_notify_response(private_ike_sa_t *this, message_t *request,
-								 notify_type_t type)
+								 notify_type_t type, chunk_t data)
 {
 	message_t *response;
 	packet_t *packet;
@@ -899,7 +916,7 @@ static void send_notify_response(private_ike_sa_t *this, message_t *request,
 	response->set_exchange_type(response, request->get_exchange_type(request));
 	response->set_request(response, FALSE);
 	response->set_message_id(response, request->get_message_id(request));
-	response->add_notify(response, FALSE, type, chunk_empty);
+	response->add_notify(response, FALSE, type, data);
 	if (this->my_host->is_anyaddr(this->my_host))
 	{
 		this->my_host->destroy(this->my_host);
@@ -1049,8 +1066,8 @@ static void resolve_hosts(private_ike_sa_t *this)
 			!this->other_host->is_anyaddr(this->other_host))
 		{
 			host->destroy(host);
-			host = charon->kernel_interface->get_source_addr(
-							charon->kernel_interface, this->other_host, NULL);
+			host = hydra->kernel_interface->get_source_addr(
+							hydra->kernel_interface, this->other_host, NULL);
 			if (host)
 			{
 				host->set_port(host, this->ike_cfg->get_my_port(this->ike_cfg));
@@ -1150,7 +1167,7 @@ METHOD(ike_sa_t, initiate, status_t,
 		{
 			/* mediated connection, initiate mediation process */
 			job_t *job = (job_t*)initiate_mediation_job_create(this->ike_sa_id);
-			charon->processor->queue_job(charon->processor, job);
+			lib->processor->queue_job(lib->processor, job);
 			return SUCCESS;
 		}
 #endif /* ME */
@@ -1164,6 +1181,7 @@ METHOD(ike_sa_t, process_message, status_t,
 {
 	status_t status;
 	bool is_request;
+	u_int8_t type = 0;
 
 	if (this->state == IKE_PASSIVE)
 	{	/* do not handle messages in passive state */
@@ -1173,11 +1191,30 @@ METHOD(ike_sa_t, process_message, status_t,
 	is_request = message->get_request(message);
 
 	status = message->parse_body(message,
-								 this->keymat->get_crypter(this->keymat, TRUE),
-								 this->keymat->get_signer(this->keymat, TRUE));
+								 this->keymat->get_aead(this->keymat, TRUE));
+	if (status == SUCCESS)
+	{	/* check for unsupported critical payloads */
+		enumerator_t *enumerator;
+		unknown_payload_t *unknown;
+		payload_t *payload;
+
+		enumerator = message->create_payload_enumerator(message);
+		while (enumerator->enumerate(enumerator, &payload))
+		{
+			unknown = (unknown_payload_t*)payload;
+			type = payload->get_type(payload);
+			if (!payload_is_known(type) &&
+				unknown->is_critical(unknown))
+			{
+				DBG1(DBG_ENC, "payload type %N is not supported, "
+					 "but its critical!", payload_type_names, type);
+				status = NOT_SUPPORTED;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 	if (status != SUCCESS)
 	{
-
 		if (is_request)
 		{
 			switch (status)
@@ -1186,21 +1223,28 @@ METHOD(ike_sa_t, process_message, status_t,
 					DBG1(DBG_IKE, "critical unknown payloads found");
 					if (is_request)
 					{
-						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
+						send_notify_response(this, message,
+											 UNSUPPORTED_CRITICAL_PAYLOAD,
+											 chunk_from_thing(type));
+						this->task_manager->incr_mid(this->task_manager, FALSE);
 					}
 					break;
 				case PARSE_ERROR:
 					DBG1(DBG_IKE, "message parsing failed");
 					if (is_request)
 					{
-						send_notify_response(this, message, INVALID_SYNTAX);
+						send_notify_response(this, message,
+											 INVALID_SYNTAX, chunk_empty);
+						this->task_manager->incr_mid(this->task_manager, FALSE);
 					}
 					break;
 				case VERIFY_ERROR:
 					DBG1(DBG_IKE, "message verification failed");
 					if (is_request)
 					{
-						send_notify_response(this, message, INVALID_SYNTAX);
+						send_notify_response(this, message,
+											 INVALID_SYNTAX, chunk_empty);
+						this->task_manager->incr_mid(this->task_manager, FALSE);
 					}
 					break;
 				case FAILED:
@@ -1209,10 +1253,6 @@ METHOD(ike_sa_t, process_message, status_t,
 					break;
 				case INVALID_STATE:
 					DBG1(DBG_IKE, "found encrypted message, but no keys available");
-					if (is_request)
-					{
-						send_notify_response(this, message, INVALID_SYNTAX);
-					}
 				default:
 					break;
 			}
@@ -1229,15 +1269,12 @@ METHOD(ike_sa_t, process_message, status_t,
 	}
 	else
 	{
-		host_t *me, *other;
-
-		me = message->get_destination(message);
-		other = message->get_source(message);
-
 		/* if this IKE_SA is virgin, we check for a config */
 		if (this->ike_cfg == NULL)
 		{
 			job_t *job;
+			host_t *me = message->get_destination(message),
+				   *other = message->get_source(message);
 			this->ike_cfg = charon->backends->get_ike_cfg(charon->backends,
 														  me, other);
 			if (this->ike_cfg == NULL)
@@ -1245,25 +1282,18 @@ METHOD(ike_sa_t, process_message, status_t,
 				/* no config found for these hosts, destroy */
 				DBG1(DBG_IKE, "no IKE config found for %H...%H, sending %N",
 					 me, other, notify_type_names, NO_PROPOSAL_CHOSEN);
-				send_notify_response(this, message, NO_PROPOSAL_CHOSEN);
+				send_notify_response(this, message,
+									 NO_PROPOSAL_CHOSEN, chunk_empty);
 				return DESTROY_ME;
 			}
 			/* add a timeout if peer does not establish it completely */
 			job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, FALSE);
-			charon->scheduler->schedule_job(charon->scheduler, job,
-											HALF_OPEN_IKE_SA_TIMEOUT);
+			lib->scheduler->schedule_job(lib->scheduler, job,
+										 HALF_OPEN_IKE_SA_TIMEOUT);
 		}
 		this->stats[STAT_INBOUND] = time_monotonic(NULL);
-		/* check if message is trustworthy, and update host information */
-		if (this->state == IKE_CREATED || this->state == IKE_CONNECTING ||
-			message->get_exchange_type(message) != IKE_SA_INIT)
-		{
-			if (!supports_extension(this, EXT_MOBIKE))
-			{	/* with MOBIKE, we do no implicit updates */
-				update_hosts(this, me, other);
-			}
-		}
-		status = this->task_manager->process_message(this->task_manager, message);
+		status = this->task_manager->process_message(this->task_manager,
+													 message);
 		if (message->get_exchange_type(message) == IKE_AUTH &&
 			this->state == IKE_ESTABLISHED &&
 			lib->settings->get_bool(lib->settings,
@@ -1543,7 +1573,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 #endif /* ME */
 		))
 	{
-		DBG1(DBG_IKE, "unable to reestablish IKE_SA due asymetric setup");
+		DBG1(DBG_IKE, "unable to reestablish IKE_SA due to asymmetric setup");
 		return FAILED;
 	}
 
@@ -1697,7 +1727,7 @@ METHOD(ike_sa_t, set_auth_lifetime, void,
 	{
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, starting reauthentication",
 			 lifetime);
-		charon->processor->queue_job(charon->processor,
+		lib->processor->queue_job(lib->processor,
 					(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE));
 	}
 	else if (this->stats[STAT_REAUTH] == 0 ||
@@ -1706,7 +1736,7 @@ METHOD(ike_sa_t, set_auth_lifetime, void,
 		this->stats[STAT_REAUTH] = reauth_time;
 		DBG1(DBG_IKE, "received AUTH_LIFETIME of %ds, scheduling reauthentication"
 			 " in %ds", lifetime, lifetime - reduction);
-		charon->scheduler->schedule_job(charon->scheduler,
+		lib->scheduler->schedule_job(lib->scheduler,
 						(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE),
 						lifetime - reduction);
 	}
@@ -1718,10 +1748,65 @@ METHOD(ike_sa_t, set_auth_lifetime, void,
 	}
 }
 
+/**
+ * Check if the current combination of source and destination address is still
+ * valid.
+ */
+static bool is_current_path_valid(private_ike_sa_t *this)
+{
+	bool valid = FALSE;
+	host_t *src;
+	src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+											this->other_host, this->my_host);
+	if (src)
+	{
+		if (src->ip_equals(src, this->my_host))
+		{
+			valid = TRUE;
+		}
+		src->destroy(src);
+	}
+	return valid;
+}
+
+/**
+ * Check if we have any path avialable for this IKE SA.
+ */
+static bool is_any_path_valid(private_ike_sa_t *this)
+{
+	bool valid = FALSE;
+	enumerator_t *enumerator;
+	host_t *src, *addr;
+	DBG1(DBG_IKE, "old path is not available anymore, try to find another");
+	src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+												   this->other_host, NULL);
+	if (!src)
+	{
+		enumerator = this->additional_addresses->create_enumerator(
+												this->additional_addresses);
+		while (enumerator->enumerate(enumerator, &addr))
+		{
+			DBG1(DBG_IKE, "looking for a route to %H ...", addr);
+			src = hydra->kernel_interface->get_source_addr(
+									hydra->kernel_interface, addr, NULL);
+			if (src)
+			{
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	if (src)
+	{
+		valid = TRUE;
+		src->destroy(src);
+	}
+	return valid;
+}
+
 METHOD(ike_sa_t, roam, status_t,
 	private_ike_sa_t *this, bool address)
 {
-	host_t *src;
 	ike_mobike_t *mobike;
 
 	switch (this->state)
@@ -1734,81 +1819,61 @@ METHOD(ike_sa_t, roam, status_t,
 		default:
 			break;
 	}
-	/* responder just updates the peer about changed address config */
-	if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
+
+	/* keep existing path if possible */
+	if (is_current_path_valid(this))
 	{
+		DBG2(DBG_IKE, "keeping connection path %H - %H",
+			 this->my_host, this->other_host);
+		set_condition(this, COND_STALE, FALSE);
+
 		if (supports_extension(this, EXT_MOBIKE) && address)
-		{
+		{	/* if any addresses changed, send an updated list */
 			DBG1(DBG_IKE, "sending address list update using MOBIKE");
 			mobike = ike_mobike_create(&this->public, TRUE);
-			this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
+			mobike->addresses(mobike);
+			this->task_manager->queue_task(this->task_manager,
+										   (task_t*)mobike);
 			return this->task_manager->initiate(this->task_manager);
 		}
 		return SUCCESS;
 	}
 
-	/* keep existing path if possible */
-	src = charon->kernel_interface->get_source_addr(charon->kernel_interface,
-											this->other_host, this->my_host);
-	if (src)
+	if (!is_any_path_valid(this))
 	{
-		if (src->ip_equals(src, this->my_host))
-		{
-			DBG2(DBG_IKE, "keeping connection path %H - %H",
-				 src, this->other_host);
-			src->destroy(src);
-			set_condition(this, COND_STALE, FALSE);
-			return SUCCESS;
-		}
-		src->destroy(src);
-
-	}
-	else
-	{
-		/* check if we find a route at all */
-		enumerator_t *enumerator;
-		host_t *addr;
-
-		src = charon->kernel_interface->get_source_addr(charon->kernel_interface,
-														this->other_host, NULL);
-		if (!src)
-		{
-			enumerator = this->additional_addresses->create_enumerator(
-													this->additional_addresses);
-			while (enumerator->enumerate(enumerator, &addr))
-			{
-				DBG1(DBG_IKE, "looking for a route to %H ...", addr);
-				src = charon->kernel_interface->get_source_addr(
-										charon->kernel_interface, addr, NULL);
-				if (src)
-				{
-					break;
-				}
-			}
-			enumerator->destroy(enumerator);
-		}
-		if (!src)
-		{
-			DBG1(DBG_IKE, "no route found to reach %H, MOBIKE update deferred",
-				 this->other_host);
-			set_condition(this, COND_STALE, TRUE);
-			return SUCCESS;
-		}
-		src->destroy(src);
+		DBG1(DBG_IKE, "no route found to reach %H, MOBIKE update deferred",
+			 this->other_host);
+		set_condition(this, COND_STALE, TRUE);
+		return SUCCESS;
 	}
 	set_condition(this, COND_STALE, FALSE);
 
 	/* update addresses with mobike, if supported ... */
 	if (supports_extension(this, EXT_MOBIKE))
 	{
-		DBG1(DBG_IKE, "requesting address change using MOBIKE");
+		if (!has_condition(this, COND_ORIGINAL_INITIATOR))
+		{	/* responder updates the peer about changed address config */
+			DBG1(DBG_IKE, "sending address list update using MOBIKE, "
+				 "implicitly requesting an address change");
+			address = TRUE;
+		}
+		else
+		{
+			DBG1(DBG_IKE, "requesting address change using MOBIKE");
+		}
 		mobike = ike_mobike_create(&this->public, TRUE);
 		mobike->roam(mobike, address);
 		this->task_manager->queue_task(this->task_manager, (task_t*)mobike);
 		return this->task_manager->initiate(this->task_manager);
 	}
-	DBG1(DBG_IKE, "reauthenticating IKE_SA due to address change");
+
 	/* ... reauth if not */
+	if (!has_condition(this, COND_ORIGINAL_INITIATOR))
+	{	/* responder does not reauthenticate */
+		set_condition(this, COND_STALE, TRUE);
+		return SUCCESS;
+	}
+	DBG1(DBG_IKE, "reauthenticating IKE_SA due to address change");
 	return reauth(this);
 }
 
@@ -1831,7 +1896,7 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
-METHOD(ike_sa_t, inherit, status_t,
+METHOD(ike_sa_t, inherit, void,
 	private_ike_sa_t *this, ike_sa_t *other_public)
 {
 	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
@@ -1907,13 +1972,11 @@ METHOD(ike_sa_t, inherit, status_t,
 		this->stats[STAT_DELETE] = this->stats[STAT_REAUTH] + delete;
 		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
 			 "lifetime reduced to %ds", reauth, delete);
-		charon->scheduler->schedule_job(charon->scheduler,
+		lib->scheduler->schedule_job(lib->scheduler,
 				(job_t*)rekey_ike_sa_job_create(this->ike_sa_id, TRUE), reauth);
-		charon->scheduler->schedule_job(charon->scheduler,
+		lib->scheduler->schedule_job(lib->scheduler,
 				(job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE), delete);
 	}
-	/* we have to initate here, there may be new tasks to handle */
-	return this->task_manager->initiate(this->task_manager);
 }
 
 METHOD(ike_sa_t, destroy, void,
@@ -1924,6 +1987,7 @@ METHOD(ike_sa_t, destroy, void,
 	charon->bus->set_sa(charon->bus, &this->public);
 
 	set_state(this, IKE_DESTROYING);
+	this->task_manager->destroy(this->task_manager);
 
 	/* remove attributes first, as we pass the IKE_SA to the handler */
 	while (this->attributes->remove_last(this->attributes,
@@ -1941,13 +2005,12 @@ METHOD(ike_sa_t, destroy, void,
 	/* unset SA after here to avoid usage by the listeners */
 	charon->bus->set_sa(charon->bus, NULL);
 
-	this->task_manager->destroy(this->task_manager);
 	this->keymat->destroy(this->keymat);
 
 	if (this->my_virtual_ip)
 	{
-		charon->kernel_interface->del_ip(charon->kernel_interface,
-										 this->my_virtual_ip);
+		hydra->kernel_interface->del_ip(hydra->kernel_interface,
+										this->my_virtual_ip);
 		this->my_virtual_ip->destroy(this->my_virtual_ip);
 	}
 	if (this->other_virtual_ip)
@@ -2025,6 +2088,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 			.get_other_host = _get_other_host,
 			.set_other_host = _set_other_host,
 			.set_message_id = _set_message_id,
+			.float_ports = _float_ports,
 			.update_hosts = _update_hosts,
 			.get_my_id = _get_my_id,
 			.set_my_id = _set_my_id,

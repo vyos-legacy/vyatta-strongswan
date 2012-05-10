@@ -1,0 +1,15 @@
+Description: Fix FTBFS with gcc 4.6
+Author: Laurent Bigonville <bigon@debian.org>
+Bug-Debian: http://bugs.debian.org/614486
+
+--- a/src/libcharon/plugins/stroke/stroke_ca.c
++++ b/src/libcharon/plugins/stroke/stroke_ca.c
+@@ -319,7 +319,7 @@
+ 	{
+ 		if (first)
+ 		{
+-			fprintf(out, label);
++			fprintf(out, "%s", label);
+ 			first = FALSE;
+ 		}
+ 		else

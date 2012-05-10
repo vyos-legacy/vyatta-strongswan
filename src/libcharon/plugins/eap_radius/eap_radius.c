@@ -20,6 +20,8 @@
 
 #include <daemon.h>
 
+#define TUNNEL_TYPE_ESP		9
+
 typedef struct private_eap_radius_t private_eap_radius_t;
 
 /**
@@ -53,6 +55,11 @@ struct private_eap_radius_t {
 	u_int32_t vendor;
 
 	/**
+	 * EAP message identifier
+	 */
+	u_int8_t identifier;
+
+	/**
 	 * RADIUS client instance
 	 */
 	radius_client_t *client;
@@ -71,6 +78,11 @@ struct private_eap_radius_t {
 	 * Handle the Class attribute as group membership information?
 	 */
 	bool class_group;
+
+	/**
+	 * Handle the Filter-Id attribute as IPsec CHILD_SA name?
+	 */
+	bool filter_id;
 };
 
 /**
@@ -100,7 +112,7 @@ static void add_eap_identity(private_eap_radius_t *this,
 
 	hdr = alloca(len);
 	hdr->code = EAP_RESPONSE;
-	hdr->identifier = 0;
+	hdr->identifier = this->identifier;
 	hdr->length = htons(len);
 	hdr->type = EAP_IDENTITY;
 	memcpy(hdr->data, prefix.ptr, prefix.len);
@@ -132,9 +144,12 @@ static bool radius2ike(private_eap_radius_t *this,
 	if (message.len)
 	{
 		*out = payload = eap_payload_create_data(message);
-		free(message.ptr);
+
 		/* apply EAP method selected by RADIUS server */
 		this->type = payload->get_type(payload, &this->vendor);
+
+		DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &message);
+		free(message.ptr);
 		return TRUE;
 	}
 	return FALSE;
@@ -211,6 +226,62 @@ static void process_class(private_eap_radius_t *this, radius_message_t *msg)
 	enumerator->destroy(enumerator);
 }
 
+/**
+ * Handle the Filter-Id attribute as IPsec CHILD_SA name
+ */
+static void process_filter_id(private_eap_radius_t *this, radius_message_t *msg)
+{
+	enumerator_t *enumerator;
+	int type;
+	u_int8_t tunnel_tag;
+	u_int32_t tunnel_type;
+	chunk_t filter_id = chunk_empty, data;
+	bool is_esp_tunnel = FALSE;
+
+	enumerator = msg->create_enumerator(msg);
+	while (enumerator->enumerate(enumerator, &type, &data))
+	{
+		switch (type)
+		{
+			case RAT_TUNNEL_TYPE:
+				if (data.len != 4)
+				{
+					continue;
+				}
+				tunnel_tag = *data.ptr;
+				*data.ptr = 0x00;
+				tunnel_type = untoh32(data.ptr);
+				DBG1(DBG_IKE, "received RADIUS attribute Tunnel-Type: "
+							  "tag = %u, value = %u", tunnel_tag, tunnel_type);
+				is_esp_tunnel = (tunnel_type == TUNNEL_TYPE_ESP);
+				break;
+			case RAT_FILTER_ID:
+				filter_id = data;
+				DBG1(DBG_IKE, "received RADIUS attribute Filter-Id: "
+							  "'%.*s'", filter_id.len, filter_id.ptr);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (is_esp_tunnel && filter_id.len)
+	{
+		identification_t *id;
+		ike_sa_t *ike_sa;
+		auth_cfg_t *auth;
+
+		ike_sa = charon->bus->get_sa(charon->bus);
+		if (ike_sa)
+		{
+			auth = ike_sa->get_auth_cfg(ike_sa, FALSE);
+			id = identification_create_from_data(filter_id);
+			auth->add(auth, AUTH_RULE_GROUP, id);
+		}
+	}
+}
+
 METHOD(eap_method_t, process, status_t,
 	private_eap_radius_t *this, eap_payload_t *in, eap_payload_t **out)
 {
@@ -221,6 +292,8 @@ METHOD(eap_method_t, process, status_t,
 	request = radius_message_create_request();
 	request->add(request, RAT_USER_NAME, this->peer->get_encoding(this->peer));
 	data = in->get_data(in);
+	DBG3(DBG_IKE, "%N payload %B", eap_type_names, this->type, &data);
+ 
 	/* fragment data suitable for RADIUS (not more than 253 bytes) */
 	while (data.len > 253)
 	{
@@ -247,12 +320,17 @@ METHOD(eap_method_t, process, status_t,
 				{
 					process_class(this, response);
 				}
+				if (this->filter_id)
+				{
+					process_filter_id(this, response);
+				}
+				DBG1(DBG_IKE, "RADIUS authentication of '%Y' successful",
+					 this->peer);
 				status = SUCCESS;
 				break;
 			case RMC_ACCESS_REJECT:
 			default:
-				DBG1(DBG_CFG, "received %N from RADIUS server",
-					 radius_message_code_names, response->get_code(response));
+				DBG1(DBG_IKE, "RADIUS authentication of '%Y' failed", this->peer);
 				status = FAILED;
 				break;
 		}
@@ -281,6 +359,18 @@ METHOD(eap_method_t, get_msk, status_t,
 		return SUCCESS;
 	}
 	return FAILED;
+}
+
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_radius_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_radius_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
 }
 
 METHOD(eap_method_t, is_mutual, bool,
@@ -313,13 +403,17 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 	private_eap_radius_t *this;
 
 	INIT(this,
-		.public.eap_method_interface = {
-			.initiate = _initiate,
-			.process = _process,
-			.get_type = _get_type,
-			.is_mutual = _is_mutual,
-			.get_msk = _get_msk,
-			.destroy = _destroy,
+		.public = {
+			.eap_method = {
+				.initiate = _initiate,
+				.process = _process,
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
+				.destroy = _destroy,
+			},
 		},
 		/* initially EAP_RADIUS, but is set to the method selected by RADIUS */
 		.type = EAP_RADIUS,
@@ -329,6 +423,9 @@ eap_radius_t *eap_radius_create(identification_t *server, identification_t *peer
 								"charon.plugins.eap-radius.id_prefix", ""),
 		.class_group = lib->settings->get_bool(lib->settings,
 								"charon.plugins.eap-radius.class_group", FALSE),
+		.filter_id = lib->settings->get_bool(lib->settings,
+								"charon.plugins.eap-radius.filter_id", FALSE),
+
 	);
 	this->client = radius_client_create();
 	if (!this->client)

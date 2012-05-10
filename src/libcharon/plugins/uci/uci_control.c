@@ -294,7 +294,7 @@ uci_control_t *uci_control_create()
 	{
 		this->job = callback_job_create((callback_job_cb_t)receive,
 										this, NULL, NULL);
-		charon->processor->queue_job(charon->processor, (job_t*)this->job);
+		lib->processor->queue_job(lib->processor, (job_t*)this->job);
 	}
 	return &this->public;
 }

@@ -58,11 +58,8 @@ static void entry_destroy(entry_t *entry)
 	free(entry);
 }
 
-/**
- * Implementation of fetcher_manager_t.fetch.
- */
-static status_t fetch(private_fetcher_manager_t *this,
-					  char *url, chunk_t *response, ...)
+METHOD(fetcher_manager_t, fetch, status_t,
+	private_fetcher_manager_t *this, char *url, void *userdata, ...)
 {
 	enumerator_t *enumerator;
 	status_t status = NOT_SUPPORTED;
@@ -89,27 +86,33 @@ static status_t fetch(private_fetcher_manager_t *this,
 		{
 			continue;
 		}
-		va_start(args, response);
+		va_start(args, userdata);
 		while (good)
 		{
-			opt = va_arg(args, fetcher_option_t);
+			opt = va_arg(args, int);
 			switch (opt)
 			{
 				case FETCH_REQUEST_DATA:
-					good = fetcher->set_option(fetcher, opt, va_arg(args, chunk_t));
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, chunk_t));
 					continue;
 				case FETCH_REQUEST_TYPE:
 				case FETCH_REQUEST_HEADER:
-					good = fetcher->set_option(fetcher, opt, va_arg(args, char*));
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, char*));
 					continue;
 				case FETCH_HTTP_VERSION_1_0:
 					good = fetcher->set_option(fetcher, opt);
 					continue;
 				case FETCH_TIMEOUT:
-					good = fetcher->set_option(fetcher, opt, va_arg(args, u_int));
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, u_int));
 					continue;
+				case FETCH_CALLBACK:
+					good = fetcher->set_option(fetcher, opt,
+											va_arg(args, fetcher_callback_t));
 				case FETCH_END:
-					break;;
+					break;
 			}
 			break;
 		}
@@ -120,7 +123,7 @@ static status_t fetch(private_fetcher_manager_t *this,
 			continue;
 		}
 
-		status = fetcher->fetch(fetcher, url, response);
+		status = fetcher->fetch(fetcher, url, userdata);
 		fetcher->destroy(fetcher);
 		/* try another fetcher only if this one does not support that URL */
 		if (status == NOT_SUPPORTED)
@@ -139,27 +142,22 @@ static status_t fetch(private_fetcher_manager_t *this,
 	return status;
 }
 
-/**
- * Implementation of fetcher_manager_t.add_fetcher.
- */
-static void add_fetcher(private_fetcher_manager_t *this,
-						fetcher_constructor_t create, char *url)
+METHOD(fetcher_manager_t, add_fetcher, void,
+	private_fetcher_manager_t *this, fetcher_constructor_t create, char *url)
 {
-	entry_t *entry = malloc_thing(entry_t);
+	entry_t *entry;
 
-	entry->url = strdup(url);
-	entry->create = create;
-
+	INIT(entry,
+		.url = strdup(url),
+		.create = create,
+	);
 	this->lock->write_lock(this->lock);
 	this->fetchers->insert_last(this->fetchers, entry);
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of fetcher_manager_t.remove_fetcher.
- */
-static void remove_fetcher(private_fetcher_manager_t *this,
-						   fetcher_constructor_t create)
+METHOD(fetcher_manager_t, remove_fetcher, void,
+	private_fetcher_manager_t *this, fetcher_constructor_t create)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -178,10 +176,8 @@ static void remove_fetcher(private_fetcher_manager_t *this,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * Implementation of fetcher_manager_t.destroy
- */
-static void destroy(private_fetcher_manager_t *this)
+METHOD(fetcher_manager_t, destroy, void,
+	private_fetcher_manager_t *this)
 {
 	this->fetchers->destroy_function(this->fetchers, (void*)entry_destroy);
 	this->lock->destroy(this->lock);
@@ -193,15 +189,18 @@ static void destroy(private_fetcher_manager_t *this)
  */
 fetcher_manager_t *fetcher_manager_create()
 {
-	private_fetcher_manager_t *this = malloc_thing(private_fetcher_manager_t);
+	private_fetcher_manager_t *this;
 
-	this->public.fetch = (status_t(*)(fetcher_manager_t*, char *url, chunk_t *response, ...))fetch;
-	this->public.add_fetcher = (void(*)(fetcher_manager_t*, fetcher_constructor_t,char*))add_fetcher;
-	this->public.remove_fetcher = (void(*)(fetcher_manager_t*, fetcher_constructor_t))remove_fetcher;
-	this->public.destroy = (void(*)(fetcher_manager_t*))destroy;
-
-	this->fetchers = linked_list_create();
-	this->lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	INIT(this,
+		.public = {
+			.fetch = _fetch,
+			.add_fetcher = _add_fetcher,
+			.remove_fetcher = _remove_fetcher,
+			.destroy = _destroy,
+		},
+		.fetchers = linked_list_create(),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+	);
 
 	return &this->public;
 }

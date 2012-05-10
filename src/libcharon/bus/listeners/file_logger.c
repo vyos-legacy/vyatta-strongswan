@@ -46,17 +46,20 @@ struct private_file_logger_t {
 	 * strftime() format of time prefix, if any
 	 */
 	char *time_format;
+
+	/**
+	 * Print the name/# of the IKE_SA?
+	 */
+	bool ike_name;
 };
 
-/**
- * Implementation of bus_listener_t.log.
- */
-static bool log_(private_file_logger_t *this, debug_t group, level_t level,
-				 int thread, ike_sa_t* ike_sa, char *format, va_list args)
+METHOD(listener_t, log_, bool,
+	   private_file_logger_t *this, debug_t group, level_t level, int thread,
+	   ike_sa_t* ike_sa, char *format, va_list args)
 {
 	if (level <= this->levels[group])
 	{
-		char buffer[8192], timestr[128];
+		char buffer[8192], timestr[128], namestr[128] = "";
 		char *current = buffer, *next;
 		struct tm tm;
 		time_t t;
@@ -66,6 +69,23 @@ static bool log_(private_file_logger_t *this, debug_t group, level_t level,
 			t = time(NULL);
 			localtime_r(&t, &tm);
 			strftime(timestr, sizeof(timestr), this->time_format, &tm);
+		}
+		if (this->ike_name && ike_sa)
+		{
+			if (ike_sa->get_peer_cfg(ike_sa))
+			{
+				snprintf(namestr, sizeof(namestr), " <%s|%d>",
+					ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+			}
+			else
+			{
+				snprintf(namestr, sizeof(namestr), " <%d>",
+					ike_sa->get_unique_id(ike_sa));
+			}
+		}
+		else
+		{
+			namestr[0] = '\0';
 		}
 
 		/* write in memory buffer first */
@@ -81,13 +101,13 @@ static bool log_(private_file_logger_t *this, debug_t group, level_t level,
 			}
 			if (this->time_format)
 			{
-				fprintf(this->out, "%s %.2d[%N] %s\n",
-						timestr, thread, debug_names, group, current);
+				fprintf(this->out, "%s %.2d[%N]%s %s\n",
+						timestr, thread, debug_names, group, namestr, current);
 			}
 			else
 			{
-				fprintf(this->out, "%.2d[%N] %s\n",
-						thread, debug_names, group, current);
+				fprintf(this->out, "%.2d[%N]%s %s\n",
+						thread, debug_names, group, namestr, current);
 			}
 			current = next;
 		}
@@ -96,10 +116,8 @@ static bool log_(private_file_logger_t *this, debug_t group, level_t level,
 	return TRUE;
 }
 
-/**
- * Implementation of file_logger_t.set_level.
- */
-static void set_level(private_file_logger_t *this, debug_t group, level_t level)
+METHOD(file_logger_t, set_level, void,
+	   private_file_logger_t *this, debug_t group, level_t level)
 {
 	if (group < DBG_ANY)
 	{
@@ -114,10 +132,8 @@ static void set_level(private_file_logger_t *this, debug_t group, level_t level)
 	}
 }
 
-/**
- * Implementation of file_logger_t.destroy.
- */
-static void destroy(private_file_logger_t *this)
+METHOD(file_logger_t, destroy, void,
+	   private_file_logger_t *this)
 {
 	if (this->out != stdout && this->out != stderr)
 	{
@@ -129,19 +145,23 @@ static void destroy(private_file_logger_t *this)
 /*
  * Described in header.
  */
-file_logger_t *file_logger_create(FILE *out, char *time_format)
+file_logger_t *file_logger_create(FILE *out, char *time_format, bool ike_name)
 {
-	private_file_logger_t *this = malloc_thing(private_file_logger_t);
+	private_file_logger_t *this;
 
-	/* public functions */
-	memset(&this->public.listener, 0, sizeof(listener_t));
-	this->public.listener.log = (bool(*)(listener_t*,debug_t,level_t,int,ike_sa_t*,char*,va_list))log_;
-	this->public.set_level = (void(*)(file_logger_t*,debug_t,level_t))set_level;
-	this->public.destroy = (void(*)(file_logger_t*))destroy;
+	INIT(this,
+		.public = {
+			.listener = {
+				.log = _log_,
+			},
+			.set_level = _set_level,
+			.destroy = _destroy,
+		},
+		.out = out,
+		.time_format = time_format,
+		.ike_name = ike_name,
+	);
 
-	/* private variables */
-	this->out = out;
-	this->time_format = time_format;
 	set_level(this, DBG_ANY, LEVEL_SILENT);
 
 	return &this->public;

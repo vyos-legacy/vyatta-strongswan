@@ -40,15 +40,6 @@
 #define IPV6_LEN	16
 
 /**
- * Mode of an IPsec SA, must be the same as in charons kernel_ipsec.h
- */
-enum ipsec_mode_t {
-	MODE_TRANSPORT = 1,
-	MODE_TUNNEL,
-	MODE_BEET
-};
-
-/**
  * Authentication methods, must be the same as in charons authenticator.h
  */
 enum auth_method_t {
@@ -127,7 +118,7 @@ static char* connection_name(starter_conn_t *conn)
 
 	if (streq(conn->name, "%auto"))
 	{
-		sprintf(buf, "conn_%ld", conn->id);
+		sprintf(buf, "conn_%lu", conn->id);
 		return buf;
 	}
 	return conn->name;
@@ -180,6 +171,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->id2 = push_string(msg, conn_end->id2);
 	msg_end->cert = push_string(msg, conn_end->cert);
 	msg_end->cert2 = push_string(msg, conn_end->cert2);
+	msg_end->cert_policy = push_string(msg, conn_end->cert_policy);
 	msg_end->ca = push_string(msg, conn_end->ca);
 	msg_end->ca2 = push_string(msg, conn_end->ca2);
 	msg_end->groups = push_string(msg, conn_end->groups);
@@ -204,7 +196,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	memset(&msg, 0, sizeof(msg));
 	msg.type = STR_ADD_CONN;
 	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
+	msg.add_conn.ikev2 = conn->keyexchange != KEY_EXCHANGE_IKEV1;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
 
 	/* PUBKEY is preferred to PSK and EAP */
@@ -223,6 +215,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.eap_type = conn->eap_type;
 	msg.add_conn.eap_vendor = conn->eap_vendor;
 	msg.add_conn.eap_identity = push_string(&msg, conn->eap_identity);
+	msg.add_conn.aaa_identity = push_string(&msg, conn->aaa_identity);
 
 	if (conn->policy & POLICY_TUNNEL)
 	{
@@ -274,6 +267,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg.add_conn.mark_in.mask = conn->mark_in.mask;
 	msg.add_conn.mark_out.value = conn->mark_out.value;
 	msg.add_conn.mark_out.mask = conn->mark_out.mask;
+	msg.add_conn.tfc = conn->tfc;
 
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->left);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->right);

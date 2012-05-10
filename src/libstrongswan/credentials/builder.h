@@ -57,12 +57,6 @@ enum builder_part_t {
 	BUILD_BLOB_PGP,
 	/** DNS public key blob (RFC 4034, RSA specifc RFC 3110), chunk_t */
 	BUILD_BLOB_DNSKEY,
-	/** passphrase for e.g. PEM decryption, chunk_t */
-	BUILD_PASSPHRASE,
-	/** passphrase callback, chunk_t(*fn)(void *user, int try), void *user.
-	 *  The callback is invoked until the returned passphrase is accepted, or
-	 *  a zero-length passphrase is returned. Try starts at 1. */
-	BUILD_PASSPHRASE_CALLBACK,
 	/** key size in bits, as used for key generation, u_int */
 	BUILD_KEY_SIZE,
 	/** private key to use for signing, private_key_t* */
@@ -93,20 +87,40 @@ enum builder_part_t {
 	BUILD_CA_CERT,
 	/** a certificate, certificate_t* */
 	BUILD_CERT,
-	/** CRL distribution point URIs, linked_list_t* containing char* */
+	/** CRL distribution point URIs, x509_cdp_t* */
 	BUILD_CRL_DISTRIBUTION_POINTS,
 	/** OCSP AuthorityInfoAccess locations, linked_list_t* containing char* */
 	BUILD_OCSP_ACCESS_LOCATIONS,
 	/** certificate path length constraint */
 	BUILD_PATHLEN,
+	/** permitted X509 name constraints, linked_list_t* of identification_t* */
+	BUILD_PERMITTED_NAME_CONSTRAINTS,
+	/** excluded X509 name constraints, linked_list_t* of identification_t* */
+	BUILD_EXCLUDED_NAME_CONSTRAINTS,
+	/** certificatePolicy OIDs, linked_list_t* of x509_cert_policy_t* */
+	BUILD_CERTIFICATE_POLICIES,
+	/** policyMapping OIDs, linked_list_t* of x509_policy_mapping_t* */
+	BUILD_POLICY_MAPPINGS,
+	/** requireExplicitPolicy constraint, int */
+	BUILD_POLICY_REQUIRE_EXPLICIT,
+	/** inhibitPolicyMapping constraint, int */
+	BUILD_POLICY_INHIBIT_MAPPING,
+	/** inhibitAnyPolicy constraint, int */
+	BUILD_POLICY_INHIBIT_ANY,
 	/** enforce an additional X509 flag, x509_flag_t */
 	BUILD_X509_FLAG,
 	/** enumerator_t over (chunk_t serial, time_t date, crl_reason_t reason) */
 	BUILD_REVOKED_ENUMERATOR,
-	/** key ID of a key on a smartcard, null terminated char* ([slot:]keyid) */
-	BUILD_SMARTCARD_KEYID,
-	/** pin to access a key on a smartcard, null terminated char* */
-	BUILD_SMARTCARD_PIN,
+	/** Base CRL serial for a delta CRL, chunk_t, */
+	BUILD_BASE_CRL,
+	/** PKCS#10 challenge password */
+	BUILD_CHALLENGE_PWD,
+	/** friendly name of a PKCS#11 module, null terminated char* */
+	BUILD_PKCS11_MODULE,
+	/** slot specifier for a token in a PKCS#11 module, int */
+	BUILD_PKCS11_SLOT,
+	/** key ID of a key on a token, chunk_t */
+	BUILD_PKCS11_KEYID,
 	/** modulus (n) of a RSA key, chunk_t */
 	BUILD_RSA_MODULUS,
 	/** public exponent (e) of a RSA key, chunk_t */

@@ -379,7 +379,7 @@ static void add(char *name, host_t *start, host_t *end, int timeout)
 		chunk_increment(cur_addr);
 	}
 	commit_transaction();
-	printf("done.\n", count);
+	printf("done.\n");
 }
 
 static bool add_address(u_int pool_id, char *address_str, int *family)
@@ -407,9 +407,11 @@ static bool add_address(u_int pool_id, char *address_str, int *family)
 		fprintf(stderr, "invalid address '%s'.\n", address_str);
 		return FALSE;
 	}
-	if (family && *family && *family != address->get_family(address))
+	if (family && *family != AF_UNSPEC &&
+		*family != address->get_family(address))
 	{
 		fprintf(stderr, "invalid address family '%s'.\n", address_str);
+		address->destroy(address);
 		return FALSE;
 	}
 
@@ -421,9 +423,13 @@ static bool add_address(u_int pool_id, char *address_str, int *family)
 			DB_UINT, user_id, DB_UINT, 0, DB_UINT, 1) != 1)
 	{
 		fprintf(stderr, "inserting address '%s' failed.\n", address_str);
+		address->destroy(address);
 		return FALSE;
 	}
-	*family = address->get_family(address);
+	if (family)
+	{
+		*family = address->get_family(address);
+	}
 	address->destroy(address);
 
 	return TRUE;
@@ -469,6 +475,10 @@ static void add_addresses(char *pool, char *path, int timeout)
 		}
 		if (add_address(pool_id, address_str, &family) == FALSE)
 		{
+			if (file != stdin)
+			{
+				fclose(file);
+			}
 			exit(EXIT_FAILURE);
 		}
 		++count;
@@ -586,7 +596,7 @@ static void resize(char *name, host_t *end)
 			DB_UINT, id, DB_BLOB, cur_addr,	DB_UINT, 0, DB_UINT, 0, DB_UINT, 1);
 	}
 	commit_transaction();
-	printf("done.\n", count);
+	printf("done.\n");
 
 }
 
@@ -1004,6 +1014,7 @@ static void do_args(int argc, char *argv[])
 				break;
 			case '1':
 				operation = OP_STATUS_ATTR;
+				break;
 			case 'u':
 				utc = TRUE;
 				continue;

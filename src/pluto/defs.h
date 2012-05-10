@@ -21,12 +21,6 @@
 
 #include <chunk.h>
 
-#ifdef KLIPS
-# define USED_BY_KLIPS  /* ignore */
-#else
-# define USED_BY_KLIPS  UNUSED
-#endif
-
 #ifdef DEBUG
 # define USED_BY_DEBUG  /* ignore */
 #else
@@ -65,15 +59,6 @@ extern const char* check_expiry(time_t expiration_date,
 
 #define MAX_PROMPT_PASS_TRIALS  5
 #define PROMPT_PASS_LEN         64
-
-/* struct used to prompt for a secret passphrase
- * from a console with file descriptor fd
- */
-typedef struct {
-	char secret[PROMPT_PASS_LEN+1];
-	bool prompt;
-	int fd;
-} prompt_pass_t;
 
 /* filter eliminating the directory entries '.' and '..' */
 typedef struct dirent dirent_t;

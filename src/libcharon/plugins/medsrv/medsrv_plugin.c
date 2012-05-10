@@ -48,10 +48,14 @@ struct private_medsrv_plugin_t {
 	medsrv_config_t *config;
 };
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_medsrv_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_medsrv_plugin_t *this)
+{
+	return "medsrv";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_medsrv_plugin_t *this)
 {
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
@@ -67,9 +71,17 @@ static void destroy(private_medsrv_plugin_t *this)
 plugin_t *medsrv_plugin_create()
 {
 	char *uri;
-	private_medsrv_plugin_t *this = malloc_thing(private_medsrv_plugin_t);
+	private_medsrv_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	uri = lib->settings->get_str(lib->settings,
 								 "medsrv.database", NULL);

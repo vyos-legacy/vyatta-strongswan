@@ -24,9 +24,6 @@
 #define CHILD_CFG_H_
 
 typedef enum action_t action_t;
-typedef enum ipcomp_transform_t ipcomp_transform_t;
-typedef struct lifetime_cfg_t lifetime_cfg_t;
-typedef struct mark_t mark_t;
 typedef struct child_cfg_t child_cfg_t;
 
 #include <library.h>
@@ -35,14 +32,15 @@ typedef struct child_cfg_t child_cfg_t;
 #include <kernel/kernel_ipsec.h>
 
 /**
- * Action to take when DPD detected/connection gets closed by peer.
+ * Action to take when connection is loaded, DPD is detected or
+ * connection gets closed by peer.
  */
 enum action_t {
 	/** No action */
 	ACTION_NONE,
-	/** Route config to reestablish on demand */
+	/** Route config to establish or reestablish on demand */
 	ACTION_ROUTE,
-	/** Restart config immediately */
+	/** Start or restart config immediately */
 	ACTION_RESTART,
 };
 
@@ -50,48 +48,6 @@ enum action_t {
  * enum names for action_t.
  */
 extern enum_name_t *action_names;
-
-/**
- * IPComp transform IDs, as in RFC 4306
- */
-enum ipcomp_transform_t {
-	IPCOMP_NONE = 241,
-	IPCOMP_OUI = 1,
-	IPCOMP_DEFLATE = 2,
-	IPCOMP_LZS = 3,
-	IPCOMP_LZJH = 4,
-};
-
-/**
- * enum strings for ipcomp_transform_t.
- */
-extern enum_name_t *ipcomp_transform_names;
-
-/**
- * A lifetime_cfg_t defines the lifetime limits of a CHILD_SA.
- *
- * Set any of these values to 0 to ignore.
- */
-struct lifetime_cfg_t {
-	struct {
-		/** Limit before the CHILD_SA gets invalid. */
-		u_int64_t	life;
-		/** Limit before the CHILD_SA gets rekeyed. */
-		u_int64_t	rekey;
-		/** The range of a random value subtracted from rekey. */
-		u_int64_t	jitter;
-	} time, bytes, packets;
-};
-
-/**
- * A mark_t defines an optional mark in a CHILD_SA.
- */
-struct mark_t {
-	/** Mark value */
-	u_int32_t value;
-	/** Mark mask */
-	u_int32_t mask;
-};
 
 /**
  * A child_cfg_t defines the config template for a CHILD_SA.
@@ -214,6 +170,13 @@ struct child_cfg_t {
 	ipsec_mode_t (*get_mode) (child_cfg_t *this);
 
 	/**
+	 * Action to take to start CHILD_SA.
+	 *
+	 * @return				start action
+	 */
+	action_t (*get_start_action) (child_cfg_t *this);
+
+	/**
 	 * Action to take on DPD.
 	 *
 	 * @return				DPD action
@@ -238,7 +201,7 @@ struct child_cfg_t {
 	 * Check whether IPComp should be used, if the other peer supports it.
 	 *
 	 * @return				TRUE, if IPComp should be used
-	 * 						FALSE, otherwise
+	 *						FALSE, otherwise
 	 */
 	bool (*use_ipcomp)(child_cfg_t *this);
 
@@ -259,10 +222,17 @@ struct child_cfg_t {
 	/**
 	 * Optional mark for CHILD_SA
 	 *
-	 * @param inbound		TRUE for inbound, FALSE for outbound 
+	 * @param inbound		TRUE for inbound, FALSE for outbound
 	 * @return				mark
 	 */
 	mark_t (*get_mark)(child_cfg_t *this, bool inbound);
+
+	/**
+	 * Get the TFC padding value to use for CHILD_SA.
+	 *
+	 * @return				TFC padding, 0 to disable, -1 for MTU
+	 */
+	u_int32_t (*get_tfc)(child_cfg_t *this);
 
 	/**
 	 * Sets two options needed for Mobile IPv6 interoperability
@@ -277,7 +247,7 @@ struct child_cfg_t {
 	 * Check whether IPsec transport SA should be set up in proxy mode
 	 *
 	 * @return				TRUE, if proxy mode should be used
-	 * 						FALSE, otherwise
+	 *						FALSE, otherwise
 	 */
 	bool (*use_proxy_mode)(child_cfg_t *this);
 
@@ -285,7 +255,7 @@ struct child_cfg_t {
 	 * Check whether IPsec policies should be installed in the kernel
 	 *
 	 * @return				TRUE, if IPsec kernel policies should be installed
-	 * 						FALSE, otherwise
+	 *						FALSE, otherwise
 	 */
 	bool (*install_policy)(child_cfg_t *this);
 
@@ -321,6 +291,7 @@ struct child_cfg_t {
  * @param updown			updown script to execute on up/down event
  * @param hostaccess		TRUE to allow access to the local host
  * @param mode				mode to propose for CHILD_SA, transport, tunnel or BEET
+ * @param start_action		start action
  * @param dpd_action		DPD action
  * @param close_action		close action
  * @param ipcomp			use IPComp, if peer supports it
@@ -328,13 +299,14 @@ struct child_cfg_t {
  * @param reqid				specific reqid to use for CHILD_SA, 0 for auto assign
  * @param mark_in			optional inbound mark (can be NULL)
  * @param mark_out			optional outbound mark (can be NULL)
+ * @param tfc				TFC padding size, 0 to disable, -1 to pad to PMTU
  * @return					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, lifetime_cfg_t *lifetime,
 							  char *updown, bool hostaccess,
-							  ipsec_mode_t mode, action_t dpd_action,
-							  action_t close_action, bool ipcomp,
-							  u_int32_t inactivity, u_int32_t reqid,
-							  mark_t *mark_in, mark_t *mark_out);
+							  ipsec_mode_t mode, action_t start_action,
+							  action_t dpd_action, action_t close_action,
+							  bool ipcomp, u_int32_t inactivity, u_int32_t reqid,
+							  mark_t *mark_in, mark_t *mark_out, u_int32_t tfc);
 
 #endif /** CHILD_CFG_H_ @}*/

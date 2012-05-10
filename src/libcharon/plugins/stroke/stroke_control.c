@@ -17,6 +17,8 @@
 
 #include <daemon.h>
 #include <processing/jobs/delete_ike_sa_job.h>
+#include <processing/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/rekey_child_sa_job.h>
 
 typedef struct private_stroke_control_t private_stroke_control_t;
 
@@ -91,37 +93,11 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 }
 
 /**
- * Implementation of stroke_control_t.initiate.
+ * call the charon controller to initiate the connection
  */
-static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+static void charon_initiate(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+							stroke_msg_t *msg, FILE *out)
 {
-	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg;
-	stroke_log_info_t info;
-
-	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
-													  msg->initiate.name);
-	if (peer_cfg == NULL)
-	{
-		DBG1(DBG_CFG, "no config named '%s'\n", msg->initiate.name);
-		return;
-	}
-	if (peer_cfg->get_ike_version(peer_cfg) != 2)
-	{
-		DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
-			 peer_cfg->get_ike_version(peer_cfg));
-		peer_cfg->destroy(peer_cfg);
-		return;
-	}
-
-	child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
-	if (child_cfg == NULL)
-	{
-		DBG1(DBG_CFG, "no child config named '%s'\n", msg->initiate.name);
-		peer_cfg->destroy(peer_cfg);
-		return;
-	}
-
 	if (msg->output_verbosity < 0)
 	{
 		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
@@ -129,83 +105,166 @@ static void initiate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *ou
 	}
 	else
 	{
-		info.out = out;
-		info.level = msg->output_verbosity;
+		stroke_log_info_t info = { msg->output_verbosity, out };
+
 		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
 									 (controller_cb_t)stroke_log, &info);
 	}
 }
 
-/**
- * Implementation of stroke_control_t.terminate.
- */
-static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, initiate, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
-	char *string, *pos = NULL, *name = NULL;
-	u_int32_t id = 0;
-	bool child, all = FALSE;
-	int len;
-	ike_sa_t *ike_sa;
+	child_cfg_t *child_cfg = NULL;
+	peer_cfg_t *peer_cfg;
 	enumerator_t *enumerator;
-	linked_list_t *ike_list, *child_list;
-	stroke_log_info_t info;
-	uintptr_t del;
+	bool empty = TRUE;
 
-	string = msg->terminate.name;
+	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+													  msg->initiate.name);
+	if (peer_cfg)
+	{
+		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		{
+			DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
+				 peer_cfg->get_ike_version(peer_cfg));
+			peer_cfg->destroy(peer_cfg);
+			return;
+		}
+
+		child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
+		if (child_cfg == NULL)
+		{
+			enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+			while (enumerator->enumerate(enumerator, &child_cfg))
+			{
+				empty = FALSE;
+				charon_initiate(peer_cfg->get_ref(peer_cfg),
+								child_cfg->get_ref(child_cfg), msg, out);
+			}
+			enumerator->destroy(enumerator);
+
+			if (empty)
+			{
+				DBG1(DBG_CFG, "no child config named '%s'", msg->initiate.name);
+				fprintf(out, "no child config named '%s'\n", msg->initiate.name);
+			}
+			peer_cfg->destroy(peer_cfg);
+			return;
+		}
+	}
+	else
+	{
+		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+													NULL, NULL, NULL, NULL);
+		while (enumerator->enumerate(enumerator, &peer_cfg))
+		{
+			if (peer_cfg->get_ike_version(peer_cfg) != 2)
+			{
+				continue;
+			}
+			child_cfg = get_child_from_peer(peer_cfg, msg->initiate.name);
+			if (child_cfg)
+			{
+				peer_cfg->get_ref(peer_cfg);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (child_cfg == NULL)
+		{
+			DBG1(DBG_CFG, "no config named '%s'", msg->initiate.name);
+			fprintf(out, "no config named '%s'\n", msg->initiate.name);
+			return;
+		}
+	}
+	charon_initiate(peer_cfg, child_cfg, msg, out);
+}
+
+/**
+ * Parse a terminate/rekey specifier
+ */
+static bool parse_specifier(char *string, u_int32_t *id,
+							char **name, bool *child, bool *all)
+{
+	int len;
+	char *pos = NULL;
+
+	*id = 0;
+	*name = NULL;
+	*all = FALSE;
 
 	len = strlen(string);
 	if (len < 1)
 	{
-		DBG1(DBG_CFG, "error parsing string");
-		return;
+		return FALSE;
 	}
 	switch (string[len-1])
 	{
 		case '}':
-			child = TRUE;
+			*child = TRUE;
 			pos = strchr(string, '{');
 			break;
 		case ']':
-			child = FALSE;
+			*child = FALSE;
 			pos = strchr(string, '[');
 			break;
 		default:
-			name = string;
-			child = FALSE;
+			*name = string;
+			*child = FALSE;
 			break;
 	}
 
-	if (name)
+	if (*name)
 	{
 		/* is a single name */
 	}
 	else if (pos == string + len - 2)
 	{	/* is name[] or name{} */
 		string[len-2] = '\0';
-		name = string;
+		*name = string;
 	}
 	else
 	{
 		if (!pos)
 		{
-			DBG1(DBG_CFG, "error parsing string");
-			return;
+			return FALSE;
 		}
 		if (*(pos + 1) == '*')
 		{	/* is name[*] */
-			all = TRUE;
+			*all = TRUE;
 			*pos = '\0';
-			name = string;
+			*name = string;
 		}
 		else
 		{	/* is name[123] or name{23} */
-			id = atoi(pos + 1);
-			if (id == 0)
+			*id = atoi(pos + 1);
+			if (*id == 0)
 			{
-				DBG1(DBG_CFG, "error parsing string");
-				return;
+				return FALSE;
 			}
 		}
+	}
+	return TRUE;
+}
+
+METHOD(stroke_control_t, terminate, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	char *name;
+	u_int32_t id;
+	bool child, all;
+	ike_sa_t *ike_sa;
+	enumerator_t *enumerator;
+	linked_list_t *ike_list, *child_list;
+	stroke_log_info_t info;
+	uintptr_t del;
+
+	if (!parse_specifier(msg->terminate.name, &id, &name, &child, &all))
+	{
+		DBG1(DBG_CFG, "error parsing specifier string");
+		return;
 	}
 
 	info.out = out;
@@ -293,11 +352,68 @@ static void terminate(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 	child_list->destroy(child_list);
 }
 
-/**
- * Implementation of stroke_control_t.terminate_srcip.
- */
-static void terminate_srcip(private_stroke_control_t *this,
-							stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, rekey, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	char *name;
+	u_int32_t id;
+	bool child, all, finished = FALSE;
+	ike_sa_t *ike_sa;
+	enumerator_t *enumerator;
+
+	if (!parse_specifier(msg->terminate.name, &id, &name, &child, &all))
+	{
+		DBG1(DBG_CFG, "error parsing specifier string");
+		return;
+	}
+	enumerator = charon->controller->create_ike_sa_enumerator(charon->controller);
+	while (enumerator->enumerate(enumerator, &ike_sa))
+	{
+		child_sa_t *child_sa;
+		iterator_t *children;
+
+		if (child)
+		{
+			children = ike_sa->create_child_sa_iterator(ike_sa);
+			while (children->iterate(children, (void**)&child_sa))
+			{
+				if ((name && streq(name, child_sa->get_name(child_sa))) ||
+					(id && id == child_sa->get_reqid(child_sa)))
+				{
+					lib->processor->queue_job(lib->processor,
+						(job_t*)rekey_child_sa_job_create(
+								child_sa->get_reqid(child_sa),
+								child_sa->get_protocol(child_sa),
+								child_sa->get_spi(child_sa, TRUE)));
+					if (!all)
+					{
+						finished = TRUE;
+						break;
+					}
+				}
+			}
+			children->destroy(children);
+		}
+		else if ((name && streq(name, ike_sa->get_name(ike_sa))) ||
+				 (id && id == ike_sa->get_unique_id(ike_sa)))
+		{
+			lib->processor->queue_job(lib->processor,
+				(job_t*)rekey_ike_sa_job_create(ike_sa->get_id(ike_sa), FALSE));
+			if (!all)
+			{
+				finished = TRUE;
+			}
+		}
+		if (finished)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(stroke_control_t, terminate_srcip, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -354,7 +470,7 @@ static void terminate_srcip(private_stroke_control_t *this,
 		}
 
 		/* schedule delete asynchronously */
-		charon->processor->queue_job(charon->processor, (job_t*)
+		lib->processor->queue_job(lib->processor, (job_t*)
 						delete_ike_sa_job_create(ike_sa->get_id(ike_sa), TRUE));
 	}
 	enumerator->destroy(enumerator);
@@ -362,10 +478,8 @@ static void terminate_srcip(private_stroke_control_t *this,
 	DESTROY_IF(end);
 }
 
-/**
- * Implementation of stroke_control_t.purge_ike
- */
-static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, purge_ike, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	enumerator_t *enumerator;
 	iterator_t *iterator;
@@ -403,50 +517,95 @@ static void purge_ike(private_stroke_control_t *this, stroke_msg_t *msg, FILE *o
 }
 
 /**
- * Implementation of stroke_control_t.route.
+ * call charon to install a trap
  */
-static void route(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+						 char *name, FILE *out)
 {
-	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg;
-
-	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
-													  msg->route.name);
-	if (peer_cfg == NULL)
-	{
-		fprintf(out, "no config named '%s'\n", msg->route.name);
-		return;
-	}
-	if (peer_cfg->get_ike_version(peer_cfg) != 2)
-	{
-		peer_cfg->destroy(peer_cfg);
-		return;
-	}
-
-	child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
-	if (child_cfg == NULL)
-	{
-		fprintf(out, "no child config named '%s'\n", msg->route.name);
-		peer_cfg->destroy(peer_cfg);
-		return;
-	}
-
 	if (charon->traps->install(charon->traps, peer_cfg, child_cfg))
 	{
-		fprintf(out, "configuration '%s' routed\n", msg->route.name);
+		fprintf(out, "'%s' routed\n", name);
 	}
 	else
 	{
-		fprintf(out, "routing configuration '%s' failed\n", msg->route.name);
+		fprintf(out, "routing '%s' failed\n", name);
 	}
+}
+
+METHOD(stroke_control_t, route, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+{
+	child_cfg_t *child_cfg = NULL;
+	peer_cfg_t *peer_cfg;
+	enumerator_t *enumerator;
+	bool empty = TRUE;
+
+	peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+													  msg->route.name);
+	if (peer_cfg)
+	{
+		if (peer_cfg->get_ike_version(peer_cfg) != 2)
+		{
+			DBG1(DBG_CFG, "ignoring initiation request for IKEv%d config",
+				 peer_cfg->get_ike_version(peer_cfg));
+			peer_cfg->destroy(peer_cfg);
+			return;
+		}
+
+		child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
+		if (child_cfg == NULL)
+		{
+			enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+			while (enumerator->enumerate(enumerator, &child_cfg))
+			{
+				empty = FALSE;
+				charon_route(peer_cfg, child_cfg, child_cfg->get_name(child_cfg),
+							 out);
+			}
+			enumerator->destroy(enumerator);
+
+			if (empty)
+			{
+				DBG1(DBG_CFG, "no child config named '%s'", msg->route.name);
+				fprintf(out, "no child config named '%s'\n", msg->route.name);
+			}
+			peer_cfg->destroy(peer_cfg);
+			return;
+		}
+	}
+	else
+	{
+		enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
+													NULL, NULL, NULL, NULL);
+		while (enumerator->enumerate(enumerator, &peer_cfg))
+		{
+			if (peer_cfg->get_ike_version(peer_cfg) != 2)
+			{
+				continue;
+			}
+			child_cfg = get_child_from_peer(peer_cfg, msg->route.name);
+			if (child_cfg)
+			{
+				peer_cfg->get_ref(peer_cfg);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (child_cfg == NULL)
+		{
+			DBG1(DBG_CFG, "no config named '%s'", msg->route.name);
+			fprintf(out, "no config named '%s'\n", msg->route.name);
+			return;
+		}
+	}
+	charon_route(peer_cfg, child_cfg, msg->route.name, out);
 	peer_cfg->destroy(peer_cfg);
 	child_cfg->destroy(child_cfg);
 }
 
-/**
- * Implementation of stroke_control_t.unroute.
- */
-static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
+METHOD(stroke_control_t, unroute, void,
+	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
@@ -468,10 +627,8 @@ static void unroute(private_stroke_control_t *this, stroke_msg_t *msg, FILE *out
 	fprintf(out, "configuration '%s' not found\n", msg->unroute.name);
 }
 
-/**
- * Implementation of stroke_control_t.destroy
- */
-static void destroy(private_stroke_control_t *this)
+METHOD(stroke_control_t, destroy, void,
+	private_stroke_control_t *this)
 {
 	free(this);
 }
@@ -481,15 +638,20 @@ static void destroy(private_stroke_control_t *this)
  */
 stroke_control_t *stroke_control_create()
 {
-	private_stroke_control_t *this = malloc_thing(private_stroke_control_t);
+	private_stroke_control_t *this;
 
-	this->public.initiate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))initiate;
-	this->public.terminate = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate;
-	this->public.terminate_srcip = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))terminate_srcip;
-	this->public.purge_ike = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))purge_ike;
-	this->public.route = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))route;
-	this->public.unroute = (void(*)(stroke_control_t*, stroke_msg_t *msg, FILE *out))unroute;
-	this->public.destroy = (void(*)(stroke_control_t*))destroy;
+	INIT(this,
+		.public = {
+			.initiate = _initiate,
+			.terminate = _terminate,
+			.terminate_srcip = _terminate_srcip,
+			.rekey = _rekey,
+			.purge_ike = _purge_ike,
+			.route = _route,
+			.unroute = _unroute,
+			.destroy = _destroy,
+		},
+	);
 
 	return &this->public;
 }

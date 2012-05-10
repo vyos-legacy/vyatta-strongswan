@@ -73,10 +73,8 @@ struct private_gcrypt_dh_t {
 	size_t p_len;
 };
 
-/**
- * Implementation of gcrypt_dh_t.set_other_public_value.
- */
-static void set_other_public_value(private_gcrypt_dh_t *this, chunk_t value)
+METHOD(diffie_hellman_t, set_other_public_value, void,
+	private_gcrypt_dh_t *this, chunk_t value)
 {
 	gcry_mpi_t p_min_1;
 	gcry_error_t err;
@@ -134,18 +132,14 @@ static chunk_t export_mpi(gcry_mpi_t value, size_t len)
 	return chunk;
 }
 
-/**
- * Implementation of gcrypt_dh_t.get_my_public_value.
- */
-static void get_my_public_value(private_gcrypt_dh_t *this, chunk_t *value)
+METHOD(diffie_hellman_t, get_my_public_value, void,
+	private_gcrypt_dh_t *this, chunk_t *value)
 {
 	*value = export_mpi(this->ya, this->p_len);
 }
 
-/**
- * Implementation of gcrypt_dh_t.get_shared_secret.
- */
-static status_t get_shared_secret(private_gcrypt_dh_t *this, chunk_t *secret)
+METHOD(diffie_hellman_t, get_shared_secret, status_t,
+	private_gcrypt_dh_t *this, chunk_t *secret)
 {
 	if (!this->zz)
 	{
@@ -155,18 +149,14 @@ static status_t get_shared_secret(private_gcrypt_dh_t *this, chunk_t *secret)
 	return SUCCESS;
 }
 
-/**
- * Implementation of gcrypt_dh_t.get_dh_group.
- */
-static diffie_hellman_group_t get_dh_group(private_gcrypt_dh_t *this)
+METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+	private_gcrypt_dh_t *this)
 {
 	return this->group;
 }
 
-/**
- * Implementation of gcrypt_dh_t.destroy.
- */
-static void destroy(private_gcrypt_dh_t *this)
+METHOD(diffie_hellman_t, destroy, void,
+	private_gcrypt_dh_t *this)
 {
 	gcry_mpi_release(this->p);
 	gcry_mpi_release(this->xa);
@@ -178,42 +168,37 @@ static void destroy(private_gcrypt_dh_t *this)
 }
 
 /*
- * Described in header.
+ * Generic internal constructor
  */
-gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
+gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
+							chunk_t g, chunk_t p)
 {
 	private_gcrypt_dh_t *this;
-	diffie_hellman_params_t *params;
 	gcry_error_t err;
 	chunk_t random;
 	rng_t *rng;
 
-	params = diffie_hellman_get_params(group);
-	if (!params)
-	{
-		return NULL;
-	}
-
-	this = malloc_thing(private_gcrypt_dh_t);
-
-	this->public.dh.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
-	this->public.dh.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
-	this->public.dh.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
-	this->public.dh.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
-	this->public.dh.destroy = (void (*)(diffie_hellman_t *)) destroy;
-
-	this->group = group;
-	this->p_len = params->prime.len;
-	err = gcry_mpi_scan(&this->p, GCRYMPI_FMT_USG,
-						params->prime.ptr, params->prime.len, NULL);
+	INIT(this,
+		.public = {
+			.dh = {
+				.get_shared_secret = _get_shared_secret,
+				.set_other_public_value = _set_other_public_value,
+				.get_my_public_value = _get_my_public_value,
+				.get_dh_group = _get_dh_group,
+				.destroy = _destroy,
+			},
+		},
+		.group = group,
+		.p_len = p.len,
+	);
+	err = gcry_mpi_scan(&this->p, GCRYMPI_FMT_USG, p.ptr, p.len, NULL);
 	if (err)
 	{
 		DBG1(DBG_LIB, "importing mpi modulus failed: %s", gpg_strerror(err));
 		free(this);
 		return NULL;
 	}
-	err = gcry_mpi_scan(&this->g, GCRYMPI_FMT_USG,
-						params->generator.ptr, params->generator.len, NULL);
+	err = gcry_mpi_scan(&this->g, GCRYMPI_FMT_USG, g.ptr, g.len, NULL);
 	if (err)
 	{
 		DBG1(DBG_LIB, "importing mpi generator failed: %s", gpg_strerror(err));
@@ -225,7 +210,7 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (rng)
 	{	/* prefer external randomizer */
-		rng->allocate_bytes(rng, params->exp_len, &random);
+		rng->allocate_bytes(rng, exp_len, &random);
 		rng->destroy(rng);
 		err = gcry_mpi_scan(&this->xa, GCRYMPI_FMT_USG,
 							random.ptr, random.len, NULL);
@@ -241,21 +226,49 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 	}
 	else
 	{	/* fallback to gcrypt internal randomizer, shouldn't ever happen */
-		this->xa = gcry_mpi_new(params->exp_len * 8);
-		gcry_mpi_randomize(this->xa, params->exp_len * 8, GCRY_STRONG_RANDOM);
+		this->xa = gcry_mpi_new(exp_len * 8);
+		gcry_mpi_randomize(this->xa, exp_len * 8, GCRY_STRONG_RANDOM);
 	}
-	if (params->exp_len == this->p_len)
+	if (exp_len == this->p_len)
 	{
 		/* achieve bitsof(p)-1 by setting MSB to 0 */
-		gcry_mpi_clear_bit(this->xa, params->exp_len * 8 - 1);
+		gcry_mpi_clear_bit(this->xa, exp_len * 8 - 1);
 	}
 
 	this->ya = gcry_mpi_new(this->p_len * 8);
-	this->yb = NULL;
-	this->zz = NULL;
 
 	gcry_mpi_powm(this->ya, this->g, this->xa, this->p);
 
 	return &this->public;
 }
 
+
+/*
+ * Described in header.
+ */
+gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
+{
+
+	diffie_hellman_params_t *params;
+
+	params = diffie_hellman_get_params(group);
+	if (!params)
+	{
+		return NULL;
+	}
+	return create_generic(group, params->exp_len,
+						  params->generator, params->prime);
+}
+
+/*
+ * Described in header.
+ */
+gcrypt_dh_t *gcrypt_dh_create_custom(diffie_hellman_group_t group,
+									 chunk_t g, chunk_t p)
+{
+	if (group == MODP_CUSTOM)
+	{
+		return create_generic(group, p.len, g, p);
+	}
+	return NULL;
+}

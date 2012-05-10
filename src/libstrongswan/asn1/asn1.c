@@ -126,6 +126,95 @@ chunk_t asn1_build_known_oid(int n)
 /*
  * Defined in header.
  */
+chunk_t asn1_oid_from_string(char *str)
+{
+	enumerator_t *enumerator;
+	u_char buf[64];
+	char *end;
+	int i = 0, pos = 0, shift;
+	u_int val, shifted_val, first = 0;
+
+	enumerator = enumerator_create_token(str, ".", "");
+	while (enumerator->enumerate(enumerator, &str))
+	{
+		val = strtoul(str, &end, 10);
+		if (end == str || pos > countof(buf))
+		{
+			pos = 0;
+			break;
+		}
+		switch (i++)
+		{
+			case 0:
+				first = val;
+				break;
+			case 1:
+				buf[pos++] = first * 40 + val;
+				break;
+			default:
+				shift = 28;		/* sufficient to handle 32 bit node numbers */
+				while (shift)
+				{
+					shifted_val = val >> shift;
+					shift -= 7;
+					if (shifted_val)	/* do not encode leading zeroes */
+					{
+						buf[pos++] = 0x80 | (shifted_val & 0x7F);
+					}
+				}
+				buf[pos++] = val & 0x7F;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return chunk_clone(chunk_create(buf, pos));
+}
+
+/*
+ * Defined in header.
+ */
+char *asn1_oid_to_string(chunk_t oid)
+{
+	char buf[64], *pos = buf;
+	int len;
+	u_int val;
+
+	if (!oid.len)
+	{
+		return NULL;
+	}
+	val = oid.ptr[0] / 40;
+	len = snprintf(buf, sizeof(buf), "%u.%u", val, oid.ptr[0] - val * 40);
+	oid = chunk_skip(oid, 1);
+	if (len < 0 || len >= sizeof(buf))
+	{
+		return NULL;
+	}
+	pos += len;
+	val = 0;
+
+	while (oid.len)
+	{
+		val = (val << 7) + (u_int)(oid.ptr[0] & 0x7f);
+
+		if (oid.ptr[0] < 128)
+		{
+			len = snprintf(pos, sizeof(buf) + buf - pos, ".%u", val);
+			if (len < 0 || len >= sizeof(buf) + buf - pos)
+			{
+				return NULL;
+			}
+			pos += len;
+			val = 0;
+		}
+		oid = chunk_skip(oid, 1);
+	}
+	return (val == 0) ? strdup(buf) : NULL;
+}
+
+/*
+ * Defined in header.
+ */
 size_t asn1_length(chunk_t *blob)
 {
 	u_char n;
@@ -374,12 +463,22 @@ void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 	{
 		case ASN1_OID:
 			oid = asn1_known_oid(object);
-			if (oid != OID_UNKNOWN)
+			if (oid == OID_UNKNOWN)
+			{
+				char *oid_str = asn1_oid_to_string(object);
+
+				if (!oid_str)
+				{
+					break;
+				}
+				DBG2(DBG_LIB, "  %s", oid_str);
+				free(oid_str);
+			}
+			else
 			{
 				DBG2(DBG_LIB, "  '%s'", oid_names[oid].name);
-				return;
 			}
-			break;
+			return;
 		case ASN1_UTF8STRING:
 		case ASN1_IA5STRING:
 		case ASN1_PRINTABLESTRING:

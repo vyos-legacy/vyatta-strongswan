@@ -31,10 +31,14 @@ struct private_dnskey_plugin_t {
 	dnskey_plugin_t public;
 };
 
-/**
- * Implementation of dnskey_plugin_t.dnskeytroy
- */
-static void destroy(private_dnskey_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_dnskey_plugin_t *this)
+{
+	return "dnskey";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_dnskey_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
 							(builder_function_t)dnskey_public_key_load);
@@ -46,13 +50,20 @@ static void destroy(private_dnskey_plugin_t *this)
  */
 plugin_t *dnskey_plugin_create()
 {
-	private_dnskey_plugin_t *this = malloc_thing(private_dnskey_plugin_t);
+	private_dnskey_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
-
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_ANY, FALSE,
 							(builder_function_t)dnskey_public_key_load);
-	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
+	lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY, KEY_RSA, FALSE,
 							(builder_function_t)dnskey_public_key_load);
 
 	return &this->public.plugin;

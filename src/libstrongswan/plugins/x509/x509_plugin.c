@@ -36,10 +36,14 @@ struct private_x509_plugin_t {
 	x509_plugin_t public;
 };
 
-/**
- * Implementation of x509_plugin_t.x509troy
- */
-static void destroy(private_x509_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_x509_plugin_t *this)
+{
+	return "x509";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_x509_plugin_t *this)
 {
 	lib->creds->remove_builder(lib->creds,
 							   (builder_function_t)x509_cert_gen);
@@ -69,29 +73,37 @@ static void destroy(private_x509_plugin_t *this)
  */
 plugin_t *x509_plugin_create()
 {
-	private_x509_plugin_t *this = malloc_thing(private_x509_plugin_t);
+	private_x509_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
 
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509, FALSE,
 							(builder_function_t)x509_cert_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509, TRUE,
 							(builder_function_t)x509_cert_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC, FALSE,
 							(builder_function_t)x509_ac_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_AC, TRUE,
 							(builder_function_t)x509_ac_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL, TRUE,
 							(builder_function_t)x509_crl_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL, FALSE,
 							(builder_function_t)x509_crl_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_REQUEST, FALSE,
 							(builder_function_t)x509_ocsp_request_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_X509_OCSP_RESPONSE, TRUE,
 							(builder_function_t)x509_ocsp_response_load);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST, FALSE,
 							(builder_function_t)x509_pkcs10_gen);
-	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST,
+	lib->creds->add_builder(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST, TRUE,
 							(builder_function_t)x509_pkcs10_load);
 
 	return &this->public.plugin;

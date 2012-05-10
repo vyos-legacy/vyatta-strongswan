@@ -126,11 +126,11 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	med_cfg = peer_cfg_create(
 		"mediation", 2, ike_cfg,
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
-		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
-		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
-		TRUE, this->dpd, 				/* mobike, dpddelay */
-		NULL, NULL, 					/* vip, pool */
-		TRUE, NULL, NULL); 				/* mediation, med by, peer id */
+		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
+		this->rekey*5, this->rekey*3,	/* jitter, overtime */
+		TRUE, this->dpd,				/* mobike, dpddelay */
+		NULL, NULL,						/* vip, pool */
+		TRUE, NULL, NULL);				/* mediation, med by, peer id */
 	e->destroy(e);
 
 	auth = auth_cfg_create();
@@ -163,10 +163,10 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	peer_cfg = peer_cfg_create(
 		name, 2, this->ike->get_ref(this->ike),
 		CERT_NEVER_SEND, UNIQUE_REPLACE,
-		1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
-		this->rekey*5, this->rekey*3, 	/* jitter, overtime */
-		TRUE, this->dpd, 				/* mobike, dpddelay */
-		NULL, NULL, 					/* vip, pool */
+		1, this->rekey*60, 0,			/* keytries, rekey, reauth */
+		this->rekey*5, this->rekey*3,	/* jitter, overtime */
+		TRUE, this->dpd,				/* mobike, dpddelay */
+		NULL, NULL,						/* vip, pool */
 		FALSE, med_cfg,					/* mediation, med by */
 		identification_create_from_encoding(ID_KEY_ID, other));
 
@@ -182,8 +182,8 @@ static peer_cfg_t *get_peer_cfg_by_name(private_medcli_config_t *this, char *nam
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_NONE, FALSE, 0, 0,
-								 NULL, NULL);
+								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
+								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts_from_string(remote_net));
@@ -243,11 +243,11 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	this->current = peer_cfg_create(
 				name, 2, this->ike->get_ref(this->ike),
 				CERT_NEVER_SEND, UNIQUE_REPLACE,
-				1, this->rekey*60, 0,  			/* keytries, rekey, reauth */
-				this->rekey*5, this->rekey*3, 	/* jitter, overtime */
-				TRUE, this->dpd, 				/* mobike, dpddelay */
-				NULL, NULL, 					/* vip, pool */
-				FALSE, NULL, NULL); 			/* mediation, med by, peer id */
+				1, this->rekey*60, 0,			/* keytries, rekey, reauth */
+				this->rekey*5, this->rekey*3,	/* jitter, overtime */
+				TRUE, this->dpd,				/* mobike, dpddelay */
+				NULL, NULL,						/* vip, pool */
+				FALSE, NULL, NULL);				/* mediation, med by, peer id */
 
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
@@ -261,8 +261,8 @@ static bool peer_enumerator_enumerate(peer_enumerator_t *this, peer_cfg_t **cfg)
 	this->current->add_auth_cfg(this->current, auth, FALSE);
 
 	child_cfg = child_cfg_create(name, &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_NONE, FALSE, 0, 0,
-								 NULL, NULL);
+								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
+								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts_from_string(local_net));
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts_from_string(remote_net));
@@ -364,7 +364,7 @@ static void schedule_autoinit(private_medcli_config_t *this)
 			if (peer_cfg)
 			{
 				/* schedule asynchronous initiation job */
-				charon->processor->queue_job(charon->processor,
+				lib->processor->queue_job(lib->processor,
 						(job_t*)callback_job_create(
 									(callback_job_cb_t)initiate_config,
 									peer_cfg, (void*)peer_cfg->destroy, NULL));

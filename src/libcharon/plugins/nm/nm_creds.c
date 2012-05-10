@@ -51,6 +51,16 @@ struct private_nm_creds_t {
 	char *pass;
 
 	/**
+	 * Private key decryption password / smartcard pin
+	 */
+	char *keypass;
+
+	/**
+	 * private key ID of smartcard key
+	 */
+	chunk_t keyid;
+
+	/**
 	 * users certificate
 	 */
 	certificate_t *usercert;
@@ -239,8 +249,14 @@ static bool shared_enumerate(shared_enumerator_t *this, shared_key_t **key,
 		return FALSE;
 	}
 	*key = this->key;
-	*me = ID_MATCH_PERFECT;
-	*other = ID_MATCH_ANY;
+	if (me)
+	{
+		*me = ID_MATCH_PERFECT;
+	}
+	if (other)
+	{
+		*other = ID_MATCH_ANY;
+	}
 	this->done = TRUE;
 	return TRUE;
 }
@@ -262,18 +278,39 @@ static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
 							identification_t *other)
 {
 	shared_enumerator_t *enumerator;
+	chunk_t key;
 
-	if (!this->pass || !this->user)
+	switch (type)
 	{
-		return NULL;
-	}
-	if (type != SHARED_EAP && type != SHARED_IKE)
-	{
-		return NULL;
-	}
-	if (me && !me->equals(me, this->user))
-	{
-		return NULL;
+		case SHARED_EAP:
+		case SHARED_IKE:
+			if (!this->pass || !this->user)
+			{
+				return NULL;
+			}
+			if (me && !me->equals(me, this->user))
+			{
+				return NULL;
+			}
+			key = chunk_create(this->pass, strlen(this->pass));
+			break;
+		case SHARED_PRIVATE_KEY_PASS:
+			if (!this->keypass)
+			{
+				return NULL;
+			}
+			key = chunk_create(this->keypass, strlen(this->keypass));
+			break;
+		case SHARED_PIN:
+			if (!this->keypass || !me ||
+				!chunk_equals(me->get_encoding(me), this->keyid))
+			{
+				return NULL;
+			}
+			key = chunk_create(this->keypass, strlen(this->keypass));
+			break;
+		default:
+			return NULL;
 	}
 
 	enumerator = malloc_thing(shared_enumerator_t);
@@ -282,9 +319,7 @@ static enumerator_t* create_shared_enumerator(private_nm_creds_t *this,
 	enumerator->this = this;
 	enumerator->done = FALSE;
 	this->lock->read_lock(this->lock);
-	enumerator->key = shared_key_create(type,
-										chunk_clone(chunk_create(this->pass,
-													strlen(this->pass))));
+	enumerator->key = shared_key_create(type, chunk_clone(key));
 	return &enumerator->public;
 }
 
@@ -365,7 +400,31 @@ static void set_username_password(private_nm_creds_t *this, identification_t *id
 	DESTROY_IF(this->user);
 	this->user = id->clone(id);
 	free(this->pass);
-	this->pass = password ? strdup(password) : NULL;
+	this->pass = strdupnull(password);
+	this->lock->unlock(this->lock);
+}
+
+/**
+ * Implementation of nm_creds_t.set_key_password
+ */
+static void set_key_password(private_nm_creds_t *this, char *password)
+{
+	this->lock->write_lock(this->lock);
+	free(this->keypass);
+	this->keypass = strdupnull(password);
+	this->lock->unlock(this->lock);
+}
+
+/**
+ * Implementation of nm_creds_t.set_pin
+ */
+static void set_pin(private_nm_creds_t *this, chunk_t keyid, char *pin)
+{
+	this->lock->write_lock(this->lock);
+	free(this->keypass);
+	free(this->keyid.ptr);
+	this->keypass = strdupnull(pin);
+	this->keyid = chunk_clone(keyid);
 	this->lock->unlock(this->lock);
 }
 
@@ -396,12 +455,16 @@ static void clear(private_nm_creds_t *this)
 	}
 	DESTROY_IF(this->user);
 	free(this->pass);
+	free(this->keypass);
+	free(this->keyid.ptr);
 	DESTROY_IF(this->usercert);
 	DESTROY_IF(this->key);
 	this->key = NULL;
 	this->usercert = NULL;
 	this->pass = NULL;
 	this->user = NULL;
+	this->keypass = NULL;
+	this->keyid = chunk_empty;
 }
 
 /**
@@ -430,6 +493,8 @@ nm_creds_t *nm_creds_create()
 	this->public.add_certificate = (void(*)(nm_creds_t*, certificate_t *cert))add_certificate;
 	this->public.load_ca_dir = (void(*)(nm_creds_t*, char *dir))load_ca_dir;
 	this->public.set_username_password = (void(*)(nm_creds_t*, identification_t *id, char *password))set_username_password;
+	this->public.set_key_password = (void(*)(nm_creds_t*, char *password))set_key_password;
+	this->public.set_pin = (void(*)(nm_creds_t*, chunk_t keyid, char *pin))set_pin;
 	this->public.set_cert_and_key = (void(*)(nm_creds_t*, certificate_t *cert, private_key_t *key))set_cert_and_key;
 	this->public.clear = (void(*)(nm_creds_t*))clear;
 	this->public.destroy = (void(*)(nm_creds_t*))destroy;
@@ -441,6 +506,8 @@ nm_creds_t *nm_creds_create()
 	this->pass = NULL;
 	this->usercert = NULL;
 	this->key = NULL;
+	this->keypass = NULL;
+	this->keyid = chunk_empty;
 
 	return &this->public;
 }
