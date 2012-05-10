@@ -1,3 +1,26 @@
+strongswan (4.5.2-1.1~bpo60+1) squeeze-backports; urgency=low
+
+  * Backport to squeeze-backports.
+  * Add myself to Uploaders.
+
+ -- Micah Anderson <micah@debian.org>  Fri, 15 Jul 2011 09:08:39 -0400
+
+strongswan (4.5.2-1.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * debian/strongswan-starter.ipsec.init: Init script should depends on
+    remote_fs instead of local_fs, also provide ipsec instead of vpn as
+    the other ipsec implementations (Closes: #629675)
+  * debian/patches/0001-fix-fprintf-format.patch: Fix FTBFS with gcc 4.6,
+    taken from upstream (Closes: #614486)
+  * debian/control: Tighten dependency version against libstrongswan
+    (Closes: #626170)
+  * debian/strongswan-starter.lintian-overrides, debian/rules:
+    Correctly set restricted permissions on /etc/ipsec.d/private/
+    and /var/lib/strongswan (Closes: #598827)
+
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 04 Jul 2011 10:58:59 +0200
+
 strongswan (4.5.2-1) unstable; urgency=low
 
   * New upstream version 4.5.2. This removes a lot of old manpages that were

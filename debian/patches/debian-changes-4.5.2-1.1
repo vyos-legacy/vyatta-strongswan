@@ -1,0 +1,3771 @@
+Description: Upstream changes introduced in version 4.5.2-1.1
+ This patch has been created by dpkg-source during the package build.
+ Here's the last changelog entry, hopefully it gives details on why
+ those changes were made:
+ .
+ strongswan (4.5.2-1.1) unstable; urgency=low
+ .
+   * Non-maintainer upload.
+   * debian/strongswan-starter.ipsec.init: Init script should depends on
+     remote_fs instead of local_fs, also provide ipsec instead of vpn as
+     the other ipsec implementations (Closes: #629675)
+   * debian/patches/0001-fix-fprintf-format.patch: Fix FTBFS with gcc 4.6,
+     taken from upstream (Closes: #614486)
+   * debian/control: Tighten dependency version against libstrongswan
+     (Closes: #626170)
+   * debian/strongswan-starter.lintian-overrides, debian/rules:
+     Correctly set restricted permissions on /etc/ipsec.d/private/
+     and /var/lib/strongswan (Closes: #598827)
+ .
+ The person named in the Author field signed this changelog entry.
+Author: Laurent Bigonville <bigon@debian.org>
+Bug-Debian: http://bugs.debian.org/598827
+Bug-Debian: http://bugs.debian.org/614486
+Bug-Debian: http://bugs.debian.org/626170
+Bug-Debian: http://bugs.debian.org/629675
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- /dev/null
++++ strongswan-4.5.2/src/libfreeswan/satoa.c
+@@ -0,0 +1,100 @@
++/*
++ * convert from binary form of SA ID to ASCII
++ * Copyright (C) 1998, 1999, 2001  Henry Spencer.
++ *
++ * This library is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU Library General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
++ *
++ * This library is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
++ * License for more details.
++ */
++#include "internal.h"
++#include "freeswan.h"
++
++static struct typename {
++	char type;
++	char *name;
++} typenames[] = {
++	{ SA_AH,	"ah" },
++	{ SA_ESP,	"esp" },
++	{ SA_IPIP,	"tun" },
++	{ SA_COMP,	"comp" },
++	{ SA_INT,	"int" },
++	{ 0,		NULL }
++};
++
++/*
++ - satoa - convert SA to ASCII "ah507@1.2.3.4"
++ */
++size_t				/* space needed for full conversion */
++satoa(sa, format, dst, dstlen)
++struct sa_id sa;
++int format;			/* character */
++char *dst;			/* need not be valid if dstlen is 0 */
++size_t dstlen;
++{
++	size_t len = 0;		/* 0 means not handled yet */
++	int base;
++	struct typename *tn;
++	char buf[30+ADDRTOA_BUF];
++
++	switch (format) {
++	case 0:
++		base = 16;	/* temporarily at least */
++		break;
++	case 'd':
++		base = 10;
++		break;
++	default:
++		return 0;
++		break;
++	}
++
++	for (tn = typenames; tn->name != NULL; tn++)
++		if (sa.proto == tn->type)
++			break;
++	if (tn->name == NULL)
++		return 0;
++
++	if (strcmp(tn->name, PASSTHROUGHTYPE) == 0 &&
++					sa.spi == PASSTHROUGHSPI &&
++					sa.dst.s_addr == PASSTHROUGHDST) {
++		strcpy(buf, PASSTHROUGHNAME);
++		len = strlen(buf);
++	} else if (sa.proto == SA_INT && sa.dst.s_addr == 0) {
++		char *p;
++
++		switch (ntohl(sa.spi)) {
++		case SPI_PASS:	p = "%pass";	break;
++		case SPI_DROP:	p = "%drop";	break;
++		case SPI_REJECT:	p = "%reject";	break;
++		case SPI_HOLD:	p = "%hold";	break;
++		case SPI_TRAP:	p = "%trap";	break;
++		case SPI_TRAPSUBNET:	p = "%trapsubnet";	break;
++		default:	p = NULL;	break;
++		}
++		if (p != NULL) {
++			strcpy(buf, p);
++			len = strlen(buf);
++		}
++	}
++
++	if (len == 0) {
++		strcpy(buf, tn->name);
++		len = strlen(buf);
++		len += ultoa(ntohl(sa.spi), base, buf+len, sizeof(buf)-len);
++		*(buf+len-1) = '@';
++		len += addrtoa(sa.dst, 0, buf+len, sizeof(buf)-len);
++	}
++
++	if (dst != NULL) {
++		if (len > dstlen)
++			*(buf+dstlen-1) = '\0';
++		strcpy(dst, buf);
++	}
++	return len;
++}
+--- /dev/null
++++ strongswan-4.5.2/src/libfreeswan/prng.3
+@@ -0,0 +1,120 @@
++.TH IPSEC_PRNG 3 "1 April 2002"
++.SH NAME
++ipsec prng_init \- initialize IPsec pseudorandom-number generator
++.br
++ipsec prng_bytes \- get bytes from IPsec pseudorandom-number generator
++.br
++ipsec prng_final \- close down IPsec pseudorandom-number generator
++.SH SYNOPSIS
++.B "#include <freeswan.h>
++.sp
++.B "void prng_init(struct prng *prng,"
++.ti +1c
++.B "const unsigned char *key, size_t keylen);"
++.br
++.B "void prng_bytes(struct prng *prng, char *dst,"
++.ti +1c
++.B "size_t dstlen);"
++.br
++.B "unsigned long prng_count(struct prng *prng);"
++.br
++.B "void prng_final(struct prng *prng);"
++.SH DESCRIPTION
++.I Prng_init
++initializes a crypto-quality pseudo-random-number generator from a key;
++.I prng_bytes
++obtains pseudo-random bytes from it;
++.I prng_count
++reports the number of bytes extracted from it to date;
++.I prng_final
++closes it down.
++It is the user's responsibility to initialize a PRNG before using it,
++and not to use it again after it is closed down.
++.PP
++.I Prng_init
++initializes,
++or re-initializes,
++the specified
++.I prng
++from the
++.IR key ,
++whose length is given by
++.IR keylen .
++The user must allocate the
++.B "struct prng"
++pointed to by
++.IR prng .
++There is no particular constraint on the length of the key,
++although a key longer than 256 bytes is unnecessary because
++only the first 256 would be used.
++Initialization requires on the order of 3000 integer operations,
++independent of key length.
++.PP
++.I Prng_bytes
++obtains
++.I dstlen
++pseudo-random bytes from the PRNG and puts them in
++.IR buf .
++This is quite fast,
++on the order of 10 integer operations per byte.
++.PP
++.I Prng_count
++reports the number of bytes obtained from the PRNG
++since it was (last) initialized.
++.PP
++.I Prng_final
++closes down a PRNG by
++zeroing its internal memory,
++obliterating all trace of the state used to generate its previous output.
++This requires on the order of 250 integer operations.
++.PP
++The
++.B <freeswan.h>
++header file supplies the definition of the
++.B prng
++structure.
++Examination of its innards is discouraged, as they may change.
++.PP
++The PRNG algorithm
++used by these functions is currently identical to that of RC4(TM).
++This algorithm is cryptographically strong,
++sufficiently unpredictable that even a hostile observer will
++have difficulty determining the next byte of output from past history,
++provided it is initialized from a reasonably large key composed of
++highly random bytes (see
++.IR random (4)).
++The usual run of software pseudo-random-number generators
++(e.g.
++.IR random (3))
++are
++.I not
++cryptographically strong.
++.PP
++The well-known attacks against RC4(TM),
++e.g. as found in 802.11b's WEP encryption system,
++apply only if multiple PRNGs are initialized with closely-related keys
++(e.g., using a counter appended to a base key).
++If such keys are used, the first few hundred pseudo-random bytes
++from each PRNG should be discarded,
++to give the PRNGs a chance to randomize their innards properly.
++No useful attacks are known if the key is well randomized to begin with.
++.SH SEE ALSO
++random(3), random(4)
++.br
++Bruce Schneier,
++\fIApplied Cryptography\fR, 2nd ed., 1996, ISBN 0-471-11709-9,
++pp. 397-8.
++.SH HISTORY
++Written for the FreeS/WAN project by Henry Spencer.
++.SH BUGS
++If an attempt is made to obtain more than 4e9 bytes
++between initializations,
++the PRNG will continue to work but
++.IR prng_count 's
++output will stick at
++.BR 4000000000 .
++Fixing this would require a longer integer type and does
++not seem worth the trouble,
++since you should probably re-initialize before then anyway...
++.PP
++``RC4'' is a trademark of RSA Data Security, Inc.
+--- /dev/null
++++ strongswan-4.5.2/src/libfreeswan/atosa.3
+@@ -0,0 +1,217 @@
++.TH IPSEC_ATOSA 3 "11 June 2001"
++.SH NAME
++ipsec atosa, satoa \- convert IPsec Security Association IDs to and from ASCII
++.SH SYNOPSIS
++.B "#include <freeswan.h>
++.sp
++.B "const char *atosa(const char *src, size_t srclen,"
++.ti +1c
++.B "struct sa_id *sa);
++.br
++.B "size_t satoa(struct sa_id sa, int format,"
++.ti +1c
++.B "char *dst, size_t dstlen);"
++.sp
++.B "struct sa_id {"
++.ti +1c
++.B "struct in_addr dst;"
++.ti +1c
++.B "ipsec_spi_t spi;"
++.ti +1c
++.B "int proto;"
++.br
++.B "};"
++.SH DESCRIPTION
++These functions are obsolete; see
++.IR ipsec_ttosa (3)
++for their replacements.
++.PP
++.I Atosa
++converts an ASCII Security Association (SA) specifier into an
++.B sa_id
++structure (containing
++a destination-host address
++in network byte order,
++an SPI number in network byte order, and
++a protocol code).
++.I Satoa
++does the reverse conversion, back to an ASCII SA specifier.
++.PP
++An SA is specified in ASCII with a mail-like syntax, e.g.
++.BR esp507@1.2.3.4 .
++An SA specifier contains
++a protocol prefix (currently
++.BR ah ,
++.BR esp ,
++or
++.BR tun ),
++an unsigned integer SPI number,
++and an IP address.
++The SPI number can be decimal or hexadecimal
++(with
++.B 0x
++prefix), as accepted by
++.IR ipsec_atoul (3).
++The IP address can be any form accepted by
++.IR ipsec_atoaddr (3),
++e.g. dotted-decimal address or DNS name.
++.PP
++As a special case, the SA specifier
++.B %passthrough
++signifies the special SA used to indicate that packets should be
++passed through unaltered.
++(At present, this is a synonym for
++.BR tun0x0@0.0.0.0 ,
++but that is subject to change without notice.)
++This form is known to both
++.I atosa
++and
++.IR satoa ,
++so the internal form of
++.B %passthrough
++is never visible.
++.PP
++The
++.B <freeswan.h>
++header file supplies the
++.B sa_id
++structure, as well as a data type
++.B ipsec_spi_t
++which is an unsigned 32-bit integer.
++(There is no consistency between kernel and user on what such a type
++is called, hence the header hides the differences.)
++.PP
++The protocol code uses the same numbers that IP does.
++For user convenience, given the difficulty in acquiring the exact set of
++protocol names used by the kernel,
++.B <freeswan.h>
++defines the names
++.BR SA_ESP ,
++.BR SA_AH ,
++and
++.B SA_IPIP
++to have the same values as the kernel names
++.BR IPPROTO_ESP ,
++.BR IPPROTO_AH ,
++and
++.BR IPPROTO_IPIP .
++.PP
++The
++.I srclen
++parameter of
++.I atosa
++specifies the length of the ASCII string pointed to by
++.IR src ;
++it is an error for there to be anything else
++(e.g., a terminating NUL) within that length.
++As a convenience for cases where an entire NUL-terminated string is
++to be converted,
++a
++.I srclen
++value of
++.B 0
++is taken to mean
++.BR strlen(src) .
++.PP
++The
++.I dstlen
++parameter of
++.I satoa
++specifies the size of the
++.I dst
++parameter;
++under no circumstances are more than
++.I dstlen
++bytes written to
++.IR dst .
++A result which will not fit is truncated.
++.I Dstlen
++can be zero, in which case
++.I dst
++need not be valid and no result is written,
++but the return value is unaffected;
++in all other cases, the (possibly truncated) result is NUL-terminated.
++The
++.I freeswan.h
++header file defines a constant,
++.BR SATOA_BUF ,
++which is the size of a buffer just large enough for worst-case results.
++.PP
++The
++.I format
++parameter of
++.I satoa
++specifies what format is to be used for the conversion.
++The value
++.B 0
++(not the ASCII character
++.BR '0' ,
++but a zero value)
++specifies a reasonable default
++(currently
++lowercase protocol prefix, lowercase hexadecimal SPI, dotted-decimal address).
++The value
++.B d
++causes the SPI to be generated in decimal instead.
++.PP
++.I Atosa
++returns
++.B NULL
++for success and
++a pointer to a string-literal error message for failure;
++see DIAGNOSTICS.
++.I Satoa
++returns
++.B 0
++for a failure, and otherwise
++always returns the size of buffer which would 
++be needed to
++accommodate the full conversion result, including terminating NUL;
++it is the caller's responsibility to check this against the size of
++the provided buffer to determine whether truncation has occurred.
++.SH SEE ALSO
++ipsec_atoul(3), ipsec_atoaddr(3), inet(3)
++.SH DIAGNOSTICS
++Fatal errors in
++.I atosa
++are:
++empty input;
++input too small to be a legal SA specifier;
++no
++.B @
++in input;
++unknown protocol prefix;
++conversion error in
++.I atoul
++or
++.IR atoaddr .
++.PP
++Fatal errors in
++.I satoa
++are:
++unknown format; unknown protocol code.
++.SH HISTORY
++Written for the FreeS/WAN project by Henry Spencer.
++.SH BUGS
++The
++.B tun
++protocol code is a FreeS/WANism which may eventually disappear.
++.PP
++The restriction of ASCII-to-binary error reports to literal strings
++(so that callers don't need to worry about freeing them or copying them)
++does limit the precision of error reporting.
++.PP
++The ASCII-to-binary error-reporting convention lends itself
++to slightly obscure code,
++because many readers will not think of NULL as signifying success.
++A good way to make it clearer is to write something like:
++.PP
++.RS
++.nf
++.B "const char *error;"
++.sp
++.B "error = atoaddr( /* ... */ );"
++.B "if (error != NULL) {"
++.B "        /* something went wrong */"
++.fi
++.RE
+--- /dev/null
++++ strongswan-4.5.2/src/libfreeswan/prng.c
+@@ -0,0 +1,200 @@
++/*
++ * crypto-class pseudorandom number generator
++ * currently uses same algorithm as RC4(TM), from Schneier 2nd ed p397
++ * Copyright (C) 2002  Henry Spencer.
++ *
++ * This library is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU Library General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
++ *
++ * This library is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
++ * License for more details.
++ */
++#include "internal.h"
++#include "freeswan.h"
++
++/*
++ - prng_init - initialize PRNG from a key
++ */
++void
++prng_init(prng, key, keylen)
++struct prng *prng;
++const unsigned char *key;
++size_t keylen;
++{
++	unsigned char k[256];
++	int i, j;
++	unsigned const char *p;
++	unsigned const char *keyend = key + keylen;
++	unsigned char t;
++
++	for (i = 0; i <= 255; i++)
++		prng->sbox[i] = i;
++	p = key;
++	for (i = 0; i <= 255; i++) {
++		k[i] = *p++;
++		if (p >= keyend)
++			p = key;
++	}
++	j = 0;
++	for (i = 0; i <= 255; i++) {
++		j = (j + prng->sbox[i] + k[i]) & 0xff;
++		t = prng->sbox[i];
++		prng->sbox[i] = prng->sbox[j];
++		prng->sbox[j] = t;
++		k[i] = 0;	/* clear out key memory */
++	}
++	prng->i = 0;
++	prng->j = 0;
++	prng->count = 0;
++}
++
++/*
++ - prng_bytes - get some pseudorandom bytes from PRNG
++ */
++void
++prng_bytes(prng, dst, dstlen)
++struct prng *prng;
++unsigned char *dst;
++size_t dstlen;
++{
++	int i, j, t;
++	unsigned char *p = dst;
++	size_t remain = dstlen;
++#	define	MAX	4000000000ul
++
++	while (remain > 0) {
++		i = (prng->i + 1) & 0xff;
++		prng->i = i;
++		j = (prng->j + prng->sbox[i]) & 0xff;
++		prng->j = j;
++		t = prng->sbox[i];
++		prng->sbox[i] = prng->sbox[j];
++		prng->sbox[j] = t;
++		t = (t + prng->sbox[i]) & 0xff;
++		*p++ = prng->sbox[t];
++		remain--;
++	}
++	if (prng->count < MAX - dstlen)
++		prng->count += dstlen;
++	else
++		prng->count = MAX;
++}
++
++/*
++ - prnt_count - how many bytes have been extracted from PRNG so far?
++ */
++unsigned long
++prng_count(prng)
++struct prng *prng;
++{
++	return prng->count;
++}
++
++/*
++ - prng_final - clear out PRNG to ensure nothing left in memory
++ */
++void
++prng_final(prng)
++struct prng *prng;
++{
++	int i;
++
++	for (i = 0; i <= 255; i++)
++		prng->sbox[i] = 0;
++	prng->i = 0;
++	prng->j = 0;
++	prng->count = 0;	/* just for good measure */
++}
++
++
++
++#ifdef PRNG_MAIN
++
++#include <stdio.h>
++
++void regress();
++
++int
++main(argc, argv)
++int argc;
++char *argv[];
++{
++	struct prng pr;
++	unsigned char buf[100];
++	unsigned char *p;
++	size_t n;
++
++	if (argc < 2) {
++		fprintf(stderr, "Usage: %s {key|-r}\n", argv[0]);
++		exit(2);
++	}
++
++	if (strcmp(argv[1], "-r") == 0) {
++		regress();
++		fprintf(stderr, "regress() returned?!?\n");
++		exit(1);
++	}
++
++	prng_init(&pr, argv[1], strlen(argv[1]));
++	prng_bytes(&pr, buf, 32);
++	printf("0x");
++	for (p = buf, n = 32; n > 0; p++, n--)
++		printf("%02x", *p);
++	printf("\n%lu bytes\n", prng_count(&pr));
++	prng_final(&pr);
++	exit(0);
++}
++
++void
++regress()
++{
++	struct prng pr;
++	unsigned char buf[100];
++	unsigned char *p;
++	size_t n;
++	/* somewhat non-random sample key */
++	unsigned char key[] = "here we go gathering nuts in May";
++	/* first thirty bytes of output from that key */
++	unsigned char good[] = "\x3f\x02\x8e\x4a\x2a\xea\x23\x18\x92\x7c"
++				"\x09\x52\x83\x61\xaa\x26\xce\xbb\x9d\x71"
++				"\x71\xe5\x10\x22\xaf\x60\x54\x8d\x5b\x28";
++	int nzero, none;
++	int show = 0;
++
++	prng_init(&pr, key, strlen(key));
++	prng_bytes(&pr, buf, sizeof(buf));
++	for (p = buf, n = sizeof(buf); n > 0; p++, n--) {
++		if (*p == 0)
++			nzero++;
++		if (*p == 255)
++			none++;
++	}
++	if (nzero > 3 || none > 3) {
++		fprintf(stderr, "suspiciously non-random output!\n");
++		show = 1;
++	}
++	if (memcmp(buf, good, strlen(good)) != 0) {
++		fprintf(stderr, "incorrect output!\n");
++		show = 1;
++	}
++	if (show) {
++		fprintf(stderr, "0x");
++		for (p = buf, n = sizeof(buf); n > 0; p++, n--)
++			fprintf(stderr, "%02x", *p);
++		fprintf(stderr, "\n");
++		exit(1);
++	}
++	if (prng_count(&pr) != sizeof(buf)) {
++		fprintf(stderr, "got %u bytes, but count is %lu\n",
++					sizeof(buf), prng_count(&pr));
++		exit(1);
++	}
++	prng_final(&pr);
++	exit(0);
++}
++
++#endif /* PRNG_MAIN */
+--- /dev/null
++++ strongswan-4.5.2/src/libfreeswan/keyblobtoid.3
+@@ -0,0 +1,102 @@
++.TH IPSEC_KEYBLOBTOID 3 "25 March 2002"
++.SH NAME
++ipsec keyblobtoid, splitkeytoid \- generate key IDs from RSA keys
++.SH SYNOPSIS
++.B "#include <freeswan.h>
++.sp
++.B "size_t keyblobtoid(const unsigned char *blob,"
++.ti +1c
++.B "size_t bloblen, char *dst, size_t dstlen);"
++.br
++.B "size_t splitkeytoid(const unsigned char *e, size_t elen,"
++.ti +1c
++.B "const unsigned char *m, size_t mlen, char *dst,
++.ti +1c
++.B "size_t dstlen);"
++.SH DESCRIPTION
++.I Keyblobtoid
++and
++.I splitkeytoid
++generate
++key IDs
++from RSA keys,
++for use in messages and reporting,
++writing the result to
++.IR dst .
++A
++.I key ID
++is a short ASCII string identifying a key;
++currently it is just the first nine characters of the base64
++encoding of the RFC 2537/3110 ``byte blob'' representation of the key.
++(Beware that no finite key ID can be collision-proof:
++there is always some small chance of two random keys having the
++same ID.)
++.PP
++.I Keyblobtoid
++generates a key ID from a key which is already in the form of an
++RFC 2537/3110 binary key
++.I blob
++(encoded exponent length, exponent, modulus).
++.PP
++.I Splitkeytoid
++generates a key ID from a key given in the form of a separate
++(binary) exponent
++.I e
++and modulus
++.IR m .
++.PP
++The
++.I dstlen
++parameter of either
++specifies the size of the
++.I dst
++parameter;
++under no circumstances are more than
++.I dstlen
++bytes written to
++.IR dst .
++A result which will not fit is truncated.
++.I Dstlen
++can be zero, in which case
++.I dst
++need not be valid and no result is written,
++but the return value is unaffected;
++in all other cases, the (possibly truncated) result is NUL-terminated.
++The
++.I freeswan.h
++header file defines a constant
++.B KEYID_BUF
++which is the size of a buffer large enough for worst-case results.
++.PP
++Both functions return
++.B 0
++for a failure, and otherwise
++always return the size of buffer which would 
++be needed to
++accommodate the full conversion result, including terminating NUL;
++it is the caller's responsibility to check this against the size of
++the provided buffer to determine whether truncation has occurred.
++.P
++With keys generated by
++.IR ipsec_rsasigkey (3),
++the first two base64 digits are always the same,
++and the third carries only about one bit of information.
++It's worse with keys using longer fixed exponents,
++e.g. the 24-bit exponent that's common in X.509 certificates.
++However, being able to relate key IDs to the full
++base64 text form of keys by eye is sufficiently useful that this
++waste of space seems justifiable.
++The choice of nine digits is a compromise between bulk and
++probability of collision.
++.SH SEE ALSO
++RFC 3110,
++\fIRSA/SHA-1 SIGs and RSA KEYs in the Domain Name System (DNS)\fR,
++Eastlake, 2001
++(superseding the older but better-known RFC 2537).
++.SH DIAGNOSTICS
++Fatal errors are:
++key too short to supply enough bits to construct a complete key ID
++(almost certainly indicating a garbage key);
++exponent too long for its length to be representable.
++.SH HISTORY
++Written for the FreeS/WAN project by Henry Spencer.
+--- /dev/null
++++ strongswan-4.5.2/src/libfreeswan/keyblobtoid.c
+@@ -0,0 +1,146 @@
++/*
++ * generate printable key IDs
++ * Copyright (C) 2002  Henry Spencer.
++ *
++ * This library is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU Library General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
++ *
++ * This library is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
++ * License for more details.
++ */
++#include "internal.h"
++#include "freeswan.h"
++
++/*
++ - keyblobtoid - generate a printable key ID from an RFC 2537/3110 key blob
++ * Current algorithm is just to use first nine base64 digits.
++ */
++size_t
++keyblobtoid(src, srclen, dst, dstlen)
++const unsigned char *src;
++size_t srclen;
++char *dst;			/* need not be valid if dstlen is 0 */
++size_t dstlen;
++{
++	char buf[KEYID_BUF];
++	size_t ret;
++#	define	NDIG	9
++
++	if (srclen < (NDIG*6 + 7)/8) {
++		strcpy(buf, "?len= ?");
++		buf[5] = '0' + srclen;
++		ret = 0;
++	} else {
++		(void) datatot(src, srclen, 64, buf, NDIG+1);
++		ret = NDIG+1;
++	}
++
++	if (dstlen > 0) {
++		if (strlen(buf)+1 > dstlen)
++			*(buf + dstlen - 1) = '\0';
++		strcpy(dst, buf);
++	}
++	return ret;
++}
++
++/*
++ - splitkeytoid - generate a printable key ID from exponent/modulus pair
++ * Just constructs the beginnings of a key blob and calls keyblobtoid().
++ */
++size_t
++splitkeytoid(e, elen, m, mlen, dst, dstlen)
++const unsigned char *e;
++size_t elen;
++const unsigned char *m;
++size_t mlen;
++char *dst;			/* need not be valid if dstlen is 0 */
++size_t dstlen;
++{
++	unsigned char buf[KEYID_BUF];	/* ample room */
++	unsigned char *bufend = buf + sizeof(buf);
++	unsigned char *p;
++	size_t n;
++
++	p = buf;
++	if (elen <= 255)
++		*p++ = elen;
++	else if ((elen &~ 0xffff) == 0) {
++		*p++ = 0;
++		*p++ = (elen>>8) & 0xff;
++		*p++ = elen & 0xff;
++	} else
++		return 0;	/* unrepresentable exponent length */
++
++	n = bufend - p;
++	if (elen < n)
++		n = elen;
++	memcpy(p, e, n);
++	p += n;
++
++	n = bufend - p;
++	if (n > 0) {
++		if (mlen < n)
++			n = mlen;
++		memcpy(p, m, n);
++		p += n;
++	}
++
++	return keyblobtoid(buf, p - buf, dst, dstlen);
++}
++
++
++
++#ifdef KEYBLOBTOID_MAIN
++
++#include <stdio.h>
++
++void regress();
++
++int
++main(argc, argv)
++int argc;
++char *argv[];
++{
++	typedef unsigned char uc;
++	uc hexblob[] = "\x01\x03\x85\xf2\xd6\x76\x9b\x03\x59\xb6\x21\x52";
++	uc hexe[] = "\x03";
++	uc hexm[] = "\x85\xf2\xd6\x76\x9b\x03\x59\xb6\x21\x52\xef\x85";
++	char b64nine[] = "AQOF8tZ2m";
++	char b64six[] = "AQOF8t";
++	char buf[100];
++	size_t n;
++	char *b = b64nine;
++	size_t bl = strlen(b) + 1;
++	int st = 0;
++
++	n = keyblobtoid(hexblob, strlen(hexblob), buf, sizeof(buf));
++	if (n != bl) {
++		fprintf(stderr, "%s: keyblobtoid returned %d not %d\n",
++							argv[0], n, bl);
++		st = 1;
++	}
++	if (strcmp(buf, b) != 0) {
++		fprintf(stderr, "%s: keyblobtoid generated `%s' not `%s'\n",
++							argv[0], buf, b);
++		st = 1;
++	}
++	n = splitkeytoid(hexe, strlen(hexe), hexm, strlen(hexm), buf,
++								sizeof(buf));
++	if (n != bl) {
++		fprintf(stderr, "%s: splitkeytoid returned %d not %d\n",
++							argv[0], n, bl);
++		st = 1;
++	}
++	if (strcmp(buf, b) != 0) {
++		fprintf(stderr, "%s: splitkeytoid generated `%s' not `%s'\n",
++							argv[0], buf, b);
++		st = 1;
++	}
++	exit(st);
++}
++
++#endif /* KEYBLOBTOID_MAIN */
+--- /dev/null
++++ strongswan-4.5.2/src/libfreeswan/atosa.c
+@@ -0,0 +1,198 @@
++/*
++ * convert from ASCII form of SA ID to binary
++ * Copyright (C) 1998, 1999  Henry Spencer.
++ *
++ * This library is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU Library General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
++ *
++ * This library is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public
++ * License for more details.
++ */
++#include "internal.h"
++#include "freeswan.h"
++
++static struct satype {
++	char *prefix;
++	size_t prelen;		/* strlen(prefix) */
++	int proto;
++} satypes[] = {
++	{ "ah",		2,	SA_AH	},
++	{ "esp",	3,	SA_ESP	},
++	{ "tun",	3,	SA_IPIP },
++	{ "comp",	4,	SA_COMP },
++	{ NULL,		0,	0,	}
++};
++
++/*
++ - atosa - convert ASCII "ah507@10.0.0.1" to SA identifier
++ */
++const char *			/* NULL for success, else string literal */
++atosa(src, srclen, sa)
++const char *src;
++size_t srclen;			/* 0 means "apply strlen" */
++struct sa_id *sa;
++{
++	const char *at;
++	const char *addr;
++	const char *spi = NULL;
++	struct satype *sat;
++	unsigned long ul;
++	const char *oops;
++#	define	MINLEN	5	/* ah0@0 is as short as it can get */
++	static char ptname[] = PASSTHROUGHNAME;
++#	define	PTNLEN	(sizeof(ptname)-1)	/* -1 for NUL */
++
++	if (srclen == 0)
++		srclen = strlen(src);
++	if (srclen == 0)
++		return "empty string";
++	if (srclen < MINLEN)
++		return "string too short to be SA specifier";
++	if (srclen == PTNLEN && memcmp(src, ptname, PTNLEN) == 0) {
++		src = PASSTHROUGHIS;
++		srclen = strlen(src);
++	}
++
++	at = memchr(src, '@', srclen);
++	if (at == NULL)
++		return "no @ in SA specifier";
++
++	for (sat = satypes; sat->prefix != NULL; sat++)
++		if (sat->prelen < srclen &&
++				strncmp(src, sat->prefix, sat->prelen) == 0) {
++			sa->proto = sat->proto;
++			spi = src + sat->prelen;
++			break;			/* NOTE BREAK OUT */
++		}
++	if (sat->prefix == NULL)
++		return "SA specifier lacks valid protocol prefix";
++
++	if (spi >= at)
++		return "no SPI in SA specifier";
++	oops = atoul(spi, at - spi, 13, &ul);
++	if (oops != NULL)
++		return oops;
++	sa->spi = htonl(ul);
++
++	addr = at + 1;
++	oops = atoaddr(addr, srclen - (addr - src), &sa->dst);
++	if (oops != NULL)
++		return oops;
++
++	return NULL;
++}
++
++
++
++#ifdef ATOSA_MAIN
++
++#include <stdio.h>
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <arpa/inet.h>
++
++void regress(void);
++
++int
++main(int argc, char *argv[])
++{
++	struct sa_id sa;
++	char buf[100];
++	const char *oops;
++	size_t n;
++
++	if (argc < 2) {
++		fprintf(stderr, "Usage: %s {ahnnn@aaa|-r}\n", argv[0]);
++		exit(2);
++	}
++
++	if (strcmp(argv[1], "-r") == 0) {
++		regress();
++		fprintf(stderr, "regress() returned?!?\n");
++		exit(1);
++	}
++
++	oops = atosa(argv[1], 0, &sa);
++	if (oops != NULL) {
++		fprintf(stderr, "%s: conversion failed: %s\n", argv[0], oops);
++		exit(1);
++	}
++	n = satoa(sa, 0, buf, sizeof(buf));
++	if (n > sizeof(buf)) {
++		fprintf(stderr, "%s: reverse conv of `%d'", argv[0], sa.proto);
++		fprintf(stderr, "%lu@", (long unsigned int)sa.spi);
++		fprintf(stderr, "%s", inet_ntoa(sa.dst));
++		fprintf(stderr, " failed: need %ld bytes, have only %ld\n",
++						(long)n, (long)sizeof(buf));
++		exit(1);
++	}
++	printf("%s\n", buf);
++
++	exit(0);
++}
++
++struct rtab {
++	char *input;
++	char *output;			/* NULL means error expected */
++} rtab[] = {
++	{"esp257@1.2.3.0",		"esp257@1.2.3.0"},
++	{"ah0x20@1.2.3.4",		"ah32@1.2.3.4"},
++	{"tun011@111.2.3.99",		"tun11@111.2.3.99"},
++	{"",				NULL},
++	{"_",				NULL},
++	{"ah2.2",			NULL},
++	{"goo2@1.2.3.4",			NULL},
++	{"esp9@1.2.3.4",			"esp9@1.2.3.4"},
++	{"espp9@1.2.3.4",		NULL},
++	{"es9@1.2.3.4",			NULL},
++	{"ah@1.2.3.4",			NULL},
++	{"esp7x7@1.2.3.4",		NULL},
++	{"esp77@1.0x2.3.4",		NULL},
++	{PASSTHROUGHNAME,		PASSTHROUGHNAME},
++        {NULL,				NULL}
++};
++
++void
++regress(void)
++{
++	struct rtab *r;
++	int status = 0;
++	struct sa_id sa;
++	char in[100];
++	char buf[100];
++	const char *oops;
++	size_t n;
++
++	for (r = rtab; r->input != NULL; r++) {
++		strcpy(in, r->input);
++		oops = atosa(in, 0, &sa);
++		if (oops != NULL && r->output == NULL)
++			{}		/* okay, error expected */
++		else if (oops != NULL) {
++			printf("`%s' atosa failed: %s\n", r->input, oops);
++			status = 1;
++		} else if (r->output == NULL) {
++			printf("`%s' atosa succeeded unexpectedly\n",
++								r->input);
++			status = 1;
++		} else {
++			n = satoa(sa, 'd', buf, sizeof(buf));
++			if (n > sizeof(buf)) {
++				printf("`%s' satoa failed:  need %ld\n",
++							r->input, (long)n);
++				status = 1;
++			} else if (strcmp(r->output, buf) != 0) {
++				printf("`%s' gave `%s', expected `%s'\n",
++						r->input, buf, r->output);
++				status = 1;
++			}
++		}
++	}
++	exit(status);
++}
++
++#endif /* ATOSA_MAIN */
+--- /dev/null
++++ strongswan-4.5.2/src/libcharon/plugins/maemo/org.strongswan.charon.service
+@@ -0,0 +1,4 @@
++[D-BUS Service]
++Name=org.strongswan.charon
++Exec=/usr/bin/run-standalone.sh /usr/libexec/ipsec/charon
++User=root
+--- /dev/null
++++ strongswan-4.5.2/src/libcharon/plugins/stroke/stroke_shared_key.c
+@@ -0,0 +1,140 @@
++/*
++ * Copyright (C) 2008 Martin Willi
++ * Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++#include "stroke_shared_key.h"
++
++#include <utils/linked_list.h>
++
++typedef struct private_stroke_shared_key_t private_stroke_shared_key_t;
++
++/**
++ * private data of shared_key
++ */
++struct private_stroke_shared_key_t {
++
++	/**
++	 * implements shared_key_t
++	 */
++	stroke_shared_key_t public;
++
++	/**
++	 * type of this key
++	 */
++	shared_key_type_t type;
++
++	/**
++	 * data of the key
++	 */
++	chunk_t key;
++
++	/**
++	 * list of key owners, as identification_t
++	 */
++	linked_list_t *owners;
++
++	/**
++	 * reference counter
++	 */
++	refcount_t ref;
++};
++
++/**
++ * Implementation of shared_key_t.get_type.
++ */
++static shared_key_type_t get_type(private_stroke_shared_key_t *this)
++{
++	return this->type;
++}
++
++/**
++ * Implementation of shared_key_t.get_ref.
++ */
++static private_stroke_shared_key_t* get_ref(private_stroke_shared_key_t *this)
++{
++	ref_get(&this->ref);
++	return this;
++}
++
++/**
++ * Implementation of shared_key_t.get_key.
++ */
++static chunk_t get_key(private_stroke_shared_key_t *this)
++{
++	return this->key;
++}
++
++/**
++ * Implementation of stroke_shared_key_t.has_owner.
++ */
++static id_match_t has_owner(private_stroke_shared_key_t *this, identification_t *owner)
++{
++	enumerator_t *enumerator;
++	id_match_t match, best = ID_MATCH_NONE;
++	identification_t *current;
++
++	enumerator = this->owners->create_enumerator(this->owners);
++	while (enumerator->enumerate(enumerator, &current))
++	{
++		match  = owner->matches(owner, current);
++		if (match > best)
++		{
++			best = match;
++		}
++	}
++	enumerator->destroy(enumerator);
++	return best;
++}
++/**
++ * Implementation of stroke_shared_key_t.add_owner.
++ */
++static void add_owner(private_stroke_shared_key_t *this, identification_t *owner)
++{
++	this->owners->insert_last(this->owners, owner);
++}
++
++/**
++ * Implementation of stroke_shared_key_t.destroy
++ */
++static void destroy(private_stroke_shared_key_t *this)
++{
++	if (ref_put(&this->ref))
++	{
++		this->owners->destroy_offset(this->owners, offsetof(identification_t, destroy));
++		chunk_free(&this->key);
++		free(this);
++	}
++}
++
++/**
++ * create a shared key
++ */
++stroke_shared_key_t *stroke_shared_key_create(shared_key_type_t type, chunk_t key)
++{
++	private_stroke_shared_key_t *this = malloc_thing(private_stroke_shared_key_t);
++
++	this->public.shared.get_type = (shared_key_type_t(*)(shared_key_t*))get_type;
++	this->public.shared.get_key = (chunk_t(*)(shared_key_t*))get_key;
++	this->public.shared.get_ref = (shared_key_t*(*)(shared_key_t*))get_ref;
++	this->public.shared.destroy = (void(*)(shared_key_t*))destroy;
++	this->public.add_owner = (void(*)(stroke_shared_key_t*, identification_t *owner))add_owner;
++	this->public.has_owner = (id_match_t(*)(stroke_shared_key_t*, identification_t *owner))has_owner;
++
++	this->owners = linked_list_create();
++	this->type = type;
++	this->key = key;
++	this->ref = 1;
++
++	return &this->public;
++}
+--- /dev/null
++++ strongswan-4.5.2/src/libcharon/plugins/stroke/stroke_shared_key.h
+@@ -0,0 +1,60 @@
++/*
++ * Copyright (C) 2008 Martin Willi
++ * Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++/**
++ * @defgroup stroke_shared_key stroke_shared_key
++ * @{ @ingroup stroke
++ */
++
++#ifndef STROKE_SHARED_KEY_H_
++#define STROKE_SHARED_KEY_H_
++
++#include <utils/identification.h>
++#include <credentials/keys/shared_key.h>
++
++typedef struct stroke_shared_key_t stroke_shared_key_t;
++
++/**
++ * Shared key implementation for keys read from ipsec.secrets
++ */
++struct stroke_shared_key_t {
++
++	/**
++	 * Implements the shared_key_t interface.
++	 */
++	shared_key_t shared;
++
++	/**
++	 * Add an owner to the key.
++	 *
++	 * @param owner		owner to add
++	 */
++	void (*add_owner)(stroke_shared_key_t *this, identification_t *owner);
++
++	/**
++	 * Check if a key has a specific owner.
++	 *
++	 * @param owner		owner to check
++	 * @return			best match found
++	 */
++	id_match_t (*has_owner)(stroke_shared_key_t *this, identification_t *owner);
++};
++
++/**
++ * Create a stroke_shared_key instance.
++ */
++stroke_shared_key_t *stroke_shared_key_create(shared_key_type_t type, chunk_t key);
++
++#endif /** STROKE_SHARED_KEY_H_ @}*/
+--- /dev/null
++++ strongswan-4.5.2/src/libcharon/tnccs/tnccs.c
+@@ -0,0 +1,22 @@
++/*
++ * Copyright (C) 2010 Andreas Steffen
++ * HSR Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++#include "tnccs.h"
++
++ENUM(eap_type_names, TNCCS_1_1, TNCCS_2_0,
++	"TNCCS 1.1",
++	"TNCCS SOH",
++	"TNCCS 2.0",
++);
+--- /dev/null
++++ strongswan-4.5.2/src/libcharon/tnccs/tnccs_manager.h
+@@ -0,0 +1,74 @@
++/*
++ * Copyright (C) 2010 Andreas Steffen
++ * HSR Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++/**
++ * @defgroup tnccs_manager tnccs_manager
++ * @{ @ingroup tnccs
++ */
++
++#ifndef TNCCS_MANAGER_H_
++#define TNCCS_MANAGER_H_
++
++#include "tnccs.h"
++
++typedef struct tnccs_manager_t tnccs_manager_t;
++
++/**
++ * The TNCCS manager manages all TNCCS implementations and creates instances.
++ *
++ * A plugin registers its implemented TNCCS protocol with the manager by
++ * providing type and a constructor function. The manager then creates
++ * TNCCS protocol instances via the provided constructor.
++ */
++struct tnccs_manager_t {
++
++	/**
++	 * Register a TNCCS protocol implementation.
++	 *
++	 * @param type			TNCCS protocol type
++	 * @param constructor	constructor, returns a TNCCS protocol implementation
++	 */
++	void (*add_method)(tnccs_manager_t *this, tnccs_type_t type,
++					   tnccs_constructor_t constructor);
++
++	/**
++	 * Unregister a TNCCS protocol implementation using it's constructor.
++	 *
++	 * @param constructor	constructor function to remove, as added in add_method
++	 */
++	void (*remove_method)(tnccs_manager_t *this, tnccs_constructor_t constructor);
++
++	/**
++	 * Create a new TNCCS protocol instance.
++	 *
++	 * @param type			type of the TNCCS protocol
++	 * @param is_server		TRUE if TNC Server, FALSE if TNC Client
++	 * @return				TNCCS protocol instance, NULL if no constructor found
++	 */
++	tnccs_t* (*create_instance)(tnccs_manager_t *this, tnccs_type_t type,
++								bool is_server);
++
++	/**
++	 * Destroy a tnccs_manager instance.
++	 */
++	void (*destroy)(tnccs_manager_t *this);
++};
++
++/**
++ * Create a tnccs_manager instance.
++ */
++tnccs_manager_t *tnccs_manager_create();
++
++#endif /** TNCCS_MANAGER_H_ @}*/
+--- /dev/null
++++ strongswan-4.5.2/src/libcharon/tnccs/tnccs_manager.c
+@@ -0,0 +1,148 @@
++/*
++ * Copyright (C) 2010 Andreas Steffen
++ * HSR Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++#include "tnccs_manager.h"
++
++#include <utils/linked_list.h>
++#include <threading/rwlock.h>
++
++typedef struct private_tnccs_manager_t private_tnccs_manager_t;
++typedef struct tnccs_entry_t tnccs_entry_t;
++
++/**
++ * TNCCS constructor entry
++ */
++struct tnccs_entry_t {
++
++	/**
++	 * TNCCS protocol type
++	 */
++	tnccs_type_t type;
++
++	/**
++	 * constructor function to create instance
++	 */
++	tnccs_constructor_t constructor;
++};
++
++/**
++ * private data of tnccs_manager
++ */
++struct private_tnccs_manager_t {
++
++	/**
++	 * public functions
++	 */
++	tnccs_manager_t public;
++
++	/**
++	 * list of tnccs_entry_t's
++	 */
++	linked_list_t *protocols;
++
++	/**
++	 * rwlock to lock methods
++	 */
++	rwlock_t *lock;
++};
++
++METHOD(tnccs_manager_t, add_method, void,
++	private_tnccs_manager_t *this, tnccs_type_t type,
++	tnccs_constructor_t constructor)
++{
++	tnccs_entry_t *entry = malloc_thing(tnccs_entry_t);
++
++	entry->type = type;
++	entry->constructor = constructor;
++
++	this->lock->write_lock(this->lock);
++	this->protocols->insert_last(this->protocols, entry);
++	this->lock->unlock(this->lock);
++}
++
++METHOD(tnccs_manager_t, remove_method, void,
++	private_tnccs_manager_t *this, tnccs_constructor_t constructor)
++{
++	enumerator_t *enumerator;
++	tnccs_entry_t *entry;
++
++	this->lock->write_lock(this->lock);
++	enumerator = this->protocols->create_enumerator(this->protocols);
++	while (enumerator->enumerate(enumerator, &entry))
++	{
++		if (constructor == entry->constructor)
++		{
++			this->protocols->remove_at(this->protocols, enumerator);
++			free(entry);
++		}
++	}
++	enumerator->destroy(enumerator);
++	this->lock->unlock(this->lock);
++}
++
++METHOD(tnccs_manager_t, create_instance, tnccs_t*,
++	private_tnccs_manager_t *this, tnccs_type_t type, bool is_server)
++{
++	enumerator_t *enumerator;
++	tnccs_entry_t *entry;
++	tnccs_t *protocol = NULL;
++
++	this->lock->read_lock(this->lock);
++	enumerator = this->protocols->create_enumerator(this->protocols);
++	while (enumerator->enumerate(enumerator, &entry))
++	{
++		if (type == entry->type)
++		{
++			protocol = entry->constructor(is_server);
++			if (protocol)
++			{
++				break;
++			}
++		}
++	}
++	enumerator->destroy(enumerator);
++	this->lock->unlock(this->lock);
++	return protocol;
++}
++
++METHOD(tnccs_manager_t, destroy, void,
++	private_tnccs_manager_t *this)
++{
++	this->protocols->destroy_function(this->protocols, free);
++	this->lock->destroy(this->lock);
++	free(this);
++}
++
++/*
++ * See header
++ */
++tnccs_manager_t *tnccs_manager_create()
++{
++	private_tnccs_manager_t *this;
++
++	INIT(this,
++			.public = {
++				.add_method = _add_method,
++				.remove_method = _remove_method,
++				.create_instance = _create_instance,
++				.destroy = _destroy,
++			},
++			.protocols = linked_list_create(),
++			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
++	);
++
++	return &this->public;
++}
++
+--- /dev/null
++++ strongswan-4.5.2/src/libcharon/tnccs/tnccs.h
+@@ -0,0 +1,52 @@
++/*
++ * Copyright (C) 2010 Andreas Steffen
++ * HSR Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++/**
++ * @defgroup tnccs tnccs
++ * @{ @ingroup libcharon
++ */
++
++#ifndef TNCCS_H_
++#define TNCCS_H_
++
++typedef enum tnccs_type_t tnccs_type_t;
++
++#include <library.h>
++
++/**
++ * Type of TNC Client/Server protocol
++ */
++enum tnccs_type_t {
++	TNCCS_1_1,
++	TNCCS_SOH,
++	TNCCS_2_0
++};
++
++/**
++ * enum names for tnccs_type_t.
++ */
++extern enum_name_t *tnccs_type_names;
++
++typedef struct tnccs_t tnccs_t;
++
++/**
++ * Constructor definition for a pluggable TNCCS protocol implementation.
++ *
++ * @param is_server		TRUE if TNC Server, FALSE if TNC Client
++ * @return				implementation of the tnccs_t interface
++ */
++typedef tnccs_t* (*tnccs_constructor_t)(bool is_server);
++
++#endif /** TNC_H_ @}*/
+--- /dev/null
++++ strongswan-4.5.2/src/_copyright/_copyright.8
+@@ -0,0 +1,29 @@
++.TH _COPYRIGHT 8 "25 Apr 2002"
++.SH NAME
++ipsec _copyright \- prints FreeSWAN copyright
++.SH DESCRIPTION
++.I _copyright
++outputs the FreeSWAN copyright, and version numbers for "ipsec --copyright"
++.SH "SEE ALSO"
++ipsec(8)
++.SH HISTORY
++Man page written for the Linux FreeS/WAN project
++<http://www.freeswan.org/>
++by Michael Richardson. Program written by Henry Spencer.
++.\"
++.\" $Log: _copyright.8,v $
++.\" Revision 1.1  2004/03/15 20:35:27  as
++.\" added files from freeswan-2.04-x509-1.5.3
++.\"
++.\" Revision 1.2  2002/04/29 22:39:31  mcr
++.\" 	added basic man page for all internal commands.
++.\"
++.\" Revision 1.1  2002/04/26 01:21:43  mcr
++.\" 	while tracking down a missing (not installed) /etc/ipsec.conf,
++.\" 	MCR has decided that it is not okay for each program subdir to have
++.\" 	some subset (determined with -f) of possible files.
++.\" 	Each subdir that defines $PROGRAM, MUST have a PROGRAM.8 file as well as a PROGRAM file.
++.\" 	Optional PROGRAM.5 files have been added to the makefiles.
++.\"
++.\"
++.\"
+--- /dev/null
++++ strongswan-4.5.2/src/libstrongswan/credentials/certificates/x509.c
+@@ -0,0 +1,28 @@
++/*
++ * Copyright (C) 2008 Martin Willi
++ * Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++#include "x509.h"
++
++ENUM(x509_flag_names, X509_NONE, X509_IP_ADDR_BLOCKS,
++	"X509_NONE",
++	"X509_CA",
++	"X509_AA",
++	"X509_OCSP_SIGNER",
++	"X509_SERVER_AUTH",
++	"X509_CLIENT_AUTH",
++	"X509_SELF_SIGNED",
++	"X509_IP_ADDR_BLOCKS",
++);
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/description.txt
+@@ -0,0 +1,11 @@
++The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>.
++At the outset the gateway authenticates itself to the clients by sending an IKEv2
++<b>RSA signature</b> accompanied by a certificate.
++<b>carol</b> and <b>dave</b> then set up an <b>EAP-TTLS</b> tunnel each via <b>moon</b> to
++the FreeRADIUS server <b>alice</b> authenticated by an X.509 AAA certificate.
++The strong EAP-TTLS tunnel protects the ensuing weak client authentication based on <b>EAP-MD5</b>.
++In a next step the EAP-TNC protocol is used within the EAP-TTLS tunnel to determine the
++health of <b>carol</b> and <b>dave</b> via the <b>IF-TNCCS 1.1</b> client-server interface.
++<b>carol</b> passes the health test and <b>dave</b> fails. Based on these measurements <b>carol</b>
++is authenticated successfully and is granted access to the subnet behind <b>moon</b> whereas 
++<b>dave</b> fails the layered EAP authentication and is rejected.
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/posttest.dat
+@@ -0,0 +1,8 @@
++moon::ipsec stop
++carol::ipsec stop
++dave::ipsec stop
++alice::/etc/init.d/radiusd stop
++alice::rm /etc/raddb/sites-enabled/inner-tunnel-second
++moon::/etc/init.d/iptables stop 2> /dev/null
++carol::/etc/init.d/iptables stop 2> /dev/null
++dave::/etc/init.d/iptables stop 2> /dev/null
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/evaltest.dat
+@@ -0,0 +1,14 @@
++carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
++carol::cat /var/log/daemon.log::TNCCS-Recommendation.*allow::YES
++carol::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established::YES
++carol::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.100/32 === 10.1.0.0/16::YES
++dave::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
++dave::cat /var/log/daemon.log::TNCCS-Recommendation.*none::YES
++dave::cat /var/log/daemon.log::received EAP_FAILURE, EAP authentication failed::YES
++dave::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.0/16::NO
++moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES         
++moon::cat /var/log/daemon.log::RADIUS authentication of 'dave@strongswan.org' failed::YES
++moon::cat /var/log/daemon.log::EAP method EAP_TTLS failed for peer dave@strongswan.org::YES
++carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
++dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_VENUS: icmp_seq=1::NO
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/test.conf
+@@ -0,0 +1,26 @@
++#!/bin/bash
++#
++# This configuration file provides information on the
++# UML instances used for this test
++
++# All UML instances that are required for this test
++#
++UMLHOSTS="alice moon carol winnetou dave"
++
++# Corresponding block diagram
++#
++DIAGRAM="a-m-c-w-d.png"
++
++# UML instances on which tcpdump is to be started
++#
++TCPDUMPHOSTS="moon"
++
++# UML instances on which IPsec is started
++# Used for IPsec logging purposes
++#
++IPSECHOSTS="moon carol dave"
++
++# UML instances on which FreeRadius is started
++#
++RADIUSHOSTS="alice"
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/pretest.dat
+@@ -0,0 +1,15 @@
++moon::/etc/init.d/iptables start 2> /dev/null
++carol::/etc/init.d/iptables start 2> /dev/null
++dave::/etc/init.d/iptables start 2> /dev/null
++alice::ln -s /etc/raddb/sites-available/inner-tunnel-second /etc/raddb/sites-enabled/inner-tunnel-second
++alice::cat /etc/raddb/sites-enabled/inner-tunnel-second
++alice::/etc/init.d/radiusd start
++carol::cat /etc/tnc/dummyimc.file
++dave::cat /etc/tnc/dummyimc.file
++moon::ipsec start
++carol::ipsec start
++dave::ipsec start
++carol::sleep 1
++carol::ipsec up home
++dave::ipsec up home
++dave::sleep 1
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/dave/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++dave@strongswan.org : EAP "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/dave/etc/ipsec.conf
+@@ -0,0 +1,24 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_DAVE
++	leftid=dave@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsubnet=10.1.0.0/16
++	rightauth=pubkey
++	aaa_identity="C=CH, O=Linux strongSwan, CN=aaa.strongswan.org"
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/dave/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/dave/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/dave/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++none
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMV configuration file for TNC@FHH-TNC-Server
++
++IMV "Dummy" /usr/local/lib/libdummyimv.so.0.7.0
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/proxy.conf
+@@ -0,0 +1,5 @@
++realm strongswan.org {
++  type     = radius
++  authhost = LOCAL
++  accthost = LOCAL
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/dictionary.tnc
+@@ -0,0 +1,5 @@
++ATTRIBUTE	TNC-Status	3001	integer
++
++VALUE	TNC-Status	Access	0 
++VALUE	TNC-Status	Isolate	1
++VALUE	TNC-Status	None	2
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/dictionary
+@@ -0,0 +1,2 @@
++$INCLUDE	/usr/share/freeradius/dictionary
++$INCLUDE	/etc/raddb/dictionary.tnc
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/clients.conf
+@@ -0,0 +1,4 @@
++client PH_IP_MOON1 {
++  secret    = gv6URkSs 
++  shortname = moon
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/eap.conf
+@@ -0,0 +1,25 @@
++eap {
++  md5 {
++  }
++  default_eap_type = ttls
++  tls {
++    private_key_file = /etc/raddb/certs/aaaKey.pem
++    certificate_file = /etc/raddb/certs/aaaCert.pem
++    CA_file = /etc/raddb/certs/strongswanCert.pem
++    cipher_list = "DEFAULT"
++    dh_file = /etc/raddb/certs/dh
++    random_file = /etc/raddb/certs/random
++  }
++  ttls {
++    default_eap_type = md5
++    use_tunneled_reply = yes
++    virtual_server = "inner-tunnel"
++    tnc_virtual_server = "inner-tunnel-second"
++  }
++}
++
++eap eap_tnc {
++      default_eap_type = tnc
++      tnc {
++      }
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/radiusd.conf
+@@ -0,0 +1,120 @@
++# radiusd.conf	-- FreeRADIUS server configuration file.
++
++prefix = /usr
++exec_prefix = ${prefix}
++sysconfdir = /etc
++localstatedir = /var
++sbindir = ${exec_prefix}/sbin
++logdir = ${localstatedir}/log/radius
++raddbdir = ${sysconfdir}/raddb
++radacctdir = ${logdir}/radacct
++
++#  name of the running server.  See also the "-n" command-line option.
++name = radiusd
++
++#  Location of config and logfiles.
++confdir = ${raddbdir}
++run_dir = ${localstatedir}/run/radiusd
++
++# Should likely be ${localstatedir}/lib/radiusd
++db_dir = ${raddbdir}
++
++# libdir: Where to find the rlm_* modules.
++libdir = ${exec_prefix}/lib
++
++#  pidfile: Where to place the PID of the RADIUS server.
++pidfile = ${run_dir}/${name}.pid
++
++#  max_request_time: The maximum time (in seconds) to handle a request.
++max_request_time = 30
++
++#  cleanup_delay: The time to wait (in seconds) before cleaning up
++cleanup_delay = 5
++
++#  max_requests: The maximum number of requests which the server keeps
++max_requests = 1024
++
++#  listen: Make the server listen on a particular IP address, and send
++listen {
++  type = auth
++  ipaddr = PH_IP_ALICE 
++  port = 0
++}
++
++#  This second "listen" section is for listening on the accounting
++#  port, too.
++#
++listen {
++  type  = acct
++  ipaddr = PH_IP_ALICE 
++  port = 0
++}
++
++#  hostname_lookups: Log the names of clients or just their IP addresses
++hostname_lookups = no
++
++#  Core dumps are a bad thing.  This should only be set to 'yes'
++allow_core_dumps = no
++
++#  Regular expressions
++regular_expressions = yes
++extended_expressions = yes
++
++#  Logging section.  The various "log_*" configuration items
++log {
++  destination = files
++  file = ${logdir}/radius.log
++  syslog_facility = daemon
++  stripped_names = no
++  auth = yes 
++  auth_badpass = yes 
++  auth_goodpass = yes 
++}
++
++#  The program to execute to do concurrency checks.
++checkrad = ${sbindir}/checkrad
++
++#  Security considerations
++security {
++  max_attributes = 200
++  reject_delay = 1
++  status_server = yes
++}
++
++# PROXY CONFIGURATION
++proxy_requests = yes
++$INCLUDE proxy.conf
++
++# CLIENTS CONFIGURATION
++$INCLUDE clients.conf
++
++# THREAD POOL CONFIGURATION
++thread pool {
++  start_servers = 5
++  max_servers = 32
++  min_spare_servers = 3
++  max_spare_servers = 10
++  max_requests_per_server = 0
++}
++
++# MODULE CONFIGURATION
++modules {
++  $INCLUDE ${confdir}/modules/
++  $INCLUDE eap.conf
++  $INCLUDE sql.conf
++  $INCLUDE sql/mysql/counter.conf
++}
++
++# Instantiation
++instantiate {
++  exec
++  expr
++  expiration
++  logintime
++}
++
++# Policies
++$INCLUDE policy.conf
++
++# Include all enabled virtual hosts
++$INCLUDE sites-enabled/
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/users
+@@ -0,0 +1,2 @@
++carol	Cleartext-Password := "Ar3etTnp"
++dave	Cleartext-Password := "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/sites-available/default
+@@ -0,0 +1,44 @@
++authorize {
++  suffix
++  eap {
++    ok = return
++  }
++  files
++}
++
++authenticate {
++  eap
++}
++
++preacct {
++  preprocess
++  acct_unique
++  suffix
++  files
++}
++
++accounting {
++  detail
++  unix
++  radutmp
++  attr_filter.accounting_response
++}
++
++session {
++  radutmp
++}
++
++post-auth {
++  exec
++  Post-Auth-Type REJECT {
++    attr_filter.access_reject
++  }
++}
++
++pre-proxy {
++}
++
++post-proxy {
++  eap
++}
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/sites-available/inner-tunnel
+@@ -0,0 +1,32 @@
++server inner-tunnel {
++
++authorize {
++	suffix
++	eap {
++		ok = return
++	}
++	files
++}
++
++authenticate {
++	eap
++}
++
++session {
++	radutmp
++}
++
++post-auth {
++	Post-Auth-Type REJECT {
++		attr_filter.access_reject
++	}
++}
++
++pre-proxy {
++}
++
++post-proxy {
++	eap
++}
++
++} # inner-tunnel server block
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/alice/etc/raddb/sites-available/inner-tunnel-second
+@@ -0,0 +1,23 @@
++server inner-tunnel-second {
++
++authorize {
++	eap_tnc {
++		ok = return
++	}
++}
++
++authenticate {
++	eap_tnc
++}
++
++session {
++	radutmp
++}
++
++post-auth {
++	Post-Auth-Type REJECT {
++		attr_filter.access_reject
++	}
++}
++
++} # inner-tunnel-second block
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/moon/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++: RSA moonKey.pem
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/moon/etc/ipsec.conf
+@@ -0,0 +1,25 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	strictcrlpolicy=no
++	plutostart=no
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn rw-eap
++	left=PH_IP_MOON
++	leftsubnet=10.1.0.0/16
++	leftcert=moonCert.pem
++	leftid=@moon.strongswan.org
++	leftauth=pubkey
++	leftfirewall=yes
++	rightauth=eap-radius
++	rightid=*@strongswan.org
++	rightsendcert=never
++	right=%any
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/moon/etc/strongswan.conf
+@@ -0,0 +1,12 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-radius updown
++  multiple_authentication=no
++  plugins {
++    eap-radius {
++      secret = gv6URkSs 
++      server = PH_IP_ALICE
++    }
++  }
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/moon/etc/init.d/iptables
+@@ -0,0 +1,84 @@
++#!/sbin/runscript
++# Copyright 1999-2004 Gentoo Foundation
++# Distributed under the terms of the GNU General Public License v2
++
++opts="start stop reload"
++
++depend() {
++	before net
++	need logger
++}
++
++start() {
++	ebegin "Starting firewall"
++
++	# enable IP forwarding
++	echo 1 > /proc/sys/net/ipv4/ip_forward
++	
++	# default policy is DROP
++	/sbin/iptables -P INPUT DROP
++	/sbin/iptables -P OUTPUT DROP
++	/sbin/iptables -P FORWARD DROP
++
++	# allow esp
++	iptables -A INPUT  -i eth0 -p 50 -j ACCEPT
++	iptables -A OUTPUT -o eth0 -p 50 -j ACCEPT
++
++	# allow IKE
++	iptables -A INPUT  -i eth0 -p udp --sport 500 --dport 500 -j ACCEPT
++	iptables -A OUTPUT -o eth0 -p udp --dport 500 --sport 500 -j ACCEPT
++
++	# allow MobIKE
++	iptables -A INPUT  -i eth0 -p udp --sport 4500 --dport 4500 -j ACCEPT
++	iptables -A OUTPUT -o eth0 -p udp --dport 4500 --sport 4500 -j ACCEPT
++
++	# allow crl fetch from winnetou
++	iptables -A INPUT  -i eth0 -p tcp --sport 80 -s PH_IP_WINNETOU -j ACCEPT
++	iptables -A OUTPUT -o eth0 -p tcp --dport 80 -d PH_IP_WINNETOU -j ACCEPT
++
++	# allow RADIUS protocol with alice
++	iptables -A INPUT  -i eth1 -p udp --sport 1812 -s PH_IP_ALICE -j ACCEPT
++	iptables -A OUTPUT -o eth1 -p udp --dport 1812 -d PH_IP_ALICE -j ACCEPT
++
++	# allow ssh
++	iptables -A INPUT  -p tcp --dport 22 -j ACCEPT
++	iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT
++
++	eend $?
++}
++
++stop() {
++	ebegin "Stopping firewall"
++		for a in `cat /proc/net/ip_tables_names`; do
++			/sbin/iptables -F -t $a
++			/sbin/iptables -X -t $a
++	
++			if [ $a == nat ]; then
++				/sbin/iptables -t nat -P PREROUTING ACCEPT
++				/sbin/iptables -t nat -P POSTROUTING ACCEPT
++				/sbin/iptables -t nat -P OUTPUT ACCEPT
++			elif [ $a == mangle ]; then
++				/sbin/iptables -t mangle -P PREROUTING ACCEPT
++				/sbin/iptables -t mangle -P INPUT ACCEPT
++				/sbin/iptables -t mangle -P FORWARD ACCEPT
++				/sbin/iptables -t mangle -P OUTPUT ACCEPT
++				/sbin/iptables -t mangle -P POSTROUTING ACCEPT
++			elif [ $a == filter ]; then
++				/sbin/iptables -t filter -P INPUT ACCEPT
++				/sbin/iptables -t filter -P FORWARD ACCEPT
++				/sbin/iptables -t filter -P OUTPUT ACCEPT
++			fi
++		done
++	eend $?
++}
++
++reload() {
++	ebegin "Flushing firewall"
++		for a in `cat /proc/net/ip_tables_names`; do
++			/sbin/iptables -F -t $a
++			/sbin/iptables -X -t $a
++		done;
++        eend $?
++	start
++}
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/carol/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++carol@strongswan.org : EAP "Ar3etTnp"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/carol/etc/ipsec.conf
+@@ -0,0 +1,24 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_CAROL
++	leftid=carol@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsubnet=10.1.0.0/16
++	rightauth=pubkey
++	aaa_identity="C=CH, O=Linux strongSwan, CN=aaa.strongswan.org"
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/carol/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/carol/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius-block/hosts/carol/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++allow
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/description.txt
+@@ -0,0 +1,8 @@
++The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>
++using EAP-TTLS authentication only with the gateway presenting a server certificate and
++the clients doing EAP-MD5 password-based authentication.
++In a next step the EAP-TNC protocol is used within the EAP-TTLS tunnel to determine the
++health of <b>carol</b> and <b>dave</b> via the <b>IF-TNCCS 1.1</b> client-server interface.
++<b>carol</b> passes the health test and <b>dave</b> fails. Based on these measurements
++<b>carol</b> is authenticated successfully and is granted access to the subnet behind
++<b>moon</b> whereas <b>dave</b> fails the layered EAP authentication and is rejected. 
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/posttest.dat
+@@ -0,0 +1,6 @@
++moon::ipsec stop
++carol::ipsec stop
++dave::ipsec stop
++moon::/etc/init.d/iptables stop 2> /dev/null
++carol::/etc/init.d/iptables stop 2> /dev/null
++dave::/etc/init.d/iptables stop 2> /dev/null
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/evaltest.dat
+@@ -0,0 +1,12 @@
++carol::cat /var/log/daemon.log::TNCCS-Recommendation.*allow::YES
++carol::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established::YES
++carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
++carol::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.100/32 === 10.1.0.0/16::YES
++dave::cat /var/log/daemon.log::TNCCS-Recommendation.*none::YES
++dave::cat /var/log/daemon.log::received EAP_FAILURE, EAP authentication failed::YES
++dave::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.0/16::NO
++moon::cat /var/log/daemon.log::added group membership 'allow'::YES
++moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES 
++moon::cat /var/log/daemon.log::EAP method EAP_TTLS failed for peer dave@strongswan.org::YES
++carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
++dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_VENUS: icmp_seq=1::NO
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/test.conf
+@@ -0,0 +1,26 @@
++#!/bin/bash
++#
++# This configuration file provides information on the
++# UML instances used for this test
++
++# All UML instances that are required for this test
++#
++UMLHOSTS="alice venus moon carol winnetou dave"
++
++# Corresponding block diagram
++#
++DIAGRAM="a-v-m-c-w-d.png"
++
++# UML instances on which tcpdump is to be started
++#
++TCPDUMPHOSTS="moon"
++
++# UML instances on which IPsec is started
++# Used for IPsec logging purposes
++#
++IPSECHOSTS="moon carol dave"
++
++# UML instances on which FreeRadius is started
++#
++RADIUSHOSTS=
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/pretest.dat
+@@ -0,0 +1,15 @@
++moon::/etc/init.d/iptables start 2> /dev/null
++carol::/etc/init.d/iptables start 2> /dev/null
++dave::/etc/init.d/iptables start 2> /dev/null
++moon::cat /etc/tnc_config
++carol::cat /etc/tnc_config
++dave::cat /etc/tnc_config
++carol::cat /etc/tnc/dummyimc.file
++dave::cat /etc/tnc/dummyimc.file
++moon::ipsec start
++carol::ipsec start
++dave::ipsec start
++carol::sleep 1
++carol::ipsec up home
++dave::ipsec up home
++dave::sleep 1
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/dave/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++dave@strongswan.org : EAP "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/dave/etc/ipsec.conf
+@@ -0,0 +1,23 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_DAVE
++	leftid=dave@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsendcert=never
++	rightsubnet=10.1.0.0/16
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/dave/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/dave/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/dave/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++none
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/moon/etc/ipsec.secrets
+@@ -0,0 +1,6 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++: RSA moonKey.pem
++
++carol@strongswan.org : EAP "Ar3etTnp"
++dave@strongswan.org  : EAP "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/moon/etc/ipsec.conf
+@@ -0,0 +1,26 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	strictcrlpolicy=no
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn rw-eap
++	left=PH_IP_MOON
++	leftsubnet=10.1.0.0/16
++	leftcert=moonCert.pem
++	leftid=@moon.strongswan.org
++	leftauth=eap-ttls
++	leftfirewall=yes
++	rightauth=eap-ttls
++	rightid=*@strongswan.org
++	rightsendcert=never
++	right=%any
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/moon/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMV configuration file for strongSwan server 
++
++IMV "Dummy" /usr/local/lib/libdummyimv.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/moon/etc/strongswan.conf
+@@ -0,0 +1,13 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-ttls eap-md5 eap-tnc tnccs-11 tnc-imv updown
++  multiple_authentication=no
++  plugins {
++    eap-ttls {
++      phase2_method = md5
++      phase2_piggyback = yes
++      phase2_tnc = yes
++    }
++  }
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/carol/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++carol@strongswan.org : EAP "Ar3etTnp"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/carol/etc/ipsec.conf
+@@ -0,0 +1,23 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_CAROL
++	leftid=carol@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsendcert=never
++	rightsubnet=10.1.0.0/16
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/carol/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/carol/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-block/hosts/carol/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++allow
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/description.txt
+@@ -0,0 +1,7 @@
++The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>,
++bothe ends doing certificate-based EAP-TLS authentication only.
++In a next step the EAP-TNC protocol is used within the EAP-TTLS tunnel to determine the
++health of <b>carol</b> and <b>dave</b> via the <b>IF-TNCCS 1.1</b> client-server interface.
++<b>carol</b> passes the health test and <b>dave</b> fails. Based on these measurements the
++clients are connected by gateway <b>moon</b> to the "rw-allow" and "rw-isolate" subnets,
++respectively.
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/posttest.dat
+@@ -0,0 +1,6 @@
++moon::ipsec stop
++carol::ipsec stop
++dave::ipsec stop
++moon::/etc/init.d/iptables stop 2> /dev/null
++carol::/etc/init.d/iptables stop 2> /dev/null
++dave::/etc/init.d/iptables stop 2> /dev/null
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/evaltest.dat
+@@ -0,0 +1,19 @@
++carol::cat /var/log/daemon.log::TNCCS-Recommendation.*allow::YES
++carol::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established ::YES
++carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
++carol::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.100/32 === 10.1.0.0/28::YES
++dave::cat /var/log/daemon.log::TNCCS-Recommendation.*isolate::YES
++dave::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established ::YES
++dave::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
++dave::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.16/28::YES
++moon::cat /var/log/daemon.log::added group membership 'allow'::YES
++moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES              
++moon::cat /var/log/daemon.log::added group membership 'isolate'::YES
++moon::cat /var/log/daemon.log::authentication of 'dave@strongswan.org' with EAP successful::YES
++moon::ipsec statusall::rw-allow.*10.1.0.0/28 === 192.168.0.100/32::YES
++moon::ipsec statusall::rw-isolate.*10.1.0.16/28 === 192.168.0.200/32::YES
++carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
++carol::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_ALICE: icmp_seq=1::NO
++dave::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_VENUS: icmp_seq=1::YES
++dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_VENUS: icmp_seq=1::NO
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/test.conf
+@@ -0,0 +1,26 @@
++#!/bin/bash
++#
++# This configuration file provides information on the
++# UML instances used for this test
++
++# All UML instances that are required for this test
++#
++UMLHOSTS="alice venus moon carol winnetou dave"
++
++# Corresponding block diagram
++#
++DIAGRAM="a-v-m-c-w-d.png"
++
++# UML instances on which tcpdump is to be started
++#
++TCPDUMPHOSTS="moon"
++
++# UML instances on which IPsec is started
++# Used for IPsec logging purposes
++#
++IPSECHOSTS="moon carol dave"
++
++# UML instances on which FreeRadius is started
++#
++RADIUSHOSTS=
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/pretest.dat
+@@ -0,0 +1,15 @@
++moon::/etc/init.d/iptables start 2> /dev/null
++carol::/etc/init.d/iptables start 2> /dev/null
++dave::/etc/init.d/iptables start 2> /dev/null
++moon::cat /etc/tnc_config
++carol::cat /etc/tnc_config
++dave::cat /etc/tnc_config
++carol::cat /etc/tnc/dummyimc.file
++dave::cat /etc/tnc/dummyimc.file
++moon::ipsec start
++carol::ipsec start
++dave::ipsec start
++carol::sleep 1
++carol::ipsec up home
++dave::ipsec up home
++dave::sleep 1
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/dave/etc/ipsec.conf
+@@ -0,0 +1,24 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_DAVE
++	leftcert=daveCert.pem
++	leftid=dave@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsendcert=never
++	rightsubnet=10.1.0.0/16
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/dave/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/dave/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/dave/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++isolate
+\ No newline at end of file
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/moon/etc/ipsec.secrets
+@@ -0,0 +1,6 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++: RSA moonKey.pem
++
++carol@strongswan.org : EAP "Ar3etTnp"
++dave@strongswan.org  : EAP "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/moon/etc/ipsec.conf
+@@ -0,0 +1,36 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	strictcrlpolicy=no
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn rw-allow
++	rightgroups=allow
++	leftsubnet=10.1.0.0/28
++	also=rw-eap
++	auto=add
++
++conn rw-isolate
++	rightgroups=isolate
++	leftsubnet=10.1.0.16/28
++	also=rw-eap
++	auto=add
++
++conn rw-eap
++	left=PH_IP_MOON
++	leftcert=moonCert.pem
++	leftid=@moon.strongswan.org
++	leftauth=eap-ttls
++	leftfirewall=yes
++	rightauth=eap-ttls
++	rightid=*@strongswan.org
++	rightsendcert=never
++	right=%any
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/moon/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMV configuration file for strongSwan server 
++
++IMV "Dummy" /usr/local/lib/libdummyimv.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/moon/etc/strongswan.conf
+@@ -0,0 +1,13 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-ttls eap-md5 eap-tnc tnccs-11 tnc-imv updown
++  multiple_authentication=no
++  plugins {
++    eap-ttls {
++      request_peer_auth = yes
++      phase2_piggyback = yes
++      phase2_tnc = yes
++    }
++  }
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/carol/etc/ipsec.conf
+@@ -0,0 +1,24 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_CAROL
++	leftcert=carolCert.pem
++	leftid=carol@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsendcert=never
++	rightsubnet=10.1.0.0/16
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/carol/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/carol/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-tls/hosts/carol/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++allow
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/description.txt
+@@ -0,0 +1,10 @@
++The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>.
++At the outset the gateway authenticates itself to the clients by sending an IKEv2
++<b>RSA signature</b> accompanied by a certificate.
++<b>carol</b> and <b>dave</b> then set up an <b>EAP-TTLS</b> tunnel each via <b>moon</b> to
++the FreeRADIUS server <b>alice</b> authenticated by an X.509 AAA certificate.
++The strong EAP-TTLS tunnel protects the ensuing weak client authentication based on <b>EAP-MD5</b>.
++In a next step the EAP-TNC protocol is used within the EAP-TTLS tunnel to determine the
++health of <b>carol</b> and <b>dave</b> via the <b>IF-TNCCS 1.1</b> client-server interface.
++<b>carol</b> passes the health test and <b>dave</b> fails. Based on these measurements the
++clients are connected by gateway <b>moon</b> to the "rw-allow" and "rw-isolate" subnets, respectively.
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/posttest.dat
+@@ -0,0 +1,8 @@
++moon::ipsec stop
++carol::ipsec stop
++dave::ipsec stop
++alice::/etc/init.d/radiusd stop
++alice::rm /etc/raddb/sites-enabled/inner-tunnel-second
++moon::/etc/init.d/iptables stop 2> /dev/null
++carol::/etc/init.d/iptables stop 2> /dev/null
++dave::/etc/init.d/iptables stop 2> /dev/null
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/evaltest.dat
+@@ -0,0 +1,19 @@
++carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
++carol::cat /var/log/daemon.log::TNCCS-Recommendation.*allow::YES
++carol::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established ::YES
++carol::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.100/32 === 10.1.0.0/28::YES
++dave::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with RSA signature successful::YES
++dave::cat /var/log/daemon.log::TNCCS-Recommendation.*isolate::YES
++dave::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established ::YES
++dave::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.16/28::YES
++moon::cat /var/log/daemon.log::received RADIUS attribute Filter-Id: 'allow'::YES
++moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES            
++moon::cat /var/log/daemon.log::received RADIUS attribute Filter-Id: 'isolate'::YES
++moon::cat /var/log/daemon.log::authentication of 'dave@strongswan.org' with EAP successful::YES
++moon::ipsec statusall::rw-allow.*10.1.0.0/28 === 192.168.0.100/32::YES
++moon::ipsec statusall::rw-isolate.*10.1.0.16/28 === 192.168.0.200/32::YES
++carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
++carol::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_ALICE: icmp_seq=1::NO
++dave::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_VENUS: icmp_seq=1::YES
++dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_VENUS: icmp_seq=1::NO
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/test.conf
+@@ -0,0 +1,26 @@
++#!/bin/bash
++#
++# This configuration file provides information on the
++# UML instances used for this test
++
++# All UML instances that are required for this test
++#
++UMLHOSTS="alice venus moon carol winnetou dave"
++
++# Corresponding block diagram
++#
++DIAGRAM="a-v-m-c-w-d.png"
++
++# UML instances on which tcpdump is to be started
++#
++TCPDUMPHOSTS="moon"
++
++# UML instances on which IPsec is started
++# Used for IPsec logging purposes
++#
++IPSECHOSTS="moon carol dave"
++
++# UML instances on which FreeRadius is started
++#
++RADIUSHOSTS="alice"
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/pretest.dat
+@@ -0,0 +1,18 @@
++moon::/etc/init.d/iptables start 2> /dev/null
++carol::/etc/init.d/iptables start 2> /dev/null
++dave::/etc/init.d/iptables start 2> /dev/null
++alice::ln -s /etc/raddb/sites-available/inner-tunnel-second /etc/raddb/sites-enabled/inner-tunnel-second
++alice::cat /etc/raddb/sites-enabled/inner-tunnel-second
++alice::/etc/init.d/radiusd start
++alice::cat /etc/tnc_config
++carol::cat /etc/tnc_config
++dave::cat /etc/tnc_config
++carol::cat /etc/tnc/dummyimc.file
++dave::cat /etc/tnc/dummyimc.file
++moon::ipsec start
++carol::ipsec start
++dave::ipsec start
++carol::sleep 1
++carol::ipsec up home
++dave::ipsec up home
++dave::sleep 1
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/dave/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++dave@strongswan.org : EAP "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/dave/etc/ipsec.conf
+@@ -0,0 +1,24 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_DAVE
++	leftid=dave@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsubnet=10.1.0.0/16
++	rightauth=pubkey
++	aaa_identity="C=CH, O=Linux strongSwan, CN=aaa.strongswan.org"
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/dave/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/dave/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/dave/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++isolate
+\ No newline at end of file
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMV configuration file for TNC@FHH-TNC-Server
++
++IMV "Dummy" /usr/local/lib/libdummyimv.so.0.7.0
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/proxy.conf
+@@ -0,0 +1,5 @@
++realm strongswan.org {
++  type     = radius
++  authhost = LOCAL
++  accthost = LOCAL
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/dictionary.tnc
+@@ -0,0 +1,5 @@
++ATTRIBUTE	TNC-Status	3001	integer
++
++VALUE	TNC-Status	Access	0 
++VALUE	TNC-Status	Isolate	1
++VALUE	TNC-Status	None	2
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/dictionary
+@@ -0,0 +1,2 @@
++$INCLUDE	/usr/share/freeradius/dictionary
++$INCLUDE	/etc/raddb/dictionary.tnc
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/clients.conf
+@@ -0,0 +1,4 @@
++client PH_IP_MOON1 {
++  secret    = gv6URkSs 
++  shortname = moon
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/eap.conf
+@@ -0,0 +1,25 @@
++eap {
++  md5 {
++  }
++  default_eap_type = ttls
++  tls {
++    private_key_file = /etc/raddb/certs/aaaKey.pem
++    certificate_file = /etc/raddb/certs/aaaCert.pem
++    CA_file = /etc/raddb/certs/strongswanCert.pem
++    cipher_list = "DEFAULT"
++    dh_file = /etc/raddb/certs/dh
++    random_file = /etc/raddb/certs/random
++  }
++  ttls {
++    default_eap_type = md5
++    use_tunneled_reply = yes
++    virtual_server = "inner-tunnel"
++    tnc_virtual_server = "inner-tunnel-second"
++  }
++}
++
++eap eap_tnc {
++      default_eap_type = tnc
++      tnc {
++      }
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/radiusd.conf
+@@ -0,0 +1,120 @@
++# radiusd.conf	-- FreeRADIUS server configuration file.
++
++prefix = /usr
++exec_prefix = ${prefix}
++sysconfdir = /etc
++localstatedir = /var
++sbindir = ${exec_prefix}/sbin
++logdir = ${localstatedir}/log/radius
++raddbdir = ${sysconfdir}/raddb
++radacctdir = ${logdir}/radacct
++
++#  name of the running server.  See also the "-n" command-line option.
++name = radiusd
++
++#  Location of config and logfiles.
++confdir = ${raddbdir}
++run_dir = ${localstatedir}/run/radiusd
++
++# Should likely be ${localstatedir}/lib/radiusd
++db_dir = ${raddbdir}
++
++# libdir: Where to find the rlm_* modules.
++libdir = ${exec_prefix}/lib
++
++#  pidfile: Where to place the PID of the RADIUS server.
++pidfile = ${run_dir}/${name}.pid
++
++#  max_request_time: The maximum time (in seconds) to handle a request.
++max_request_time = 30
++
++#  cleanup_delay: The time to wait (in seconds) before cleaning up
++cleanup_delay = 5
++
++#  max_requests: The maximum number of requests which the server keeps
++max_requests = 1024
++
++#  listen: Make the server listen on a particular IP address, and send
++listen {
++  type = auth
++  ipaddr = PH_IP_ALICE 
++  port = 0
++}
++
++#  This second "listen" section is for listening on the accounting
++#  port, too.
++#
++listen {
++  type  = acct
++  ipaddr = PH_IP_ALICE 
++  port = 0
++}
++
++#  hostname_lookups: Log the names of clients or just their IP addresses
++hostname_lookups = no
++
++#  Core dumps are a bad thing.  This should only be set to 'yes'
++allow_core_dumps = no
++
++#  Regular expressions
++regular_expressions = yes
++extended_expressions = yes
++
++#  Logging section.  The various "log_*" configuration items
++log {
++  destination = files
++  file = ${logdir}/radius.log
++  syslog_facility = daemon
++  stripped_names = no
++  auth = yes 
++  auth_badpass = yes 
++  auth_goodpass = yes 
++}
++
++#  The program to execute to do concurrency checks.
++checkrad = ${sbindir}/checkrad
++
++#  Security considerations
++security {
++  max_attributes = 200
++  reject_delay = 1
++  status_server = yes
++}
++
++# PROXY CONFIGURATION
++proxy_requests = yes
++$INCLUDE proxy.conf
++
++# CLIENTS CONFIGURATION
++$INCLUDE clients.conf
++
++# THREAD POOL CONFIGURATION
++thread pool {
++  start_servers = 5
++  max_servers = 32
++  min_spare_servers = 3
++  max_spare_servers = 10
++  max_requests_per_server = 0
++}
++
++# MODULE CONFIGURATION
++modules {
++  $INCLUDE ${confdir}/modules/
++  $INCLUDE eap.conf
++  $INCLUDE sql.conf
++  $INCLUDE sql/mysql/counter.conf
++}
++
++# Instantiation
++instantiate {
++  exec
++  expr
++  expiration
++  logintime
++}
++
++# Policies
++$INCLUDE policy.conf
++
++# Include all enabled virtual hosts
++$INCLUDE sites-enabled/
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/users
+@@ -0,0 +1,2 @@
++carol	Cleartext-Password := "Ar3etTnp"
++dave	Cleartext-Password := "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/sites-available/default
+@@ -0,0 +1,44 @@
++authorize {
++  suffix
++  eap {
++    ok = return
++  }
++  files
++}
++
++authenticate {
++  eap
++}
++
++preacct {
++  preprocess
++  acct_unique
++  suffix
++  files
++}
++
++accounting {
++  detail
++  unix
++  radutmp
++  attr_filter.accounting_response
++}
++
++session {
++  radutmp
++}
++
++post-auth {
++  exec
++  Post-Auth-Type REJECT {
++    attr_filter.access_reject
++  }
++}
++
++pre-proxy {
++}
++
++post-proxy {
++  eap
++}
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/sites-available/inner-tunnel
+@@ -0,0 +1,32 @@
++server inner-tunnel {
++
++authorize {
++	suffix
++	eap {
++		ok = return
++	}
++	files
++}
++
++authenticate {
++	eap
++}
++
++session {
++	radutmp
++}
++
++post-auth {
++	Post-Auth-Type REJECT {
++		attr_filter.access_reject
++	}
++}
++
++pre-proxy {
++}
++
++post-proxy {
++	eap
++}
++
++} # inner-tunnel server block
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/alice/etc/raddb/sites-available/inner-tunnel-second
+@@ -0,0 +1,36 @@
++server inner-tunnel-second {
++
++authorize {
++	eap_tnc {
++		ok = return
++	}
++}
++
++authenticate {
++	eap_tnc
++}
++
++session {
++	radutmp
++}
++
++post-auth {
++	if (control:TNC-Status == "Access") {
++		update reply {
++			Tunnel-Type := ESP 
++			Filter-Id := "allow"
++		}
++	}
++	elsif (control:TNC-Status == "Isolate") {
++		update reply {
++			Tunnel-Type := ESP 
++			Filter-Id := "isolate"	
++		}
++	}
++
++	Post-Auth-Type REJECT {
++		attr_filter.access_reject
++	}
++}
++
++} # inner-tunnel-second block
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/moon/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++: RSA moonKey.pem
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/moon/etc/ipsec.conf
+@@ -0,0 +1,35 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	strictcrlpolicy=no
++	plutostart=no
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn rw-allow
++	rightgroups=allow
++	leftsubnet=10.1.0.0/28
++	also=rw-eap
++	auto=add
++
++conn rw-isolate
++	rightgroups=isolate
++	leftsubnet=10.1.0.16/28
++	also=rw-eap
++	auto=add
++
++conn rw-eap
++	left=PH_IP_MOON
++	leftcert=moonCert.pem
++	leftid=@moon.strongswan.org
++	leftauth=pubkey
++	leftfirewall=yes
++	rightauth=eap-radius
++	rightid=*@strongswan.org
++	rightsendcert=never
++	right=%any
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/moon/etc/strongswan.conf
+@@ -0,0 +1,13 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-radius updown
++  multiple_authentication=no
++  plugins {
++    eap-radius {
++      secret = gv6URkSs 
++      server = PH_IP_ALICE
++      filter_id = yes
++    }
++  }
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/moon/etc/init.d/iptables
+@@ -0,0 +1,84 @@
++#!/sbin/runscript
++# Copyright 1999-2004 Gentoo Foundation
++# Distributed under the terms of the GNU General Public License v2
++
++opts="start stop reload"
++
++depend() {
++	before net
++	need logger
++}
++
++start() {
++	ebegin "Starting firewall"
++
++	# enable IP forwarding
++	echo 1 > /proc/sys/net/ipv4/ip_forward
++	
++	# default policy is DROP
++	/sbin/iptables -P INPUT DROP
++	/sbin/iptables -P OUTPUT DROP
++	/sbin/iptables -P FORWARD DROP
++
++	# allow esp
++	iptables -A INPUT  -i eth0 -p 50 -j ACCEPT
++	iptables -A OUTPUT -o eth0 -p 50 -j ACCEPT
++
++	# allow IKE
++	iptables -A INPUT  -i eth0 -p udp --sport 500 --dport 500 -j ACCEPT
++	iptables -A OUTPUT -o eth0 -p udp --dport 500 --sport 500 -j ACCEPT
++
++	# allow MobIKE
++	iptables -A INPUT  -i eth0 -p udp --sport 4500 --dport 4500 -j ACCEPT
++	iptables -A OUTPUT -o eth0 -p udp --dport 4500 --sport 4500 -j ACCEPT
++
++	# allow crl fetch from winnetou
++	iptables -A INPUT  -i eth0 -p tcp --sport 80 -s PH_IP_WINNETOU -j ACCEPT
++	iptables -A OUTPUT -o eth0 -p tcp --dport 80 -d PH_IP_WINNETOU -j ACCEPT
++
++	# allow RADIUS protocol with alice
++	iptables -A INPUT  -i eth1 -p udp --sport 1812 -s PH_IP_ALICE -j ACCEPT
++	iptables -A OUTPUT -o eth1 -p udp --dport 1812 -d PH_IP_ALICE -j ACCEPT
++
++	# allow ssh
++	iptables -A INPUT  -p tcp --dport 22 -j ACCEPT
++	iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT
++
++	eend $?
++}
++
++stop() {
++	ebegin "Stopping firewall"
++		for a in `cat /proc/net/ip_tables_names`; do
++			/sbin/iptables -F -t $a
++			/sbin/iptables -X -t $a
++	
++			if [ $a == nat ]; then
++				/sbin/iptables -t nat -P PREROUTING ACCEPT
++				/sbin/iptables -t nat -P POSTROUTING ACCEPT
++				/sbin/iptables -t nat -P OUTPUT ACCEPT
++			elif [ $a == mangle ]; then
++				/sbin/iptables -t mangle -P PREROUTING ACCEPT
++				/sbin/iptables -t mangle -P INPUT ACCEPT
++				/sbin/iptables -t mangle -P FORWARD ACCEPT
++				/sbin/iptables -t mangle -P OUTPUT ACCEPT
++				/sbin/iptables -t mangle -P POSTROUTING ACCEPT
++			elif [ $a == filter ]; then
++				/sbin/iptables -t filter -P INPUT ACCEPT
++				/sbin/iptables -t filter -P FORWARD ACCEPT
++				/sbin/iptables -t filter -P OUTPUT ACCEPT
++			fi
++		done
++	eend $?
++}
++
++reload() {
++	ebegin "Flushing firewall"
++		for a in `cat /proc/net/ip_tables_names`; do
++			/sbin/iptables -F -t $a
++			/sbin/iptables -X -t $a
++		done;
++        eend $?
++	start
++}
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/carol/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++carol@strongswan.org : EAP "Ar3etTnp"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/carol/etc/ipsec.conf
+@@ -0,0 +1,24 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_CAROL
++	leftid=carol@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsubnet=10.1.0.0/16
++	rightauth=pubkey
++	aaa_identity="C=CH, O=Linux strongSwan, CN=aaa.strongswan.org"
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/carol/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/carol/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc-radius/hosts/carol/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++allow
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/description.txt
+@@ -0,0 +1,9 @@
++The roadwarriors <b>carol</b> and <b>dave</b> set up a connection each to gateway <b>moon</b>
++using EAP-TTLS authentication only with the gateway presenting a server certificate and
++the clients doing EAP-MD5 password-based authentication.
++In a next step the EAP-TNC protocol is used within the EAP-TTLS tunnel to determine the
++health of <b>carol</b> and <b>dave</b> via the <b>IF-TNCCS 1.1</b> client-server interface.
++<b>carol</b> passes the health test and <b>dave</b> fails. Based on these measurements the
++clients are connected by gateway <b>moon</b> to the "rw-allow" and "rw-isolate" subnets,
++respectively.
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/posttest.dat
+@@ -0,0 +1,6 @@
++moon::ipsec stop
++carol::ipsec stop
++dave::ipsec stop
++moon::/etc/init.d/iptables stop 2> /dev/null
++carol::/etc/init.d/iptables stop 2> /dev/null
++dave::/etc/init.d/iptables stop 2> /dev/null
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/evaltest.dat
+@@ -0,0 +1,19 @@
++carol::cat /var/log/daemon.log::TNCCS-Recommendation.*allow::YES
++carol::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established ::YES
++carol::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
++carol::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.100/32 === 10.1.0.0/28::YES
++dave::cat /var/log/daemon.log::TNCCS-Recommendation.*isolate::YES
++dave::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established ::YES
++dave::cat /var/log/daemon.log::authentication of 'moon.strongswan.org' with EAP successful::YES
++dave::cat /var/log/daemon.log::CHILD_SA home{1} established.*TS 192.168.0.200/32 === 10.1.0.16/28::YES
++moon::cat /var/log/daemon.log::added group membership 'allow'::YES
++moon::cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
++moon::cat /var/log/daemon.log::added group membership 'isolate'::YES
++moon::cat /var/log/daemon.log::authentication of 'dave@strongswan.org' with EAP successful::YES
++moon::ipsec statusall::rw-allow.*10.1.0.0/28 === 192.168.0.100/32::YES
++moon::ipsec statusall::rw-isolate.*10.1.0.16/28 === 192.168.0.200/32::YES
++carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
++carol::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_ALICE: icmp_seq=1::NO
++dave::ping -c 1 PH_IP_VENUS::64 bytes from PH_IP_VENUS: icmp_seq=1::YES
++dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_VENUS: icmp_seq=1::NO
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/test.conf
+@@ -0,0 +1,26 @@
++#!/bin/bash
++#
++# This configuration file provides information on the
++# UML instances used for this test
++
++# All UML instances that are required for this test
++#
++UMLHOSTS="alice venus moon carol winnetou dave"
++
++# Corresponding block diagram
++#
++DIAGRAM="a-v-m-c-w-d.png"
++
++# UML instances on which tcpdump is to be started
++#
++TCPDUMPHOSTS="moon"
++
++# UML instances on which IPsec is started
++# Used for IPsec logging purposes
++#
++IPSECHOSTS="moon carol dave"
++
++# UML instances on which FreeRadius is started
++#
++RADIUSHOSTS=
++
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/pretest.dat
+@@ -0,0 +1,15 @@
++moon::/etc/init.d/iptables start 2> /dev/null
++carol::/etc/init.d/iptables start 2> /dev/null
++dave::/etc/init.d/iptables start 2> /dev/null
++moon::cat /etc/tnc_config
++carol::cat /etc/tnc_config
++dave::cat /etc/tnc_config
++carol::cat /etc/tnc/dummyimc.file
++dave::cat /etc/tnc/dummyimc.file
++moon::ipsec start
++carol::ipsec start
++dave::ipsec start
++carol::sleep 1
++carol::ipsec up home
++dave::ipsec up home
++dave::sleep 1
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/dave/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++dave@strongswan.org : EAP "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/dave/etc/ipsec.conf
+@@ -0,0 +1,23 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_DAVE
++	leftid=dave@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsendcert=never
++	rightsubnet=10.1.0.0/16
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/dave/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/dave/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/dave/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++isolate
+\ No newline at end of file
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/moon/etc/ipsec.secrets
+@@ -0,0 +1,6 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++: RSA moonKey.pem
++
++carol@strongswan.org : EAP "Ar3etTnp"
++dave@strongswan.org  : EAP "W7R0g3do"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/moon/etc/ipsec.conf
+@@ -0,0 +1,36 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	strictcrlpolicy=no
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn rw-allow
++	rightgroups=allow
++	leftsubnet=10.1.0.0/28
++	also=rw-eap
++	auto=add
++
++conn rw-isolate
++	rightgroups=isolate
++	leftsubnet=10.1.0.16/28
++	also=rw-eap
++	auto=add
++
++conn rw-eap
++	left=PH_IP_MOON
++	leftcert=moonCert.pem
++	leftid=@moon.strongswan.org
++	leftauth=eap-ttls
++	leftfirewall=yes
++	rightauth=eap-ttls
++	rightid=*@strongswan.org
++	rightsendcert=never
++	right=%any
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/moon/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMV configuration file for strongSwan server 
++
++IMV "Dummy" /usr/local/lib/libdummyimv.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/moon/etc/strongswan.conf
+@@ -0,0 +1,13 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-ttls eap-md5 eap-tnc tnccs-11 tnc-imv updown
++  multiple_authentication=no
++  plugins {
++    eap-ttls {
++      phase2_method = md5
++      phase2_piggyback = yes
++      phase2_tnc = yes
++    }
++  }
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/carol/etc/ipsec.secrets
+@@ -0,0 +1,3 @@
++# /etc/ipsec.secrets - strongSwan IPsec secrets file
++
++carol@strongswan.org : EAP "Ar3etTnp"
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/carol/etc/ipsec.conf
+@@ -0,0 +1,23 @@
++# /etc/ipsec.conf - strongSwan IPsec configuration file
++
++config setup
++	plutostart=no
++	charondebug="tls 2, tnc 3"
++
++conn %default
++	ikelifetime=60m
++	keylife=20m
++	rekeymargin=3m
++	keyingtries=1
++	keyexchange=ikev2
++
++conn home
++	left=PH_IP_CAROL
++	leftid=carol@strongswan.org
++	leftauth=eap
++	leftfirewall=yes
++	right=PH_IP_MOON
++	rightid=@moon.strongswan.org
++	rightsendcert=never
++	rightsubnet=10.1.0.0/16
++	auto=add
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/carol/etc/tnc_config
+@@ -0,0 +1,3 @@
++#IMC configuration file for strongSwan client 
++
++IMC "Dummy" /usr/local/lib/libdummyimc.so
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/carol/etc/strongswan.conf
+@@ -0,0 +1,6 @@
++# /etc/strongswan.conf - strongSwan configuration file
++
++charon {
++  load = curl aes des sha1 sha2 md5 pem pkcs1 gmp random x509 revocation hmac xcbc stroke kernel-netlink socket-default eap-identity eap-md5 eap-ttls eap-tnc tnc-imc tnccs-11 updown
++  multiple_authentication=no
++}
+--- /dev/null
++++ strongswan-4.5.2/testing/tests/ikev2/rw-eap-tnc/hosts/carol/etc/tnc/dummyimc.file
+@@ -0,0 +1 @@
++allow

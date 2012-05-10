@@ -115,6 +115,7 @@ endif
 	chmod 600 $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
 	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
 	chmod 700 -R $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/private/
+	chmod 700 -R $(CURDIR)/debian/strongswan-starter/var/lib/strongswan/
 	# don't know why they come with +x set by default...
 	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/policies/*
 	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/examples/*
@@ -153,7 +154,6 @@ endif
 binary-common:
 	dh_testdir
 	dh_testroot
-	dh_installdirs
 	dh_installinit --name=ipsec
 	dh_installdebconf
 	dh_installchangelogs NEWS
@@ -161,7 +161,7 @@ binary-common:
 	dh_link
 	dh_strip --dbg-package=strongswan-dbg
 	dh_compress
-	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
+	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d -X var/lib/strongswan
 	dh_lintian
 	dh_makeshlibs
 	dh_installdeb
