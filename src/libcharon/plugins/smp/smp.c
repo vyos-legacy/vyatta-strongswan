@@ -702,15 +702,19 @@ static job_requeue_t dispatch(private_smp_t *this)
 	fdp = malloc_thing(int);
 	*fdp = fd;
 	job = callback_job_create((callback_job_cb_t)process, fdp, free, this->job);
-	charon->processor->queue_job(charon->processor, (job_t*)job);
+	lib->processor->queue_job(lib->processor, (job_t*)job);
 
 	return JOB_REQUEUE_DIRECT;
 }
 
-/**
- * Implementation of itnerface_t.destroy.
- */
-static void destroy(private_smp_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_smp_t *this)
+{
+	return "smp";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_smp_t *this)
 {
 	this->job->cancel(this->job);
 	close(this->socket);
@@ -723,10 +727,18 @@ static void destroy(private_smp_t *this)
 plugin_t *smp_plugin_create()
 {
 	struct sockaddr_un unix_addr = { AF_UNIX, IPSEC_PIDDIR "/charon.xml"};
-	private_smp_t *this = malloc_thing(private_smp_t);
+	private_smp_t *this;
 	mode_t old;
 
-	this->public.plugin.destroy = (void (*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -761,7 +773,7 @@ plugin_t *smp_plugin_create()
 	}
 
 	this->job = callback_job_create((callback_job_cb_t)dispatch, this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public.plugin;
 }

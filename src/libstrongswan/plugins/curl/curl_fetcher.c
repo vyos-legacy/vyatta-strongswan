@@ -43,31 +43,49 @@ struct private_curl_fetcher_t {
 	 * Optional HTTP headers
 	 */
 	struct curl_slist *headers;
+
+	/**
+	 * Callback function
+	 */
+	fetcher_callback_t cb;
 };
 
 /**
- * writes data into a dynamically resizeable chunk_t
+ * Data to pass to curl callback
  */
-static size_t append(void *ptr, size_t size, size_t nmemb, chunk_t *data)
+typedef struct {
+	fetcher_callback_t cb;
+	void *user;
+} cb_data_t;
+
+/**
+ * Curl callback function, invokes fetcher_callback_t function
+ */
+static size_t curl_cb(void *ptr, size_t size, size_t nmemb, cb_data_t *data)
 {
 	size_t realsize = size * nmemb;
 
-	data->ptr = (u_char*)realloc(data->ptr, data->len + realsize);
-	if (data->ptr)
+	if (data->cb(data->user, chunk_create(ptr, realsize)))
 	{
-		memcpy(&data->ptr[data->len], ptr, realsize);
-		data->len += realsize;
+		return realsize;
 	}
-	return realsize;
+	return 0;
 }
 
 METHOD(fetcher_t, fetch, status_t,
-	private_curl_fetcher_t *this, char *uri, chunk_t *result)
+	private_curl_fetcher_t *this, char *uri, void *userdata)
 {
 	char error[CURL_ERROR_SIZE];
 	status_t status;
+	cb_data_t data = {
+		.cb = this->cb,
+		.user = userdata,
+	};
 
-	*result = chunk_empty;
+	if (this->cb == fetcher_default_callback)
+	{
+		*(chunk_t*)userdata = chunk_empty;
+	}
 
 	if (curl_easy_setopt(this->curl, CURLOPT_URL, uri) != CURLE_OK)
 	{	/* URL type not supported by curl */
@@ -77,8 +95,8 @@ METHOD(fetcher_t, fetch, status_t,
 	curl_easy_setopt(this->curl, CURLOPT_FAILONERROR, TRUE);
 	curl_easy_setopt(this->curl, CURLOPT_NOSIGNAL, TRUE);
 	curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, DEFAULT_TIMEOUT);
-	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, (void*)append);
-	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, (void*)result);
+	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, (void*)curl_cb);
+	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, &data);
 	if (this->headers)
 	{
 		curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, this->headers);
@@ -104,6 +122,7 @@ METHOD(fetcher_t, fetch, status_t,
 METHOD(fetcher_t, set_option, bool,
 	private_curl_fetcher_t *this, fetcher_option_t option, ...)
 {
+	bool supported = TRUE;
 	va_list args;
 
 	va_start(args, option);
@@ -115,7 +134,7 @@ METHOD(fetcher_t, set_option, bool,
 
 			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDS, (char*)data.ptr);
 			curl_easy_setopt(this->curl, CURLOPT_POSTFIELDSIZE, data.len);
-			return TRUE;
+			break;
 		}
 		case FETCH_REQUEST_TYPE:
 		{
@@ -124,30 +143,38 @@ METHOD(fetcher_t, set_option, bool,
 
 			snprintf(header, BUF_LEN, "Content-Type: %s", request_type);
 			this->headers = curl_slist_append(this->headers, header);
-			return TRUE;
+			break;
 		}
 		case FETCH_REQUEST_HEADER:
 		{
 			char *header = va_arg(args, char*);
 
 			this->headers = curl_slist_append(this->headers, header);
-			return TRUE;
+			break;
 		}
 		case FETCH_HTTP_VERSION_1_0:
 		{
 			curl_easy_setopt(this->curl, CURLOPT_HTTP_VERSION,
 							 CURL_HTTP_VERSION_1_0);
-			return TRUE;
+			break;
 		}
 		case FETCH_TIMEOUT:
 		{
 			curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT,
 							 va_arg(args, u_int));
-			return TRUE;
+			break;
+		}
+		case FETCH_CALLBACK:
+		{
+			this->cb = va_arg(args, fetcher_callback_t);
+			break;
 		}
 		default:
-			return FALSE;
+			supported = FALSE;
+			break;
 	}
+	va_end(args);
+	return supported;
 }
 
 METHOD(fetcher_t, destroy, void,
@@ -166,12 +193,15 @@ curl_fetcher_t *curl_fetcher_create()
 	private_curl_fetcher_t *this;
 
 	INIT(this,
-		.public.interface = {
-			.fetch = _fetch,
-			.set_option = _set_option,
-			.destroy = _destroy,
+		.public = {
+			.interface = {
+				.fetch = _fetch,
+				.set_option = _set_option,
+				.destroy = _destroy,
+			},
 		},
 		.curl = curl_easy_init(),
+		.cb = fetcher_default_callback,
 	);
 
 	if (!this->curl)

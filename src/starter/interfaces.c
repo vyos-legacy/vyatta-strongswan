@@ -56,7 +56,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 	ssize_t msglen;
 	int fd;
 
-	bzero(&rtu, sizeof(rtu));
+	memset(&rtu, 0, sizeof(rtu));
 	rtu.m.nh.nlmsg_len = NLMSG_LENGTH(sizeof(rtu.m.rt));
 	rtu.m.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
 	rtu.m.nh.nlmsg_type = RTM_GETROUTE;
@@ -142,7 +142,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 				plog("could not open AF_INET socket");
 				break;
 			}
-			bzero(&req, sizeof(req));
+			memset(&req, 0, sizeof(req));
 			req.ifr_ifindex = iface_idx;
 			if (ioctl(fd, SIOCGIFNAME, &req) < 0 ||
 				ioctl(fd, SIOCGIFADDR, &req) < 0)
@@ -153,6 +153,7 @@ get_defaultroute(defaultroute_t *defaultroute)
 			}
 
 			strncpy(defaultroute->iface, req.ifr_name, IFNAMSIZ);
+			defaultroute->iface[IFNAMSIZ-1] = '\0';
 			defaultroute->addr.u.v4 = *((struct sockaddr_in *) &req.ifr_addr);
 			defaultroute->nexthop.u.v4.sin_family = AF_INET;
 

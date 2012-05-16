@@ -141,7 +141,7 @@ METHOD(listener_t, child_updown, bool,
 			 * callback, but from a different thread. we also delay it to avoid
 			 * a race condition during a regular shutdown */
 			job = callback_job_create(shutdown_callback, NULL, NULL, NULL);
-			charon->scheduler->schedule_job(charon->scheduler, (job_t*)job, 1);
+			lib->scheduler->schedule_job(lib->scheduler, (job_t*)job, 1);
 			return FALSE;
 		}
 	}
@@ -291,8 +291,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create("android", &lifetime, NULL, TRUE, MODE_TUNNEL,
-								 ACTION_NONE, ACTION_NONE, FALSE, 0, 0,
-								 NULL, NULL);
+								 ACTION_NONE, ACTION_NONE, ACTION_NONE, FALSE,
+								 0, 0, NULL, NULL, 0);
 	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
@@ -378,7 +378,7 @@ android_service_t *android_service_create(android_creds_t *creds)
 	charon->bus->add_listener(charon->bus, &this->public.listener);
 	this->job = callback_job_create((callback_job_cb_t)initiate, this,
 									NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

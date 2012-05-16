@@ -44,6 +44,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
 	$(top_srcdir)/m4/config/lt~obsolete.m4 \
 	$(top_srcdir)/m4/macros/with.m4 \
 	$(top_srcdir)/m4/macros/enable-disable.m4 \
+	$(top_srcdir)/m4/macros/add-plugin.m4 \
 	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -75,10 +76,11 @@ am__installdirs = "$(DESTDIR)$(plugindir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
 libstrongswan_test_vectors_la_LIBADD =
 am_libstrongswan_test_vectors_la_OBJECTS = test_vectors_plugin.lo \
-	3des_cbc.lo aes_cbc.lo aes_xcbc.lo blowfish.lo camellia_cbc.lo \
-	cast.lo des.lo idea.lo null.lo rc5.lo serpent_cbc.lo \
-	twofish_cbc.lo md2.lo md4.lo md5.lo md5_hmac.lo sha1.lo \
-	sha1_hmac.lo sha2.lo sha2_hmac.lo fips_prf.lo rng.lo
+	3des_cbc.lo aes_cbc.lo aes_ctr.lo aes_xcbc.lo aes_ccm.lo \
+	aes_gcm.lo blowfish.lo camellia_cbc.lo camellia_ctr.lo \
+	camellia_xcbc.lo cast.lo des.lo idea.lo null.lo rc5.lo \
+	serpent_cbc.lo twofish_cbc.lo md2.lo md4.lo md5.lo md5_hmac.lo \
+	sha1.lo sha1_hmac.lo sha2.lo sha2_hmac.lo fips_prf.lo rng.lo
 libstrongswan_test_vectors_la_OBJECTS =  \
 	$(am_libstrongswan_test_vectors_la_OBJECTS)
 libstrongswan_test_vectors_la_LINK = $(LIBTOOL) --tag=CC \
@@ -207,14 +209,17 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 builddir = @builddir@
+c_plugins = @c_plugins@
 datadir = @datadir@
 datarootdir = @datarootdir@
+dbusservicedir = @dbusservicedir@
 default_pkcs11 = @default_pkcs11@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 gtk_CFLAGS = @gtk_CFLAGS@
 gtk_LIBS = @gtk_LIBS@
+h_plugins = @h_plugins@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -225,29 +230,36 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
+libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
 libexecdir = @libexecdir@
-libhydra_plugins = @libhydra_plugins@
-libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 linuxdir = @linuxdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 lt_ECHO = @lt_ECHO@
+maemo_CFLAGS = @maemo_CFLAGS@
+maemo_LIBS = @maemo_LIBS@
+manager_plugins = @manager_plugins@
 mandir = @mandir@
+medsrv_plugins = @medsrv_plugins@
 mkdir_p = @mkdir_p@
 nm_CFLAGS = @nm_CFLAGS@
 nm_LIBS = @nm_LIBS@
 nm_ca_dir = @nm_ca_dir@
 oldincludedir = @oldincludedir@
+openac_plugins = @openac_plugins@
+p_plugins = @p_plugins@
+pcsclite_CFLAGS = @pcsclite_CFLAGS@
+pcsclite_LIBS = @pcsclite_LIBS@
 pdfdir = @pdfdir@
 piddir = @piddir@
+pki_plugins = @pki_plugins@
 plugindir = @plugindir@
 pluto_plugins = @pluto_plugins@
+pool_plugins = @pool_plugins@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -255,12 +267,18 @@ random_device = @random_device@
 resolv_conf = @resolv_conf@
 routing_table = @routing_table@
 routing_table_prio = @routing_table_prio@
+s_plugins = @s_plugins@
 sbindir = @sbindir@
+scepclient_plugins = @scepclient_plugins@
+scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
 simreader = @simreader@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
+systemdsystemunitdir = @systemdsystemunitdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
@@ -276,9 +294,14 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors_plugin.h test_vectors_plugin.c test_vectors.h \
 	test_vectors/3des_cbc.c \
 	test_vectors/aes_cbc.c \
+	test_vectors/aes_ctr.c \
 	test_vectors/aes_xcbc.c \
+	test_vectors/aes_ccm.c \
+	test_vectors/aes_gcm.c \
 	test_vectors/blowfish.c \
 	test_vectors/camellia_cbc.c \
+	test_vectors/camellia_ctr.c \
+	test_vectors/camellia_xcbc.c \
 	test_vectors/cast.c \
 	test_vectors/des.c \
 	test_vectors/idea.c \
@@ -383,9 +406,14 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/3des_cbc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aes_cbc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aes_ccm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aes_ctr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aes_gcm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aes_xcbc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/blowfish.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/camellia_cbc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/camellia_ctr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/camellia_xcbc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cast.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/des.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips_prf.Plo@am__quote@
@@ -440,12 +468,33 @@ aes_cbc.lo: test_vectors/aes_cbc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o aes_cbc.lo `test -f 'test_vectors/aes_cbc.c' || echo '$(srcdir)/'`test_vectors/aes_cbc.c
 
+aes_ctr.lo: test_vectors/aes_ctr.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT aes_ctr.lo -MD -MP -MF $(DEPDIR)/aes_ctr.Tpo -c -o aes_ctr.lo `test -f 'test_vectors/aes_ctr.c' || echo '$(srcdir)/'`test_vectors/aes_ctr.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/aes_ctr.Tpo $(DEPDIR)/aes_ctr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_vectors/aes_ctr.c' object='aes_ctr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o aes_ctr.lo `test -f 'test_vectors/aes_ctr.c' || echo '$(srcdir)/'`test_vectors/aes_ctr.c
+
 aes_xcbc.lo: test_vectors/aes_xcbc.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT aes_xcbc.lo -MD -MP -MF $(DEPDIR)/aes_xcbc.Tpo -c -o aes_xcbc.lo `test -f 'test_vectors/aes_xcbc.c' || echo '$(srcdir)/'`test_vectors/aes_xcbc.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/aes_xcbc.Tpo $(DEPDIR)/aes_xcbc.Plo
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_vectors/aes_xcbc.c' object='aes_xcbc.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o aes_xcbc.lo `test -f 'test_vectors/aes_xcbc.c' || echo '$(srcdir)/'`test_vectors/aes_xcbc.c
+
+aes_ccm.lo: test_vectors/aes_ccm.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT aes_ccm.lo -MD -MP -MF $(DEPDIR)/aes_ccm.Tpo -c -o aes_ccm.lo `test -f 'test_vectors/aes_ccm.c' || echo '$(srcdir)/'`test_vectors/aes_ccm.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/aes_ccm.Tpo $(DEPDIR)/aes_ccm.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_vectors/aes_ccm.c' object='aes_ccm.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o aes_ccm.lo `test -f 'test_vectors/aes_ccm.c' || echo '$(srcdir)/'`test_vectors/aes_ccm.c
+
+aes_gcm.lo: test_vectors/aes_gcm.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT aes_gcm.lo -MD -MP -MF $(DEPDIR)/aes_gcm.Tpo -c -o aes_gcm.lo `test -f 'test_vectors/aes_gcm.c' || echo '$(srcdir)/'`test_vectors/aes_gcm.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/aes_gcm.Tpo $(DEPDIR)/aes_gcm.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_vectors/aes_gcm.c' object='aes_gcm.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o aes_gcm.lo `test -f 'test_vectors/aes_gcm.c' || echo '$(srcdir)/'`test_vectors/aes_gcm.c
 
 blowfish.lo: test_vectors/blowfish.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT blowfish.lo -MD -MP -MF $(DEPDIR)/blowfish.Tpo -c -o blowfish.lo `test -f 'test_vectors/blowfish.c' || echo '$(srcdir)/'`test_vectors/blowfish.c
@@ -460,6 +509,20 @@ camellia_cbc.lo: test_vectors/camellia_cbc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_vectors/camellia_cbc.c' object='camellia_cbc.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o camellia_cbc.lo `test -f 'test_vectors/camellia_cbc.c' || echo '$(srcdir)/'`test_vectors/camellia_cbc.c
+
+camellia_ctr.lo: test_vectors/camellia_ctr.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT camellia_ctr.lo -MD -MP -MF $(DEPDIR)/camellia_ctr.Tpo -c -o camellia_ctr.lo `test -f 'test_vectors/camellia_ctr.c' || echo '$(srcdir)/'`test_vectors/camellia_ctr.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/camellia_ctr.Tpo $(DEPDIR)/camellia_ctr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_vectors/camellia_ctr.c' object='camellia_ctr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o camellia_ctr.lo `test -f 'test_vectors/camellia_ctr.c' || echo '$(srcdir)/'`test_vectors/camellia_ctr.c
+
+camellia_xcbc.lo: test_vectors/camellia_xcbc.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT camellia_xcbc.lo -MD -MP -MF $(DEPDIR)/camellia_xcbc.Tpo -c -o camellia_xcbc.lo `test -f 'test_vectors/camellia_xcbc.c' || echo '$(srcdir)/'`test_vectors/camellia_xcbc.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/camellia_xcbc.Tpo $(DEPDIR)/camellia_xcbc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='test_vectors/camellia_xcbc.c' object='camellia_xcbc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o camellia_xcbc.lo `test -f 'test_vectors/camellia_xcbc.c' || echo '$(srcdir)/'`test_vectors/camellia_xcbc.c
 
 cast.lo: test_vectors/cast.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT cast.lo -MD -MP -MF $(DEPDIR)/cast.Tpo -c -o cast.lo `test -f 'test_vectors/cast.c' || echo '$(srcdir)/'`test_vectors/cast.c

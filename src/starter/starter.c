@@ -717,7 +717,7 @@ int main (int argc, char **argv)
 
 					if (conn->startup == STARTUP_START)
 					{
-						if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
+						if (conn->keyexchange != KEY_EXCHANGE_IKEV1)
 						{
 							if (starter_charon_pid())
 							{
@@ -734,7 +734,7 @@ int main (int argc, char **argv)
 					}
 					else if (conn->startup == STARTUP_ROUTE)
 					{
-						if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
+						if (conn->keyexchange != KEY_EXCHANGE_IKEV1)
 						{
 							if (starter_charon_pid())
 							{

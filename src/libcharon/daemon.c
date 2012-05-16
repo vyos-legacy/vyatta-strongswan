@@ -19,24 +19,22 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <time.h>
-#include <errno.h>
 
 #ifdef CAPABILITIES
-#ifdef HAVE_SYS_CAPABILITY_H
-#include <sys/capability.h>
-#endif /* HAVE_SYS_CAPABILITY_H */
+# ifdef HAVE_SYS_CAPABILITY_H
+#  include <sys/capability.h>
+# elif defined(CAPABILITIES_NATIVE)
+#  include <linux/capability.h>
+# endif /* CAPABILITIES_NATIVE */
 #endif /* CAPABILITIES */
 
 #include "daemon.h"
 
 #include <library.h>
 #include <config/proposal.h>
-
-#ifndef LOG_AUTHPRIV /* not defined on OpenSolaris */
-#define LOG_AUTHPRIV LOG_AUTH
-#endif
+#include <kernel/kernel_handler.h>
+#include <processing/jobs/start_action_job.h>
 
 typedef struct private_daemon_t private_daemon_t;
 
@@ -50,13 +48,18 @@ struct private_daemon_t {
 	daemon_t public;
 
 	/**
+	 * Handler for kernel events
+	 */
+	kernel_handler_t *kernel_handler;
+
+	/**
 	 * capabilities to keep
 	 */
 #ifdef CAPABILITIES_LIBCAP
 	cap_t caps;
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
-	struct __user_cap_data_struct caps;
+	struct __user_cap_data_struct caps[2];
 #endif /* CAPABILITIES_NATIVE */
 
 };
@@ -94,10 +97,8 @@ static void dbg_bus(debug_t group, level_t level, char *fmt, ...)
 static void destroy(private_daemon_t *this)
 {
 	/* terminate all idle threads */
-	if (this->public.processor)
-	{
-		this->public.processor->set_threads(this->public.processor, 0);
-	}
+	lib->processor->set_threads(lib->processor, 0);
+
 	/* close all IKE_SAs */
 	if (this->public.ike_sa_manager)
 	{
@@ -110,21 +111,19 @@ static void destroy(private_daemon_t *this)
 #ifdef CAPABILITIES_LIBCAP
 	cap_free(this->caps);
 #endif /* CAPABILITIES_LIBCAP */
+	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.ike_sa_manager);
-	DESTROY_IF(this->public.kernel_interface);
-	DESTROY_IF(this->public.scheduler);
 	DESTROY_IF(this->public.controller);
 	DESTROY_IF(this->public.eap);
 	DESTROY_IF(this->public.sim);
+	DESTROY_IF(this->public.tnccs);
 #ifdef ME
 	DESTROY_IF(this->public.connect_manager);
 	DESTROY_IF(this->public.mediation_manager);
 #endif /* ME */
 	DESTROY_IF(this->public.backends);
 	DESTROY_IF(this->public.socket);
-	/* wait until all threads are gone */
-	DESTROY_IF(this->public.processor);
 
 	/* rehook library logging, shutdown logging */
 	dbg = dbg_old;
@@ -145,9 +144,16 @@ METHOD(daemon_t, keep_cap, void,
 	cap_set_flag(this->caps, CAP_PERMITTED, 1, &cap, CAP_SET);
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
-	this->caps.effective |= 1 << cap;
-	this->caps.permitted |= 1 << cap;
-	this->caps.inheritable |= 1 << cap;
+	int i = 0;
+
+	if (cap >= 32)
+	{
+		i++;
+		cap -= 32;
+	}
+	this->caps[i].effective |= 1 << cap;
+	this->caps[i].permitted |= 1 << cap;
+	this->caps[i].inheritable |= 1 << cap;
 #endif /* CAPABILITIES_NATIVE */
 }
 
@@ -162,9 +168,17 @@ METHOD(daemon_t, drop_capabilities, bool,
 #endif /* CAPABILITIES_LIBCAP */
 #ifdef CAPABILITIES_NATIVE
 	struct __user_cap_header_struct header = {
+#if defined(_LINUX_CAPABILITY_VERSION_3)
+		.version = _LINUX_CAPABILITY_VERSION_3,
+#elif defined(_LINUX_CAPABILITY_VERSION_2)
+		.version = _LINUX_CAPABILITY_VERSION_2,
+#elif defined(_LINUX_CAPABILITY_VERSION_1)
+		.version = _LINUX_CAPABILITY_VERSION_1,
+#else
 		.version = _LINUX_CAPABILITY_VERSION,
+#endif
 	};
-	if (capset(&header, &this->caps) != 0)
+	if (capset(&header, this->caps) != 0)
 	{
 		return FALSE;
 	}
@@ -176,7 +190,7 @@ METHOD(daemon_t, start, void,
 	   private_daemon_t *this)
 {
 	/* start the engine, go multithreaded */
-	charon->processor->set_threads(charon->processor,
+	lib->processor->set_threads(lib->processor,
 						lib->settings->get_int(lib->settings, "charon.threads",
 											   DEFAULT_THREADS));
 }
@@ -186,164 +200,25 @@ METHOD(daemon_t, start, void,
  */
 static void print_plugins()
 {
-	char buf[512], *plugin;
+	char buf[512];
 	int len = 0;
 	enumerator_t *enumerator;
+	plugin_t *plugin;
 
 	buf[0] = '\0';
 	enumerator = lib->plugins->create_plugin_enumerator(lib->plugins);
 	while (len < sizeof(buf) && enumerator->enumerate(enumerator, &plugin))
 	{
-		len += snprintf(&buf[len], sizeof(buf)-len, "%s ", plugin);
+		len += snprintf(&buf[len], sizeof(buf)-len, "%s ",
+						plugin->get_name(plugin));
 	}
 	enumerator->destroy(enumerator);
 	DBG1(DBG_DMN, "loaded plugins: %s", buf);
 }
 
-/**
- * Initialize logging
- */
-static void initialize_loggers(private_daemon_t *this, bool use_stderr,
-							   level_t levels[])
-{
-	sys_logger_t *sys_logger;
-	file_logger_t *file_logger;
-	enumerator_t *enumerator;
-	char *facility, *filename;
-	int loggers_defined = 0;
-	debug_t group;
-	level_t  def;
-	bool append;
-	FILE *file;
-
-	/* setup sysloggers */
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
-														  "charon.syslog");
-	while (enumerator->enumerate(enumerator, &facility))
-	{
-		loggers_defined++;
-		if (streq(facility, "daemon"))
-		{
-			sys_logger = sys_logger_create(LOG_DAEMON);
-		}
-		else if (streq(facility, "auth"))
-		{
-			sys_logger = sys_logger_create(LOG_AUTHPRIV);
-		}
-		else
-		{
-			continue;
-		}
-		def = lib->settings->get_int(lib->settings,
-									 "charon.syslog.%s.default", 1, facility);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group,
-				lib->settings->get_int(lib->settings,
-									   "charon.syslog.%s.%N", def,
-									   facility, debug_lower_names, group));
-		}
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-	}
-	enumerator->destroy(enumerator);
-
-	/* and file loggers */
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
-														  "charon.filelog");
-	while (enumerator->enumerate(enumerator, &filename))
-	{
-		loggers_defined++;
-		if (streq(filename, "stderr"))
-		{
-			file = stderr;
-		}
-		else if (streq(filename, "stdout"))
-		{
-			file = stdout;
-		}
-		else
-		{
-			append = lib->settings->get_bool(lib->settings,
-									"charon.filelog.%s.append", TRUE, filename);
-			file = fopen(filename, append ? "a" : "w");
-			if (file == NULL)
-			{
-				DBG1(DBG_DMN, "opening file %s for logging failed: %s",
-					 filename, strerror(errno));
-				continue;
-			}
-			if (lib->settings->get_bool(lib->settings,
-							"charon.filelog.%s.flush_line", FALSE, filename))
-			{
-				setlinebuf(file);
-			}
-		}
-		file_logger = file_logger_create(file,
-						lib->settings->get_str(lib->settings,
-							"charon.filelog.%s.time_format", NULL, filename));
-		def = lib->settings->get_int(lib->settings,
-									 "charon.filelog.%s.default", 1, filename);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			file_logger->set_level(file_logger, group,
-				lib->settings->get_int(lib->settings,
-									   "charon.filelog.%s.%N", def,
-									   filename, debug_lower_names, group));
-		}
-		this->public.file_loggers->insert_last(this->public.file_loggers,
-											   file_logger);
-		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-
-	}
-	enumerator->destroy(enumerator);
-
-	/* set up legacy style default loggers provided via command-line */
-	if (!loggers_defined)
-	{
-		/* set up default stdout file_logger */
-		file_logger = file_logger_create(stdout, NULL);
-		this->public.bus->add_listener(this->public.bus, &file_logger->listener);
-		this->public.file_loggers->insert_last(this->public.file_loggers,
-											   file_logger);
-		/* set up default daemon sys_logger */
-		sys_logger = sys_logger_create(LOG_DAEMON);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		for (group = 0; group < DBG_MAX; group++)
-		{
-			sys_logger->set_level(sys_logger, group, levels[group]);
-			if (use_stderr)
-			{
-				file_logger->set_level(file_logger, group, levels[group]);
-			}
-		}
-
-		/* set up default auth sys_logger */
-		sys_logger = sys_logger_create(LOG_AUTHPRIV);
-		this->public.bus->add_listener(this->public.bus, &sys_logger->listener);
-		this->public.sys_loggers->insert_last(this->public.sys_loggers,
-											  sys_logger);
-		sys_logger->set_level(sys_logger, DBG_ANY, LEVEL_AUDIT);
-	}
-}
-
 METHOD(daemon_t, initialize, bool,
-	   private_daemon_t *this, bool syslog, level_t levels[])
+	private_daemon_t *this)
 {
-	/* for uncritical pseudo random numbers */
-	srandom(time(NULL) + getpid());
-
-	/* setup bus and it's listeners first to enable log output */
-	this->public.bus = bus_create();
-	/* set up hook to log dbg message in library via charons message bus */
-	dbg_old = dbg;
-	dbg = dbg_bus;
-
-	initialize_loggers(this, !syslog, levels);
-
 	DBG1(DBG_DMN, "Starting IKEv2 charon daemon (strongSwan "VERSION")");
 
 	if (lib->integrity)
@@ -354,17 +229,6 @@ METHOD(daemon_t, initialize, bool,
 		DBG1(DBG_DMN, "lib    'libcharon': passed file and segment integrity tests");
 		DBG1(DBG_DMN, "daemon 'charon': passed file integrity test");
 	}
-
-	/* load secrets, ca certificates and crls */
-	this->public.processor = processor_create();
-	this->public.scheduler = scheduler_create();
-	this->public.controller = controller_create();
-	this->public.eap = eap_manager_create();
-	this->public.sim = sim_manager_create();
-	this->public.backends = backend_manager_create();
-	this->public.kernel_interface = kernel_interface_create();
-	this->public.socket = socket_manager_create();
-	this->public.traps = trap_manager_create();
 
 	/* load plugins, further infrastructure may need it */
 	if (!lib->plugins->load(lib->plugins, NULL,
@@ -386,6 +250,9 @@ METHOD(daemon_t, initialize, bool,
 	{
 		return FALSE;
 	}
+
+	/* Queue start_action job */
+	lib->processor->queue_job(lib->processor, (job_t*)start_action_job_create());
 
 #ifdef ME
 	this->public.connect_manager = connect_manager_create();
@@ -412,10 +279,20 @@ private_daemon_t *daemon_create()
 			.drop_capabilities = _drop_capabilities,
 			.initialize = _initialize,
 			.start = _start,
+			.bus = bus_create(),
 			.file_loggers = linked_list_create(),
 			.sys_loggers = linked_list_create(),
 		},
 	);
+	charon = &this->public;
+	this->public.controller = controller_create();
+	this->public.eap = eap_manager_create();
+	this->public.sim = sim_manager_create();
+	this->public.tnccs = tnccs_manager_create();
+	this->public.backends = backend_manager_create();
+	this->public.socket = socket_manager_create();
+	this->public.traps = trap_manager_create();
+	this->kernel_handler = kernel_handler_create();
 
 #ifdef CAPABILITIES
 #ifdef CAPABILITIES_LIBCAP
@@ -436,7 +313,6 @@ private_daemon_t *daemon_create()
  */
 void libcharon_deinit()
 {
-
 	destroy((private_daemon_t*)charon);
 	charon = NULL;
 }
@@ -449,7 +325,13 @@ bool libcharon_init()
 	private_daemon_t *this;
 
 	this = daemon_create();
-	charon = &this->public;
+
+	/* for uncritical pseudo random numbers */
+	srandom(time(NULL) + getpid());
+
+	/* set up hook to log dbg message in library via charons message bus */
+	dbg_old = dbg;
+	dbg = dbg_bus;
 
 	lib->printf_hook->add_handler(lib->printf_hook, 'P',
 								  proposal_printf_hook,

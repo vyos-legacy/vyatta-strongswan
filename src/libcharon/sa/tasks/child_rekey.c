@@ -75,6 +75,15 @@ struct private_child_rekey_t {
 	 * colliding task, may be delete or rekey
 	 */
 	task_t *collision;
+
+	/**
+	 * Indicate that peer destroyed the redundant child from collision.
+	 * This happens if a peer's delete notification for the redundant
+	 * child gets processed before the rekey job. If so, we must not
+	 * touch the child created in the collision since it points to
+	 * memory already freed.
+	 */
+	bool other_child_destroyed;
 };
 
 /**
@@ -232,21 +241,24 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 		/* if we have the lower nonce, delete rekeyed SA. If not, delete
 		 * the redundant. */
 		if (memcmp(this_nonce.ptr, other_nonce.ptr,
-				   min(this_nonce.len, other_nonce.len)) < 0)
+				   min(this_nonce.len, other_nonce.len)) > 0)
 		{
 			child_sa_t *child_sa;
 
-			DBG1(DBG_IKE, "CHILD_SA rekey collision won, "
-				 "deleting rekeyed child");
+			DBG1(DBG_IKE, "CHILD_SA rekey collision won, deleting old child");
 			to_delete = this->child_sa;
-			/* disable close action for the redundand child */
-			child_sa = other->child_create->get_child(other->child_create);
-			child_sa->set_close_action(child_sa, ACTION_NONE);
+			/* don't touch child other created, it has already been deleted */
+			if (!this->other_child_destroyed)
+			{
+				/* disable close action for the redundand child */
+				child_sa = other->child_create->get_child(other->child_create);
+				child_sa->set_close_action(child_sa, ACTION_NONE);
+			}
 		}
 		else
 		{
 			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, "
-				 "deleting redundant child");
+				 "deleting rekeyed child");
 			to_delete = this->child_create->get_child(this->child_create);
 		}
 	}
@@ -286,7 +298,7 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 		DBG1(DBG_IKE, "peer seems to not support CHILD_SA rekeying, "
 			 "starting reauthentication");
 		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-		charon->processor->queue_job(charon->processor,
+		lib->processor->queue_job(lib->processor,
 				(job_t*)rekey_ike_sa_job_create(
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;
@@ -316,7 +328,7 @@ static status_t process_i(private_child_rekey_t *this, message_t *message)
 			DBG1(DBG_IKE, "CHILD_SA rekeying failed, "
 								"trying again in %d seconds", retry);
 			this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-			charon->scheduler->schedule_job(charon->scheduler, job, retry);
+			lib->scheduler->schedule_job(lib->scheduler, job, retry);
 		}
 		return SUCCESS;
 	}
@@ -370,7 +382,7 @@ static void collide(private_child_rekey_t *this, task_t *other)
 	if (other->get_type(other) == CHILD_REKEY)
 	{
 		private_child_rekey_t *rekey = (private_child_rekey_t*)other;
-		if (rekey == NULL || rekey->child_sa != this->child_sa)
+		if (rekey->child_sa != this->child_sa)
 		{
 			/* not the same child => no collision */
 			other->destroy(other);
@@ -380,7 +392,14 @@ static void collide(private_child_rekey_t *this, task_t *other)
 	else if (other->get_type(other) == CHILD_DELETE)
 	{
 		child_delete_t *del = (child_delete_t*)other;
-		if (del == NULL || del->get_child(del) != this->child_sa)
+		if (del->get_child(del) == this->child_create->get_child(this->child_create))
+		{
+			/* peer deletes redundant child created in collision */
+			this->other_child_destroyed = TRUE;
+			other->destroy(other);
+			return;
+		}
+		if (del->get_child(del) != this->child_sa)
 		{
 			/* not the same child => no collision */
 			other->destroy(other);
@@ -393,6 +412,8 @@ static void collide(private_child_rekey_t *this, task_t *other)
 		other->destroy(other);
 		return;
 	}
+	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names, CHILD_REKEY,
+		 task_type_names, other->get_type(other));
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }
@@ -466,6 +487,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 	this->spi = spi;
 	this->collision = NULL;
 	this->child_delete = NULL;
+	this->other_child_destroyed = FALSE;
 
 	return &this->public;
 }

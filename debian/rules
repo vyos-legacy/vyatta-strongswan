@@ -15,13 +15,24 @@ CONFIGUREARGS := --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
 		--enable-ldap --enable-curl \
 		--with-capabilities=libcap \
 		--enable-smartcard --enable-cisco-quirks \
+		--enable-pkcs11 \
 		--with-default-pkcs11=/usr/lib/opensc-pkcs11.so \
 		--enable-openssl --enable-agent \
+		--enable-ctr --enable-ccm --enable-gcm --enable-addrblock \
 		--enable-eap-radius --enable-eap-identity --enable-eap-md5 \
 		--enable-eap-gtc --enable-eap-aka --enable-eap-mschapv2 \
+		--enable-eap-tls --enable-eap-ttls --enable-eap-tnc \
 		--enable-sql --enable-integrity-test \
 		--enable-ha --enable-dhcp --enable-farp \
+		--enable-led \
 		--enable-test-vectors --enable-nat-transport
+	#	--with-user=strongswan --with-group=nogroup \
+	#	--enable-kernel-pfkey --enable-kernel-klips \
+	# And for --enable-eap-sim we would need the library, which we don't
+	# have right now.
+	# Don't --enable-cisco-quirks, because some other IPsec implementations
+	# (most notably the Phion one) have problems connecting when pluto 
+	# sends these Cisco options.
 
 DEB_BUILD_ARCH_CPU ?=$(shell dpkg-architecture -qDEB_BUILD_ARCH_CPU)
 
@@ -73,7 +84,8 @@ install: build-stamp
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 
 	# install files from debian/tmp into proper package dirs
-	dh_install --list-missing
+	dh_install --fail-missing -X\.la -X\.a -Xmedsrv -Xman3 -Xlibstrongswan-padlock.so
+
 	# special handling for padlock, as it is only built on i386
 ifeq ($(DEB_BUILD_ARCH_CPU),i386)
 	  install $(CURDIR)/debian/tmp/usr/lib/ipsec/plugins/libstrongswan-padlock.so* $(CURDIR)/debian/libstrongswan/usr/lib/ipsec/plugins/
@@ -91,6 +103,7 @@ endif
 	chmod 600 $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
 	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
 	chmod 700 -R $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/private/
+	chmod 700 -R $(CURDIR)/debian/strongswan-starter/var/lib/strongswan/
 	# don't know why they come with +x set by default...
 	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/policies/*
 	#chmod 644 $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/examples/*
@@ -129,7 +142,6 @@ endif
 binary-common:
 	dh_testdir
 	dh_testroot
-	dh_installdirs
 	dh_installinit --name=ipsec
 	dh_installdebconf
 	dh_installchangelogs NEWS
@@ -137,7 +149,7 @@ binary-common:
 	dh_link
 	dh_strip --dbg-package=strongswan-dbg
 	dh_compress
-	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d
+	dh_fixperms -X etc/ipsec.secrets -X etc/ipsec.d -X var/lib/strongswan
 	dh_lintian
 	dh_makeshlibs
 	dh_installdeb

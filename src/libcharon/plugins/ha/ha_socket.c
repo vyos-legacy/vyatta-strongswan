@@ -20,10 +20,10 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include <daemon.h>
 #include <utils/host.h>
+#include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ha_socket_t private_ha_socket_t;
@@ -107,7 +107,7 @@ METHOD(ha_socket_t, push, void,
 
 			job = callback_job_create((callback_job_cb_t)send_message,
 									  data, (void*)job_data_destroy, NULL);
-			charon->processor->queue_job(charon->processor, (job_t*)job);
+			lib->processor->queue_job(lib->processor, (job_t*)job);
 			return;
 		}
 		DBG1(DBG_CFG, "pushing HA message failed: %s", strerror(errno));
@@ -121,12 +121,12 @@ METHOD(ha_socket_t, pull, ha_message_t*,
 	{
 		ha_message_t *message;
 		char buf[1024];
-		int oldstate;
+		bool oldstate;
 		ssize_t len;
 
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		oldstate = thread_cancelability(TRUE);
 		len = recv(this->fd, buf, sizeof(buf), 0);
-		pthread_setcancelstate(oldstate, NULL);
+		thread_cancelability(oldstate);
 		if (len <= 0)
 		{
 			switch (errno)

@@ -59,12 +59,12 @@ bool test_rsa_gen()
 			return FALSE;
 		}
 		free(sig.ptr);
-		if (!public->encrypt(public, data, &crypt))
+		if (!public->encrypt(public, ENCRYPT_RSA_PKCS1, data, &crypt))
 		{
 			DBG1(DBG_CFG, "encrypting data with RSA failed");
 			return FALSE;
 		}
-		if (!private->decrypt(private, crypt, &plain))
+		if (!private->decrypt(private, ENCRYPT_RSA_PKCS1, crypt, &plain))
 		{
 			DBG1(DBG_CFG, "decrypting data with RSA failed");
 			return FALSE;
@@ -110,7 +110,7 @@ bool test_rsa_load_any()
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ANY,
 								BUILD_BLOB_ASN1_DER, chunk,
 								BUILD_END);
-	if (!public || public->get_keysize(public) != 256)
+	if (!public || public->get_keysize(public) != 2048)
 	{
 		return FALSE;
 	}

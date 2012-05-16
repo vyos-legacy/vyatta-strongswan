@@ -101,19 +101,23 @@ done
 
 
 ##############################################################################
+# open ssh sessions
+#
+for host in $STRONGSWANHOSTS
+do
+    ssh $SSHCONF -N root@`eval echo \\\$ipv4_$host` &
+    eval ssh_pid_$host="`echo $!`"
+done
+
+
+##############################################################################
 # create header for the results html file
 #
 
 KERNEL_VERSION=`basename $KERNEL .tar.bz2`
 IPSEC_VERSION=`basename $STRONGSWAN .tar.bz2`
 
-cat > $INDEX <<@EOF
-<html>
-<head>
-  <title>strongSwan UML Tests</title>
-</head>
-<body>
-  <h2>strongSwan UML Tests</h2>
+ENVIRONMENT_HEADER=$(cat <<@EOF
   <table border="0" cellspacing="2">
     <tr valign="top">
       <td><b>Host:</b></td>
@@ -138,9 +142,27 @@ cat > $INDEX <<@EOF
       <td >&nbsp;</td>
     </tr>
 @EOF
+)
 
-cat $INDEX > $TESTRESULTSHTML
-cat >> $TESTRESULTSHTML <<@EOF
+cat > $INDEX <<@EOF
+<html>
+<head>
+  <title>strongSwan UML Tests</title>
+</head>
+<body>
+  <h2>strongSwan UML Tests</h2>
+  $ENVIRONMENT_HEADER
+@EOF
+
+cat > $TESTRESULTSHTML <<@EOF
+<html>
+<head>
+  <title>strongSwan UML Tests - All Tests</title>
+</head>
+<body>
+  <div><a href="index.html">strongSwan UML Tests</a> / All Tests</div>
+  <h2>All Tests</h2>
+  $ENVIRONMENT_HEADER
     <tr align="left">
       <th>Number</th>
       <th>Test</th>
@@ -203,6 +225,7 @@ do
   <title>strongSwan $SUBDIR Tests</title>
 </head>
 <body>
+  <div><a href="../index.html">strongSwan UML Tests</a> / $SUBDIR</div>
   <h2>strongSwan $SUBDIR Tests</h2>
   <table border="0" cellspacing="2">
     <tr valign="top">
@@ -333,6 +356,7 @@ do
 	#
 
 	$DIR/scripts/load-testconfig $testname
+	unset RADIUSHOSTS
 	source $TESTDIR/test.conf
 
 
@@ -350,7 +374,7 @@ do
 		iface=`echo $host_iface | awk -F ":" '{if ($2 != "") { print $2 } else { printf("eth0") }}'`
 		tcpdump_cmd="tcpdump -i $iface not port ssh and not port domain > /tmp/tcpdump.log 2>&1 &"
 		echo "${host}# $tcpdump_cmd" >> $CONSOLE_LOG
-		ssh root@`eval echo \\\$ipv4_$host '$tcpdump_cmd'`
+		ssh $SSHCONF root@`eval echo \\\$ipv4_$host '$tcpdump_cmd'`
 		eval TDUP_${host}="true"
 	    done
 	fi
@@ -367,7 +391,7 @@ do
 	    if ($2 != "")
 	    {
 		printf("echo \"%s# %s\"; ", $1, $2)
-		printf("ssh root@\044ipv4_%s \"%s\"; ", $1, $2)
+		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
 		printf("echo;\n")
 	    }
 	}' $TESTDIR/pretest.dat` >> $CONSOLE_LOG 2>&1
@@ -379,7 +403,7 @@ do
 
 	function stop_tcpdump {
 	    echo "${1}# killall tcpdump" >> $CONSOLE_LOG
-	    eval ssh root@\$ipv4_${1} killall tcpdump
+	    eval ssh $SSHCONF root@\$ipv4_${1} killall tcpdump
 	    eval TDUP_${1}="false"
 	    echo ""
 	}
@@ -405,12 +429,12 @@ do
 		{
 		    printf("if [ \044TDUP_%s == \"true\" ]; then stop_tcpdump %s; fi; \n", host, host)
 		    printf("echo \"%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
-		    printf("ssh root@\044ipv4_%s cat /tmp/tcpdump.log | grep \"%s\"; ", host, pattern)
+		    printf("ssh \044SSHCONF root@\044ipv4_%s cat /tmp/tcpdump.log | grep \"%s\"; ", host, pattern)
 		}
 		else
 		{
 		    printf("echo \"%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
-		    printf("ssh root@\044ipv4_%s %s | grep \"%s\"; ",  host, command, pattern)
+		    printf("ssh \044SSHCONF root@\044ipv4_%s %s | grep \"%s\"; ",  host, command, pattern)
 		}
 		printf("cmd_exit=\044?; ")
 		printf("echo; ")
@@ -444,8 +468,9 @@ do
   <title>Test $testname</title>
 </head>
 <body>
-<table border="0" width="600">
+<table border="0" cellpadding="0" cellspacing="0" width="600">
   <tr><td>
+    <div><a href="../../index.html">strongSwan UML Tests</a> / <a href="../index.html">$SUBDIR</a> / $name</div>
     <h2>Test $testname</h2>
     <h3>Description</h3>
 @EOF
@@ -465,26 +490,26 @@ do
 
 	    for command in statusall listall
 	    do
-		ssh $HOSTLOGIN ipsec $command \
+		ssh $SSHCONF $HOSTLOGIN ipsec $command \
 		    > $TESTRESULTDIR/${host}.$command 2>/dev/null
 	    done
 
 	    for file in strongswan.conf ipsec.conf ipsec.secrets
 	    do
-		scp $HOSTLOGIN:/etc/$file \
+		scp $SSHCONF $HOSTLOGIN:/etc/$file \
 		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
 	    done
 
-	    scp $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
+	    scp $SSHCONF $HOSTLOGIN:/etc/ipsec.d/ipsec.sql \
 	    	$TESTRESULTDIR/${host}.ipsec.sql  > /dev/null 2>&1
 
-	    ssh $HOSTLOGIN ip -s xfrm policy \
+	    ssh $SSHCONF $HOSTLOGIN ip -s xfrm policy \
 		    > $TESTRESULTDIR/${host}.ip.policy 2>/dev/null
-	    ssh $HOSTLOGIN ip -s xfrm state \
+	    ssh $SSHCONF $HOSTLOGIN ip -s xfrm state \
 		    > $TESTRESULTDIR/${host}.ip.state 2>/dev/null
-	    ssh $HOSTLOGIN ip route list table $SOURCEIP_ROUTING_TABLE \
+	    ssh $SSHCONF $HOSTLOGIN ip route list table $SOURCEIP_ROUTING_TABLE \
 		    > $TESTRESULTDIR/${host}.ip.route 2>/dev/null
-	    ssh $HOSTLOGIN $IPTABLES_CMD \
+	    ssh $SSHCONF $HOSTLOGIN $IPTABLES_CMD \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
 	    chmod a+r $TESTRESULTDIR/*
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
@@ -521,10 +546,49 @@ do
 
 	done
 
+	for host in $RADIUSHOSTS
+	do
+	    eval HOSTLOGIN=root@\$ipv4_${host}
+
+	    for file in clients.conf eap.conf radiusd.conf proxy.conf users
+	    do
+		scp $SSHCONF $HOSTLOGIN:/etc/raddb/$file \
+		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
+	    done
+
+	    scp $SSHCONF $HOSTLOGIN:/var/log/radius/radius.log \
+	    	$TESTRESULTDIR/${host}.radius.log  > /dev/null 2>&1
+
+	    chmod a+r $TESTRESULTDIR/*
+	    cat >> $TESTRESULTDIR/index.html <<@EOF
+    <h3>$host</h3>
+      <table border="0" cellspacing="0" width="600">
+      <tr>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.clients.conf">clients.conf</a></li>
+	    <li><a href="$host.radiusd.conf">radiusd.conf</a></li>
+	  </ul>
+	</td>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.eap.conf">eap.conf</a></li>
+	    <li><a href="$host.radius.log">radius.log</a></li>
+	  </ul>
+      </td>
+	<td valign="top">
+	  <ul>
+	    <li><a href="$host.proxy.conf">proxy.conf</a></li>
+	    <li><a href="$host.users">users</a></li>
+	  </ul>
+      </td>
+    </tr>
+    </table>
+@EOF
+
+	done
+
 	cat >> $TESTRESULTDIR/index.html <<@EOF
-  </td></tr>
-  <tr><td align="right">
-    <b><a href="../index.html">Back</a></b>
   </td></tr>
 </table>
 </body>
@@ -543,7 +607,7 @@ do
 	    if ($2 != "")
 	    {
 		printf("echo \"%s# %s\"; ", $1, $2)
-		printf("ssh root@\044ipv4_%s \"%s\"; ", $1, $2)
+		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
 		printf("echo;\n")
 	    }
 	}' $TESTDIR/posttest.dat` >> $CONSOLE_LOG 2>&1
@@ -556,10 +620,10 @@ do
 	for host in $IPSECHOSTS
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
-	    ssh $HOSTLOGIN grep pluto /var/log/auth.log \
+	    ssh $SSHCONF $HOSTLOGIN grep pluto /var/log/auth.log \
 		> $TESTRESULTDIR/${host}.auth.log
 	    echo >> $TESTRESULTDIR/${host}.auth.log
-	    ssh $HOSTLOGIN grep charon /var/log/auth.log \
+	    ssh $SSHCONF $HOSTLOGIN grep charon /var/log/auth.log \
 		>> $TESTRESULTDIR/${host}.auth.log
 	done
 
@@ -571,10 +635,10 @@ do
 	for host in $IPSECHOSTS
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
-	    ssh $HOSTLOGIN grep pluto /var/log/daemon.log \
+	    ssh $SSHCONF $HOSTLOGIN grep pluto /var/log/daemon.log \
 		> $TESTRESULTDIR/${host}.daemon.log
 	    echo >> $TESTRESULTDIR/${host}.daemon.log
-	    ssh $HOSTLOGIN grep charon /var/log/daemon.log \
+	    ssh $SSHCONF $HOSTLOGIN grep charon /var/log/daemon.log \
 		>> $TESTRESULTDIR/${host}.daemon.log
 	done
 
@@ -588,7 +652,7 @@ do
 	    if [ "`eval echo \\\$TDUP_${host}`" = "true" ]
 	    then
 		echo "${host}# killall tcpdump" >> $CONSOLE_LOG
-		eval ssh root@\$ipv4_$host killall tcpdump
+		eval ssh $SSHCONF root@\$ipv4_$host killall tcpdump
 		eval TDUP_${host}="false"
 	    fi
 	done
@@ -617,7 +681,7 @@ do
 	cat >> $TESTRESULTSHTML << @EOF
   <tr>
     <td>$testnumber</td>
-    <td><a href="$testname/">$testname</a></td>
+    <td><a href="$testname/index.html">$testname</a></td>
     <td><a href="$testname/console.log"><font color="$COLOR">$STATUS</font></a></td>
     <td>&nbsp;</td>
   </tr>
@@ -625,7 +689,7 @@ do
 	cat >> $SUBTESTSINDEX << @EOF
   <tr>
     <td>$testnumber</td>
-    <td><a href="$name/">$name</a></td>
+    <td><a href="$name/index.html">$name</a></td>
     <td><a href="$name/console.log"><font color="$COLOR">$STATUS</font></a></td>
     <td>&nbsp;</td>
   </tr>
@@ -639,7 +703,7 @@ do
 	for host in $IPSECHOSTS
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
-	    ssh $HOSTLOGIN 'if [ -f /var/run/charon.pid ]; then rm /var/run/charon.pid; echo "    removed charon.pid on `hostname`"; fi'
+	    ssh $SSHCONF $HOSTLOGIN 'if [ -f /var/run/charon.pid ]; then rm /var/run/charon.pid; echo "    removed charon.pid on `hostname`"; fi'
 	done
 
     done
@@ -652,11 +716,16 @@ done
 #
 
 cat >> $TESTRESULTSHTML << @EOF
+    <tr>
+      <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><b>Passed:</b></td><td><b><font color="green">$passed_cnt</font></b></td><td>&nbsp;</td><td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><b>Failed:</b></td><td><b><font color="red">$failed_cnt</font></b></td><td>&nbsp;</td><td>&nbsp;</td>
+    </tr>
   </table>
-  <p>
-  <b>Passed: &nbsp; <font color="green">$passed_cnt</font></b><br>
-  <b>Failed: &nbsp; <font color="red">$failed_cnt</font></b><br>
-  <p>
 </body>
 </html>
 @EOF
@@ -694,10 +763,20 @@ cecho ""
 HTDOCS="/var/www/localhost/htdocs"
 
 cecho-n "Copying test results to winnetou.."
-ssh root@${ipv4_winnetou} mkdir -p $HTDOCS/testresults > /dev/null 2>&1
-scp -r $TODAYDIR root@${ipv4_winnetou}:$HTDOCS/testresults > /dev/null 2>&1
-ssh root@${ipv4_winnetou} ln -s $HTDOCS/images $HTDOCS/testresults/$TESTDATE/images > /dev/null 2>&1
+ssh $SSHCONF root@${ipv4_winnetou} mkdir -p $HTDOCS/testresults > /dev/null 2>&1
+scp $SSHCONF -r $TODAYDIR root@${ipv4_winnetou}:$HTDOCS/testresults > /dev/null 2>&1
+ssh $SSHCONF root@${ipv4_winnetou} ln -s $HTDOCS/images $HTDOCS/testresults/$TESTDATE/images > /dev/null 2>&1
 cgecho "done"
 cecho ""
 cecho "The results are available in $TODAYDIR"
 cecho "or via the link http://$ipv4_winnetou/testresults/$TESTDATE"
+
+
+##########################################################################
+# close ssh sessions
+#
+for host in $STRONGSWANHOSTS
+do
+    kill `eval echo \\\$ssh_pid_$host`
+done
+

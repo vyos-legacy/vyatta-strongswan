@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2009 Martin Willi
+ * Copyright (C) 2009-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -12,6 +13,10 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <time.h>
 
 #include "crypto_tester.h"
 
@@ -34,6 +39,11 @@ struct private_crypto_tester_t {
 	 * List of crypter test vectors
 	 */
 	linked_list_t *crypter;
+
+	/**
+	 * List of aead test vectors
+	 */
+	linked_list_t *aead;
 
 	/**
 	 * List of signer test vectors
@@ -64,13 +74,98 @@ struct private_crypto_tester_t {
 	 * should we run RNG_TRUE tests? Enough entropy?
 	 */
 	bool rng_true;
+
+	/**
+	 * time we test each algorithm
+	 */
+	int bench_time;
+
+	/**
+	 * size of buffer we use for benchmarking
+	 */
+	int bench_size;
 };
 
 /**
- * Implementation of crypto_tester_t.test_crypter
+ * Get the name of a test vector, if available
  */
-static bool test_crypter(private_crypto_tester_t *this,
-	encryption_algorithm_t alg, size_t key_size, crypter_constructor_t create)
+static const char* get_name(void *sym)
+{
+#ifdef HAVE_DLADDR
+	Dl_info dli;
+
+	if (dladdr(sym, &dli))
+	{
+		return dli.dli_sname;
+	}
+#endif
+	return "unknown";
+}
+
+/**
+ * Start a benchmark timer
+ */
+static void start_timing(struct timespec *start)
+{
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, start);
+}
+
+/**
+ * End a benchmark timer, return ms
+ */
+static u_int end_timing(struct timespec *start)
+{
+	struct timespec end;
+
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	return (end.tv_nsec - start->tv_nsec) / 1000000 +
+			(end.tv_sec - start->tv_sec) * 1000;
+}
+
+/**
+ * Benchmark a crypter
+ */
+static u_int bench_crypter(private_crypto_tester_t *this,
+	encryption_algorithm_t alg, crypter_constructor_t create)
+{
+	crypter_t *crypter;
+
+	crypter = create(alg, 0);
+	if (crypter)
+	{
+		char iv[crypter->get_iv_size(crypter)];
+		char key[crypter->get_key_size(crypter)];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+
+		memset(iv, 0x56, sizeof(iv));
+		memset(key, 0x12, sizeof(key));
+		crypter->set_key(crypter, chunk_from_thing(key));
+
+		buf = chunk_alloc(this->bench_size);
+		memset(buf.ptr, 0x34, buf.len);
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			crypter->encrypt(crypter, buf, chunk_from_thing(iv), NULL);
+			runs++;
+			crypter->decrypt(crypter, buf, chunk_from_thing(iv), NULL);
+			runs++;
+		}
+		free(buf.ptr);
+		crypter->destroy(crypter);
+
+		return runs;
+	}
+	return 0;
+}
+
+METHOD(crypto_tester_t, test_crypter, bool,
+	private_crypto_tester_t *this, encryption_algorithm_t alg, size_t key_size,
+	crypter_constructor_t create, u_int *speed, const char *plugin_name)
 {
 	enumerator_t *enumerator;
 	crypter_test_vector_t *vector;
@@ -93,7 +188,11 @@ static bool test_crypter(private_crypto_tester_t *this,
 		}
 		crypter = create(alg, vector->key_size);
 		if (!crypter)
-		{	/* key size not supported... */
+		{
+			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
+				 encryption_algorithm_names, alg, plugin_name,
+				 BITS_PER_BYTE * vector->key_size);
+			failed = TRUE;
 			continue;
 		}
 
@@ -102,7 +201,7 @@ static bool test_crypter(private_crypto_tester_t *this,
 
 		key = chunk_create(vector->key, crypter->get_key_size(crypter));
 		crypter->set_key(crypter, key);
-		iv = chunk_create(vector->iv, crypter->get_block_size(crypter));
+		iv = chunk_create(vector->iv, crypter->get_iv_size(crypter));
 
 		/* allocated encryption */
 		plain = chunk_create(vector->plain, vector->len);
@@ -136,32 +235,258 @@ static bool test_crypter(private_crypto_tester_t *this,
 		crypter->destroy(crypter);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 encryption_algorithm_names, alg, tested);
+			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
+				 encryption_algorithm_names, alg, plugin_name, get_name(vector));
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
-			 this->required ? "disabled" : "enabled ",
-			 encryption_algorithm_names, alg);
-		return !this->required;
+		if (failed)
+		{
+			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
+				 encryption_algorithm_names, alg, plugin_name);
+			return FALSE;
+		}
+		else
+		{
+			DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
+				 this->required ? "disabled" : "enabled ",
+				 encryption_algorithm_names, alg, plugin_name);
+			return !this->required;
+		}
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 encryption_algorithm_names, alg, tested);
+		if (speed)
+		{
+			*speed = bench_crypter(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
+				 encryption_algorithm_names, alg, plugin_name, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
+				 encryption_algorithm_names, alg, plugin_name, tested);
+		}
 	}
 	return !failed;
 }
 
 /**
- * Implementation of crypto_tester_t.test_signer
+ * Benchmark an aead transform
  */
-static bool test_signer(private_crypto_tester_t *this,
-						integrity_algorithm_t alg, signer_constructor_t create)
+static u_int bench_aead(private_crypto_tester_t *this,
+	encryption_algorithm_t alg, aead_constructor_t create)
+{
+	aead_t *aead;
+
+	aead = create(alg, 0);
+	if (aead)
+	{
+		char iv[aead->get_iv_size(aead)];
+		char key[aead->get_key_size(aead)];
+		char assoc[4];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+		size_t icv;
+
+		memset(iv, 0x56, sizeof(iv));
+		memset(key, 0x12, sizeof(key));
+		memset(assoc, 0x78, sizeof(assoc));
+		aead->set_key(aead, chunk_from_thing(key));
+		icv = aead->get_icv_size(aead);
+
+		buf = chunk_alloc(this->bench_size + icv);
+		memset(buf.ptr, 0x34, buf.len);
+		buf.len -= icv;
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			aead->encrypt(aead, buf, chunk_from_thing(assoc),
+						  chunk_from_thing(iv), NULL);
+			runs += 2;
+			aead->decrypt(aead, chunk_create(buf.ptr, buf.len + icv),
+						  chunk_from_thing(assoc), chunk_from_thing(iv), NULL);
+			runs += 2;
+		}
+		free(buf.ptr);
+		aead->destroy(aead);
+
+		return runs;
+	}
+	return 0;
+}
+
+METHOD(crypto_tester_t, test_aead, bool,
+	private_crypto_tester_t *this, encryption_algorithm_t alg, size_t key_size,
+	aead_constructor_t create, u_int *speed, const char *plugin_name)
+{
+	enumerator_t *enumerator;
+	aead_test_vector_t *vector;
+	bool failed = FALSE;
+	u_int tested = 0;
+
+	enumerator = this->aead->create_enumerator(this->aead);
+	while (enumerator->enumerate(enumerator, &vector))
+	{
+		aead_t *aead;
+		chunk_t key, plain, cipher, iv, assoc;
+		size_t icv;
+
+		if (vector->alg != alg)
+		{
+			continue;
+		}
+		if (key_size && key_size != vector->key_size)
+		{	/* test only vectors with a specific key size, if key size given */
+			continue;
+		}
+		aead = create(alg, vector->key_size);
+		if (!aead)
+		{
+			DBG1(DBG_LIB, "%N[%s]: %u bit key size not supported",
+				 encryption_algorithm_names, alg, plugin_name,
+				 BITS_PER_BYTE * vector->key_size);
+			failed = TRUE;
+			continue;
+		}
+
+		failed = FALSE;
+		tested++;
+
+		key = chunk_create(vector->key, aead->get_key_size(aead));
+		aead->set_key(aead, key);
+		iv = chunk_create(vector->iv, aead->get_iv_size(aead));
+		assoc = chunk_create(vector->adata, vector->alen);
+		icv = aead->get_icv_size(aead);
+
+		/* allocated encryption */
+		plain = chunk_create(vector->plain, vector->len);
+		aead->encrypt(aead, plain, assoc, iv, &cipher);
+		if (!memeq(vector->cipher, cipher.ptr, cipher.len))
+		{
+			failed = TRUE;
+		}
+		/* inline decryption */
+		if (!aead->decrypt(aead, cipher, assoc, iv, NULL))
+		{
+			failed = TRUE;
+		}
+		if (!memeq(vector->plain, cipher.ptr, cipher.len - icv))
+		{
+			failed = TRUE;
+		}
+		free(cipher.ptr);
+		/* allocated decryption */
+		cipher = chunk_create(vector->cipher, vector->len + icv);
+		if (!aead->decrypt(aead, cipher, assoc, iv, &plain))
+		{
+			plain = chunk_empty;
+			failed = TRUE;
+		}
+		else if (!memeq(vector->plain, plain.ptr, plain.len))
+		{
+			failed = TRUE;
+		}
+		plain.ptr = realloc(plain.ptr, plain.len + icv);
+		/* inline encryption */
+		aead->encrypt(aead, plain, assoc, iv, NULL);
+		if (!memeq(vector->cipher, plain.ptr, plain.len + icv))
+		{
+			failed = TRUE;
+		}
+		free(plain.ptr);
+
+		aead->destroy(aead);
+		if (failed)
+		{
+			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
+				 encryption_algorithm_names, alg, plugin_name, get_name(vector));
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	if (!tested)
+	{
+		if (failed)
+		{
+			DBG1(DBG_LIB,"disable %N[%s]: no key size supported",
+				 encryption_algorithm_names, alg, plugin_name);
+			return FALSE;
+		}
+		else
+		{
+			DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
+				 this->required ? "disabled" : "enabled ",
+				 encryption_algorithm_names, alg, plugin_name);
+			return !this->required;
+		}
+	}
+	if (!failed)
+	{
+		if (speed)
+		{
+			*speed = bench_aead(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
+				 encryption_algorithm_names, alg, plugin_name, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
+				 encryption_algorithm_names, alg, plugin_name, tested);
+		}
+	}
+	return !failed;
+}
+
+/**
+ * Benchmark a signer
+ */
+static u_int bench_signer(private_crypto_tester_t *this,
+	encryption_algorithm_t alg, signer_constructor_t create)
+{
+	signer_t *signer;
+
+	signer = create(alg);
+	if (signer)
+	{
+		char key[signer->get_key_size(signer)];
+		char mac[signer->get_block_size(signer)];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+
+		memset(key, 0x12, sizeof(key));
+		signer->set_key(signer, chunk_from_thing(key));
+
+		buf = chunk_alloc(this->bench_size);
+		memset(buf.ptr, 0x34, buf.len);
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			signer->get_signature(signer, buf, mac);
+			runs++;
+			signer->verify_signature(signer, buf, chunk_from_thing(mac));
+			runs++;
+		}
+		free(buf.ptr);
+		signer->destroy(signer);
+
+		return runs;
+	}
+	return 0;
+}
+
+METHOD(crypto_tester_t, test_signer, bool,
+	private_crypto_tester_t *this, integrity_algorithm_t alg,
+	signer_constructor_t create, u_int *speed, const char *plugin_name)
 {
 	enumerator_t *enumerator;
 	signer_test_vector_t *vector;
@@ -183,8 +508,8 @@ static bool test_signer(private_crypto_tester_t *this,
 		signer = create(alg);
 		if (!signer)
 		{
-			DBG1(DBG_LIB, "disabled %N: creating instance failed",
-				 integrity_algorithm_names, alg);
+			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
+				 integrity_algorithm_names, alg, plugin_name);
 			failed = TRUE;
 			break;
 		}
@@ -226,11 +551,10 @@ static bool test_signer(private_crypto_tester_t *this,
 		/* signature to existing buffer, using append mode */
 		if (data.len > 2)
 		{
-			memset(mac.ptr, 0, mac.len);
 			signer->allocate_signature(signer, chunk_create(data.ptr, 1), NULL);
 			signer->get_signature(signer, chunk_create(data.ptr + 1, 1), NULL);
-			signer->get_signature(signer, chunk_skip(data, 2), mac.ptr);
-			if (!memeq(vector->mac, mac.ptr, mac.len))
+			if (!signer->verify_signature(signer, chunk_skip(data, 2),
+										  chunk_create(vector->mac, mac.len)))
 			{
 				failed = TRUE;
 			}
@@ -240,32 +564,73 @@ static bool test_signer(private_crypto_tester_t *this,
 		signer->destroy(signer);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 integrity_algorithm_names, alg, tested);
+			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
+				 integrity_algorithm_names, alg, plugin_name, get_name(vector));
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
-			 integrity_algorithm_names, alg);
+			 integrity_algorithm_names, alg, plugin_name);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 integrity_algorithm_names, alg, tested);
+		if (speed)
+		{
+			*speed = bench_signer(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
+				 integrity_algorithm_names, alg, plugin_name, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
+				 integrity_algorithm_names, alg, plugin_name, tested);
+		}
 	}
 	return !failed;
 }
 
 /**
- * Implementation of hasher_t.test_hasher
+ * Benchmark a hasher
  */
-static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
-						hasher_constructor_t create)
+static u_int bench_hasher(private_crypto_tester_t *this,
+	hash_algorithm_t alg, hasher_constructor_t create)
+{
+	hasher_t *hasher;
+
+	hasher = create(alg);
+	if (hasher)
+	{
+		char hash[hasher->get_hash_size(hasher)];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+
+		buf = chunk_alloc(this->bench_size);
+		memset(buf.ptr, 0x34, buf.len);
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			hasher->get_hash(hasher, buf, hash);
+			runs++;
+		}
+		free(buf.ptr);
+		hasher->destroy(hasher);
+
+		return runs;
+	}
+	return 0;
+}
+
+METHOD(crypto_tester_t, test_hasher, bool,
+	private_crypto_tester_t *this, hash_algorithm_t alg,
+	hasher_constructor_t create, u_int *speed, const char *plugin_name)
 {
 	enumerator_t *enumerator;
 	hasher_test_vector_t *vector;
@@ -287,8 +652,8 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 		hasher = create(alg);
 		if (!hasher)
 		{
-			DBG1(DBG_LIB, "disabled %N: creating instance failed",
-				 hash_algorithm_names, alg);
+			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
+				 hash_algorithm_names, alg, plugin_name);
 			failed = TRUE;
 			break;
 		}
@@ -330,32 +695,73 @@ static bool test_hasher(private_crypto_tester_t *this, hash_algorithm_t alg,
 		hasher->destroy(hasher);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 hash_algorithm_names, alg, tested);
+			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
+				 hash_algorithm_names, alg, plugin_name, get_name(vector));
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
-			 hash_algorithm_names, alg);
+			 hash_algorithm_names, alg, plugin_name);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 hash_algorithm_names, alg, tested);
+		if (speed)
+		{
+			*speed = bench_hasher(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
+				 hash_algorithm_names, alg, plugin_name, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
+				 hash_algorithm_names, alg, plugin_name, tested);
+		}
 	}
 	return !failed;
 }
 
 /**
- * Implementation of crypto_tester_t.test_prf
+ * Benchmark a PRF
  */
-static bool test_prf(private_crypto_tester_t *this,
-					 pseudo_random_function_t alg, prf_constructor_t create)
+static u_int bench_prf(private_crypto_tester_t *this,
+					   pseudo_random_function_t alg, prf_constructor_t create)
+{
+	prf_t *prf;
+
+	prf = create(alg);
+	if (prf)
+	{
+		char bytes[prf->get_block_size(prf)];
+		chunk_t buf;
+		struct timespec start;
+		u_int runs;
+
+		buf = chunk_alloc(this->bench_size);
+		memset(buf.ptr, 0x34, buf.len);
+
+		runs = 0;
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			prf->get_bytes(prf, buf, bytes);
+			runs++;
+		}
+		free(buf.ptr);
+		prf->destroy(prf);
+
+		return runs;
+	}
+	return 0;
+}
+
+METHOD(crypto_tester_t, test_prf, bool,
+	private_crypto_tester_t *this, pseudo_random_function_t alg,
+	prf_constructor_t create, u_int *speed, const char *plugin_name)
 {
 	enumerator_t *enumerator;
 	prf_test_vector_t *vector;
@@ -377,8 +783,8 @@ static bool test_prf(private_crypto_tester_t *this,
 		prf = create(alg);
 		if (!prf)
 		{
-			DBG1(DBG_LIB, "disabled %N: creating instance failed",
-				 pseudo_random_function_names, alg);
+			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
+				 pseudo_random_function_names, alg, plugin_name);
 			failed = TRUE;
 			break;
 		}
@@ -431,32 +837,70 @@ static bool test_prf(private_crypto_tester_t *this,
 		prf->destroy(prf);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 pseudo_random_function_names, alg, tested);
+			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
+				 pseudo_random_function_names, alg, plugin_name, get_name(vector));
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
 			 this->required ? "disabled" : "enabled ",
-			 pseudo_random_function_names, alg);
+			 pseudo_random_function_names, alg, plugin_name);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 pseudo_random_function_names, alg, tested);
+		if (speed)
+		{
+			*speed = bench_prf(this, alg, create);
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
+				 pseudo_random_function_names, alg, plugin_name, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
+				 pseudo_random_function_names, alg, plugin_name, tested);
+		}
 	}
 	return !failed;
 }
 
 /**
- * Implementation of crypto_tester_t.test_rng
+ * Benchmark a RNG
  */
-static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
-					 rng_constructor_t create)
+static u_int bench_rng(private_crypto_tester_t *this,
+					   rng_quality_t quality, rng_constructor_t create)
+{
+	rng_t *rng;
+
+	rng = create(quality);
+	if (rng)
+	{
+		struct timespec start;
+		chunk_t buf;
+		u_int runs;
+
+		runs = 0;
+		buf = chunk_alloc(this->bench_size);
+		start_timing(&start);
+		while (end_timing(&start) < this->bench_time)
+		{
+			rng->get_bytes(rng, buf.len, buf.ptr);
+			runs++;
+		}
+		free(buf.ptr);
+		rng->destroy(rng);
+
+		return runs;
+	}
+	return 0;
+}
+
+METHOD(crypto_tester_t, test_rng, bool,
+	private_crypto_tester_t *this, rng_quality_t quality,
+	rng_constructor_t create, u_int *speed, const char *plugin_name)
 {
 	enumerator_t *enumerator;
 	rng_test_vector_t *vector;
@@ -465,8 +909,8 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 
 	if (!this->rng_true && quality == RNG_TRUE)
 	{
-		DBG1(DBG_LIB, "enabled  %N: skipping test (disabled by config)",
-			 rng_quality_names, quality);
+		DBG1(DBG_LIB, "enabled  %N[%s]: skipping test (disabled by config)",
+			 rng_quality_names, quality, plugin_name);
 		return TRUE;
 	}
 
@@ -485,8 +929,8 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 		rng = create(quality);
 		if (!rng)
 		{
-			DBG1(DBG_LIB, "disabled %N: creating instance failed",
-				 rng_quality_names, quality);
+			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
+				 rng_quality_names, quality, plugin_name);
 			failed = TRUE;
 			break;
 		}
@@ -515,78 +959,77 @@ static bool test_rng(private_crypto_tester_t *this, rng_quality_t quality,
 		rng->destroy(rng);
 		if (failed)
 		{
-			DBG1(DBG_LIB, "disabled %N: test vector %u failed",
-				 rng_quality_names, quality, tested);
+			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
+				 rng_quality_names, quality, plugin_name, get_name(vector));
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 	if (!tested)
 	{
-		DBG1(DBG_LIB, "%s %N: no test vectors found",
+		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found",
 			 this->required ? ", disabled" : "enabled ",
-			 rng_quality_names, quality);
+			 rng_quality_names, quality, plugin_name);
 		return !this->required;
 	}
 	if (!failed)
 	{
-		DBG1(DBG_LIB, "enabled  %N: passed %u test vectors",
-			 rng_quality_names, quality, tested);
+		if (speed)
+		{
+			*speed = bench_rng(this, quality, create);
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
+				 rng_quality_names, quality, plugin_name, tested, *speed);
+		}
+		else
+		{
+			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
+				 rng_quality_names, quality, plugin_name, tested);
+		}
 	}
 	return !failed;
 }
 
-/**
- * Implementation of crypter_tester_t.add_crypter_vector
- */
-static void add_crypter_vector(private_crypto_tester_t *this,
-							   crypter_test_vector_t *vector)
+METHOD(crypto_tester_t, add_crypter_vector, void,
+	private_crypto_tester_t *this, crypter_test_vector_t *vector)
 {
 	this->crypter->insert_last(this->crypter, vector);
 }
 
-/**
- * Implementation of crypter_tester_t.add_signer_vector
- */
-static void add_signer_vector(private_crypto_tester_t *this,
-							  signer_test_vector_t *vector)
+METHOD(crypto_tester_t, add_aead_vector, void,
+	private_crypto_tester_t *this, aead_test_vector_t *vector)
+{
+	this->aead->insert_last(this->aead, vector);
+}
+
+METHOD(crypto_tester_t, add_signer_vector, void,
+	private_crypto_tester_t *this, signer_test_vector_t *vector)
 {
 	this->signer->insert_last(this->signer, vector);
 }
 
-/**
- * Implementation of crypter_tester_t.add_hasher_vector
- */
-static void add_hasher_vector(private_crypto_tester_t *this,
-							  hasher_test_vector_t *vector)
+METHOD(crypto_tester_t, add_hasher_vector, void,
+	private_crypto_tester_t *this, hasher_test_vector_t *vector)
 {
 	this->hasher->insert_last(this->hasher, vector);
 }
 
-/**
- * Implementation of crypter_tester_t.add_prf_vector
- */
-static void add_prf_vector(private_crypto_tester_t *this,
-						   prf_test_vector_t *vector)
+METHOD(crypto_tester_t, add_prf_vector, void,
+	private_crypto_tester_t *this, prf_test_vector_t *vector)
 {
 	this->prf->insert_last(this->prf, vector);
 }
 
-/**
- * Implementation of crypter_tester_t.add_rng_vector
- */
-static void add_rng_vector(private_crypto_tester_t *this,
-						   rng_test_vector_t *vector)
+METHOD(crypto_tester_t, add_rng_vector, void,
+	private_crypto_tester_t *this, rng_test_vector_t *vector)
 {
 	this->rng->insert_last(this->rng, vector);
 }
 
-/**
- * Implementation of crypto_tester_t.destroy.
- */
-static void destroy(private_crypto_tester_t *this)
+METHOD(crypto_tester_t, destroy, void,
+	private_crypto_tester_t *this)
 {
 	this->crypter->destroy(this->crypter);
+	this->aead->destroy(this->aead);
 	this->signer->destroy(this->signer);
 	this->hasher->destroy(this->hasher);
 	this->prf->destroy(this->prf);
@@ -599,30 +1042,43 @@ static void destroy(private_crypto_tester_t *this)
  */
 crypto_tester_t *crypto_tester_create()
 {
-	private_crypto_tester_t *this = malloc_thing(private_crypto_tester_t);
+	private_crypto_tester_t *this;
 
-	this->public.test_crypter = (bool(*)(crypto_tester_t*, encryption_algorithm_t alg,size_t key_size, crypter_constructor_t create))test_crypter;
-	this->public.test_signer = (bool(*)(crypto_tester_t*, integrity_algorithm_t alg, signer_constructor_t create))test_signer;
-	this->public.test_hasher = (bool(*)(crypto_tester_t*, hash_algorithm_t alg, hasher_constructor_t create))test_hasher;
-	this->public.test_prf = (bool(*)(crypto_tester_t*, pseudo_random_function_t alg, prf_constructor_t create))test_prf;
-	this->public.test_rng = (bool(*)(crypto_tester_t*, rng_quality_t quality, rng_constructor_t create))test_rng;
-	this->public.add_crypter_vector = (void(*)(crypto_tester_t*, crypter_test_vector_t *vector))add_crypter_vector;
-	this->public.add_signer_vector = (void(*)(crypto_tester_t*, signer_test_vector_t *vector))add_signer_vector;
-	this->public.add_hasher_vector = (void(*)(crypto_tester_t*, hasher_test_vector_t *vector))add_hasher_vector;
-	this->public.add_prf_vector = (void(*)(crypto_tester_t*, prf_test_vector_t *vector))add_prf_vector;
-	this->public.add_rng_vector = (void(*)(crypto_tester_t*, rng_test_vector_t *vector))add_rng_vector;
-	this->public.destroy = (void(*)(crypto_tester_t*))destroy;
+	INIT(this,
+		.public = {
+			.test_crypter = _test_crypter,
+			.test_aead = _test_aead,
+			.test_signer = _test_signer,
+			.test_hasher = _test_hasher,
+			.test_prf = _test_prf,
+			.test_rng = _test_rng,
+			.add_crypter_vector = _add_crypter_vector,
+			.add_aead_vector = _add_aead_vector,
+			.add_signer_vector = _add_signer_vector,
+			.add_hasher_vector = _add_hasher_vector,
+			.add_prf_vector = _add_prf_vector,
+			.add_rng_vector = _add_rng_vector,
+			.destroy = _destroy,
+		},
+		.crypter = linked_list_create(),
+		.aead = linked_list_create(),
+		.signer = linked_list_create(),
+		.hasher = linked_list_create(),
+		.prf = linked_list_create(),
+		.rng = linked_list_create(),
 
-	this->crypter = linked_list_create();
-	this->signer = linked_list_create();
-	this->hasher = linked_list_create();
-	this->prf = linked_list_create();
-	this->rng = linked_list_create();
+		.required = lib->settings->get_bool(lib->settings,
+								"libstrongswan.crypto_test.required", FALSE),
+		.rng_true = lib->settings->get_bool(lib->settings,
+								"libstrongswan.crypto_test.rng_true", FALSE),
+		.bench_time = lib->settings->get_int(lib->settings,
+								"libstrongswan.crypto_test.bench_time", 50),
+		.bench_size = lib->settings->get_int(lib->settings,
+								"libstrongswan.crypto_test.bench_size", 1024),
+	);
 
-	this->required = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.required", FALSE);
-	this->rng_true = lib->settings->get_bool(lib->settings,
-								"libstrongswan.crypto_test.rng_true", FALSE);
+	/* enforce a block size of 16, should be fine for all algorithms */
+	this->bench_size = this->bench_size / 16 * 16;
 
 	return &this->public;
 }

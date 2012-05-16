@@ -12,8 +12,20 @@ if USE_SIMAKA
   SUBDIRS += libsimaka
 endif
 
+if USE_TLS
+  SUBDIRS += libtls
+endif
+
+if USE_LIBCHARON
+  SUBDIRS += libcharon
+endif
+
 if USE_FILE_CONFIG
-  SUBDIRS += libfreeswan starter ipsec _copyright
+  SUBDIRS += libfreeswan starter
+endif
+
+if USE_IPSEC_SCRIPT
+  SUBDIRS += ipsec _copyright
 endif
 
 if USE_PLUTO
@@ -21,7 +33,7 @@ if USE_PLUTO
 endif
 
 if USE_CHARON
-  SUBDIRS += libcharon charon
+  SUBDIRS += charon
 endif
 
 if USE_STROKE
@@ -34,6 +46,10 @@ endif
 
 if USE_TOOLS
   SUBDIRS += openac scepclient pki newhostkey rsasigkey barf _include _keycensor _secretcensor
+endif
+
+if USE_CONFTEST
+  SUBDIRS += conftest
 endif
 
 if USE_DUMM
@@ -60,4 +76,4 @@ EXTRA_DIST = strongswan.conf
 
 install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)"
-		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true
+		test -e "$(DESTDIR)$(sysconfdir)/strongswan.conf" || $(INSTALL) -m 640 $(srcdir)/strongswan.conf $(DESTDIR)$(sysconfdir)/strongswan.conf || true

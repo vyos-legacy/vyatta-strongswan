@@ -27,7 +27,6 @@
 typedef struct auth_cfg_t auth_cfg_t;
 typedef enum auth_rule_t auth_rule_t;
 typedef enum auth_class_t auth_class_t;
-typedef enum eap_type_t eap_type_t;
 
 /**
  * Class of authentication to use. This is different to auth_method_t in that
@@ -51,35 +50,6 @@ enum auth_class_t {
 extern enum_name_t *auth_class_names;
 
 /**
- * EAP types, defines the EAP method implementation
- */
-enum eap_type_t {
-	EAP_IDENTITY = 1,
-	EAP_NOTIFICATION = 2,
-	EAP_NAK = 3,
-	EAP_MD5 = 4,
-	EAP_OTP = 5,
-	EAP_GTC = 6,
-	EAP_SIM = 18,
-	EAP_AKA = 23,
-	EAP_MSCHAPV2 = 26,
-	/** not a method, but an implementation providing different methods */
-	EAP_RADIUS = 253,
-	EAP_EXPANDED = 254,
-	EAP_EXPERIMENTAL = 255,
-};
-
-/**
- * enum names for eap_type_t.
- */
-extern enum_name_t *eap_type_names;
-
-/**
- * short string enum names for eap_type_t.
- */
-extern enum_name_t *eap_type_short_names;
-
-/**
  * Authentication config to use during authentication process.
  *
  * Each authentication config contains a set of rules. These rule-sets are used
@@ -98,6 +68,8 @@ enum auth_rule_t {
 	AUTH_RULE_IDENTITY,
 	/** authentication class, auth_class_t */
 	AUTH_RULE_AUTH_CLASS,
+	/** AAA-backend identity for EAP methods supporting it, identification_t* */
+	AUTH_RULE_AAA_IDENTITY,
 	/** EAP identity to use within EAP-Identity exchange, identification_t* */
 	AUTH_RULE_EAP_IDENTITY,
 	/** EAP type to propose for peer authentication, eap_type_t */
@@ -118,6 +90,12 @@ enum auth_rule_t {
 	 * The group membership constraint is fulfilled if the subject is member of
 	 * one group defined in the constraints. */
 	AUTH_RULE_GROUP,
+	/** required RSA public key strength, u_int in bits */
+	AUTH_RULE_RSA_STRENGTH,
+	/** required ECDSA public key strength, u_int in bits */
+	AUTH_RULE_ECDSA_STRENGTH,
+	/** certificatePolicy constraint, numerical OID as char* */
+	AUTH_RULE_CERT_POLICY,
 
 	/** intermediate certificate, certificate_t* */
 	AUTH_HELPER_IM_CERT,
@@ -127,6 +105,8 @@ enum auth_rule_t {
 	AUTH_HELPER_IM_HASH_URL,
 	/** Hash and URL of a end-entity certificate, char* */
 	AUTH_HELPER_SUBJECT_HASH_URL,
+	/** revocation certificate (CRL, OCSP), certificate_t* */
+	AUTH_HELPER_REVOCATION_CERT,
 };
 
 /**

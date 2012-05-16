@@ -65,32 +65,34 @@ typedef struct {
 } x501rdn_t;
 
 static const x501rdn_t x501rdns[] = {
-	{"ND", 				OID_NAME_DISTINGUISHER,		ASN1_PRINTABLESTRING},
-	{"UID", 			OID_PILOT_USERID,			ASN1_PRINTABLESTRING},
-	{"DC", 				OID_PILOT_DOMAIN_COMPONENT, ASN1_PRINTABLESTRING},
-	{"CN",				OID_COMMON_NAME,			ASN1_PRINTABLESTRING},
-	{"S", 				OID_SURNAME,				ASN1_PRINTABLESTRING},
-	{"SN", 				OID_SERIAL_NUMBER,			ASN1_PRINTABLESTRING},
-	{"serialNumber", 	OID_SERIAL_NUMBER,			ASN1_PRINTABLESTRING},
-	{"C", 				OID_COUNTRY,				ASN1_PRINTABLESTRING},
-	{"L", 				OID_LOCALITY,				ASN1_PRINTABLESTRING},
-	{"ST",				OID_STATE_OR_PROVINCE,		ASN1_PRINTABLESTRING},
-	{"O", 				OID_ORGANIZATION,			ASN1_PRINTABLESTRING},
-	{"OU", 				OID_ORGANIZATION_UNIT,		ASN1_PRINTABLESTRING},
-	{"T", 				OID_TITLE,					ASN1_PRINTABLESTRING},
-	{"D", 				OID_DESCRIPTION,			ASN1_PRINTABLESTRING},
-	{"N", 				OID_NAME,					ASN1_PRINTABLESTRING},
-	{"G", 				OID_GIVEN_NAME,				ASN1_PRINTABLESTRING},
-	{"I", 				OID_INITIALS,				ASN1_PRINTABLESTRING},
-	{"ID", 				OID_UNIQUE_IDENTIFIER,		ASN1_PRINTABLESTRING},
-	{"EN", 				OID_EMPLOYEE_NUMBER,		ASN1_PRINTABLESTRING},
-	{"employeeNumber",	OID_EMPLOYEE_NUMBER,		ASN1_PRINTABLESTRING},
-	{"E", 				OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
-	{"Email", 			OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
-	{"emailAddress",	OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
-	{"UN", 				OID_UNSTRUCTURED_NAME,		ASN1_IA5STRING},
-	{"unstructuredName",OID_UNSTRUCTURED_NAME,		ASN1_IA5STRING},
-	{"TCGID", 			OID_TCGID,					ASN1_PRINTABLESTRING}
+	{"ND", 					OID_NAME_DISTINGUISHER,		ASN1_PRINTABLESTRING},
+	{"UID", 				OID_PILOT_USERID,			ASN1_PRINTABLESTRING},
+	{"DC", 					OID_PILOT_DOMAIN_COMPONENT, ASN1_PRINTABLESTRING},
+	{"CN",					OID_COMMON_NAME,			ASN1_PRINTABLESTRING},
+	{"S", 					OID_SURNAME,				ASN1_PRINTABLESTRING},
+	{"SN", 					OID_SERIAL_NUMBER,			ASN1_PRINTABLESTRING},
+	{"serialNumber", 		OID_SERIAL_NUMBER,			ASN1_PRINTABLESTRING},
+	{"C", 					OID_COUNTRY,				ASN1_PRINTABLESTRING},
+	{"L", 					OID_LOCALITY,				ASN1_PRINTABLESTRING},
+	{"ST",					OID_STATE_OR_PROVINCE,		ASN1_PRINTABLESTRING},
+	{"O", 					OID_ORGANIZATION,			ASN1_PRINTABLESTRING},
+	{"OU", 					OID_ORGANIZATION_UNIT,		ASN1_PRINTABLESTRING},
+	{"T", 					OID_TITLE,					ASN1_PRINTABLESTRING},
+	{"D", 					OID_DESCRIPTION,			ASN1_PRINTABLESTRING},
+	{"N", 					OID_NAME,					ASN1_PRINTABLESTRING},
+	{"G", 					OID_GIVEN_NAME,				ASN1_PRINTABLESTRING},
+	{"I", 					OID_INITIALS,				ASN1_PRINTABLESTRING},
+	{"ID", 					OID_UNIQUE_IDENTIFIER,		ASN1_PRINTABLESTRING},
+	{"EN", 					OID_EMPLOYEE_NUMBER,		ASN1_PRINTABLESTRING},
+	{"employeeNumber",		OID_EMPLOYEE_NUMBER,		ASN1_PRINTABLESTRING},
+	{"E",					OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
+	{"Email", 				OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
+	{"emailAddress",		OID_EMAIL_ADDRESS,			ASN1_IA5STRING},
+	{"UN",					OID_UNSTRUCTURED_NAME,		ASN1_IA5STRING},
+	{"unstructuredName",	OID_UNSTRUCTURED_NAME,		ASN1_IA5STRING},
+	{"UA",					OID_UNSTRUCTURED_ADDRESS,	ASN1_PRINTABLESTRING},
+	{"unstructuredAddress", OID_UNSTRUCTURED_ADDRESS,	ASN1_PRINTABLESTRING},
+	{"TCGID", 				OID_TCGID,					ASN1_PRINTABLESTRING}
 };
 
 /**
@@ -282,11 +284,13 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 	chunk_t oid_data, data, printable;
 	u_char type;
 	int oid, written;
-	bool finished = FALSE;
+	bool finished = FALSE, empty = TRUE;
 
 	e = create_rdn_enumerator(dn);
 	while (e->enumerate(e, &oid_data, &type, &data))
 	{
+		empty = FALSE;
+
 		oid = asn1_known_oid(oid_data);
 
 		if (oid == OID_UNKNOWN)
@@ -330,7 +334,11 @@ static void dntoa(chunk_t dn, char *buf, size_t len)
 			break;
 		}
 	}
-	if (!finished)
+	if (empty)
+	{
+		snprintf(buf, len, "");
+	}
+	else if (!finished)
 	{
 		snprintf(buf, len, "(invalid ID_DER_ASN1_DN)");
 	}
@@ -976,7 +984,11 @@ identification_t *identification_create_from_string(char *string)
 				else
 				{	/* not IPv4/6 fallback to KEY_ID */
 					this = identification_create(ID_KEY_ID);
-					this->encoded = chunk_create(strdup(string), strlen(string));
+					this->encoded.len = strlen(string);
+					if (this->encoded.len)
+					{
+						this->encoded.ptr = strdup(string);
+					}
 				}
 				return &this->public;
 			}
@@ -998,14 +1010,22 @@ identification_t *identification_create_from_string(char *string)
 			{
 				this = identification_create(ID_FQDN);
 				string += 1;
-				this->encoded = chunk_create(strdup(string), strlen(string));
+				this->encoded.len = strlen(string);
+				if (this->encoded.len)
+				{
+					this->encoded.ptr = strdup(string);
+				}
 				return &this->public;
 			}
 		}
 		else
 		{
 			this = identification_create(ID_RFC822_ADDR);
-			this->encoded = chunk_create(strdup(string), strlen(string));
+			this->encoded.len = strlen(string);
+			if (this->encoded.len)
+			{
+				this->encoded.ptr = strdup(string);
+			}
 			return &this->public;
 		}
 	}

@@ -382,6 +382,8 @@ static private_openssl_crl_t *create_empty()
 				},
 				.get_serial = _get_serial,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
+				.is_delta_crl = (void*)return_false,
+				.create_delta_crl_uri_enumerator = (void*)enumerator_create_empty,
 				.create_enumerator = _create_enumerator,
 			},
 		},
@@ -416,10 +418,19 @@ static bool parse_authKeyIdentifier_ext(private_openssl_crl_t *this,
 static bool parse_crlNumber_ext(private_openssl_crl_t *this,
 								X509_EXTENSION *ext)
 {
-	free(this->serial.ptr);
-	this->serial = chunk_clone(
-						openssl_asn1_str2chunk(X509_EXTENSION_get_data(ext)));
-	return this->serial.len != 0;
+	chunk_t chunk;
+
+	chunk = openssl_asn1_str2chunk(X509_EXTENSION_get_data(ext));
+	/* quick and dirty INTEGER unwrap */
+	if (chunk.len > 1 && chunk.ptr[0] == V_ASN1_INTEGER &&
+		chunk.ptr[1] == chunk.len - 2)
+	{
+		chunk = chunk_skip(chunk, 2);
+		free(this->serial.ptr);
+		this->serial = chunk_clone(chunk);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -449,7 +460,14 @@ static bool parse_extensions(private_openssl_crl_t *this)
 					ok = parse_crlNumber_ext(this, ext);
 					break;
 				default:
-					ok = TRUE;
+					ok = X509_EXTENSION_get_critical(ext) == 0 ||
+						 !lib->settings->get_bool(lib->settings,
+								"libstrongswan.x509.enforce_critical", TRUE);
+					if (!ok)
+					{
+						DBG1(DBG_LIB, "found unsupported critical X.509 "
+							 "CRL extension");
+					}
 					break;
 			}
 			if (!ok)

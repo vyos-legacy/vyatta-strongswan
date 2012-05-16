@@ -15,6 +15,7 @@
 
 #include "stroke_config.h"
 
+#include <hydra.h>
 #include <daemon.h>
 #include <threading/mutex.h>
 #include <utils/lexparser.h>
@@ -52,12 +53,8 @@ struct private_stroke_config_t {
 	stroke_cred_t *cred;
 };
 
-/**
- * Implementation of backend_t.create_peer_cfg_enumerator.
- */
-static enumerator_t* create_peer_cfg_enumerator(private_stroke_config_t *this,
-												identification_t *me,
-												identification_t *other)
+METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
+	private_stroke_config_t *this, identification_t *me, identification_t *other)
 {
 	this->mutex->lock(this->mutex);
 	return enumerator_create_cleaner(this->list->create_enumerator(this->list),
@@ -73,11 +70,8 @@ static bool ike_filter(void *data, peer_cfg_t **in, ike_cfg_t **out)
 	return TRUE;
 }
 
-/**
- * Implementation of backend_t.create_ike_cfg_enumerator.
- */
-static enumerator_t* create_ike_cfg_enumerator(private_stroke_config_t *this,
-											   host_t *me, host_t *other)
+METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
+	private_stroke_config_t *this, host_t *me, host_t *other)
 {
 	this->mutex->lock(this->mutex);
 	return enumerator_create_filter(this->list->create_enumerator(this->list),
@@ -85,10 +79,8 @@ static enumerator_t* create_ike_cfg_enumerator(private_stroke_config_t *this,
 									(void*)this->mutex->unlock);
 }
 
-/**
- * implements backend_t.get_peer_cfg_by_name.
- */
-static peer_cfg_t *get_peer_cfg_by_name(private_stroke_config_t *this, char *name)
+METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
+	private_stroke_config_t *this, char *name)
 {
 	enumerator_t *e1, *e2;
 	peer_cfg_t *current, *found = NULL;
@@ -199,8 +191,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	host = host_create_from_dns(msg->add_conn.other.address, 0, 0);
 	if (host)
 	{
-		interface = charon->kernel_interface->get_interface(
-												charon->kernel_interface, host);
+		interface = hydra->kernel_interface->get_interface(
+												hydra->kernel_interface, host);
 		host->destroy(host);
 		if (interface)
 		{
@@ -215,8 +207,8 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 			host = host_create_from_dns(msg->add_conn.me.address, 0, 0);
 			if (host)
 			{
-				interface = charon->kernel_interface->get_interface(
-												charon->kernel_interface, host);
+				interface = hydra->kernel_interface->get_interface(
+												hydra->kernel_interface, host);
 				host->destroy(host);
 				if (!interface)
 				{
@@ -362,7 +354,16 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			}
 		}
 		else
-		{	/* no second authentication round, fine */
+		{	/* no second authentication round, fine. But load certificates
+			 * for other purposes (EAP-TLS) */
+			if (cert)
+			{
+				certificate = this->cred->load_peer(this->cred, cert);
+				if (certificate)
+				{
+					certificate->destroy(certificate);
+				}
+			}
 			return NULL;
 		}
 	}
@@ -408,7 +409,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		}
 		else
 		{
-			DBG1(DBG_CFG, "CA certificate %s not found, discarding CA "
+			DBG1(DBG_CFG, "CA certificate \"%s\" not found, discarding CA "
 				 "constraint", ca);
 		}
 	}
@@ -428,13 +429,38 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		enumerator->destroy(enumerator);
 	}
 
+	/* certificatePolicies */
+	if (end->cert_policy)
+	{
+		enumerator_t *enumerator;
+		char *policy;
+
+		enumerator = enumerator_create_token(end->cert_policy, ",", " ");
+		while (enumerator->enumerate(enumerator, &policy))
+		{
+			cfg->add(cfg, AUTH_RULE_CERT_POLICY, strdup(policy));
+		}
+		enumerator->destroy(enumerator);
+	}
+
 	/* authentication metod (class, actually) */
 	if (streq(auth, "pubkey") ||
-		streq(auth, "rsasig") || streq(auth, "rsa") ||
-		streq(auth, "ecdsasig") || streq(auth, "ecdsa"))
+		strneq(auth, "rsa", strlen("rsa")) ||
+		strneq(auth, "ecdsa", strlen("ecdsa")))
 	{
+		u_int strength;
+
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		build_crl_policy(cfg, local, msg->add_conn.crl_policy);
+
+		if (sscanf(auth, "rsa-%d", &strength) == 1)
+		{
+			cfg->add(cfg, AUTH_RULE_RSA_STRENGTH, (uintptr_t)strength);
+		}
+		if (sscanf(auth, "ecdsa-%d", &strength) == 1)
+		{
+			cfg->add(cfg, AUTH_RULE_ECDSA_STRENGTH, (uintptr_t)strength);
+		}
 	}
 	else if (streq(auth, "psk") || streq(auth, "secret"))
 	{
@@ -501,6 +527,11 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 													msg->add_conn.eap_identity);
 			}
 			cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, identity);
+		}
+		if (msg->add_conn.aaa_identity)
+		{
+			cfg->add(cfg, AUTH_RULE_AAA_IDENTITY,
+				identification_create_from_string(msg->add_conn.aaa_identity));
 		}
 	}
 	else
@@ -793,9 +824,9 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 	child_cfg = child_cfg_create(
 				msg->add_conn.name, &lifetime,
 				msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
-				msg->add_conn.mode, dpd, dpd, msg->add_conn.ipcomp,
+				msg->add_conn.mode, ACTION_NONE, dpd, dpd, msg->add_conn.ipcomp,
 				msg->add_conn.inactivity, msg->add_conn.reqid,
-				&mark_in, &mark_out);
+				&mark_in, &mark_out, msg->add_conn.tfc);
 	child_cfg->set_mipv6_options(child_cfg, msg->add_conn.proxy_mode,
 											msg->add_conn.install_policy);
 	add_ts(this, &msg->add_conn.me, child_cfg, TRUE);
@@ -806,10 +837,8 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 	return child_cfg;
 }
 
-/**
- * Implementation of stroke_config_t.add.
- */
-static void add(private_stroke_config_t *this, stroke_msg_t *msg)
+METHOD(stroke_config_t, add, void,
+	private_stroke_config_t *this, stroke_msg_t *msg)
 {
 	ike_cfg_t *ike_cfg, *existing_ike;
 	peer_cfg_t *peer_cfg, *existing;
@@ -869,10 +898,8 @@ static void add(private_stroke_config_t *this, stroke_msg_t *msg)
 	}
 }
 
-/**
- * Implementation of stroke_config_t.del.
- */
-static void del(private_stroke_config_t *this, stroke_msg_t *msg)
+METHOD(stroke_config_t, del, void,
+	private_stroke_config_t *this, stroke_msg_t *msg)
 {
 	enumerator_t *enumerator, *children;
 	peer_cfg_t *peer;
@@ -923,10 +950,8 @@ static void del(private_stroke_config_t *this, stroke_msg_t *msg)
 	}
 }
 
-/**
- * Implementation of stroke_config_t.destroy
- */
-static void destroy(private_stroke_config_t *this)
+METHOD(stroke_config_t, destroy, void,
+	private_stroke_config_t *this)
 {
 	this->list->destroy_offset(this->list, offsetof(peer_cfg_t, destroy));
 	this->mutex->destroy(this->mutex);
@@ -938,19 +963,24 @@ static void destroy(private_stroke_config_t *this)
  */
 stroke_config_t *stroke_config_create(stroke_ca_t *ca, stroke_cred_t *cred)
 {
-	private_stroke_config_t *this = malloc_thing(private_stroke_config_t);
+	private_stroke_config_t *this;
 
-	this->public.backend.create_peer_cfg_enumerator = (enumerator_t*(*)(backend_t*, identification_t *me, identification_t *other))create_peer_cfg_enumerator;
-	this->public.backend.create_ike_cfg_enumerator = (enumerator_t*(*)(backend_t*, host_t *me, host_t *other))create_ike_cfg_enumerator;
-	this->public.backend.get_peer_cfg_by_name = (peer_cfg_t* (*)(backend_t*,char*))get_peer_cfg_by_name;
-	this->public.add = (void(*)(stroke_config_t*, stroke_msg_t *msg))add;
-	this->public.del = (void(*)(stroke_config_t*, stroke_msg_t *msg))del;
-	this->public.destroy = (void(*)(stroke_config_t*))destroy;
-
-	this->list = linked_list_create();
-	this->mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
-	this->ca = ca;
-	this->cred = cred;
+	INIT(this,
+		.public = {
+			.backend = {
+				.create_peer_cfg_enumerator = _create_peer_cfg_enumerator,
+				.create_ike_cfg_enumerator = _create_ike_cfg_enumerator,
+				.get_peer_cfg_by_name = _get_peer_cfg_by_name,
+			},
+			.add = _add,
+			.del = _del,
+			.destroy = _destroy,
+		},
+		.list = linked_list_create(),
+		.mutex = mutex_create(MUTEX_TYPE_RECURSIVE),
+		.ca = ca,
+		.cred = cred,
+	);
 
 	return &this->public;
 }

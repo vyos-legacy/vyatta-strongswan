@@ -1,3 +1,77 @@
+strongswan (4.5.2-1.1~bpo60+1) squeeze-backports; urgency=low
+
+  * Backport to squeeze-backports.
+  * Add myself to Uploaders.
+
+ -- Micah Anderson <micah@debian.org>  Fri, 15 Jul 2011 09:08:39 -0400
+
+strongswan (4.5.2-1.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * debian/strongswan-starter.ipsec.init: Init script should depends on
+    remote_fs instead of local_fs, also provide ipsec instead of vpn as
+    the other ipsec implementations (Closes: #629675)
+  * debian/patches/0001-fix-fprintf-format.patch: Fix FTBFS with gcc 4.6,
+    taken from upstream (Closes: #614486)
+  * debian/control: Tighten dependency version against libstrongswan
+    (Closes: #626170)
+  * debian/strongswan-starter.lintian-overrides, debian/rules:
+    Correctly set restricted permissions on /etc/ipsec.d/private/
+    and /var/lib/strongswan (Closes: #598827)
+
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 04 Jul 2011 10:58:59 +0200
+
+strongswan (4.5.2-1) unstable; urgency=low
+
+  * New upstream version 4.5.2. This removes a lot of old manpages that were
+    not properly updated since freeswan.
+    Closes: #616482: strongswan-ikev1: virtual ips not released if xauth name 
+                     does not match id
+    Closes: #626169: strongswan: ipsec tunnels fail because charon segfaults
+    Closes: #625228: strongswan-starter: left-/rightnexthop options are broken
+    Closes: #614105: strongswan-ikev2: charon continually respawns
+  * Fix typo in debian/rules that precluded --enable-nm from being passed to
+    configure (LP: #771778).
+    Closes: #627775: strongswan-nm package is missing nm module
+  * Make sure to install all newly added plugins (and generally files created
+    by make install) by calling dh_install with --fail-missing. Install some
+    newly enabled crypto plugins in the libstrongswan package.
+    Closes: #627783: Please disable modules that are not installed in package 
+                     at build time
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Thu, 19 May 2011 13:42:21 +0200
+
+strongswan (4.5.1-1) unstable; urgency=low
+
+  * New upstream version
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sat, 05 Mar 2011 09:27:49 +0100
+
+strongswan (4.5.0-1) unstable; urgency=low
+
+  * New upstream version 4.5.0
+  * Enabled new configure options for additional libstrongswan plugins:
+    --enable-ctr --enable-ccm --enable-gcm --enable-addrblock --enable-led
+    --enable-pkcs11 --enable-eap-tls --enable-eap-ttls --enable-eap-tnc
+  * Enable NAT-Traversal with transport mode support so that strongswan
+    can be used for an L2TP/IPsec gateway (e.g. for Windows or mobile phone
+    clients).
+  * Special handling for strongswan-nm package during build time: only build
+    and install if headers are really available. This supports easier 
+    backporting by simply ignoring build-deps and therefore to build all
+    packages except the strongswan-nm without any changes to the source 
+    package.
+  * Install test-vectors and revocation plugins for libstrongswan.
+    Closes: #600996: strongswan-starter: plugin 'revocation' failed to load
+  * Acknowledge translations NMU.
+    Closes: #598925: Intent to NMU or help for an l10n upload of strongswan 
+                     to fix pending po-debconf l10n bugs
+    Closes: #598925 #599888 #600354 #600409 #602449 #603723 #603779
+  * Update Brazilian Portugese debconf translation.
+    Closes: #607404: strongswan: [INTL:pt_BR] Brazilian Portuguese debconf 
+		     templates translation
+
+ -- Rene Mayrhofer <rmayr@debian.org>  Sun, 28 Nov 2010 13:09:42 +0100
 strongswan (4.4.1-5.1-vyatta4) unstable; urgency=low
 
   * new branch

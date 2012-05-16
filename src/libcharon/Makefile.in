@@ -46,108 +46,97 @@ host_triplet = @host@
 
 @USE_LIBCAP_TRUE@am__append_2 = -lcap
 @USE_LOAD_TESTER_TRUE@am__append_3 = plugins/load_tester
-@USE_LOAD_TESTER_TRUE@am__append_4 = load-tester
-@MONOLITHIC_TRUE@@USE_LOAD_TESTER_TRUE@am__append_5 = plugins/load_tester/libstrongswan-load-tester.la
-@USE_KERNEL_PFKEY_TRUE@am__append_6 = plugins/kernel_pfkey
-@USE_KERNEL_PFKEY_TRUE@am__append_7 = kernel-pfkey
-@MONOLITHIC_TRUE@@USE_KERNEL_PFKEY_TRUE@am__append_8 = plugins/kernel_pfkey/libstrongswan-kernel-pfkey.la
-@USE_KERNEL_PFROUTE_TRUE@am__append_9 = plugins/kernel_pfroute
-@USE_KERNEL_PFROUTE_TRUE@am__append_10 = kernel-pfroute
-@MONOLITHIC_TRUE@@USE_KERNEL_PFROUTE_TRUE@am__append_11 = plugins/kernel_pfroute/libstrongswan-kernel-pfroute.la
-@USE_KERNEL_KLIPS_TRUE@am__append_12 = plugins/kernel_klips
-@USE_KERNEL_KLIPS_TRUE@am__append_13 = kernel-klips
-@MONOLITHIC_TRUE@@USE_KERNEL_KLIPS_TRUE@am__append_14 = plugins/kernel_klips/libstrongswan-kernel-klips.la
-@USE_KERNEL_NETLINK_TRUE@am__append_15 = plugins/kernel_netlink
-@USE_KERNEL_NETLINK_TRUE@am__append_16 = kernel-netlink
-@MONOLITHIC_TRUE@@USE_KERNEL_NETLINK_TRUE@am__append_17 = plugins/kernel_netlink/libstrongswan-kernel-netlink.la
-@USE_SOCKET_DEFAULT_TRUE@am__append_18 = plugins/socket_default
-@USE_SOCKET_DEFAULT_TRUE@am__append_19 = socket-default
-@MONOLITHIC_TRUE@@USE_SOCKET_DEFAULT_TRUE@am__append_20 = plugins/socket_default/libstrongswan-socket-default.la
-@USE_SOCKET_RAW_TRUE@am__append_21 = plugins/socket_raw
-@USE_SOCKET_RAW_TRUE@am__append_22 = socket-raw
-@MONOLITHIC_TRUE@@USE_SOCKET_RAW_TRUE@am__append_23 = plugins/socket_raw/libstrongswan-socket-raw.la
-@USE_SOCKET_DYNAMIC_TRUE@am__append_24 = plugins/socket_dynamic
-@USE_SOCKET_DYNAMIC_TRUE@am__append_25 = socket-dynamic
-@MONOLITHIC_TRUE@@USE_SOCKET_DYNAMIC_TRUE@am__append_26 = plugins/socket_dynamic/libstrongswan-socket-dynamic.la
-@USE_FARP_TRUE@am__append_27 = plugins/farp
-@USE_FARP_TRUE@am__append_28 = farp
-@MONOLITHIC_TRUE@@USE_FARP_TRUE@am__append_29 = plugins/farp/libstrongswan-farp.la
-@USE_STROKE_TRUE@am__append_30 = plugins/stroke
-@USE_STROKE_TRUE@am__append_31 = stroke
-@MONOLITHIC_TRUE@@USE_STROKE_TRUE@am__append_32 = plugins/stroke/libstrongswan-stroke.la
-@USE_SMP_TRUE@am__append_33 = plugins/smp
-@USE_SMP_TRUE@am__append_34 = smp
-@MONOLITHIC_TRUE@@USE_SMP_TRUE@am__append_35 = plugins/smp/libstrongswan-smp.la
-@USE_SQL_TRUE@am__append_36 = plugins/sql
-@USE_SQL_TRUE@am__append_37 = sql
-@MONOLITHIC_TRUE@@USE_SQL_TRUE@am__append_38 = plugins/sql/libstrongswan-sql.la
-@USE_UPDOWN_TRUE@am__append_39 = plugins/updown
-@USE_UPDOWN_TRUE@am__append_40 = updown
-@MONOLITHIC_TRUE@@USE_UPDOWN_TRUE@am__append_41 = plugins/updown/libstrongswan-updown.la
-@USE_EAP_IDENTITY_TRUE@am__append_42 = plugins/eap_identity
-@USE_EAP_IDENTITY_TRUE@am__append_43 = eap-identity
-@MONOLITHIC_TRUE@@USE_EAP_IDENTITY_TRUE@am__append_44 = plugins/eap_identity/libstrongswan-eap-identity.la
-@USE_EAP_SIM_TRUE@am__append_45 = plugins/eap_sim
-@USE_EAP_SIM_TRUE@am__append_46 = eap-sim
-@MONOLITHIC_TRUE@@USE_EAP_SIM_TRUE@am__append_47 = plugins/eap_sim/libstrongswan-eap-sim.la
-@USE_EAP_SIM_FILE_TRUE@am__append_48 = plugins/eap_sim_file
-@USE_EAP_SIM_FILE_TRUE@am__append_49 = eap-sim-file
-@MONOLITHIC_TRUE@@USE_EAP_SIM_FILE_TRUE@am__append_50 = plugins/eap_sim_file/libstrongswan-eap-sim-file.la
-@USE_EAP_SIMAKA_SQL_TRUE@am__append_51 = plugins/eap_simaka_sql
-@USE_EAP_SIMAKA_SQL_TRUE@am__append_52 = eap-simaka-sql
-@MONOLITHIC_TRUE@@USE_EAP_SIMAKA_SQL_TRUE@am__append_53 = plugins/eap_simaka_sql/libstrongswan-eap-simaka-sql.la
-@USE_EAP_SIMAKA_PSEUDONYM_TRUE@am__append_54 = plugins/eap_simaka_pseudonym
-@USE_EAP_SIMAKA_PSEUDONYM_TRUE@am__append_55 = eap-simaka-pseudonym
-@MONOLITHIC_TRUE@@USE_EAP_SIMAKA_PSEUDONYM_TRUE@am__append_56 = plugins/eap_simaka_pseudonym/libstrongswan-eap-simaka-pseudonym.la
-@USE_EAP_SIMAKA_REAUTH_TRUE@am__append_57 = plugins/eap_simaka_reauth
-@USE_EAP_SIMAKA_REAUTH_TRUE@am__append_58 = eap-simaka-reauth
-@MONOLITHIC_TRUE@@USE_EAP_SIMAKA_REAUTH_TRUE@am__append_59 = plugins/eap_simaka_reauth/libstrongswan-eap-simaka-reauth.la
-@USE_EAP_AKA_TRUE@am__append_60 = plugins/eap_aka
-@USE_EAP_AKA_TRUE@am__append_61 = eap-aka
-@MONOLITHIC_TRUE@@USE_EAP_AKA_TRUE@am__append_62 = plugins/eap_aka/libstrongswan-eap-aka.la
-@USE_EAP_AKA_3GPP2_TRUE@am__append_63 = plugins/eap_aka_3gpp2
-@USE_EAP_AKA_3GPP2_TRUE@am__append_64 = eap-aka-3gpp2
-@MONOLITHIC_TRUE@@USE_EAP_AKA_3GPP2_TRUE@am__append_65 = plugins/eap_aka_3gpp2/libstrongswan-eap-aka-3gpp2.la
-@MONOLITHIC_TRUE@@USE_SIMAKA_TRUE@am__append_66 = $(top_builddir)/src/libsimaka/libsimaka.la
-@USE_EAP_MD5_TRUE@am__append_67 = plugins/eap_md5
-@USE_EAP_MD5_TRUE@am__append_68 = eap-md5
-@MONOLITHIC_TRUE@@USE_EAP_MD5_TRUE@am__append_69 = plugins/eap_md5/libstrongswan-eap-md5.la
-@USE_EAP_GTC_TRUE@am__append_70 = plugins/eap_gtc
-@USE_EAP_GTC_TRUE@am__append_71 = eap-gtc
-@MONOLITHIC_TRUE@@USE_EAP_GTC_TRUE@am__append_72 = plugins/eap_gtc/libstrongswan-eap-gtc.la
-@USE_EAP_MSCHAPV2_TRUE@am__append_73 = plugins/eap_mschapv2
-@USE_EAP_MSCHAPV2_TRUE@am__append_74 = eap-mschapv2
-@MONOLITHIC_TRUE@@USE_EAP_MSCHAPV2_TRUE@am__append_75 = plugins/eap_mschapv2/libstrongswan-eap-mschapv2.la
-@USE_EAP_RADIUS_TRUE@am__append_76 = plugins/eap_radius
-@USE_EAP_RADIUS_TRUE@am__append_77 = eap-radius
-@MONOLITHIC_TRUE@@USE_EAP_RADIUS_TRUE@am__append_78 = plugins/eap_radius/libstrongswan-eap-radius.la
-@USE_MEDSRV_TRUE@am__append_79 = plugins/medsrv
-@USE_MEDSRV_TRUE@am__append_80 = medsrv
-@MONOLITHIC_TRUE@@USE_MEDSRV_TRUE@am__append_81 = plugins/medsrv/libstrongswan-medsrv.la
-@USE_MEDCLI_TRUE@am__append_82 = plugins/medcli
-@USE_MEDCLI_TRUE@am__append_83 = medcli
-@MONOLITHIC_TRUE@@USE_MEDCLI_TRUE@am__append_84 = plugins/medcli/libstrongswan-medcli.la
-@USE_NM_TRUE@am__append_85 = plugins/nm
-@USE_NM_TRUE@am__append_86 = nm
-@MONOLITHIC_TRUE@@USE_NM_TRUE@am__append_87 = plugins/nm/libstrongswan-nm.la
-@USE_DHCP_TRUE@am__append_88 = plugins/dhcp
-@USE_DHCP_TRUE@am__append_89 = dhcp
-@MONOLITHIC_TRUE@@USE_DHCP_TRUE@am__append_90 = plugins/dhcp/libstrongswan-dhcp.la
-@USE_ANDROID_TRUE@am__append_91 = plugins/android
-@USE_ANDROID_TRUE@am__append_92 = android
-@MONOLITHIC_TRUE@@USE_ANDROID_TRUE@am__append_93 = plugins/android/libstrongswan-android.la
-@USE_HA_TRUE@am__append_94 = plugins/ha
-@USE_HA_TRUE@am__append_95 = ha
-@MONOLITHIC_TRUE@@USE_HA_TRUE@am__append_96 = plugins/ha/libstrongswan-ha.la
-@USE_UCI_TRUE@am__append_97 = plugins/uci
-@USE_UCI_TRUE@am__append_98 = uci
-@MONOLITHIC_TRUE@@USE_UCI_TRUE@am__append_99 = plugins/uci/libstrongswan-uci.la
-@USE_ADDRBLOCK_TRUE@am__append_100 = plugins/addrblock
-@USE_ADDRBLOCK_TRUE@am__append_101 = addrblock
-@MONOLITHIC_TRUE@@USE_ADDRBLOCK_TRUE@am__append_102 = plugins/uci/libstrongswan-addrblock.la
-@USE_UNIT_TESTS_TRUE@am__append_103 = plugins/unit_tester
-@USE_UNIT_TESTS_TRUE@am__append_104 = unit-tester
-@MONOLITHIC_TRUE@@USE_UNIT_TESTS_TRUE@am__append_105 = plugins/unit_tester/libstrongswan-unit-tester.la
+@MONOLITHIC_TRUE@@USE_LOAD_TESTER_TRUE@am__append_4 = plugins/load_tester/libstrongswan-load-tester.la
+@USE_SOCKET_DEFAULT_TRUE@am__append_5 = plugins/socket_default
+@MONOLITHIC_TRUE@@USE_SOCKET_DEFAULT_TRUE@am__append_6 = plugins/socket_default/libstrongswan-socket-default.la
+@USE_SOCKET_RAW_TRUE@am__append_7 = plugins/socket_raw
+@MONOLITHIC_TRUE@@USE_SOCKET_RAW_TRUE@am__append_8 = plugins/socket_raw/libstrongswan-socket-raw.la
+@USE_SOCKET_DYNAMIC_TRUE@am__append_9 = plugins/socket_dynamic
+@MONOLITHIC_TRUE@@USE_SOCKET_DYNAMIC_TRUE@am__append_10 = plugins/socket_dynamic/libstrongswan-socket-dynamic.la
+@USE_FARP_TRUE@am__append_11 = plugins/farp
+@MONOLITHIC_TRUE@@USE_FARP_TRUE@am__append_12 = plugins/farp/libstrongswan-farp.la
+@USE_STROKE_TRUE@am__append_13 = plugins/stroke
+@MONOLITHIC_TRUE@@USE_STROKE_TRUE@am__append_14 = plugins/stroke/libstrongswan-stroke.la
+@USE_SMP_TRUE@am__append_15 = plugins/smp
+@MONOLITHIC_TRUE@@USE_SMP_TRUE@am__append_16 = plugins/smp/libstrongswan-smp.la
+@USE_SQL_TRUE@am__append_17 = plugins/sql
+@MONOLITHIC_TRUE@@USE_SQL_TRUE@am__append_18 = plugins/sql/libstrongswan-sql.la
+@USE_UPDOWN_TRUE@am__append_19 = plugins/updown
+@MONOLITHIC_TRUE@@USE_UPDOWN_TRUE@am__append_20 = plugins/updown/libstrongswan-updown.la
+@USE_EAP_IDENTITY_TRUE@am__append_21 = plugins/eap_identity
+@MONOLITHIC_TRUE@@USE_EAP_IDENTITY_TRUE@am__append_22 = plugins/eap_identity/libstrongswan-eap-identity.la
+@USE_EAP_SIM_TRUE@am__append_23 = plugins/eap_sim
+@MONOLITHIC_TRUE@@USE_EAP_SIM_TRUE@am__append_24 = plugins/eap_sim/libstrongswan-eap-sim.la
+@USE_EAP_SIM_FILE_TRUE@am__append_25 = plugins/eap_sim_file
+@MONOLITHIC_TRUE@@USE_EAP_SIM_FILE_TRUE@am__append_26 = plugins/eap_sim_file/libstrongswan-eap-sim-file.la
+@USE_EAP_SIM_PCSC_TRUE@am__append_27 = plugins/eap_sim_pcsc
+@MONOLITHIC_TRUE@@USE_EAP_SIM_PCSC_TRUE@am__append_28 = plugins/eap_sim_pcsc/libstrongswan-eap-sim-pcsc.la
+@USE_EAP_SIMAKA_SQL_TRUE@am__append_29 = plugins/eap_simaka_sql
+@MONOLITHIC_TRUE@@USE_EAP_SIMAKA_SQL_TRUE@am__append_30 = plugins/eap_simaka_sql/libstrongswan-eap-simaka-sql.la
+@USE_EAP_SIMAKA_PSEUDONYM_TRUE@am__append_31 = plugins/eap_simaka_pseudonym
+@MONOLITHIC_TRUE@@USE_EAP_SIMAKA_PSEUDONYM_TRUE@am__append_32 = plugins/eap_simaka_pseudonym/libstrongswan-eap-simaka-pseudonym.la
+@USE_EAP_SIMAKA_REAUTH_TRUE@am__append_33 = plugins/eap_simaka_reauth
+@MONOLITHIC_TRUE@@USE_EAP_SIMAKA_REAUTH_TRUE@am__append_34 = plugins/eap_simaka_reauth/libstrongswan-eap-simaka-reauth.la
+@USE_EAP_AKA_TRUE@am__append_35 = plugins/eap_aka
+@MONOLITHIC_TRUE@@USE_EAP_AKA_TRUE@am__append_36 = plugins/eap_aka/libstrongswan-eap-aka.la
+@USE_EAP_AKA_3GPP2_TRUE@am__append_37 = plugins/eap_aka_3gpp2
+@MONOLITHIC_TRUE@@USE_EAP_AKA_3GPP2_TRUE@am__append_38 = plugins/eap_aka_3gpp2/libstrongswan-eap-aka-3gpp2.la
+@MONOLITHIC_TRUE@@USE_SIMAKA_TRUE@am__append_39 = $(top_builddir)/src/libsimaka/libsimaka.la
+@USE_EAP_MD5_TRUE@am__append_40 = plugins/eap_md5
+@MONOLITHIC_TRUE@@USE_EAP_MD5_TRUE@am__append_41 = plugins/eap_md5/libstrongswan-eap-md5.la
+@USE_EAP_GTC_TRUE@am__append_42 = plugins/eap_gtc
+@MONOLITHIC_TRUE@@USE_EAP_GTC_TRUE@am__append_43 = plugins/eap_gtc/libstrongswan-eap-gtc.la
+@USE_EAP_MSCHAPV2_TRUE@am__append_44 = plugins/eap_mschapv2
+@MONOLITHIC_TRUE@@USE_EAP_MSCHAPV2_TRUE@am__append_45 = plugins/eap_mschapv2/libstrongswan-eap-mschapv2.la
+@USE_EAP_RADIUS_TRUE@am__append_46 = plugins/eap_radius
+@MONOLITHIC_TRUE@@USE_EAP_RADIUS_TRUE@am__append_47 = plugins/eap_radius/libstrongswan-eap-radius.la
+@USE_EAP_TLS_TRUE@am__append_48 = plugins/eap_tls
+@MONOLITHIC_TRUE@@USE_EAP_TLS_TRUE@am__append_49 = plugins/eap_tls/libstrongswan-eap-tls.la
+@USE_EAP_TTLS_TRUE@am__append_50 = plugins/eap_ttls
+@MONOLITHIC_TRUE@@USE_EAP_TTLS_TRUE@am__append_51 = plugins/eap_ttls/libstrongswan-eap-ttls.la
+@USE_EAP_PEAP_TRUE@am__append_52 = plugins/eap_peap
+@MONOLITHIC_TRUE@@USE_EAP_PEAP_TRUE@am__append_53 = plugins/eap_peap/libstrongswan-eap-peap.la
+@USE_EAP_TNC_TRUE@am__append_54 = plugins/eap_tnc
+@MONOLITHIC_TRUE@@USE_EAP_TNC_TRUE@am__append_55 = plugins/eap_tnc/libstrongswan-eap-tnc.la
+@MONOLITHIC_TRUE@@USE_TLS_TRUE@am__append_56 = $(top_builddir)/src/libtls/libtls.la
+@USE_TNC_IMC_TRUE@am__append_57 = plugins/tnc_imc
+@MONOLITHIC_TRUE@@USE_TNC_IMC_TRUE@am__append_58 = plugins/tnc_imc/libstrongswan-tnc-imc.la
+@USE_TNC_IMV_TRUE@am__append_59 = plugins/tnc_imv
+@MONOLITHIC_TRUE@@USE_TNC_IMV_TRUE@am__append_60 = plugins/tnc_imv/libstrongswan-tnc-imv.la
+@USE_TNCCS_11_TRUE@am__append_61 = plugins/tnccs_11
+@MONOLITHIC_TRUE@@USE_TNCCS_11_TRUE@am__append_62 = plugins/tnccs_11/libstrongswan-tnccs-11.la
+@USE_TNCCS_20_TRUE@am__append_63 = plugins/tnccs_20
+@MONOLITHIC_TRUE@@USE_TNCCS_20_TRUE@am__append_64 = plugins/tnccs_20/libstrongswan-tnccs-20.la
+@USE_TNCCS_DYNAMIC_TRUE@am__append_65 = plugins/tnccs_dynamic
+@MONOLITHIC_TRUE@@USE_TNCCS_DYNAMIC_TRUE@am__append_66 = plugins/tnccs_dynamic/libstrongswan-tnccs-dynamic.la
+@USE_MEDSRV_TRUE@am__append_67 = plugins/medsrv
+@MONOLITHIC_TRUE@@USE_MEDSRV_TRUE@am__append_68 = plugins/medsrv/libstrongswan-medsrv.la
+@USE_MEDCLI_TRUE@am__append_69 = plugins/medcli
+@MONOLITHIC_TRUE@@USE_MEDCLI_TRUE@am__append_70 = plugins/medcli/libstrongswan-medcli.la
+@USE_NM_TRUE@am__append_71 = plugins/nm
+@MONOLITHIC_TRUE@@USE_NM_TRUE@am__append_72 = plugins/nm/libstrongswan-nm.la
+@USE_DHCP_TRUE@am__append_73 = plugins/dhcp
+@MONOLITHIC_TRUE@@USE_DHCP_TRUE@am__append_74 = plugins/dhcp/libstrongswan-dhcp.la
+@USE_ANDROID_TRUE@am__append_75 = plugins/android
+@MONOLITHIC_TRUE@@USE_ANDROID_TRUE@am__append_76 = plugins/android/libstrongswan-android.la
+@USE_MAEMO_TRUE@am__append_77 = plugins/maemo
+@MONOLITHIC_TRUE@@USE_MAEMO_TRUE@am__append_78 = plugins/maemo/libstrongswan-maemo.la
+@USE_HA_TRUE@am__append_79 = plugins/ha
+@MONOLITHIC_TRUE@@USE_HA_TRUE@am__append_80 = plugins/ha/libstrongswan-ha.la
+@USE_WHITELIST_TRUE@am__append_81 = plugins/whitelist
+@MONOLITHIC_TRUE@@USE_WHITELIST_TRUE@am__append_82 = plugins/whitelist/libstrongswan-whitelist.la
+@USE_LED_TRUE@am__append_83 = plugins/led
+@MONOLITHIC_TRUE@@USE_LED_TRUE@am__append_84 = plugins/led/libstrongswan-led.la
+@USE_DUPLICHECK_TRUE@am__append_85 = plugins/duplicheck
+@MONOLITHIC_TRUE@@USE_DUPLICHECK_TRUE@am__append_86 = plugins/duplicheck/libstrongswan-duplicheck.la
+@USE_COUPLING_TRUE@am__append_87 = plugins/coupling
+@MONOLITHIC_TRUE@@USE_COUPLING_TRUE@am__append_88 = plugins/coupling/libstrongswan-coupling.la
+@USE_UCI_TRUE@am__append_89 = plugins/uci
+@MONOLITHIC_TRUE@@USE_UCI_TRUE@am__append_90 = plugins/uci/libstrongswan-uci.la
+@USE_ADDRBLOCK_TRUE@am__append_91 = plugins/addrblock
+@MONOLITHIC_TRUE@@USE_ADDRBLOCK_TRUE@am__append_92 = plugins/uci/libstrongswan-addrblock.la
+@USE_UNIT_TESTS_TRUE@am__append_93 = plugins/unit_tester
+@MONOLITHIC_TRUE@@USE_UNIT_TESTS_TRUE@am__append_94 = plugins/unit_tester/libstrongswan-unit-tester.la
 subdir = src/libcharon
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -158,6 +147,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
 	$(top_srcdir)/m4/config/lt~obsolete.m4 \
 	$(top_srcdir)/m4/macros/with.m4 \
 	$(top_srcdir)/m4/macros/enable-disable.m4 \
+	$(top_srcdir)/m4/macros/add-plugin.m4 \
 	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -190,18 +180,22 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libcharon_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__append_5) $(am__append_8) \
-	$(am__append_11) $(am__append_14) $(am__append_17) \
-	$(am__append_20) $(am__append_23) $(am__append_26) \
-	$(am__append_29) $(am__append_32) $(am__append_35) \
-	$(am__append_38) $(am__append_41) $(am__append_44) \
-	$(am__append_47) $(am__append_50) $(am__append_53) \
-	$(am__append_56) $(am__append_59) $(am__append_62) \
-	$(am__append_65) $(am__append_66) $(am__append_69) \
-	$(am__append_72) $(am__append_75) $(am__append_78) \
-	$(am__append_81) $(am__append_84) $(am__append_87) \
-	$(am__append_90) $(am__append_93) $(am__append_96) \
-	$(am__append_99) $(am__append_102) $(am__append_105)
+	$(am__DEPENDENCIES_1) $(am__append_4) $(am__append_6) \
+	$(am__append_8) $(am__append_10) $(am__append_12) \
+	$(am__append_14) $(am__append_16) $(am__append_18) \
+	$(am__append_20) $(am__append_22) $(am__append_24) \
+	$(am__append_26) $(am__append_28) $(am__append_30) \
+	$(am__append_32) $(am__append_34) $(am__append_36) \
+	$(am__append_38) $(am__append_39) $(am__append_41) \
+	$(am__append_43) $(am__append_45) $(am__append_47) \
+	$(am__append_49) $(am__append_51) $(am__append_53) \
+	$(am__append_55) $(am__append_56) $(am__append_58) \
+	$(am__append_60) $(am__append_62) $(am__append_64) \
+	$(am__append_66) $(am__append_68) $(am__append_70) \
+	$(am__append_72) $(am__append_74) $(am__append_76) \
+	$(am__append_78) $(am__append_80) $(am__append_82) \
+	$(am__append_84) $(am__append_86) $(am__append_88) \
+	$(am__append_90) $(am__append_92) $(am__append_94)
 am__libcharon_la_SOURCES_DIST = bus/bus.c bus/bus.h \
 	bus/listeners/listener.h bus/listeners/file_logger.c \
 	bus/listeners/file_logger.h bus/listeners/sys_logger.c \
@@ -249,16 +243,12 @@ am__libcharon_la_SOURCES_DIST = bus/bus.c bus/bus.h \
 	encoding/payloads/unknown_payload.c \
 	encoding/payloads/unknown_payload.h \
 	encoding/payloads/vendor_id_payload.c \
-	encoding/payloads/vendor_id_payload.h \
-	kernel/kernel_interface.c kernel/kernel_interface.h \
-	kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
-	kernel/kernel_net.h network/packet.c network/packet.h \
+	encoding/payloads/vendor_id_payload.h kernel/kernel_handler.c \
+	kernel/kernel_handler.h network/packet.c network/packet.h \
 	network/receiver.c network/receiver.h network/sender.c \
 	network/sender.h network/socket_manager.c \
 	network/socket_manager.h network/socket.h \
-	processing/jobs/job.h processing/jobs/acquire_job.c \
-	processing/jobs/acquire_job.h processing/jobs/callback_job.c \
-	processing/jobs/callback_job.h \
+	processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 	processing/jobs/delete_child_sa_job.c \
 	processing/jobs/delete_child_sa_job.h \
 	processing/jobs/delete_ike_sa_job.c \
@@ -275,13 +265,13 @@ am__libcharon_la_SOURCES_DIST = bus/bus.c bus/bus.h \
 	processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 	processing/jobs/send_keepalive_job.c \
 	processing/jobs/send_keepalive_job.h \
-	processing/jobs/roam_job.c processing/jobs/roam_job.h \
-	processing/jobs/update_sa_job.c \
+	processing/jobs/start_action_job.c \
+	processing/jobs/start_action_job.h processing/jobs/roam_job.c \
+	processing/jobs/roam_job.h processing/jobs/update_sa_job.c \
 	processing/jobs/update_sa_job.h \
 	processing/jobs/inactivity_job.c \
-	processing/jobs/inactivity_job.h processing/scheduler.c \
-	processing/scheduler.h processing/processor.c \
-	processing/processor.h sa/authenticators/authenticator.c \
+	processing/jobs/inactivity_job.h \
+	sa/authenticators/authenticator.c \
 	sa/authenticators/authenticator.h \
 	sa/authenticators/eap_authenticator.c \
 	sa/authenticators/eap_authenticator.h \
@@ -291,6 +281,9 @@ am__libcharon_la_SOURCES_DIST = bus/bus.c bus/bus.h \
 	sa/authenticators/eap/eap_manager.h \
 	sa/authenticators/eap/sim_manager.c \
 	sa/authenticators/eap/sim_manager.h \
+	sa/authenticators/eap/sim_card.h \
+	sa/authenticators/eap/sim_provider.h \
+	sa/authenticators/eap/sim_hooks.h \
 	sa/authenticators/psk_authenticator.c \
 	sa/authenticators/psk_authenticator.h \
 	sa/authenticators/pubkey_authenticator.c \
@@ -313,7 +306,12 @@ am__libcharon_la_SOURCES_DIST = bus/bus.c bus/bus.h \
 	sa/tasks/ike_reauth.h sa/tasks/ike_auth_lifetime.c \
 	sa/tasks/ike_auth_lifetime.h sa/tasks/ike_vendor.c \
 	sa/tasks/ike_vendor.h sa/tasks/task.c sa/tasks/task.h \
-	encoding/payloads/endpoint_notify.c \
+	tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+	tnc/imc/imc.h tnc/imc/imc_manager.h tnc/imv/imv.h \
+	tnc/imv/imv_manager.h tnc/imv/imv_recommendations.c \
+	tnc/imv/imv_recommendations.h tnc/tnccs/tnccs.c \
+	tnc/tnccs/tnccs.h tnc/tnccs/tnccs_manager.c \
+	tnc/tnccs/tnccs_manager.h encoding/payloads/endpoint_notify.c \
 	encoding/payloads/endpoint_notify.h \
 	processing/jobs/initiate_mediation_job.c \
 	processing/jobs/initiate_mediation_job.h \
@@ -334,14 +332,13 @@ am_libcharon_la_OBJECTS = bus.lo file_logger.lo sys_logger.lo \
 	notify_payload.lo payload.lo proposal_substructure.lo \
 	sa_payload.lo traffic_selector_substructure.lo \
 	transform_attribute.lo transform_substructure.lo ts_payload.lo \
-	unknown_payload.lo vendor_id_payload.lo kernel_interface.lo \
-	kernel_ipsec.lo packet.lo receiver.lo sender.lo \
-	socket_manager.lo acquire_job.lo callback_job.lo \
-	delete_child_sa_job.lo delete_ike_sa_job.lo migrate_job.lo \
-	process_message_job.lo rekey_child_sa_job.lo \
+	unknown_payload.lo vendor_id_payload.lo kernel_handler.lo \
+	packet.lo receiver.lo sender.lo socket_manager.lo \
+	acquire_job.lo delete_child_sa_job.lo delete_ike_sa_job.lo \
+	migrate_job.lo process_message_job.lo rekey_child_sa_job.lo \
 	rekey_ike_sa_job.lo retransmit_job.lo send_dpd_job.lo \
-	send_keepalive_job.lo roam_job.lo update_sa_job.lo \
-	inactivity_job.lo scheduler.lo processor.lo authenticator.lo \
+	send_keepalive_job.lo start_action_job.lo roam_job.lo \
+	update_sa_job.lo inactivity_job.lo authenticator.lo \
 	eap_authenticator.lo eap_method.lo eap_manager.lo \
 	sim_manager.lo psk_authenticator.lo pubkey_authenticator.lo \
 	child_sa.lo ike_sa.lo ike_sa_id.lo ike_sa_manager.lo \
@@ -350,6 +347,7 @@ am_libcharon_la_OBJECTS = bus.lo file_logger.lo sys_logger.lo \
 	ike_cert_post.lo ike_config.lo ike_delete.lo ike_dpd.lo \
 	ike_init.lo ike_natd.lo ike_mobike.lo ike_rekey.lo \
 	ike_reauth.lo ike_auth_lifetime.lo ike_vendor.lo task.lo \
+	tncifimv.lo imv_recommendations.lo tnccs.lo tnccs_manager.lo \
 	$(am__objects_1)
 libcharon_la_OBJECTS = $(am_libcharon_la_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -381,18 +379,21 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = . plugins/load_tester plugins/kernel_pfkey \
-	plugins/kernel_pfroute plugins/kernel_klips \
-	plugins/kernel_netlink plugins/socket_default \
+DIST_SUBDIRS = . plugins/load_tester plugins/socket_default \
 	plugins/socket_raw plugins/socket_dynamic plugins/farp \
 	plugins/stroke plugins/smp plugins/sql plugins/updown \
 	plugins/eap_identity plugins/eap_sim plugins/eap_sim_file \
-	plugins/eap_simaka_sql plugins/eap_simaka_pseudonym \
-	plugins/eap_simaka_reauth plugins/eap_aka \
-	plugins/eap_aka_3gpp2 plugins/eap_md5 plugins/eap_gtc \
-	plugins/eap_mschapv2 plugins/eap_radius plugins/medsrv \
-	plugins/medcli plugins/nm plugins/dhcp plugins/android \
-	plugins/ha plugins/uci plugins/addrblock plugins/unit_tester
+	plugins/eap_sim_pcsc plugins/eap_simaka_sql \
+	plugins/eap_simaka_pseudonym plugins/eap_simaka_reauth \
+	plugins/eap_aka plugins/eap_aka_3gpp2 plugins/eap_md5 \
+	plugins/eap_gtc plugins/eap_mschapv2 plugins/eap_radius \
+	plugins/eap_tls plugins/eap_ttls plugins/eap_peap \
+	plugins/eap_tnc plugins/tnc_imc plugins/tnc_imv \
+	plugins/tnccs_11 plugins/tnccs_20 plugins/tnccs_dynamic \
+	plugins/medsrv plugins/medcli plugins/nm plugins/dhcp \
+	plugins/android plugins/maemo plugins/ha plugins/whitelist \
+	plugins/led plugins/duplicheck plugins/coupling plugins/uci \
+	plugins/addrblock plugins/unit_tester
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -520,14 +521,17 @@ build_cpu = @build_cpu@
 build_os = @build_os@
 build_vendor = @build_vendor@
 builddir = @builddir@
+c_plugins = @c_plugins@
 datadir = @datadir@
 datarootdir = @datarootdir@
+dbusservicedir = @dbusservicedir@
 default_pkcs11 = @default_pkcs11@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 gtk_CFLAGS = @gtk_CFLAGS@
 gtk_LIBS = @gtk_LIBS@
+h_plugins = @h_plugins@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -538,29 +542,36 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 ipsecdir = @ipsecdir@
-ipsecgid = @ipsecgid@
 ipsecgroup = @ipsecgroup@
-ipsecuid = @ipsecuid@
 ipsecuser = @ipsecuser@
+libcharon_plugins = @libcharon_plugins@
 libdir = @libdir@
 libexecdir = @libexecdir@
-libhydra_plugins = @libhydra_plugins@
-libstrongswan_plugins = @libstrongswan_plugins@
 linux_headers = @linux_headers@
 linuxdir = @linuxdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
 lt_ECHO = @lt_ECHO@
+maemo_CFLAGS = @maemo_CFLAGS@
+maemo_LIBS = @maemo_LIBS@
+manager_plugins = @manager_plugins@
 mandir = @mandir@
+medsrv_plugins = @medsrv_plugins@
 mkdir_p = @mkdir_p@
 nm_CFLAGS = @nm_CFLAGS@
 nm_LIBS = @nm_LIBS@
 nm_ca_dir = @nm_ca_dir@
 oldincludedir = @oldincludedir@
+openac_plugins = @openac_plugins@
+p_plugins = @p_plugins@
+pcsclite_CFLAGS = @pcsclite_CFLAGS@
+pcsclite_LIBS = @pcsclite_LIBS@
 pdfdir = @pdfdir@
 piddir = @piddir@
+pki_plugins = @pki_plugins@
 plugindir = @plugindir@
 pluto_plugins = @pluto_plugins@
+pool_plugins = @pool_plugins@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -568,12 +579,18 @@ random_device = @random_device@
 resolv_conf = @resolv_conf@
 routing_table = @routing_table@
 routing_table_prio = @routing_table_prio@
+s_plugins = @s_plugins@
 sbindir = @sbindir@
+scepclient_plugins = @scepclient_plugins@
+scripts_plugins = @scripts_plugins@
 sharedstatedir = @sharedstatedir@
 simreader = @simreader@
+soup_CFLAGS = @soup_CFLAGS@
+soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
 strongswan_conf = @strongswan_conf@
 sysconfdir = @sysconfdir@
+systemdsystemunitdir = @systemdsystemunitdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
@@ -629,16 +646,12 @@ libcharon_la_SOURCES = bus/bus.c bus/bus.h bus/listeners/listener.h \
 	encoding/payloads/unknown_payload.c \
 	encoding/payloads/unknown_payload.h \
 	encoding/payloads/vendor_id_payload.c \
-	encoding/payloads/vendor_id_payload.h \
-	kernel/kernel_interface.c kernel/kernel_interface.h \
-	kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
-	kernel/kernel_net.h network/packet.c network/packet.h \
+	encoding/payloads/vendor_id_payload.h kernel/kernel_handler.c \
+	kernel/kernel_handler.h network/packet.c network/packet.h \
 	network/receiver.c network/receiver.h network/sender.c \
 	network/sender.h network/socket_manager.c \
 	network/socket_manager.h network/socket.h \
-	processing/jobs/job.h processing/jobs/acquire_job.c \
-	processing/jobs/acquire_job.h processing/jobs/callback_job.c \
-	processing/jobs/callback_job.h \
+	processing/jobs/acquire_job.c processing/jobs/acquire_job.h \
 	processing/jobs/delete_child_sa_job.c \
 	processing/jobs/delete_child_sa_job.h \
 	processing/jobs/delete_ike_sa_job.c \
@@ -655,13 +668,13 @@ libcharon_la_SOURCES = bus/bus.c bus/bus.h bus/listeners/listener.h \
 	processing/jobs/send_dpd_job.c processing/jobs/send_dpd_job.h \
 	processing/jobs/send_keepalive_job.c \
 	processing/jobs/send_keepalive_job.h \
-	processing/jobs/roam_job.c processing/jobs/roam_job.h \
-	processing/jobs/update_sa_job.c \
+	processing/jobs/start_action_job.c \
+	processing/jobs/start_action_job.h processing/jobs/roam_job.c \
+	processing/jobs/roam_job.h processing/jobs/update_sa_job.c \
 	processing/jobs/update_sa_job.h \
 	processing/jobs/inactivity_job.c \
-	processing/jobs/inactivity_job.h processing/scheduler.c \
-	processing/scheduler.h processing/processor.c \
-	processing/processor.h sa/authenticators/authenticator.c \
+	processing/jobs/inactivity_job.h \
+	sa/authenticators/authenticator.c \
 	sa/authenticators/authenticator.h \
 	sa/authenticators/eap_authenticator.c \
 	sa/authenticators/eap_authenticator.h \
@@ -671,6 +684,9 @@ libcharon_la_SOURCES = bus/bus.c bus/bus.h bus/listeners/listener.h \
 	sa/authenticators/eap/eap_manager.h \
 	sa/authenticators/eap/sim_manager.c \
 	sa/authenticators/eap/sim_manager.h \
+	sa/authenticators/eap/sim_card.h \
+	sa/authenticators/eap/sim_provider.h \
+	sa/authenticators/eap/sim_hooks.h \
 	sa/authenticators/psk_authenticator.c \
 	sa/authenticators/psk_authenticator.h \
 	sa/authenticators/pubkey_authenticator.c \
@@ -693,78 +709,90 @@ libcharon_la_SOURCES = bus/bus.c bus/bus.h bus/listeners/listener.h \
 	sa/tasks/ike_reauth.h sa/tasks/ike_auth_lifetime.c \
 	sa/tasks/ike_auth_lifetime.h sa/tasks/ike_vendor.c \
 	sa/tasks/ike_vendor.h sa/tasks/task.c sa/tasks/task.h \
-	$(am__append_1)
+	tnc/tncif.h tnc/tncifimc.h tnc/tncifimv.h tnc/tncifimv.c \
+	tnc/imc/imc.h tnc/imc/imc_manager.h tnc/imv/imv.h \
+	tnc/imv/imv_manager.h tnc/imv/imv_recommendations.c \
+	tnc/imv/imv_recommendations.h tnc/tnccs/tnccs.c \
+	tnc/tnccs/tnccs.h tnc/tnccs/tnccs_manager.c \
+	tnc/tnccs/tnccs_manager.h $(am__append_1)
 INCLUDES = \
 	-I${linux_headers} \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libhydra \
 	-I$(top_srcdir)/src/libcharon
 
-AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
-	-DPLUGINS=\""${PLUGINS}\""
+AM_CFLAGS = \
+	-DIPSEC_DIR=\"${ipsecdir}\" \
+	-DIPSEC_PIDDIR=\"${piddir}\" \
+	-DPLUGINS=\""${libcharon_plugins}\""
+
 libcharon_la_LIBADD = -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB) \
-	$(am__append_2) $(am__append_5) $(am__append_8) \
-	$(am__append_11) $(am__append_14) $(am__append_17) \
-	$(am__append_20) $(am__append_23) $(am__append_26) \
-	$(am__append_29) $(am__append_32) $(am__append_35) \
-	$(am__append_38) $(am__append_41) $(am__append_44) \
-	$(am__append_47) $(am__append_50) $(am__append_53) \
-	$(am__append_56) $(am__append_59) $(am__append_62) \
-	$(am__append_65) $(am__append_66) $(am__append_69) \
-	$(am__append_72) $(am__append_75) $(am__append_78) \
-	$(am__append_81) $(am__append_84) $(am__append_87) \
-	$(am__append_90) $(am__append_93) $(am__append_96) \
-	$(am__append_99) $(am__append_102) $(am__append_105)
+	$(am__append_2) $(am__append_4) $(am__append_6) \
+	$(am__append_8) $(am__append_10) $(am__append_12) \
+	$(am__append_14) $(am__append_16) $(am__append_18) \
+	$(am__append_20) $(am__append_22) $(am__append_24) \
+	$(am__append_26) $(am__append_28) $(am__append_30) \
+	$(am__append_32) $(am__append_34) $(am__append_36) \
+	$(am__append_38) $(am__append_39) $(am__append_41) \
+	$(am__append_43) $(am__append_45) $(am__append_47) \
+	$(am__append_49) $(am__append_51) $(am__append_53) \
+	$(am__append_55) $(am__append_56) $(am__append_58) \
+	$(am__append_60) $(am__append_62) $(am__append_64) \
+	$(am__append_66) $(am__append_68) $(am__append_70) \
+	$(am__append_72) $(am__append_74) $(am__append_76) \
+	$(am__append_78) $(am__append_80) $(am__append_82) \
+	$(am__append_84) $(am__append_86) $(am__append_88) \
+	$(am__append_90) $(am__append_92) $(am__append_94)
 EXTRA_DIST = Android.mk
-@MONOLITHIC_FALSE@SUBDIRS = . $(am__append_3) $(am__append_6) \
-@MONOLITHIC_FALSE@	$(am__append_9) $(am__append_12) \
-@MONOLITHIC_FALSE@	$(am__append_15) $(am__append_18) \
-@MONOLITHIC_FALSE@	$(am__append_21) $(am__append_24) \
-@MONOLITHIC_FALSE@	$(am__append_27) $(am__append_30) \
-@MONOLITHIC_FALSE@	$(am__append_33) $(am__append_36) \
-@MONOLITHIC_FALSE@	$(am__append_39) $(am__append_42) \
-@MONOLITHIC_FALSE@	$(am__append_45) $(am__append_48) \
-@MONOLITHIC_FALSE@	$(am__append_51) $(am__append_54) \
-@MONOLITHIC_FALSE@	$(am__append_57) $(am__append_60) \
-@MONOLITHIC_FALSE@	$(am__append_63) $(am__append_67) \
-@MONOLITHIC_FALSE@	$(am__append_70) $(am__append_73) \
-@MONOLITHIC_FALSE@	$(am__append_76) $(am__append_79) \
-@MONOLITHIC_FALSE@	$(am__append_82) $(am__append_85) \
-@MONOLITHIC_FALSE@	$(am__append_88) $(am__append_91) \
-@MONOLITHIC_FALSE@	$(am__append_94) $(am__append_97) \
-@MONOLITHIC_FALSE@	$(am__append_100) $(am__append_103)
+@MONOLITHIC_FALSE@SUBDIRS = . $(am__append_3) $(am__append_5) \
+@MONOLITHIC_FALSE@	$(am__append_7) $(am__append_9) \
+@MONOLITHIC_FALSE@	$(am__append_11) $(am__append_13) \
+@MONOLITHIC_FALSE@	$(am__append_15) $(am__append_17) \
+@MONOLITHIC_FALSE@	$(am__append_19) $(am__append_21) \
+@MONOLITHIC_FALSE@	$(am__append_23) $(am__append_25) \
+@MONOLITHIC_FALSE@	$(am__append_27) $(am__append_29) \
+@MONOLITHIC_FALSE@	$(am__append_31) $(am__append_33) \
+@MONOLITHIC_FALSE@	$(am__append_35) $(am__append_37) \
+@MONOLITHIC_FALSE@	$(am__append_40) $(am__append_42) \
+@MONOLITHIC_FALSE@	$(am__append_44) $(am__append_46) \
+@MONOLITHIC_FALSE@	$(am__append_48) $(am__append_50) \
+@MONOLITHIC_FALSE@	$(am__append_52) $(am__append_54) \
+@MONOLITHIC_FALSE@	$(am__append_57) $(am__append_59) \
+@MONOLITHIC_FALSE@	$(am__append_61) $(am__append_63) \
+@MONOLITHIC_FALSE@	$(am__append_65) $(am__append_67) \
+@MONOLITHIC_FALSE@	$(am__append_69) $(am__append_71) \
+@MONOLITHIC_FALSE@	$(am__append_73) $(am__append_75) \
+@MONOLITHIC_FALSE@	$(am__append_77) $(am__append_79) \
+@MONOLITHIC_FALSE@	$(am__append_81) $(am__append_83) \
+@MONOLITHIC_FALSE@	$(am__append_85) $(am__append_87) \
+@MONOLITHIC_FALSE@	$(am__append_89) $(am__append_91) \
+@MONOLITHIC_FALSE@	$(am__append_93)
 
 # build optional plugins
 ########################
-@MONOLITHIC_TRUE@SUBDIRS = $(am__append_3) $(am__append_6) \
-@MONOLITHIC_TRUE@	$(am__append_9) $(am__append_12) \
-@MONOLITHIC_TRUE@	$(am__append_15) $(am__append_18) \
-@MONOLITHIC_TRUE@	$(am__append_21) $(am__append_24) \
-@MONOLITHIC_TRUE@	$(am__append_27) $(am__append_30) \
-@MONOLITHIC_TRUE@	$(am__append_33) $(am__append_36) \
-@MONOLITHIC_TRUE@	$(am__append_39) $(am__append_42) \
-@MONOLITHIC_TRUE@	$(am__append_45) $(am__append_48) \
-@MONOLITHIC_TRUE@	$(am__append_51) $(am__append_54) \
-@MONOLITHIC_TRUE@	$(am__append_57) $(am__append_60) \
-@MONOLITHIC_TRUE@	$(am__append_63) $(am__append_67) \
-@MONOLITHIC_TRUE@	$(am__append_70) $(am__append_73) \
-@MONOLITHIC_TRUE@	$(am__append_76) $(am__append_79) \
-@MONOLITHIC_TRUE@	$(am__append_82) $(am__append_85) \
-@MONOLITHIC_TRUE@	$(am__append_88) $(am__append_91) \
-@MONOLITHIC_TRUE@	$(am__append_94) $(am__append_97) \
-@MONOLITHIC_TRUE@	$(am__append_100) $(am__append_103)
-PLUGINS = ${libstrongswan_plugins} ${libhydra_plugins} $(am__append_4) \
-	$(am__append_7) $(am__append_10) $(am__append_13) \
-	$(am__append_16) $(am__append_19) $(am__append_22) \
-	$(am__append_25) $(am__append_28) $(am__append_31) \
-	$(am__append_34) $(am__append_37) $(am__append_40) \
-	$(am__append_43) $(am__append_46) $(am__append_49) \
-	$(am__append_52) $(am__append_55) $(am__append_58) \
-	$(am__append_61) $(am__append_64) $(am__append_68) \
-	$(am__append_71) $(am__append_74) $(am__append_77) \
-	$(am__append_80) $(am__append_83) $(am__append_86) \
-	$(am__append_89) $(am__append_92) $(am__append_95) \
-	$(am__append_98) $(am__append_101) $(am__append_104)
+@MONOLITHIC_TRUE@SUBDIRS = $(am__append_3) $(am__append_5) \
+@MONOLITHIC_TRUE@	$(am__append_7) $(am__append_9) \
+@MONOLITHIC_TRUE@	$(am__append_11) $(am__append_13) \
+@MONOLITHIC_TRUE@	$(am__append_15) $(am__append_17) \
+@MONOLITHIC_TRUE@	$(am__append_19) $(am__append_21) \
+@MONOLITHIC_TRUE@	$(am__append_23) $(am__append_25) \
+@MONOLITHIC_TRUE@	$(am__append_27) $(am__append_29) \
+@MONOLITHIC_TRUE@	$(am__append_31) $(am__append_33) \
+@MONOLITHIC_TRUE@	$(am__append_35) $(am__append_37) \
+@MONOLITHIC_TRUE@	$(am__append_40) $(am__append_42) \
+@MONOLITHIC_TRUE@	$(am__append_44) $(am__append_46) \
+@MONOLITHIC_TRUE@	$(am__append_48) $(am__append_50) \
+@MONOLITHIC_TRUE@	$(am__append_52) $(am__append_54) \
+@MONOLITHIC_TRUE@	$(am__append_57) $(am__append_59) \
+@MONOLITHIC_TRUE@	$(am__append_61) $(am__append_63) \
+@MONOLITHIC_TRUE@	$(am__append_65) $(am__append_67) \
+@MONOLITHIC_TRUE@	$(am__append_69) $(am__append_71) \
+@MONOLITHIC_TRUE@	$(am__append_73) $(am__append_75) \
+@MONOLITHIC_TRUE@	$(am__append_77) $(am__append_79) \
+@MONOLITHIC_TRUE@	$(am__append_81) $(am__append_83) \
+@MONOLITHIC_TRUE@	$(am__append_85) $(am__append_87) \
+@MONOLITHIC_TRUE@	$(am__append_89) $(am__append_91) \
+@MONOLITHIC_TRUE@	$(am__append_93)
 all: all-recursive
 
 .SUFFIXES:
@@ -844,7 +872,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/authenticator.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/backend_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bus.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/callback_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cert_payload.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/certreq_payload.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/child_cfg.Plo@am__quote@
@@ -889,11 +916,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_sa_id.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_sa_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ike_vendor.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/imv_recommendations.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/inactivity_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/initiate_mediation_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ke_payload.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_interface.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_ipsec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_handler.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keymat.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mediation_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mediation_manager.Plo@am__quote@
@@ -906,7 +933,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/payload.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/peer_cfg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/process_message_job.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/processor.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/proposal.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/proposal_substructure.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/psk_authenticator.Plo@am__quote@
@@ -917,15 +943,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/retransmit_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/roam_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sa_payload.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scheduler.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/send_dpd_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/send_keepalive_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sender.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sim_manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket_manager.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/start_action_job.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sys_logger.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/task.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/task_manager.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnccs_manager.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tncifimv.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/traffic_selector_substructure.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transform_attribute.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transform_substructure.Plo@am__quote@
@@ -1201,19 +1230,12 @@ vendor_id_payload.lo: encoding/payloads/vendor_id_payload.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o vendor_id_payload.lo `test -f 'encoding/payloads/vendor_id_payload.c' || echo '$(srcdir)/'`encoding/payloads/vendor_id_payload.c
 
-kernel_interface.lo: kernel/kernel_interface.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT kernel_interface.lo -MD -MP -MF $(DEPDIR)/kernel_interface.Tpo -c -o kernel_interface.lo `test -f 'kernel/kernel_interface.c' || echo '$(srcdir)/'`kernel/kernel_interface.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/kernel_interface.Tpo $(DEPDIR)/kernel_interface.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='kernel/kernel_interface.c' object='kernel_interface.lo' libtool=yes @AMDEPBACKSLASH@
+kernel_handler.lo: kernel/kernel_handler.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT kernel_handler.lo -MD -MP -MF $(DEPDIR)/kernel_handler.Tpo -c -o kernel_handler.lo `test -f 'kernel/kernel_handler.c' || echo '$(srcdir)/'`kernel/kernel_handler.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/kernel_handler.Tpo $(DEPDIR)/kernel_handler.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='kernel/kernel_handler.c' object='kernel_handler.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o kernel_interface.lo `test -f 'kernel/kernel_interface.c' || echo '$(srcdir)/'`kernel/kernel_interface.c
-
-kernel_ipsec.lo: kernel/kernel_ipsec.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT kernel_ipsec.lo -MD -MP -MF $(DEPDIR)/kernel_ipsec.Tpo -c -o kernel_ipsec.lo `test -f 'kernel/kernel_ipsec.c' || echo '$(srcdir)/'`kernel/kernel_ipsec.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/kernel_ipsec.Tpo $(DEPDIR)/kernel_ipsec.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='kernel/kernel_ipsec.c' object='kernel_ipsec.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o kernel_ipsec.lo `test -f 'kernel/kernel_ipsec.c' || echo '$(srcdir)/'`kernel/kernel_ipsec.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o kernel_handler.lo `test -f 'kernel/kernel_handler.c' || echo '$(srcdir)/'`kernel/kernel_handler.c
 
 packet.lo: network/packet.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT packet.lo -MD -MP -MF $(DEPDIR)/packet.Tpo -c -o packet.lo `test -f 'network/packet.c' || echo '$(srcdir)/'`network/packet.c
@@ -1249,13 +1271,6 @@ acquire_job.lo: processing/jobs/acquire_job.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='processing/jobs/acquire_job.c' object='acquire_job.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o acquire_job.lo `test -f 'processing/jobs/acquire_job.c' || echo '$(srcdir)/'`processing/jobs/acquire_job.c
-
-callback_job.lo: processing/jobs/callback_job.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT callback_job.lo -MD -MP -MF $(DEPDIR)/callback_job.Tpo -c -o callback_job.lo `test -f 'processing/jobs/callback_job.c' || echo '$(srcdir)/'`processing/jobs/callback_job.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/callback_job.Tpo $(DEPDIR)/callback_job.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='processing/jobs/callback_job.c' object='callback_job.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o callback_job.lo `test -f 'processing/jobs/callback_job.c' || echo '$(srcdir)/'`processing/jobs/callback_job.c
 
 delete_child_sa_job.lo: processing/jobs/delete_child_sa_job.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT delete_child_sa_job.lo -MD -MP -MF $(DEPDIR)/delete_child_sa_job.Tpo -c -o delete_child_sa_job.lo `test -f 'processing/jobs/delete_child_sa_job.c' || echo '$(srcdir)/'`processing/jobs/delete_child_sa_job.c
@@ -1320,6 +1335,13 @@ send_keepalive_job.lo: processing/jobs/send_keepalive_job.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o send_keepalive_job.lo `test -f 'processing/jobs/send_keepalive_job.c' || echo '$(srcdir)/'`processing/jobs/send_keepalive_job.c
 
+start_action_job.lo: processing/jobs/start_action_job.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT start_action_job.lo -MD -MP -MF $(DEPDIR)/start_action_job.Tpo -c -o start_action_job.lo `test -f 'processing/jobs/start_action_job.c' || echo '$(srcdir)/'`processing/jobs/start_action_job.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/start_action_job.Tpo $(DEPDIR)/start_action_job.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='processing/jobs/start_action_job.c' object='start_action_job.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o start_action_job.lo `test -f 'processing/jobs/start_action_job.c' || echo '$(srcdir)/'`processing/jobs/start_action_job.c
+
 roam_job.lo: processing/jobs/roam_job.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT roam_job.lo -MD -MP -MF $(DEPDIR)/roam_job.Tpo -c -o roam_job.lo `test -f 'processing/jobs/roam_job.c' || echo '$(srcdir)/'`processing/jobs/roam_job.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/roam_job.Tpo $(DEPDIR)/roam_job.Plo
@@ -1340,20 +1362,6 @@ inactivity_job.lo: processing/jobs/inactivity_job.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='processing/jobs/inactivity_job.c' object='inactivity_job.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o inactivity_job.lo `test -f 'processing/jobs/inactivity_job.c' || echo '$(srcdir)/'`processing/jobs/inactivity_job.c
-
-scheduler.lo: processing/scheduler.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT scheduler.lo -MD -MP -MF $(DEPDIR)/scheduler.Tpo -c -o scheduler.lo `test -f 'processing/scheduler.c' || echo '$(srcdir)/'`processing/scheduler.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/scheduler.Tpo $(DEPDIR)/scheduler.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='processing/scheduler.c' object='scheduler.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o scheduler.lo `test -f 'processing/scheduler.c' || echo '$(srcdir)/'`processing/scheduler.c
-
-processor.lo: processing/processor.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT processor.lo -MD -MP -MF $(DEPDIR)/processor.Tpo -c -o processor.lo `test -f 'processing/processor.c' || echo '$(srcdir)/'`processing/processor.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/processor.Tpo $(DEPDIR)/processor.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='processing/processor.c' object='processor.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o processor.lo `test -f 'processing/processor.c' || echo '$(srcdir)/'`processing/processor.c
 
 authenticator.lo: sa/authenticators/authenticator.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT authenticator.lo -MD -MP -MF $(DEPDIR)/authenticator.Tpo -c -o authenticator.lo `test -f 'sa/authenticators/authenticator.c' || echo '$(srcdir)/'`sa/authenticators/authenticator.c
@@ -1571,6 +1579,34 @@ task.lo: sa/tasks/task.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='sa/tasks/task.c' object='task.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o task.lo `test -f 'sa/tasks/task.c' || echo '$(srcdir)/'`sa/tasks/task.c
+
+tncifimv.lo: tnc/tncifimv.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tncifimv.lo -MD -MP -MF $(DEPDIR)/tncifimv.Tpo -c -o tncifimv.lo `test -f 'tnc/tncifimv.c' || echo '$(srcdir)/'`tnc/tncifimv.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tncifimv.Tpo $(DEPDIR)/tncifimv.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnc/tncifimv.c' object='tncifimv.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tncifimv.lo `test -f 'tnc/tncifimv.c' || echo '$(srcdir)/'`tnc/tncifimv.c
+
+imv_recommendations.lo: tnc/imv/imv_recommendations.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT imv_recommendations.lo -MD -MP -MF $(DEPDIR)/imv_recommendations.Tpo -c -o imv_recommendations.lo `test -f 'tnc/imv/imv_recommendations.c' || echo '$(srcdir)/'`tnc/imv/imv_recommendations.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/imv_recommendations.Tpo $(DEPDIR)/imv_recommendations.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnc/imv/imv_recommendations.c' object='imv_recommendations.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o imv_recommendations.lo `test -f 'tnc/imv/imv_recommendations.c' || echo '$(srcdir)/'`tnc/imv/imv_recommendations.c
+
+tnccs.lo: tnc/tnccs/tnccs.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs.lo -MD -MP -MF $(DEPDIR)/tnccs.Tpo -c -o tnccs.lo `test -f 'tnc/tnccs/tnccs.c' || echo '$(srcdir)/'`tnc/tnccs/tnccs.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs.Tpo $(DEPDIR)/tnccs.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnc/tnccs/tnccs.c' object='tnccs.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs.lo `test -f 'tnc/tnccs/tnccs.c' || echo '$(srcdir)/'`tnc/tnccs/tnccs.c
+
+tnccs_manager.lo: tnc/tnccs/tnccs_manager.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT tnccs_manager.lo -MD -MP -MF $(DEPDIR)/tnccs_manager.Tpo -c -o tnccs_manager.lo `test -f 'tnc/tnccs/tnccs_manager.c' || echo '$(srcdir)/'`tnc/tnccs/tnccs_manager.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/tnccs_manager.Tpo $(DEPDIR)/tnccs_manager.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='tnc/tnccs/tnccs_manager.c' object='tnccs_manager.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o tnccs_manager.lo `test -f 'tnc/tnccs/tnccs_manager.c' || echo '$(srcdir)/'`tnc/tnccs/tnccs_manager.c
 
 endpoint_notify.lo: encoding/payloads/endpoint_notify.c
 @am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT endpoint_notify.lo -MD -MP -MF $(DEPDIR)/endpoint_notify.Tpo -c -o endpoint_notify.lo `test -f 'encoding/payloads/endpoint_notify.c' || echo '$(srcdir)/'`encoding/payloads/endpoint_notify.c
@@ -1940,6 +1976,8 @@ uninstall-am: uninstall-libLTLIBRARIES
 daemon.lo :		$(top_builddir)/config.status
 
 @MONOLITHIC_TRUE@@USE_SIMAKA_TRUE@  # otherwise this library is linked to both the eap_aka and the eap_sim plugin
+
+@MONOLITHIC_TRUE@@USE_TLS_TRUE@  # otherwise this library is linked to eap_tls
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

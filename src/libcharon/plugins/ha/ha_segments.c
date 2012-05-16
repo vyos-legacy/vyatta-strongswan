@@ -15,11 +15,10 @@
 
 #include "ha_segments.h"
 
-#include <pthread.h>
-
 #include <threading/mutex.h>
 #include <threading/condvar.h>
 #include <utils/linked_list.h>
+#include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 
 #define DEFAULT_HEARTBEAT_DELAY 1000
@@ -255,16 +254,15 @@ METHOD(listener_t, alert_hook, bool,
  */
 static job_requeue_t watchdog(private_ha_segments_t *this)
 {
-	int oldstate;
-	bool timeout;
+	bool timeout, oldstate;
 
 	this->mutex->lock(this->mutex);
-	pthread_cleanup_push((void*)this->mutex->unlock, this->mutex);
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	thread_cleanup_push((void*)this->mutex->unlock, this->mutex);
+	oldstate = thread_cancelability(TRUE);
 	timeout = this->condvar->timed_wait(this->condvar, this->mutex,
 										this->heartbeat_timeout);
-	pthread_setcancelstate(oldstate, NULL);
-	pthread_cleanup_pop(TRUE);
+	thread_cancelability(oldstate);
+	thread_cleanup_pop(TRUE);
 	if (timeout)
 	{
 		DBG1(DBG_CFG, "no heartbeat received, taking all segments");
@@ -283,7 +281,7 @@ static void start_watchdog(private_ha_segments_t *this)
 {
 	this->job = callback_job_create((callback_job_cb_t)watchdog,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 }
 
 METHOD(ha_segments_t, handle_status, void,
@@ -345,7 +343,7 @@ static job_requeue_t send_status(private_ha_segments_t *this)
 	message->destroy(message);
 
 	/* schedule next invocation */
-	charon->scheduler->schedule_job_ms(charon->scheduler, (job_t*)
+	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
 									callback_job_create((callback_job_cb_t)
 										send_status, this, NULL, NULL),
 									this->heartbeat_delay);
@@ -382,7 +380,9 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 
 	INIT(this,
 		.public = {
-			.listener.alert = _alert_hook,
+			.listener = {
+				.alert = _alert_hook,
+			},
 			.activate = _activate,
 			.deactivate = _deactivate,
 			.handle_status = _handle_status,

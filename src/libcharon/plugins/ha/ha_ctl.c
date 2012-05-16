@@ -21,8 +21,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <pthread.h>
 
+#include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 
 #define HA_FIFO IPSEC_PIDDIR "/charon.ha"
@@ -60,13 +60,14 @@ struct private_ha_ctl_t {
  */
 static job_requeue_t dispatch_fifo(private_ha_ctl_t *this)
 {
-	int fifo, old;
+	int fifo;
+	bool oldstate;
 	char buf[8];
 	u_int segment;
 
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old);
+	oldstate = thread_cancelability(TRUE);
 	fifo = open(HA_FIFO, O_RDONLY);
-	pthread_setcancelstate(old, NULL);
+	thread_cancelability(oldstate);
 	if (fifo == -1)
 	{
 		DBG1(DBG_CFG, "opening HA fifo failed: %s", strerror(errno));
@@ -114,6 +115,7 @@ METHOD(ha_ctl_t, destroy, void,
 ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 {
 	private_ha_ctl_t *this;
+	mode_t old;
 
 	INIT(this,
 		.public = {
@@ -125,16 +127,23 @@ ha_ctl_t *ha_ctl_create(ha_segments_t *segments, ha_cache_t *cache)
 
 	if (access(HA_FIFO, R_OK|W_OK) != 0)
 	{
-		if (mkfifo(HA_FIFO, 600) != 0)
+		old = umask(~(S_IRWXU | S_IRWXG));
+		if (mkfifo(HA_FIFO, S_IRUSR | S_IWUSR) != 0)
 		{
 			DBG1(DBG_CFG, "creating HA FIFO %s failed: %s",
 				 HA_FIFO, strerror(errno));
 		}
+		umask(old);
+	}
+	if (chown(HA_FIFO, charon->uid, charon->gid) != 0)
+	{
+		DBG1(DBG_CFG, "changing HA FIFO permissions failed: %s",
+			 strerror(errno));
 	}
 
 	this->job = callback_job_create((callback_job_cb_t)dispatch_fifo,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 	return &this->public;
 }
 

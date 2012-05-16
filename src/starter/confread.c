@@ -19,6 +19,8 @@
 
 #include <freeswan.h>
 
+#include <eap/eap.h>
+
 #include "../pluto/constants.h"
 #include "../pluto/defs.h"
 #include "../pluto/log.h"
@@ -461,7 +463,7 @@ static void handle_firewall(const char *label, starter_end_t *end,
 	}
 }
 
-static bool handle_mark(char *value, mark_t *mark)	
+static bool handle_mark(char *value, mark_t *mark)
 {
 	char *pos, *endptr;
 
@@ -671,31 +673,8 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				}
 				break;
 			}
-			if (streq(kw->value, "aka"))
-			{
-				conn->eap_type = 23;
-			}
-			else if (streq(kw->value, "sim"))
-			{
-				conn->eap_type = 18;
-			}
-			else if (streq(kw->value, "md5"))
-			{
-				conn->eap_type = 4;
-			}
-			else if (streq(kw->value, "gtc"))
-			{
-				conn->eap_type = 6;
-			}
-			else if (streq(kw->value, "mschapv2"))
-			{
-				conn->eap_type = 26;
-			}
-			else if (streq(kw->value, "radius"))
-			{	/* pseudo-type */
-				conn->eap_type = 253;
-			}
-			else
+			conn->eap_type = eap_type_from_string(kw->value);
+			if (conn->eap_type == 0)
 			{
 				conn->eap_type = atoi(kw->value);
 				if (conn->eap_type == 0)
@@ -726,6 +705,23 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				cfg->err++;
 			}
 			break;
+		case KW_TFC:
+			if (streq(kw->value, "%mtu"))
+			{
+				conn->tfc = -1;
+			}
+			else
+			{
+				char *endptr;
+
+				conn->tfc = strtoul(kw->value, &endptr, 10);
+				if (*endptr != '\0')
+				{
+					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
+					cfg->err++;
+				}
+			}
+			break;
 		case KW_KEYINGTRIES:
 			if (streq(kw->value, "%forever"))
 			{
@@ -739,7 +735,7 @@ static void load_conn(starter_conn_t *conn, kw_list_t *kw, starter_config_t *cfg
 				if (*endptr != '\0')
 				{
 					plog("# bad integer value: %s=%s", kw->entry->name, kw->value);
-		    		cfg->err++;
+					cfg->err++;
 				}
 			}
 			break;
@@ -815,7 +811,7 @@ static void load_ca(starter_ca_t *ca, kw_list_t *kw, starter_config_t *cfg)
 				DBG(DBG_CONTROL,
 					DBG_log("  also=%s", kw->value)
 				)
-	    	}
+			}
 			continue;
 		}
 
@@ -879,7 +875,7 @@ static void load_also_conns(starter_conn_t *conn, also_t *also,
 /*
  * find a conn included by also
  */
-static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn, 
+static kw_list_t* find_also_conn(const char* name, starter_conn_t *conn,
 								 starter_config_t *cfg)
 {
 	starter_conn_t *c = cfg->conn_first;

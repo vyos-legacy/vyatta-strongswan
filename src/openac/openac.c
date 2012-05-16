@@ -36,10 +36,11 @@
 #include <credentials/certificates/x509.h>
 #include <credentials/certificates/ac.h>
 #include <credentials/keys/private_key.h>
+#include <credentials/sets/mem_cred.h>
 #include <utils/optionsfrom.h>
 
-#define OPENAC_PATH   		IPSEC_CONFDIR "/openac"
-#define OPENAC_SERIAL 		IPSEC_CONFDIR "/openac/serial"
+#define OPENAC_PATH			IPSEC_CONFDIR "/openac"
+#define OPENAC_SERIAL		IPSEC_CONFDIR "/openac/serial"
 
 #define DEFAULT_VALIDITY	24*3600		/* seconds */
 
@@ -132,7 +133,7 @@ static void write_serial(chunk_t serial)
 
 		DBG1(DBG_LIB, "  serial number is %#B", &serial);
 		hex_serial = chunk_to_hex(serial, NULL, FALSE);
-		fprintf(fd, "%.*s\n", hex_serial.len, hex_serial.ptr);
+		fprintf(fd, "%.*s\n", (int)hex_serial.len, hex_serial.ptr);
 		fclose(fd);
 		free(hex_serial.ptr);
 	}
@@ -299,6 +300,7 @@ int main(int argc, char **argv)
 					if (*optarg == '/')	/* absolute pathname */
 					{
 						strncpy(path, optarg, BUF_LEN);
+						path[BUF_LEN-1] = '\0';
 					}
 					else			/* relative pathname */
 					{
@@ -325,7 +327,7 @@ int main(int argc, char **argv)
 				continue;
 
 			case 'p':	/* --key */
-				if (strlen(optarg) > BUF_LEN)
+				if (strlen(optarg) >= BUF_LEN)
 				{
 					usage("passphrase too long");
 					goto end;
@@ -437,10 +439,19 @@ int main(int argc, char **argv)
 	/* load the signer's RSA private key */
 	if (keyfile != NULL)
 	{
+		mem_cred_t *mem;
+		shared_key_t *shared;
+
+		mem = mem_cred_create();
+		lib->credmgr->add_set(lib->credmgr, &mem->set);
+		shared = shared_key_create(SHARED_PRIVATE_KEY_PASS,
+								   chunk_clone(passphrase));
+		mem->add_shared(mem, shared, NULL);
 		signerKey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 									   BUILD_FROM_FILE, keyfile,
-									   BUILD_PASSPHRASE, passphrase,
 									   BUILD_END);
+		lib->credmgr->remove_set(lib->credmgr, &mem->set);
+		mem->destroy(mem);
 		if (signerKey == NULL)
 		{
 			goto end;
@@ -480,7 +491,8 @@ int main(int argc, char **argv)
 	notAfter =  (notAfter  == UNDEFINED_TIME) ? time(NULL) + validity : notAfter;
 
 	/* build and parse attribute certificate */
-	if (userCert != NULL && signerCert != NULL && signerKey != NULL)
+	if (userCert != NULL && signerCert != NULL && signerKey != NULL &&
+		outfile != NULL)
 	{
 		/* read the serial number and increment it by one */
 		serial = read_serial();
@@ -512,7 +524,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		usage("some of the mandatory parameters --usercert --cert --key "
+		usage("some of the mandatory parameters --usercert --cert --key --out "
 			  "are missing");
 	}
 

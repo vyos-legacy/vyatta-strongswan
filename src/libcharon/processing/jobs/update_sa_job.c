@@ -43,19 +43,15 @@ struct private_update_sa_job_t {
 	host_t *new;
 };
 
-/**
- * Implements job_t.destroy.
- */
-static void destroy(private_update_sa_job_t *this)
+METHOD(job_t, destroy, void,
+	private_update_sa_job_t *this)
 {
 	this->new->destroy(this->new);
 	free(this);
 }
 
-/**
- * Implementation of job_t.execute.
- */
-static void execute(private_update_sa_job_t *this)
+METHOD(job_t, execute, void,
+	private_update_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 
@@ -71,7 +67,7 @@ static void execute(private_update_sa_job_t *this)
 		if (ike_sa->has_condition(ike_sa, COND_NAT_THERE) &&
 			!ike_sa->has_condition(ike_sa, COND_NAT_HERE))
 		{
-			ike_sa->update_hosts(ike_sa, NULL, this->new);
+			ike_sa->update_hosts(ike_sa, NULL, this->new, FALSE);
 		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
@@ -83,13 +79,18 @@ static void execute(private_update_sa_job_t *this)
  */
 update_sa_job_t *update_sa_job_create(u_int32_t reqid, host_t *new)
 {
-	private_update_sa_job_t *this = malloc_thing(private_update_sa_job_t);
+	private_update_sa_job_t *this;
 
-	this->public.job_interface.execute = (void (*) (job_t *)) execute;
-	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-
-	this->reqid = reqid;
-	this->new = new;
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.destroy = _destroy,
+			},
+		},
+		.reqid = reqid,
+		.new = new,
+	);
 
 	return &this->public;
 }

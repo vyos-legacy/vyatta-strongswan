@@ -68,6 +68,11 @@ struct private_ike_auth_t {
 	packet_t *other_packet;
 
 	/**
+	 * Reserved bytes of ID payload
+	 */
+	char reserved[3];
+
+	/**
 	 * currently active authenticator, to authenticate us
 	 */
 	authenticator_t *my_auth;
@@ -101,6 +106,11 @@ struct private_ike_auth_t {
 	 * should we send a AUTHENTICATION_FAILED notify?
 	 */
 	bool authentication_failed;
+
+	/**
+	 * received an INITIAL_CONTACT?
+	 */
+	bool initial_contact;
 };
 
 /**
@@ -157,6 +167,24 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 	/* keep a copy of the received packet */
 	this->other_packet = message->get_packet(message);
 	return NEED_MORE;
+}
+
+/**
+ * Get and store reserved bytes of id_payload, required for AUTH payload
+ */
+static void get_reserved_id_bytes(private_ike_auth_t *this, id_payload_t *id)
+{
+	u_int8_t *byte;
+	int i;
+
+	for (i = 0; i < countof(this->reserved); i++)
+	{
+		byte = payload_get_field(&id->payload_interface, RESERVED_BYTE, i);
+		if (byte)
+		{
+			this->reserved[i] = *byte;
+		}
+	}
 }
 
 /**
@@ -329,10 +357,8 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 	return this->peer_cfg != NULL;
 }
 
-/**
- * Implementation of task_t.build for initiator
- */
-static status_t build_i(private_ike_auth_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_auth_t *this, message_t *message)
 {
 	auth_cfg_t *cfg;
 
@@ -367,7 +393,7 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 	/* check if an authenticator is in progress */
 	if (this->my_auth == NULL)
 	{
-		identification_t *id;
+		identification_t *idi, *idr = NULL;
 		id_payload_t *id_payload;
 
 		/* clean up authentication config from a previous round */
@@ -378,33 +404,48 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 		cfg = get_auth_cfg(this, FALSE);
 		if (cfg)
 		{
-			id = cfg->get(cfg, AUTH_RULE_IDENTITY);
-			if (id && !id->contains_wildcards(id))
+			idr = cfg->get(cfg, AUTH_RULE_IDENTITY);
+			if (idr && !idr->contains_wildcards(idr))
 			{
-				this->ike_sa->set_other_id(this->ike_sa, id->clone(id));
+				this->ike_sa->set_other_id(this->ike_sa, idr->clone(idr));
 				id_payload = id_payload_create_from_identification(
-															ID_RESPONDER, id);
+															ID_RESPONDER, idr);
 				message->add_payload(message, (payload_t*)id_payload);
 			}
 		}
 		/* add IDi */
 		cfg = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 		cfg->merge(cfg, get_auth_cfg(this, TRUE), TRUE);
-		id = cfg->get(cfg, AUTH_RULE_IDENTITY);
-		if (!id)
+		idi = cfg->get(cfg, AUTH_RULE_IDENTITY);
+		if (!idi)
 		{
 			DBG1(DBG_CFG, "configuration misses IDi");
 			return FAILED;
 		}
-		this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
-		id_payload = id_payload_create_from_identification(ID_INITIATOR, id);
+		this->ike_sa->set_my_id(this->ike_sa, idi->clone(idi));
+		id_payload = id_payload_create_from_identification(ID_INITIATOR, idi);
+		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
+
+		if (idr && message->get_message_id(message) == 1 &&
+			this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NO)
+		{
+			host_t *host;
+
+			host = this->ike_sa->get_other_host(this->ike_sa);
+			if (!charon->ike_sa_manager->has_contact(charon->ike_sa_manager,
+											idi, idr, host->get_family(host)))
+			{
+				message->add_notify(message, FALSE, INITIAL_CONTACT, chunk_empty);
+			}
+		}
 
 		/* build authentication data */
 		this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
 							this->other_nonce, this->my_nonce,
 							this->other_packet->get_data(this->other_packet),
-							this->my_packet->get_data(this->my_packet));
+							this->my_packet->get_data(this->my_packet),
+							this->reserved);
 		if (!this->my_auth)
 		{
 			return FAILED;
@@ -441,10 +482,8 @@ static status_t build_i(private_ike_auth_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_auth_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	private_ike_auth_t *this, message_t *message)
 {
 	auth_cfg_t *cfg, *cand;
 	id_payload_t *id_payload;
@@ -481,9 +520,8 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		{
 			this->ike_sa->enable_extension(this->ike_sa, EXT_MULTIPLE_AUTH);
 		}
-		if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN) &&
-			message->get_notify(message, EAP_ONLY_AUTHENTICATION))
-		{	/* EAP-only has no official notify, accept only from strongSwan */
+		if (message->get_notify(message, EAP_ONLY_AUTHENTICATION))
+		{
 			this->ike_sa->enable_extension(this->ike_sa,
 										   EXT_EAP_ONLY_AUTHENTICATION);
 		}
@@ -499,6 +537,7 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			return FAILED;
 		}
 		id = id_payload->get_identification(id_payload);
+		get_reserved_id_bytes(this, id_payload);
 		this->ike_sa->set_other_id(this->ike_sa, id);
 		cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 		cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
@@ -538,13 +577,19 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			{
 				cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
 			}
+			id = (identification_t*)cand->get(cand, AUTH_RULE_AAA_IDENTITY);
+			if (id)
+			{
+				cfg->add(cfg, AUTH_RULE_AAA_IDENTITY, id->clone(id));
+			}
 		}
 
 		/* verify authentication data */
 		this->other_auth = authenticator_create_verifier(this->ike_sa,
 							message, this->other_nonce, this->my_nonce,
 							this->other_packet->get_data(this->other_packet),
-							this->my_packet->get_data(this->my_packet));
+							this->my_packet->get_data(this->my_packet),
+							this->reserved);
 		if (!this->other_auth)
 		{
 			this->authentication_failed = TRUE;
@@ -568,10 +613,13 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 			return NEED_MORE;
 	}
 
-	/* store authentication information */
-	cfg = auth_cfg_create();
-	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-	this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
+	/* If authenticated (with non-EAP) and received INITIAL_CONTACT,
+	 * delete any existing IKE_SAs with that peer. */
+	if (message->get_message_id(message) == 1 &&
+		message->get_notify(message, INITIAL_CONTACT))
+	{
+		this->initial_contact = TRUE;
+	}
 
 	/* another auth round done, invoke authorize hook */
 	if (!charon->bus->authorize(charon->bus, FALSE))
@@ -580,6 +628,11 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 		this->authentication_failed = TRUE;
 		return NEED_MORE;
 	}
+
+	/* store authentication information */
+	cfg = auth_cfg_create();
+	cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
+	this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
 
 	if (!update_cfg_candidates(this, FALSE))
 	{
@@ -599,10 +652,8 @@ static status_t process_r(private_ike_auth_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_auth_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	private_ike_auth_t *this, message_t *message)
 {
 	auth_cfg_t *cfg;
 
@@ -658,7 +709,15 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 		}
 
 		id_payload = id_payload_create_from_identification(ID_RESPONDER, id);
+		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
+
+		if (this->initial_contact)
+		{
+			charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
+													 this->ike_sa, TRUE);
+			this->initial_contact = FALSE;
+		}
 
 		if ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS) == AUTH_CLASS_EAP)
 		{	/* EAP-only authentication */
@@ -678,7 +737,8 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 			this->my_auth = authenticator_create_builder(this->ike_sa, cfg,
 								this->other_nonce, this->my_nonce,
 								this->other_packet->get_data(this->other_packet),
-								this->my_packet->get_data(this->my_packet));
+								this->my_packet->get_data(this->my_packet),
+								this->reserved);
 			if (!this->my_auth)
 			{
 				message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
@@ -740,7 +800,7 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	if (!this->do_another_auth && !this->expect_another_auth)
 	{
 		if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
-													 this->ike_sa))
+													 this->ike_sa, FALSE))
 		{
 			DBG1(DBG_IKE, "cancelling IKE_SA setup due uniqueness policy");
 			message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
@@ -768,10 +828,8 @@ static status_t build_r(private_ike_auth_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_auth_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_auth_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
@@ -821,7 +879,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 					break;
 				default:
 				{
-					if (type < 16383)
+					if (type <= 16383)
 					{
 						DBG1(DBG_IKE, "received %N notify error",
 							 notify_type_names, type);
@@ -853,6 +911,7 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				return FAILED;
 			}
 			id = id_payload->get_identification(id_payload);
+			get_reserved_id_bytes(this, id_payload);
 			this->ike_sa->set_other_id(this->ike_sa, id);
 			cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 			cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
@@ -863,7 +922,8 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 				this->other_auth = authenticator_create_verifier(this->ike_sa,
 								message, this->other_nonce, this->my_nonce,
 								this->other_packet->get_data(this->other_packet),
-								this->my_packet->get_data(this->my_packet));
+								this->my_packet->get_data(this->my_packet),
+								this->reserved);
 				if (!this->other_auth)
 				{
 					return FAILED;
@@ -889,17 +949,17 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 			this->other_auth->destroy(this->other_auth);
 			this->other_auth = NULL;
 		}
-		/* store authentication information, reset authenticator */
-		cfg = auth_cfg_create();
-		cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
-		this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
-
 		/* another auth round done, invoke authorize hook */
 		if (!charon->bus->authorize(charon->bus, FALSE))
 		{
 			DBG1(DBG_IKE, "authorization forbids IKE_SA, cancelling");
 			return FAILED;
 		}
+
+		/* store authentication information, reset authenticator */
+		cfg = auth_cfg_create();
+		cfg->merge(cfg, this->ike_sa->get_auth_cfg(this->ike_sa, FALSE), FALSE);
+		this->ike_sa->add_auth_cfg(this->ike_sa, FALSE, cfg);
 	}
 
 	if (this->my_auth)
@@ -960,18 +1020,14 @@ static status_t process_i(private_ike_auth_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_auth_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_auth_t *this)
 {
 	return IKE_AUTHENTICATE;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_auth_t *this, ike_sa_t *ike_sa)
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
@@ -994,10 +1050,8 @@ static void migrate(private_ike_auth_t *this, ike_sa_t *ike_sa)
 	this->candidates = linked_list_create();
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_auth_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_auth_t *this)
 {
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
@@ -1015,37 +1069,29 @@ static void destroy(private_ike_auth_t *this)
  */
 ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_auth_t *this = malloc_thing(private_ike_auth_t);
+	private_ike_auth_t *this;
 
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
-
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.migrate = _migrate,
+				.build = _build_r,
+				.process = _process_r,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+		.initiator = initiator,
+		.candidates = linked_list_create(),
+		.do_another_auth = TRUE,
+		.expect_another_auth = TRUE,
+	);
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
-	else
-	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
-	}
-
-	this->ike_sa = ike_sa;
-	this->initiator = initiator;
-	this->my_nonce = chunk_empty;
-	this->other_nonce = chunk_empty;
-	this->my_packet = NULL;
-	this->other_packet = NULL;
-	this->peer_cfg = NULL;
-	this->candidates = linked_list_create();
-	this->my_auth = NULL;
-	this->other_auth = NULL;
-	this->do_another_auth = TRUE;
-	this->expect_another_auth = TRUE;
-	this->authentication_failed = FALSE;
-
 	return &this->public;
 }
 

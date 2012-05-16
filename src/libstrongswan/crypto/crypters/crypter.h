@@ -42,6 +42,7 @@ enum encryption_algorithm_t {
 	ENCR_DES_IV32 =            9,
 	ENCR_NULL =               11,
 	ENCR_AES_CBC =            12,
+	/** CTR as specified for IPsec (RFC5930/RFC3686), nonce appended to key */
 	ENCR_AES_CTR =            13,
 	ENCR_AES_CCM_ICV8 =       14,
 	ENCR_AES_CCM_ICV12 =      15,
@@ -51,6 +52,7 @@ enum encryption_algorithm_t {
 	ENCR_AES_GCM_ICV16 =      20,
 	ENCR_NULL_AUTH_AES_GMAC = 21,
 	ENCR_CAMELLIA_CBC =       23,
+	/* CTR as specified for IPsec (RFC5529), nonce appended to key */
 	ENCR_CAMELLIA_CTR =       24,
 	ENCR_CAMELLIA_CCM_ICV8 =  25,
 	ENCR_CAMELLIA_CCM_ICV12 = 26,
@@ -81,8 +83,8 @@ struct crypter_t {
 	/**
 	 * Encrypt a chunk of data and allocate space for the encrypted value.
 	 *
-	 * The length of the iv must equal to get_block_size(), while the length
-	 * of data must be a multiple it.
+	 * The length of the iv must equal to get_iv_size(), while the length
+	 * of data must be a multiple of get_block_size().
 	 * If encrypted is NULL, the encryption is done in-place (overwriting data).
 	 *
 	 * @param data			data to encrypt
@@ -95,8 +97,8 @@ struct crypter_t {
 	/**
 	 * Decrypt a chunk of data and allocate space for the decrypted value.
 	 *
-	 * The length of the iv must equal to get_block_size(), while the length
-	 * of data must be a multiple it.
+	 * The length of the iv must equal to get_iv_size(), while the length
+	 * of data must be a multiple of get_block_size().
 	 * If decrpyted is NULL, the encryption is done in-place (overwriting data).
 	 *
 	 * @param data			data to decrypt
@@ -109,14 +111,29 @@ struct crypter_t {
 	/**
 	 * Get the block size of the crypto algorithm.
 	 *
-	 * @return					block size in bytes
+	 * get_block_size() returns the smallest block the crypter can handle,
+	 * not the block size of the underlying crypto algorithm. For counter mode,
+	 * it is usually 1.
+	 *
+	 * @return				block size in bytes
 	 */
 	size_t (*get_block_size) (crypter_t *this);
 
 	/**
+	 * Get the IV size of the crypto algorithm.
+	 *
+	 * @return				initialization vector size in bytes
+	 */
+	size_t (*get_iv_size)(crypter_t *this);
+
+	/**
 	 * Get the key size of the crypto algorithm.
 	 *
-	 * @return					key size in bytes
+	 * get_key_size() might return a key length different from the key
+	 * size passed to the factory constructor. For Counter Mode, the nonce
+	 * is handled as a part of the key material and is passed to set_key().
+	 *
+	 * @return				key size in bytes
 	 */
 	size_t (*get_key_size) (crypter_t *this);
 
@@ -125,7 +142,7 @@ struct crypter_t {
 	 *
 	 * The length of the key must match get_key_size().
 	 *
-	 * @param key				key to set
+	 * @param key			key to set
 	 */
 	void (*set_key) (crypter_t *this, chunk_t key);
 
@@ -152,5 +169,13 @@ encryption_algorithm_t encryption_algorithm_from_oid(int oid, size_t *key_size);
  * @return				ASN.1 OID, OID_UNKNOWN if OID is unknown
  */
 int encryption_algorithm_to_oid(encryption_algorithm_t alg, size_t key_size);
+
+/**
+ * Check if an encryption algorithm identifier is an AEAD algorithm.
+ *
+ * @param alg			algorithm identifier
+ * @return				TRUE if it is an AEAD algorithm
+ */
+bool encryption_algorithm_is_aead(encryption_algorithm_t alg);
 
 #endif /** CRYPTER_H_ @}*/

@@ -83,3 +83,6 @@ libtool
 /src/_include/_include
 /src/_keycensor/_keycensor
 /src/_secretcensor/_secretcensor
+*.old
+*.orig
+*.rej

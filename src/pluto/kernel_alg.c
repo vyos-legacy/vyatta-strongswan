@@ -105,7 +105,7 @@ const struct sadb_alg* kernel_alg_sadb_alg_get(int satype, int exttype,
  */
 static void kernel_alg_init(void)
 {
-	DBG(DBG_KLIPS,
+	DBG(DBG_KERNEL,
 		DBG_log("alg_init(): memset(%p, 0, %d) memset(%p, 0, %d)",
 				&esp_aalg,  (int)sizeof (esp_aalg),
 				&esp_ealg,  (int)sizeof (esp_ealg))
@@ -121,7 +121,7 @@ static int kernel_alg_add(int satype, int exttype,
 	struct sadb_alg *alg_p = NULL;
 	int alg_id = sadb_alg->sadb_alg_id;
 
-	DBG(DBG_KLIPS,
+	DBG(DBG_KERNEL,
 		DBG_log("kernel_alg_add(): satype=%d, exttype=%d, alg_id=%d",
 				satype, exttype, sadb_alg->sadb_alg_id)
 	)
@@ -131,7 +131,7 @@ static int kernel_alg_add(int satype, int exttype,
 	/* This logic "mimics" KLIPS: first algo implementation will be used */
 	if (alg_p->sadb_alg_id)
 	{
-		DBG(DBG_KLIPS,
+		DBG(DBG_KERNEL,
 			DBG_log("kernel_alg_add(): discarding already setup "
 					"satype=%d, exttype=%d, alg_id=%d",
 					satype, exttype, sadb_alg->sadb_alg_id)
@@ -172,7 +172,7 @@ bool kernel_alg_esp_enc_ok(u_int alg_id, u_int key_len,
 out:
 	if (ret)
 	{
-		DBG(DBG_KLIPS,
+		DBG(DBG_KERNEL,
 			DBG_log("kernel_alg_esp_enc_ok(%d,%d): "
 					"alg_id=%d, "
 					"alg_ivlen=%d, alg_minbits=%d, alg_maxbits=%d, "
@@ -188,7 +188,7 @@ out:
 	}
 	else
 	{
-		DBG(DBG_KLIPS,
+		DBG(DBG_KERNEL,
 			DBG_log("kernel_alg_esp_enc_ok(%d,%d): NO", alg_id, key_len);
 		)
 	}
@@ -253,66 +253,6 @@ bool kernel_alg_esp_ok_final(u_int ealg, u_int key_len, u_int aalg,
 }
 
 /**
- * Load kernel_alg arrays from /proc used in manual mode from klips/utils/spi.c
- */
-int kernel_alg_proc_read(void)
-{
-	int satype;
-	int supp_exttype;
-	int alg_id, ivlen, minbits, maxbits;
-	struct sadb_alg sadb_alg;
-	int ret;
-	char buf[128];
-
-	FILE *fp=fopen("/proc/net/pf_key_supported", "r");
-
-	if (!fp)
-		return -1;
-
-	kernel_alg_init();
-
-	while (fgets(buf, sizeof(buf), fp))
-	{
-		if (buf[0] != ' ') /* skip titles */
-			continue;
-
-		sscanf(buf, "%d %d %d %d %d %d"
-				,&satype, &supp_exttype
-				, &alg_id, &ivlen
-				, &minbits, &maxbits);
-
-		switch (satype)
-		{
-		case SADB_SATYPE_ESP:
-			switch(supp_exttype)
-			{
-			case SADB_EXT_SUPPORTED_AUTH:
-			case SADB_EXT_SUPPORTED_ENCRYPT:
-				sadb_alg.sadb_alg_id = alg_id;
-				sadb_alg.sadb_alg_ivlen = ivlen;
-				sadb_alg.sadb_alg_minbits = minbits;
-				sadb_alg.sadb_alg_maxbits = maxbits;
-				ret = kernel_alg_add(satype, supp_exttype, &sadb_alg);
-				DBG(DBG_CRYPT,
-					DBG_log("kernel_alg_proc_read() alg_id=%d, "
-							"alg_ivlen=%d, alg_minbits=%d, alg_maxbits=%d, "
-							"ret=%d"
-							, sadb_alg.sadb_alg_id
-							, sadb_alg.sadb_alg_ivlen
-							, sadb_alg.sadb_alg_minbits
-							, sadb_alg.sadb_alg_maxbits
-							, ret)
-				)
-			}
-		default:
-			continue;
-		}
-	}
-	fclose(fp);
-	return 0;
-}
-
-/**
  * Load kernel_alg arrays pluto's SADB_REGISTER user by pluto/kernel.c
  */
 void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
@@ -346,7 +286,7 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 		int supp_exttype = sadb.supported->sadb_supported_exttype;
 		int supp_len = sadb.supported->sadb_supported_len*IPSEC_PFKEYv2_ALIGN;
 
-		DBG(DBG_KLIPS,
+		DBG(DBG_KERNEL,
 			DBG_log("kernel_alg_register_pfkey(): SADB_SATYPE_%s: "
 					"sadb_msg_len=%d sadb_supported_len=%d"
 					, satype==SADB_SATYPE_ESP? "ESP" : "AH"
@@ -363,7 +303,7 @@ void kernel_alg_register_pfkey(const struct sadb_msg *msg_buf, int buflen)
 		{
 			kernel_alg_add(satype, supp_exttype, sadb.alg);
 
-			DBG(DBG_KLIPS,
+			DBG(DBG_KERNEL,
 				DBG_log("kernel_alg_register_pfkey(): SADB_SATYPE_%s: "
 						"alg[%d], exttype=%d, satype=%d, alg_id=%d, "
 						"alg_ivlen=%d, alg_minbits=%d, alg_maxbits=%d, "
@@ -438,7 +378,7 @@ u_int kernel_alg_esp_enc_keylen(u_int alg_id)
 	}
 
 none:
-	DBG(DBG_KLIPS,
+	DBG(DBG_KERNEL,
 		DBG_log("kernel_alg_esp_enc_keylen(): alg_id=%d, keylen=%d",
 				alg_id, keylen)
 	)
@@ -450,62 +390,62 @@ struct sadb_alg* kernel_alg_esp_sadb_alg(u_int alg_id)
 	struct sadb_alg *sadb_alg = (ESP_EALG_PRESENT(alg_id))
 				? &esp_ealg[alg_id] : NULL;
 
-	DBG(DBG_KLIPS,
+	DBG(DBG_KERNEL,
 		DBG_log("kernel_alg_esp_sadb_alg(): alg_id=%d, sadb_alg=%p"
 				, alg_id, sadb_alg)
 	)
 	return sadb_alg;
 }
 
+/**
+ * Print the name of a kernel algorithm
+ */
+static void print_alg(char *buf, int *len, enum_names *alg_names, int alg_type)
+{
+	char alg_name[BUF_LEN];
+	int alg_name_len;
+
+	alg_name_len = sprintf(alg_name, " %s", enum_name(alg_names, alg_type));
+	if (*len + alg_name_len > CRYPTO_MAX_ALG_LINE)
+	{
+		whack_log(RC_COMMENT, "%s", buf);
+		*len = sprintf(buf, "             ");
+	}
+	sprintf(buf + *len, "%s", alg_name);
+	*len += alg_name_len;
+}
+
 void kernel_alg_list(void)
 {
 	char buf[BUF_LEN];
-	char *pos;
-	int n, len;
+	int len;
 	u_int sadb_id;
 
 	whack_log(RC_COMMENT, " ");
 	whack_log(RC_COMMENT, "List of registered ESP Algorithms:");
 	whack_log(RC_COMMENT, " ");
 
-	pos = buf;
-	*pos = '\0';
-	len = BUF_LEN;
+	len = sprintf(buf, "  encryption:");
 	for (sadb_id = 1; sadb_id <= SADB_EALG_MAX; sadb_id++)
 	{
 		if (ESP_EALG_PRESENT(sadb_id))
 		{
-			n = snprintf(pos, len, " %s",
-						 enum_name(&esp_transform_names, sadb_id));
-			pos += n;
-			len -= n;
-			if (len <= 0)
-			{
-				break;
-			}
+			print_alg(buf, &len, &esp_transform_names, sadb_id);
 		}
 	}
-	whack_log(RC_COMMENT, "  encryption:%s", buf);
+	whack_log(RC_COMMENT, "%s", buf);
 
-	pos = buf;
-	*pos = '\0';
-	len = BUF_LEN;
+	len = sprintf(buf, "  integrity: ");
 	for (sadb_id = 1; sadb_id <= SADB_AALG_MAX; sadb_id++)
 	{
 		if (ESP_AALG_PRESENT(sadb_id))
 		{
 			u_int aaid = alg_info_esp_sadb2aa(sadb_id);
 
-			n = snprintf(pos, len, " %s", enum_name(&auth_alg_names, aaid));
-			pos += n;
-			len -= n;
-			if (len <= 0)
-			{
-				break;
-			}
+			print_alg(buf, &len, &auth_alg_names, aaid);
 		}
 	}
-	whack_log(RC_COMMENT, "  integrity: %s", buf);
+	whack_log(RC_COMMENT, "%s", buf);
 }
 
 void kernel_alg_show_connection(connection_t *c, const char *instance)
@@ -693,12 +633,11 @@ static bool kernel_alg_db_add(struct db_context *db_ctx,
  *      malloced pointer (this quirk allows easier spdb.c change)
  */
 struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
-									 lset_t policy )
+									 lset_t policy)
 {
 	const struct esp_info *esp_info;
 	struct esp_info tmp_esp_info;
 	struct db_context *ctx_new = NULL;
-	struct db_prop  *prop;
 	u_int trans_cnt = esp_ealg_num * esp_aalg_num;
 
 	if (!(policy & POLICY_ENCRYPT))     /* not possible, I think  */
@@ -719,7 +658,6 @@ struct db_context* kernel_alg_db_new(struct alg_info_esp *alg_info,
 			kernel_alg_db_add(ctx_new, &tmp_esp_info, policy);
 		}
 	}
-	prop = db_prop_get(ctx_new);
 	return ctx_new;
 }
 

@@ -101,10 +101,14 @@ static padlock_feature_t get_padlock_features()
 	return 0;
 }
 
-/**
- * Implementation of aes_plugin_t.destroy
- */
-static void destroy(private_padlock_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_padlock_plugin_t *this)
+{
+	return "padlock";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_padlock_plugin_t *this)
 {
 	if (this->features & PADLOCK_RNG_ENABLED)
 	{
@@ -133,11 +137,19 @@ static void destroy(private_padlock_plugin_t *this)
  */
 plugin_t *padlock_plugin_create()
 {
-	private_padlock_plugin_t *this = malloc_thing(private_padlock_plugin_t);
+	private_padlock_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+		.features = get_padlock_features(),
+	);
 
-	this->features = get_padlock_features();
 	if (!this->features)
 	{
 		free(this);
@@ -157,21 +169,21 @@ plugin_t *padlock_plugin_create()
 
 	if (this->features & PADLOCK_RNG_ENABLED)
 	{
-		lib->crypto->add_rng(lib->crypto, RNG_TRUE,
+		lib->crypto->add_rng(lib->crypto, RNG_TRUE, get_name(this),
 						(rng_constructor_t)padlock_rng_create);
-		lib->crypto->add_rng(lib->crypto, RNG_STRONG,
+		lib->crypto->add_rng(lib->crypto, RNG_STRONG, get_name(this),
 						(rng_constructor_t)padlock_rng_create);
-		lib->crypto->add_rng(lib->crypto, RNG_WEAK,
+		lib->crypto->add_rng(lib->crypto, RNG_WEAK, get_name(this),
 						(rng_constructor_t)padlock_rng_create);
 	}
 	if (this->features & PADLOCK_ACE2_ENABLED)
 	{
-		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC,
+		lib->crypto->add_crypter(lib->crypto, ENCR_AES_CBC, get_name(this),
 						(crypter_constructor_t)padlock_aes_crypter_create);
 	}
 	if (this->features & PADLOCK_PHE_ENABLED)
 	{
-		lib->crypto->add_hasher(lib->crypto, HASH_SHA1,
+		lib->crypto->add_hasher(lib->crypto, HASH_SHA1, get_name(this),
 						(hasher_constructor_t)padlock_sha1_hasher_create);
 	}
 	return &this->public.plugin;

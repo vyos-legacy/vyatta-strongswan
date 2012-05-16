@@ -57,7 +57,7 @@
 #define streq(x,y) (strcmp(x, y) == 0)
 
 /**
- * Macro compares two strings for equality
+ * Macro compares two strings for equality, length limited
  */
 #define strneq(x,y,len) (strncmp(x, y, len) == 0)
 
@@ -65,6 +65,16 @@
  * Macro compares two strings for equality ignoring case
  */
 #define strcaseeq(x,y) (strcasecmp(x, y) == 0)
+
+/**
+ * Macro compares two strings for equality ignoring case, length limited
+ */
+#define strncaseeq(x,y,len) (strncasecmp(x, y, len) == 0)
+
+/**
+ * NULL-safe strdup variant
+ */
+#define strdupnull(x) ({ char *_x = x; _x ? strdup(_x) : NULL; })
 
 /**
  * Macro compares two binary blobs for equality
@@ -136,6 +146,28 @@
 	__attribute__((transparent_union)), ##__VA_ARGS__); \
 	static const typeof(name) *_##name = (const typeof(name)*)name; \
 	static ret name(this, ##__VA_ARGS__)
+
+/**
+ * Architecture independent bitfield definition helpers (at least with GCC).
+ *
+ * Defines a bitfield with a type t and a fixed size of bitfield members, e.g.:
+ * BITFIELD2(u_int8_t,
+ *     low: 4,
+ *     high: 4,
+ * ) flags;
+ * The member defined first placed at bit 0.
+ */
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define BITFIELD2(t, a, b,...)			struct { t a; t b; __VA_ARGS__}
+#define BITFIELD3(t, a, b, c,...)		struct { t a; t b; t c; __VA_ARGS__}
+#define BITFIELD4(t, a, b, c, d,...)	struct { t a; t b; t c; t d; __VA_ARGS__}
+#define BITFIELD5(t, a, b, c, d, e,...)	struct { t a; t b; t c; t d; t e; __VA_ARGS__}
+#elif BYTE_ORDER == BIG_ENDIAN
+#define BITFIELD2(t, a, b,...)			struct { t b; t a; __VA_ARGS__}
+#define BITFIELD3(t, a, b, c,...)		struct { t c; t b; t a; __VA_ARGS__}
+#define BITFIELD4(t, a, b, c, d,...)	struct { t d; t c; t b; t a; __VA_ARGS__}
+#define BITFIELD5(t, a, b, c, d, e,...)	struct { t e; t d; t c; t b; t a; __VA_ARGS__}
+#endif
 
 /**
  * Macro to allocate a sized type.
@@ -305,6 +337,51 @@ void *clalloc(void *pointer, size_t size);
 void memxor(u_int8_t dest[], u_int8_t src[], size_t n);
 
 /**
+ * Safely overwrite n bytes of memory at ptr with zero, non-inlining variant.
+ */
+void memwipe_noinline(void *ptr, size_t n);
+
+/**
+ * Safely overwrite n bytes of memory at ptr with zero, inlining variant.
+ */
+static inline void memwipe_inline(void *ptr, size_t n)
+{
+	volatile char *c = (volatile char*)ptr;
+	int m, i;
+
+	/* byte wise until long aligned */
+	for (i = 0; (uintptr_t)&c % sizeof(long) && i < n; i++)
+	{
+		c[i] = 0;
+	}
+	/* word wize */
+	for (m = n - sizeof(long); i <= m; i += sizeof(long))
+	{
+		*(volatile long*)&c[i] = 0;
+	}
+	/* byte wise of the rest */
+	for (; i < n; i++)
+	{
+		c[i] = 0;
+	}
+}
+
+/**
+ * Safely overwrite n bytes of memory at ptr with zero, auto-inlining variant.
+ */
+static inline void memwipe(void *ptr, size_t n)
+{
+	if (__builtin_constant_p(n))
+	{
+		memwipe_inline(ptr, n);
+	}
+	else
+	{
+		memwipe_noinline(ptr, n);
+	}
+}
+
+/**
  * A variant of strstr with the characteristics of memchr, where haystack is not
  * a null-terminated string but simply a memory area of length n.
  */
@@ -358,6 +435,11 @@ bool return_true();
  * returns FALSE
  */
 bool return_false();
+
+/**
+ * returns FAILED
+ */
+status_t return_failed();
 
 /**
  * Write a 16-bit host order value in network order to an unaligned address.

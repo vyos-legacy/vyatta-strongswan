@@ -560,19 +560,15 @@ static void set_ms_length(eap_mschapv2_header_t *eap, u_int16_t len)
 	memcpy(&eap->ms_length, &len, sizeof(u_int16_t));
 }
 
-/**
- * Implementation of eap_method_t.initiate for the peer
- */
-static status_t initiate_peer(private_eap_mschapv2_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate_peer, status_t,
+	private_eap_mschapv2_t *this, eap_payload_t **out)
 {
 	/* peer never initiates */
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.initiate for the server
- */
-static status_t initiate_server(private_eap_mschapv2_t *this, eap_payload_t **out)
+METHOD(eap_method_t, initiate_server, status_t,
+	private_eap_mschapv2_t *this, eap_payload_t **out)
 {
 	rng_t *rng;
 	eap_mschapv2_header_t *eap;
@@ -818,7 +814,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 	eap_mschapv2_header_t *eap;
 	chunk_t data;
 	char *message, *token, *msg = NULL;
-	int message_len, error = 0, retryable;
+	int message_len, error = 0, retriable;
 	chunk_t challenge = chunk_empty;
 
 	data = in->get_data(in);
@@ -847,7 +843,7 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 		else if (strneq(token, "R=", 2))
 		{
 			token += 2;
-			retryable = atoi(token);
+			retriable = atoi(token);
 		}
 		else if (strneq(token, "C=", 2))
 		{
@@ -880,17 +876,17 @@ static status_t process_peer_failure(private_eap_mschapv2_t *this,
 		 mschapv2_error_names, error, sanitize(msg));
 
 	/**
-	 * at this point, if the error is retryable, we MAY retry the authentication
+	 * at this point, if the error is retriable, we MAY retry the authentication
 	 * or MAY send a Change Password packet.
 	 *
-	 * if the error is not retryable (or if we do neither of the above), we
+	 * if the error is not retriable (or if we do neither of the above), we
 	 * SHOULD send a Failure Response packet.
 	 * windows clients don't do that, and since windows server 2008 r2 behaves
 	 * pretty odd if we do send a Failure Response, we just don't send one
 	 * either. windows 7 actually sends a delete notify (which, according to the
 	 * logs, results in an error on windows server 2008 r2).
 	 *
-	 * btw, windows server 2008 r2 does not send non-retryable errors for e.g.
+	 * btw, windows server 2008 r2 does not send non-retriable errors for e.g.
 	 * a disabled account but returns the windows error code in a notify payload
 	 * of type 12345.
 	 */
@@ -904,11 +900,8 @@ error:
 	return status;
 }
 
-/**
- * Implementation of eap_method_t.process for the peer
- */
-static status_t process_peer(private_eap_mschapv2_t *this, eap_payload_t *in,
-		eap_payload_t **out)
+METHOD(eap_method_t, process_peer, status_t,
+	private_eap_mschapv2_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	chunk_t data;
 	eap_mschapv2_header_t *eap;
@@ -1091,11 +1084,8 @@ static status_t process_server_response(private_eap_mschapv2_t *this,
 	return process_server_retry(this, out);
 }
 
-/**
- * Implementation of eap_method_t.process for the server
- */
-static status_t process_server(private_eap_mschapv2_t *this, eap_payload_t *in,
-		eap_payload_t **out)
+METHOD(eap_method_t, process_server, status_t,
+	private_eap_mschapv2_t *this, eap_payload_t *in, eap_payload_t **out)
 {
 	eap_mschapv2_header_t *eap;
 	chunk_t data;
@@ -1140,19 +1130,15 @@ static status_t process_server(private_eap_mschapv2_t *this, eap_payload_t *in,
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.get_type.
- */
-static eap_type_t get_type(private_eap_mschapv2_t *this, u_int32_t *vendor)
+METHOD(eap_method_t, get_type, eap_type_t,
+	private_eap_mschapv2_t *this, u_int32_t *vendor)
 {
 	*vendor = 0;
 	return EAP_MSCHAPV2;
 }
 
-/**
- * Implementation of eap_method_t.get_msk.
- */
-static status_t get_msk(private_eap_mschapv2_t *this, chunk_t *msk)
+METHOD(eap_method_t, get_msk, status_t,
+	private_eap_mschapv2_t *this, chunk_t *msk)
 {
 	if (this->msk.ptr)
 	{
@@ -1162,18 +1148,26 @@ static status_t get_msk(private_eap_mschapv2_t *this, chunk_t *msk)
 	return FAILED;
 }
 
-/**
- * Implementation of eap_method_t.is_mutual.
- */
-static bool is_mutual(private_eap_mschapv2_t *this)
+METHOD(eap_method_t, get_identifier, u_int8_t,
+	private_eap_mschapv2_t *this)
+{
+	return this->identifier;
+}
+
+METHOD(eap_method_t, set_identifier, void,
+	private_eap_mschapv2_t *this, u_int8_t identifier)
+{
+	this->identifier = identifier;
+}
+
+METHOD(eap_method_t, is_mutual, bool,
+	private_eap_mschapv2_t *this)
 {
 	return FALSE;
 }
 
-/**
- * Implementation of eap_method_t.destroy.
- */
-static void destroy(private_eap_mschapv2_t *this)
+METHOD(eap_method_t, destroy, void,
+	 private_eap_mschapv2_t *this)
 {
 	this->peer->destroy(this->peer);
 	this->server->destroy(this->server);
@@ -1189,25 +1183,22 @@ static void destroy(private_eap_mschapv2_t *this)
  */
 static private_eap_mschapv2_t *eap_mschapv2_create_generic(identification_t *server, identification_t *peer)
 {
-	private_eap_mschapv2_t *this = malloc_thing(private_eap_mschapv2_t);
+	private_eap_mschapv2_t *this;
 
-	this->public.eap_method_interface.initiate = NULL;
-	this->public.eap_method_interface.process = NULL;
-	this->public.eap_method_interface.get_type = (eap_type_t(*)(eap_method_t*,u_int32_t*))get_type;
-	this->public.eap_method_interface.is_mutual = (bool(*)(eap_method_t*))is_mutual;
-	this->public.eap_method_interface.get_msk = (status_t(*)(eap_method_t*,chunk_t*))get_msk;
-	this->public.eap_method_interface.destroy = (void(*)(eap_method_t*))destroy;
-
-	/* private data */
-	this->peer = peer->clone(peer);
-	this->server = server->clone(server);
-	this->challenge = chunk_empty;
-	this->nt_response = chunk_empty;
-	this->auth_response = chunk_empty;
-	this->msk = chunk_empty;
-	this->identifier = 0;
-	this->mschapv2id = 0;
-	this->retries = 0;
+	INIT(this,
+		.public = {
+			.eap_method_interface = {
+				.get_type = _get_type,
+				.is_mutual = _is_mutual,
+				.get_msk = _get_msk,
+				.get_identifier = _get_identifier,
+				.set_identifier = _set_identifier,
+				.destroy = _destroy,
+			},
+		},
+		.peer = peer->clone(peer),
+		.server = server->clone(server),
+	);
 
 	return this;
 }
@@ -1219,8 +1210,8 @@ eap_mschapv2_t *eap_mschapv2_create_server(identification_t *server, identificat
 {
 	private_eap_mschapv2_t *this = eap_mschapv2_create_generic(server, peer);
 
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_server;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*, eap_payload_t**))process_server;
+	this->public.eap_method_interface.initiate = _initiate_server;
+	this->public.eap_method_interface.process = _process_server;
 
 	/* generate a non-zero identifier */
 	do
@@ -1240,8 +1231,8 @@ eap_mschapv2_t *eap_mschapv2_create_peer(identification_t *server, identificatio
 {
 	private_eap_mschapv2_t *this = eap_mschapv2_create_generic(server, peer);
 
-	this->public.eap_method_interface.initiate = (status_t(*)(eap_method_t*,eap_payload_t**))initiate_peer;
-	this->public.eap_method_interface.process = (status_t(*)(eap_method_t*,eap_payload_t*, eap_payload_t**))process_peer;
+	this->public.eap_method_interface.initiate = _initiate_peer;
+	this->public.eap_method_interface.process = _process_peer;
 
 	return &this->public;
 }

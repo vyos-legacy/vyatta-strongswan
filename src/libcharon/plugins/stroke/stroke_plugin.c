@@ -36,10 +36,14 @@ struct private_stroke_plugin_t {
 	stroke_socket_t *socket;
 };
 
-/**
- * Implementation of stroke_plugin_t.destroy
- */
-static void destroy(private_stroke_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_stroke_plugin_t *this)
+{
+	return "stroke";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_stroke_plugin_t *this)
 {
 	this->socket->destroy(this->socket);
 	free(this);
@@ -50,11 +54,19 @@ static void destroy(private_stroke_plugin_t *this)
  */
 plugin_t *stroke_plugin_create()
 {
-	private_stroke_plugin_t *this = malloc_thing(private_stroke_plugin_t);
+	private_stroke_plugin_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+		.socket = stroke_socket_create(),
+	);
 
-	this->socket = stroke_socket_create();
 	if (this->socket == NULL)
 	{
 		free(this);

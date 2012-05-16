@@ -37,7 +37,7 @@
  * @defgroup payloads payloads
  * @ingroup encoding
  *
- * @defgroup kernel kernel
+ * @defgroup ckernel kernel
  * @ingroup libcharon
  *
  * @defgroup network network
@@ -46,11 +46,11 @@
  * @defgroup cplugins plugins
  * @ingroup libcharon
  *
- * @defgroup processing processing
+ * @defgroup cprocessing processing
  * @ingroup libcharon
  *
- * @defgroup jobs jobs
- * @ingroup processing
+ * @defgroup cjobs jobs
+ * @ingroup cprocessing
  *
  * @defgroup sa sa
  * @ingroup libcharon
@@ -140,9 +140,6 @@ typedef struct daemon_t daemon_t;
 #include <network/sender.h>
 #include <network/receiver.h>
 #include <network/socket_manager.h>
-#include <processing/scheduler.h>
-#include <processing/processor.h>
-#include <kernel/kernel_interface.h>
 #include <control/controller.h>
 #include <bus/bus.h>
 #include <bus/listeners/file_logger.h>
@@ -152,6 +149,9 @@ typedef struct daemon_t daemon_t;
 #include <config/backend_manager.h>
 #include <sa/authenticators/eap/eap_manager.h>
 #include <sa/authenticators/eap/sim_manager.h>
+#include <tnc/imc/imc_manager.h>
+#include <tnc/imv/imv_manager.h>
+#include <tnc/tnccs/tnccs_manager.h>
 
 #ifdef ME
 #include <sa/connect_manager.h>
@@ -209,16 +209,6 @@ struct daemon_t {
 	receiver_t *receiver;
 
 	/**
-	 * The Scheduler-Thread.
-	 */
-	scheduler_t *scheduler;
-
-	/**
-	 * Job processing using a thread pool.
-	 */
-	processor_t *processor;
-
-	/**
 	 * The signaling bus.
 	 */
 	bus_t *bus;
@@ -234,11 +224,6 @@ struct daemon_t {
 	linked_list_t *sys_loggers;
 
 	/**
-	 * Kernel Interface to communicate with kernel
-	 */
-	kernel_interface_t *kernel_interface;
-
-	/**
 	 * Controller to control the daemon
 	 */
 	controller_t *controller;
@@ -252,6 +237,21 @@ struct daemon_t {
 	 * SIM manager to maintain (U)SIM cards/providers
 	 */
 	sim_manager_t *sim;
+
+	/**
+	 * TNC IMC manager controlling Integrity Measurement Collectors
+	 */
+	imc_manager_t *imcs;
+
+	/**
+	 * TNC IMV manager controlling Integrity Measurement Verifiers
+	 */
+	imv_manager_t *imvs;
+
+	/**
+	 * TNCCS manager to maintain registered TNCCS protocols
+	 */
+	tnccs_manager_t *tnccs;
 
 #ifdef ME
 	/**
@@ -298,7 +298,7 @@ struct daemon_t {
 	/**
 	 * Initialize the daemon.
 	 */
-	bool (*initialize)(daemon_t *this, bool syslog, level_t levels[]);
+	bool (*initialize)(daemon_t *this);
 
 	/**
 	 * Starts the daemon, i.e. spawns the threads of the thread pool.
@@ -316,6 +316,9 @@ extern daemon_t *charon;
 
 /**
  * Initialize libcharon and create the "charon" instance of daemon_t.
+ *
+ * This function initializes the bus, listeners can be registered before
+ * calling initialize().
  *
  * @return		FALSE if integrity check failed
  */

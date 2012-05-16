@@ -31,6 +31,7 @@
 #include <threading/condvar.h>
 #include <threading/thread.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 
@@ -200,13 +201,16 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	dhcp->transaction_id = transaction->get_id(transaction);
 	if (chunk_equals(broadcast, this->dst->get_address(this->dst)))
 	{
+		/* Set broadcast flag to get broadcasted replies, as we actually
+		 * do not own the MAC we request an address for. */
+		dhcp->flags = htons(0x8000);
 		/* TODO: send with 0.0.0.0 source address */
 	}
 	else
 	{
 		/* act as relay agent */
-		src = charon->kernel_interface->get_source_addr(
-									charon->kernel_interface, this->dst, NULL);
+		src = hydra->kernel_interface->get_source_addr(hydra->kernel_interface,
+													   this->dst, NULL);
 		if (src)
 		{
 			memcpy(&dhcp->gateway_address, src->get_address(src).ptr,
@@ -458,12 +462,10 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 {
 	dhcp_transaction_t *transaction = NULL;
 	enumerator_t *enumerator;
-	host_t *offer, *server;
+	host_t *offer, *server = NULL;
 
 	offer = host_create_from_chunk(AF_INET,
 					chunk_from_thing(dhcp->your_address), 0);
-	server = host_create_from_chunk(AF_INET,
-					chunk_from_thing(dhcp->server_address), DHCP_SERVER_PORT);
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->discover->create_enumerator(this->discover);
@@ -471,11 +473,8 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 	{
 		if (transaction->get_id(transaction) == dhcp->transaction_id)
 		{
-			DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
 			this->discover->remove_at(this->discover, enumerator);
 			this->request->insert_last(this->request, transaction);
-			transaction->set_address(transaction, offer->clone(offer));
-			transaction->set_server(transaction, server->clone(server));
 			break;
 		}
 	}
@@ -504,14 +503,26 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 						chunk_create((char*)&option->data[pos], 4));
 				}
 			}
+			if (!server && option->type == DHCP_SERVER_ID && option->len == 4)
+			{
+				server = host_create_from_chunk(AF_INET,
+							chunk_create(option->data, 4), DHCP_SERVER_PORT);
+			}
 			optlen -= optsize;
 			optpos += optsize;
 		}
+		if (!server)
+		{
+			server = host_create_from_chunk(AF_INET,
+				chunk_from_thing(dhcp->server_address), DHCP_SERVER_PORT);
+		}
+		DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
+		transaction->set_address(transaction, offer->clone(offer));
+		transaction->set_server(transaction, server);
 	}
 	this->mutex->unlock(this->mutex);
 	this->condvar->broadcast(this->condvar);
 	offer->destroy(offer);
-	server->destroy(server);
 }
 
 /**
@@ -751,7 +762,7 @@ dhcp_socket_t *dhcp_socket_create()
 
 	this->job = callback_job_create((callback_job_cb_t)receive_dhcp,
 									this, NULL, NULL);
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

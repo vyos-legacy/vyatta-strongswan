@@ -329,14 +329,23 @@ struct ike_sa_t {
 	void (*set_other_host) (ike_sa_t *this, host_t *other);
 
 	/**
+	 * Float to port 4500 (e.g. if a NAT is detected).
+	 *
+	 * The port of either endpoint is changed only if it is currently
+	 * set to the default value of 500.
+	 */
+	void (*float_ports)(ike_sa_t *this);
+
+	/**
 	 * Update the IKE_SAs host.
 	 *
 	 * Hosts may be NULL to use current host.
 	 *
 	 * @param me			new local host address, or NULL
 	 * @param other			new remote host address, or NULL
+	 * @param force			force update
 	 */
-	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other);
+	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other, bool force);
 
 	/**
 	 * Get the own identification.
@@ -903,9 +912,8 @@ struct ike_sa_t {
 	 * As this call may initiate inherited tasks, a status is returned.
 	 *
 	 * @param other			other task to inherit from
-	 * @return				DESTROY_ME if initiation of inherited task failed
 	 */
-	status_t (*inherit) (ike_sa_t *this, ike_sa_t *other);
+	void (*inherit) (ike_sa_t *this, ike_sa_t *other);
 
 	/**
 	 * Reset the IKE_SA, useable when initiating fails

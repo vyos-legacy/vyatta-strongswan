@@ -5,7 +5,11 @@ hydra.c hydra.h \
 attributes/attributes.c attributes/attributes.h \
 attributes/attribute_provider.h attributes/attribute_handler.h \
 attributes/attribute_manager.c attributes/attribute_manager.h \
-attributes/mem_pool.c attributes/mem_pool.h
+attributes/mem_pool.c attributes/mem_pool.h \
+kernel/kernel_interface.c kernel/kernel_interface.h \
+kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_net.h \
+kernel/kernel_listener.h
 
 libhydra_la_LIBADD =
 
@@ -37,6 +41,34 @@ if USE_ATTR_SQL
   SUBDIRS += plugins/attr_sql
 if MONOLITHIC
   libhydra_la_LIBADD += plugins/attr_sql/libstrongswan-attr-sql.la
+endif
+endif
+
+if USE_KERNEL_PFKEY
+  SUBDIRS += plugins/kernel_pfkey
+if MONOLITHIC
+  libhydra_la_LIBADD += plugins/kernel_pfkey/libstrongswan-kernel-pfkey.la
+endif
+endif
+
+if USE_KERNEL_PFROUTE
+  SUBDIRS += plugins/kernel_pfroute
+if MONOLITHIC
+  libhydra_la_LIBADD += plugins/kernel_pfroute/libstrongswan-kernel-pfroute.la
+endif
+endif
+
+if USE_KERNEL_KLIPS
+  SUBDIRS += plugins/kernel_klips
+if MONOLITHIC
+  libhydra_la_LIBADD += plugins/kernel_klips/libstrongswan-kernel-klips.la
+endif
+endif
+
+if USE_KERNEL_NETLINK
+  SUBDIRS += plugins/kernel_netlink
+if MONOLITHIC
+  libhydra_la_LIBADD += plugins/kernel_netlink/libstrongswan-kernel-netlink.la
 endif
 endif
 

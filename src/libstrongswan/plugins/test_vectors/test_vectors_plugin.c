@@ -20,6 +20,7 @@
 
 /* define symbols of all test vectors */
 #define TEST_VECTOR_CRYPTER(x) crypter_test_vector_t x;
+#define TEST_VECTOR_AEAD(x) aead_test_vector_t x;
 #define TEST_VECTOR_SIGNER(x) signer_test_vector_t x;
 #define TEST_VECTOR_HASHER(x) hasher_test_vector_t x;
 #define TEST_VECTOR_PRF(x) prf_test_vector_t x;
@@ -28,12 +29,14 @@
 #include "test_vectors.h"
 
 #undef TEST_VECTOR_CRYPTER
+#undef TEST_VECTOR_AEAD
 #undef TEST_VECTOR_SIGNER
 #undef TEST_VECTOR_HASHER
 #undef TEST_VECTOR_PRF
 #undef TEST_VECTOR_RNG
 
 #define TEST_VECTOR_CRYPTER(x)
+#define TEST_VECTOR_AEAD(x)
 #define TEST_VECTOR_SIGNER(x)
 #define TEST_VECTOR_HASHER(x)
 #define TEST_VECTOR_PRF(x)
@@ -47,6 +50,14 @@ static crypter_test_vector_t *crypter[] = {
 };
 #undef TEST_VECTOR_CRYPTER
 #define TEST_VECTOR_CRYPTER(x)
+
+#undef TEST_VECTOR_AEAD
+#define TEST_VECTOR_AEAD(x) &x,
+static aead_test_vector_t *aead[] = {
+#include "test_vectors.h"
+};
+#undef TEST_VECTOR_AEAD
+#define TEST_VECTOR_AEAD(x)
 
 #undef TEST_VECTOR_SIGNER
 #define TEST_VECTOR_SIGNER(x) &x,
@@ -93,10 +104,14 @@ struct private_test_vectors_plugin_t {
 	test_vectors_plugin_t public;
 };
 
-/**
- * Implementation of test_vectors_plugin_t.test_vectorstroy
- */
-static void destroy(private_test_vectors_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_test_vectors_plugin_t *this)
+{
+	return "test-vectors";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_test_vectors_plugin_t *this)
 {
 	free(this);
 }
@@ -106,15 +121,28 @@ static void destroy(private_test_vectors_plugin_t *this)
  */
 plugin_t *test_vectors_plugin_create()
 {
-	private_test_vectors_plugin_t *this = malloc_thing(private_test_vectors_plugin_t);
+	private_test_vectors_plugin_t *this;
 	int i;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
 
 	for (i = 0; i < countof(crypter); i++)
 	{
 		lib->crypto->add_test_vector(lib->crypto,
 									 ENCRYPTION_ALGORITHM, crypter[i]);
+	}
+	for (i = 0; i < countof(aead); i++)
+	{
+		lib->crypto->add_test_vector(lib->crypto,
+									 AEAD_ALGORITHM, aead[i]);
 	}
 	for (i = 0; i < countof(signer); i++)
 	{

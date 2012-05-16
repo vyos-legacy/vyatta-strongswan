@@ -91,6 +91,12 @@ struct private_ha_plugin_t {
 	ha_attribute_t *attr;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_ha_plugin_t *this)
+{
+	return "ha";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_ha_plugin_t *this)
 {
@@ -142,7 +148,13 @@ plugin_t *ha_plugin_create()
 	}
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
 	);
 
 	if (secret)

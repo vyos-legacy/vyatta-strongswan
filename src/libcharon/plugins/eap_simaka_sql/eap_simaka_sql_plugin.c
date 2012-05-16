@@ -47,6 +47,12 @@ struct private_eap_simaka_sql_t {
 	database_t *db;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_eap_simaka_sql_t *this)
+{
+	return "eap-simaka-sql";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_eap_simaka_sql_t *this)
 {
@@ -85,8 +91,12 @@ plugin_t *eap_simaka_sql_plugin_create()
 							"charon.plugins.eap-simaka-sql.remove_used", FALSE);
 
 	INIT(this,
-		.public.plugin =  {
-			.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
 		},
 		.db = db,
 		.provider = eap_simaka_sql_provider_create(db, remove_used),

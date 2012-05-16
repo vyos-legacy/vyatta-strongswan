@@ -43,6 +43,12 @@ struct private_farp_plugin_t {
 	farp_spoofer_t *spoofer;
 };
 
+METHOD(plugin_t, get_name, char*,
+	private_farp_plugin_t *this)
+{
+	return "farp";
+}
+
 METHOD(plugin_t, destroy, void,
 	private_farp_plugin_t *this)
 {
@@ -60,7 +66,13 @@ plugin_t *farp_plugin_create()
 	private_farp_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
 		.listener = farp_listener_create(),
 	);
 

@@ -195,7 +195,7 @@ sender_t * sender_create()
 											"charon.send_delay_response", TRUE),
 	);
 
-	charon->processor->queue_job(charon->processor, (job_t*)this->job);
+	lib->processor->queue_job(lib->processor, (job_t*)this->job);
 
 	return &this->public;
 }

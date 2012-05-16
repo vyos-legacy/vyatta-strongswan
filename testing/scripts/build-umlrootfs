@@ -127,6 +127,7 @@ echo "ln -sf /usr/share/zoneinfo/${TZUML} /etc/localtime" >> $INSTALLSHELL
 echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
 echo -n "./configure --sysconfdir=/etc" >> $INSTALLSHELL
 echo -n " --with-random-device=/dev/urandom" >> $INSTALLSHELL
+echo -n " --disable-load-warning" >> $INSTALLSHELL
 
 if [ "$USE_LIBCURL" = "yes" ]
 then
@@ -169,6 +170,51 @@ fi
 if [ "$USE_EAP_RADIUS" = "yes" ]
 then
     echo -n " --enable-eap-radius" >> $INSTALLSHELL
+fi
+
+if [ "$USE_EAP_TLS" = "yes" ]
+then
+    echo -n " --enable-eap-tls" >> $INSTALLSHELL
+fi
+
+if [ "$USE_EAP_TTLS" = "yes" ]
+then
+    echo -n " --enable-eap-ttls" >> $INSTALLSHELL
+fi
+
+if [ "$USE_EAP_PEAP" = "yes" ]
+then
+    echo -n " --enable-eap-peap" >> $INSTALLSHELL
+fi
+
+if [ "$USE_EAP_TNC" = "yes" ]
+then
+    echo -n " --enable-eap-tnc" >> $INSTALLSHELL
+fi
+
+if [ "$USE_TNC_IMC" = "yes" ]
+then
+    echo -n " --enable-tnc-imc" >> $INSTALLSHELL
+fi
+
+if [ "$USE_TNC_IMV" = "yes" ]
+then
+    echo -n " --enable-tnc-imv" >> $INSTALLSHELL
+fi
+
+if [ "$USE_TNCCS_11" = "yes" ]
+then
+    echo -n " --enable-tnccs-11" >> $INSTALLSHELL
+fi
+
+if [ "$USE_TNCCS_20" = "yes" ]
+then
+    echo -n " --enable-tnccs-20" >> $INSTALLSHELL
+fi
+
+if [ "$USE_TNCCS_DYNAMIC" = "yes" ]
+then
+    echo -n " --enable-tnccs-dynamic" >> $INSTALLSHELL
 fi
 
 if [ "$USE_SQL" = "yes" ]
@@ -246,8 +292,43 @@ then
     echo -n " --enable-addrblock" >> $INSTALLSHELL
 fi
 
+if [ "$USE_CTR" = "yes" ]
+then
+    echo -n " --enable-ctr" >> $INSTALLSHELL
+fi
+
+if [ "$USE_CCM" = "yes" ]
+then
+    echo -n " --enable-ccm" >> $INSTALLSHELL
+fi
+
+if [ "$USE_GCM" = "yes" ]
+then
+    echo -n " --enable-gcm" >> $INSTALLSHELL
+fi
+
+if [ "$USE_HA" = "yes" ]
+then
+    echo -n " --enable-ha" >> $INSTALLSHELL
+fi
+
+if [ "$USE_AF_ALG" = "yes" ]
+then
+    echo -n " --enable-af-alg" >> $INSTALLSHELL
+fi
+
+if [ "$USE_WHITELIST" = "yes" ]
+then
+    echo -n " --enable-whitelist" >> $INSTALLSHELL
+fi
+
+if [ "$USE_CISCO_QUIRKS" = "yes" ]
+then
+    echo -n " --enable-cisco-quirks" >> $INSTALLSHELL
+fi
+
 echo "" >> $INSTALLSHELL
-echo "make" >> $INSTALLSHELL
+echo "make -j" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
 echo "ldconfig" >> $INSTALLSHELL
 

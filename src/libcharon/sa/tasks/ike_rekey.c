@@ -68,9 +68,45 @@ struct private_ike_rekey_t {
 };
 
 /**
- * Implementation of task_t.build for initiator, after rekeying
+ * Establish the new replacement IKE_SA
  */
-static status_t build_i_delete(private_ike_rekey_t *this, message_t *message)
+static void establish_new(private_ike_rekey_t *this)
+{
+	if (this->new_sa)
+	{
+		this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
+		DBG0(DBG_IKE, "IKE_SA %s[%d] rekeyed between %H[%Y]...%H[%Y]",
+			 this->new_sa->get_name(this->new_sa),
+			 this->new_sa->get_unique_id(this->new_sa),
+			 this->ike_sa->get_my_host(this->ike_sa),
+			 this->ike_sa->get_my_id(this->ike_sa),
+			 this->ike_sa->get_other_host(this->ike_sa),
+			 this->ike_sa->get_other_id(this->ike_sa));
+
+		this->new_sa->inherit(this->new_sa, this->ike_sa);
+		charon->bus->ike_rekey(charon->bus, this->ike_sa, this->new_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
+		this->new_sa = NULL;
+		/* set threads active IKE_SA after checkin */
+		charon->bus->set_sa(charon->bus, this->ike_sa);
+	}
+}
+
+METHOD(task_t, process_r_delete, status_t,
+	private_ike_rekey_t *this, message_t *message)
+{
+	establish_new(this);
+	return this->ike_delete->task.process(&this->ike_delete->task, message);
+}
+
+METHOD(task_t, build_r_delete, status_t,
+	private_ike_rekey_t *this, message_t *message)
+{
+	return this->ike_delete->task.build(&this->ike_delete->task, message);
+}
+
+METHOD(task_t, build_i_delete, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	/* update exchange type to INFORMATIONAL for the delete */
 	message->set_exchange_type(message, INFORMATIONAL);
@@ -78,18 +114,14 @@ static status_t build_i_delete(private_ike_rekey_t *this, message_t *message)
 	return this->ike_delete->task.build(&this->ike_delete->task, message);
 }
 
-/**
- * Implementation of task_t.process for initiator, after rekeying
- */
-static status_t process_i_delete(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, process_i_delete, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	return this->ike_delete->task.process(&this->ike_delete->task, message);
 }
 
-/**
- * Implementation of task_t.build for initiator
- */
-static status_t build_i(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, build_i, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
 	host_t *other_host;
@@ -112,10 +144,8 @@ static status_t build_i(private_ike_rekey_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for responder
- */
-static status_t process_r(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, process_r, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	peer_cfg_t *peer_cfg;
 	iterator_t *iterator;
@@ -156,10 +186,8 @@ static status_t process_r(private_ike_rekey_t *this, message_t *message)
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.build for responder
- */
-static status_t build_r(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, build_r, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	if (this->new_sa == NULL)
 	{
@@ -174,29 +202,24 @@ static status_t build_r(private_ike_rekey_t *this, message_t *message)
 	}
 
 	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
-	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-		 this->new_sa->get_name(this->new_sa),
-		 this->new_sa->get_unique_id(this->new_sa),
-		 this->ike_sa->get_my_host(this->ike_sa),
-		 this->ike_sa->get_my_id(this->ike_sa),
-		 this->ike_sa->get_other_host(this->ike_sa),
-		 this->ike_sa->get_other_id(this->ike_sa));
 
-	return SUCCESS;
+	/* rekeying successful, delete the IKE_SA using a subtask */
+	this->ike_delete = ike_delete_create(this->ike_sa, FALSE);
+	this->public.task.build = _build_r_delete;
+	this->public.task.process = _process_r_delete;
+
+	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.process for initiator
- */
-static status_t process_i(private_ike_rekey_t *this, message_t *message)
+METHOD(task_t, process_i, status_t,
+	private_ike_rekey_t *this, message_t *message)
 {
 	if (message->get_notify(message, NO_ADDITIONAL_SAS))
 	{
 		DBG1(DBG_IKE, "peer seems to not support IKE rekeying, "
 			 "starting reauthentication");
 		this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-		charon->processor->queue_job(charon->processor,
+		lib->processor->queue_job(lib->processor,
 				(job_t*)rekey_ike_sa_job_create(
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;
@@ -217,7 +240,7 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 				DBG1(DBG_IKE, "IKE_SA rekeying failed, "
 										"trying again in %d seconds", retry);
 				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-				charon->scheduler->schedule_job(charon->scheduler, job, retry);
+				lib->scheduler->schedule_job(lib->scheduler, job, retry);
 			}
 			return SUCCESS;
 		case NEED_MORE:
@@ -228,95 +251,92 @@ static status_t process_i(private_ike_rekey_t *this, message_t *message)
 			break;
 	}
 
-	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-		 this->new_sa->get_name(this->new_sa),
-		 this->new_sa->get_unique_id(this->new_sa),
-		 this->ike_sa->get_my_host(this->ike_sa),
-		 this->ike_sa->get_my_id(this->ike_sa),
-		 this->ike_sa->get_other_host(this->ike_sa),
-		 this->ike_sa->get_other_id(this->ike_sa));
-
 	/* check for collisions */
 	if (this->collision &&
 		this->collision->get_type(this->collision) == IKE_REKEY)
 	{
-		chunk_t this_nonce, other_nonce;
-		host_t *host;
 		private_ike_rekey_t *other = (private_ike_rekey_t*)this->collision;
 
-		this_nonce = this->ike_init->get_lower_nonce(this->ike_init);
-		other_nonce = other->ike_init->get_lower_nonce(other->ike_init);
+		/* ike_init can be NULL, if child_sa is half-open */
+		if (other->ike_init)
+		{
+			host_t *host;
+			chunk_t this_nonce, other_nonce;
 
-		/* if we have the lower nonce, delete rekeyed SA. If not, delete
-		 * the redundant. */
-		if (memcmp(this_nonce.ptr, other_nonce.ptr,
-				   min(this_nonce.len, other_nonce.len)) < 0)
-		{
-			/* peer should delete this SA. Add a timeout just in case. */
-			job_t *job = (job_t*)delete_ike_sa_job_create(
-									other->new_sa->get_id(other->new_sa), TRUE);
-			charon->scheduler->schedule_job(charon->scheduler, job, 10);
-			DBG1(DBG_IKE, "IKE_SA rekey collision won, deleting rekeyed IKE_SA");
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, other->new_sa);
-			other->new_sa = NULL;
-		}
-		else
-		{
-			DBG1(DBG_IKE, "IKE_SA rekey collision lost, deleting redundant IKE_SA");
-			/* apply host for a proper delete */
-			host = this->ike_sa->get_my_host(this->ike_sa);
-			this->new_sa->set_my_host(this->new_sa, host->clone(host));
-			host = this->ike_sa->get_other_host(this->ike_sa);
-			this->new_sa->set_other_host(this->new_sa, host->clone(host));
-			this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-			if (this->new_sa->delete(this->new_sa) == DESTROY_ME)
+			this_nonce = this->ike_init->get_lower_nonce(this->ike_init);
+			other_nonce = other->ike_init->get_lower_nonce(other->ike_init);
+
+			/* if we have the lower nonce, delete rekeyed SA. If not, delete
+			 * the redundant. */
+			if (memcmp(this_nonce.ptr, other_nonce.ptr,
+						min(this_nonce.len, other_nonce.len)) > 0)
 			{
-				charon->ike_sa_manager->checkin_and_destroy(
-										charon->ike_sa_manager, this->new_sa);
+				/* peer should delete this SA. Add a timeout just in case. */
+				job_t *job = (job_t*)delete_ike_sa_job_create(
+						other->new_sa->get_id(other->new_sa), TRUE);
+				lib->scheduler->schedule_job(lib->scheduler, job, 10);
+				DBG1(DBG_IKE, "IKE_SA rekey collision won, waiting for delete");
+				charon->ike_sa_manager->checkin(charon->ike_sa_manager, other->new_sa);
+				other->new_sa = NULL;
 			}
 			else
 			{
-				charon->ike_sa_manager->checkin(
-										charon->ike_sa_manager, this->new_sa);
+				DBG1(DBG_IKE, "IKE_SA rekey collision lost, "
+					 "deleting redundant IKE_SA");
+				/* apply host for a proper delete */
+				host = this->ike_sa->get_my_host(this->ike_sa);
+				this->new_sa->set_my_host(this->new_sa, host->clone(host));
+				host = this->ike_sa->get_other_host(this->ike_sa);
+				this->new_sa->set_other_host(this->new_sa, host->clone(host));
+				this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
+				this->new_sa->set_state(this->new_sa, IKE_REKEYING);
+				if (this->new_sa->delete(this->new_sa) == DESTROY_ME)
+				{
+					this->new_sa->destroy(this->new_sa);
+				}
+				else
+				{
+					charon->ike_sa_manager->checkin(
+								charon->ike_sa_manager, this->new_sa);
+					/* set threads active IKE_SA after checkin */
+					charon->bus->set_sa(charon->bus, this->ike_sa);
+				}
+				this->new_sa = NULL;
+				establish_new(other);
+				return SUCCESS;
 			}
-			/* set threads active IKE_SA after checkin */
-			charon->bus->set_sa(charon->bus, this->ike_sa);
-			/* inherit to other->new_sa in destroy() */
-			this->new_sa = other->new_sa;
-			other->new_sa = NULL;
-			return SUCCESS;
 		}
 		/* set threads active IKE_SA after checkin */
 		charon->bus->set_sa(charon->bus, this->ike_sa);
 	}
 
+	establish_new(this);
+
 	/* rekeying successful, delete the IKE_SA using a subtask */
 	this->ike_delete = ike_delete_create(this->ike_sa, TRUE);
-	this->public.task.build = (status_t(*)(task_t*,message_t*))build_i_delete;
-	this->public.task.process = (status_t(*)(task_t*,message_t*))process_i_delete;
+	this->public.task.build = _build_i_delete;
+	this->public.task.process = _process_i_delete;
 
 	return NEED_MORE;
 }
 
-/**
- * Implementation of task_t.get_type
- */
-static task_type_t get_type(private_ike_rekey_t *this)
+METHOD(task_t, get_type, task_type_t,
+	private_ike_rekey_t *this)
 {
 	return IKE_REKEY;
 }
 
-static void collide(private_ike_rekey_t* this, task_t *other)
+METHOD(ike_rekey_t, collide, void,
+	private_ike_rekey_t* this, task_t *other)
 {
+	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names, IKE_REKEY,
+		 task_type_names, other->get_type(other));
 	DESTROY_IF(this->collision);
 	this->collision = other;
 }
 
-/**
- * Implementation of task_t.migrate
- */
-static void migrate(private_ike_rekey_t *this, ike_sa_t *ike_sa)
+METHOD(task_t, migrate, void,
+	private_ike_rekey_t *this, ike_sa_t *ike_sa)
 {
 	if (this->ike_init)
 	{
@@ -326,13 +346,7 @@ static void migrate(private_ike_rekey_t *this, ike_sa_t *ike_sa)
 	{
 		this->ike_delete->task.destroy(&this->ike_delete->task);
 	}
-	if (this->new_sa)
-	{
-		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
-													this->new_sa);
-		/* set threads active IKE_SA after checkin */
-		charon->bus->set_sa(charon->bus, this->ike_sa);
-	}
+	DESTROY_IF(this->new_sa);
 	DESTROY_IF(this->collision);
 
 	this->collision = NULL;
@@ -342,28 +356,9 @@ static void migrate(private_ike_rekey_t *this, ike_sa_t *ike_sa)
 	this->ike_delete = NULL;
 }
 
-/**
- * Implementation of task_t.destroy
- */
-static void destroy(private_ike_rekey_t *this)
+METHOD(task_t, destroy, void,
+	private_ike_rekey_t *this)
 {
-	if (this->new_sa)
-	{
-		if (this->new_sa->get_state(this->new_sa) == IKE_ESTABLISHED &&
-			this->new_sa->inherit(this->new_sa, this->ike_sa) != DESTROY_ME)
-		{
-			/* invoke hook if rekeying was successful */
-			charon->bus->ike_rekey(charon->bus, this->ike_sa, this->new_sa);
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
-		}
-		else
-		{
-			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
-														this->new_sa);
-		}
-		/* set threads active IKE_SA after checkin */
-		charon->bus->set_sa(charon->bus, this->ike_sa);
-	}
 	if (this->ike_init)
 	{
 		this->ike_init->task.destroy(&this->ike_init->task);
@@ -372,6 +367,7 @@ static void destroy(private_ike_rekey_t *this)
 	{
 		this->ike_delete->task.destroy(&this->ike_delete->task);
 	}
+	DESTROY_IF(this->new_sa);
 	DESTROY_IF(this->collision);
 	free(this);
 }
@@ -381,29 +377,27 @@ static void destroy(private_ike_rekey_t *this)
  */
 ike_rekey_t *ike_rekey_create(ike_sa_t *ike_sa, bool initiator)
 {
-	private_ike_rekey_t *this = malloc_thing(private_ike_rekey_t);
+	private_ike_rekey_t *this;
 
-	this->public.collide = (void(*)(ike_rekey_t*,task_t*))collide;
-	this->public.task.get_type = (task_type_t(*)(task_t*))get_type;
-	this->public.task.migrate = (void(*)(task_t*,ike_sa_t*))migrate;
-	this->public.task.destroy = (void(*)(task_t*))destroy;
+	INIT(this,
+		.public = {
+			.task = {
+				.get_type = _get_type,
+				.build = _build_r,
+				.process = _process_r,
+				.migrate = _migrate,
+				.destroy = _destroy,
+			},
+			.collide = _collide,
+		},
+		.ike_sa = ike_sa,
+		.initiator = initiator,
+	);
 	if (initiator)
 	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_i;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_i;
+		this->public.task.build = _build_i;
+		this->public.task.process = _process_i;
 	}
-	else
-	{
-		this->public.task.build = (status_t(*)(task_t*,message_t*))build_r;
-		this->public.task.process = (status_t(*)(task_t*,message_t*))process_r;
-	}
-
-	this->ike_sa = ike_sa;
-	this->new_sa = NULL;
-	this->ike_init = NULL;
-	this->ike_delete = NULL;
-	this->initiator = initiator;
-	this->collision = NULL;
 
 	return &this->public;
 }

@@ -105,8 +105,22 @@ enum purge_flag_t {
 	PURGE_NONE =		0x0000,
 	/** purge ocsp cache entries */
 	PURGE_OCSP =		0x0001,
+	/** purge CRL cache entries */
+	PURGE_CRLS =		0x0002,
+	/** purge X509 cache entries */
+	PURGE_CERTS =		0x0004,
 	/** purge IKE_SAs without a CHILD_SA */
-	PURGE_IKE =			0x0002,
+	PURGE_IKE =			0x0008,
+};
+
+typedef enum export_flag_t export_flag_t;
+
+/**
+ * Definition of the export flags
+ */
+enum export_flag_t {
+	/** export an X509 certificate */
+	EXPORT_X509 =		0x0001,
 };
 
 /**
@@ -135,6 +149,7 @@ struct stroke_end_t {
 	char *ca;
 	char *ca2;
 	char *groups;
+	char *cert_policy;
 	char *updown;
 	char *address;
 	u_int16_t ikeport;
@@ -173,6 +188,8 @@ struct stroke_msg_t {
 		STR_TERMINATE,
 		/* terminate connection by peers srcip/virtual ip */
 		STR_TERMINATE_SRCIP,
+		/* rekey a connection */
+		STR_REKEY,
 		/* show connection status */
 		STR_STATUS,
 		/* show verbose connection status */
@@ -193,6 +210,8 @@ struct stroke_msg_t {
 		STR_PURGE,
 		/* show pool leases */
 		STR_LEASES,
+		/* export credentials */
+		STR_EXPORT,
 		/* more to come */
 	} type;
 
@@ -203,7 +222,7 @@ struct stroke_msg_t {
 		/* data for STR_INITIATE, STR_ROUTE, STR_UP, STR_DOWN, ... */
 		struct {
 			char *name;
-		} initiate, route, unroute, terminate, status, del_conn, del_ca;
+		} initiate, route, unroute, terminate, rekey, status, del_conn, del_ca;
 
 		/* data for STR_TERMINATE_SRCIP */
 		struct {
@@ -220,6 +239,7 @@ struct stroke_msg_t {
 			u_int32_t eap_type;
 			u_int32_t eap_vendor;
 			char *eap_identity;
+			char *aaa_identity;
 			int mode;
 			int mobike;
 			int force_encap;
@@ -228,6 +248,7 @@ struct stroke_msg_t {
 			int proxy_mode;
 			int install_policy;
 			u_int32_t reqid;
+			u_int32_t tfc;
 
 			crl_policy_t crl_policy;
 			int unique;
@@ -300,6 +321,12 @@ struct stroke_msg_t {
 		struct {
 			purge_flag_t flags;
 		} purge;
+
+		/* data for STR_EXPORT */
+		struct {
+			export_flag_t flags;
+			char *selector;
+		} export;
 
 		/* data for STR_LEASES */
 		struct {

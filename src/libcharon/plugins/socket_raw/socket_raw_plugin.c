@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2010 Tobias Brunner
+ * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -30,18 +32,19 @@ struct private_socket_raw_plugin_t {
 	 * Implements plugin interface
 	 */
 	socket_raw_plugin_t public;
-
-	/**
-	 * Raw socket instance.
-	 */
-	socket_raw_socket_t *socket;
 };
+
+METHOD(plugin_t, get_name, char*,
+	private_socket_raw_plugin_t *this)
+{
+	return "socket-raw";
+}
 
 METHOD(plugin_t, destroy, void,
 	private_socket_raw_plugin_t *this)
 {
-	charon->socket->remove_socket(charon->socket, &this->socket->socket);
-	this->socket->destroy(this->socket);
+	charon->socket->remove_socket(charon->socket,
+							(socket_constructor_t)socket_raw_socket_create);
 	free(this);
 }
 
@@ -53,16 +56,17 @@ plugin_t *socket_raw_plugin_create()
 	private_socket_raw_plugin_t *this;
 
 	INIT(this,
-		.public.plugin.destroy = _destroy,
-		.socket = socket_raw_socket_create(),
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
 	);
 
-	if (!this->socket)
-	{
-		free(this);
-		return NULL;
-	}
-	charon->socket->add_socket(charon->socket, &this->socket->socket);
+	charon->socket->add_socket(charon->socket,
+							(socket_constructor_t)socket_raw_socket_create);
 
 	return &this->public.plugin;
 }

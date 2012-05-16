@@ -15,8 +15,10 @@
 
 #include "pki.h"
 
+#include <asn1/asn1.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
+#include <credentials/certificates/crl.h>
 #include <selectors/traffic_selector.h>
 
 #include <time.h>
@@ -29,7 +31,7 @@ static void print_pubkey(public_key_t *key)
 	chunk_t chunk;
 
 	printf("pubkey:    %N %d bits\n", key_type_names, key->get_type(key),
-		   key->get_keysize(key) * 8);
+		   key->get_keysize(key));
 	if (key->get_fingerprint(key, KEYID_PUBKEY_INFO_SHA1, &chunk))
 	{
 		printf("keyid:     %#B\n", &chunk);
@@ -71,8 +73,11 @@ static void print_x509(x509_t *x509)
 	chunk_t chunk;
 	bool first;
 	char *uri;
-	int len;
+	int len, explicit, inhibit;
 	x509_flag_t flags;
+	x509_cdp_t *cdp;
+	x509_cert_policy_t *policy;
+	x509_policy_mapping_t *mapping;
 
 	chunk = x509->get_serial(x509);
 	printf("serial:    %#B\n", &chunk);
@@ -104,6 +109,10 @@ static void print_x509(x509_t *x509)
 	{
 		printf("CA ");
 	}
+	if (flags & X509_CRL_SIGN)
+	{
+		printf("CRLSign ");
+	}
 	if (flags & X509_AA)
 	{
 		printf("AA ");
@@ -132,17 +141,22 @@ static void print_x509(x509_t *x509)
 
 	first = TRUE;
 	enumerator = x509->create_crl_uri_enumerator(x509);
-	while (enumerator->enumerate(enumerator, &uri))
+	while (enumerator->enumerate(enumerator, &cdp))
 	{
 		if (first)
 		{
-			printf("CRL URIs:  %s\n", uri);
+			printf("CRL URIs:  %s", cdp->uri);
 			first = FALSE;
 		}
 		else
 		{
-			printf("           %s\n", uri);
+			printf("           %s", cdp->uri);
 		}
+		if (cdp->issuer)
+		{
+			printf(" (CRL issuer: %Y)", cdp->issuer);
+		}
+		printf("\n");
 	}
 	enumerator->destroy(enumerator);
 
@@ -162,10 +176,109 @@ static void print_x509(x509_t *x509)
 	}
 	enumerator->destroy(enumerator);
 
-	len = x509->get_pathLenConstraint(x509);
-	if (len != X509_NO_PATH_LEN_CONSTRAINT)
+	len = x509->get_constraint(x509, X509_PATH_LEN);
+	if (len != X509_NO_CONSTRAINT)
 	{
 		printf("pathlen:   %d\n", len);
+	}
+
+	first = TRUE;
+	enumerator = x509->create_name_constraint_enumerator(x509, TRUE);
+	while (enumerator->enumerate(enumerator, &id))
+	{
+		if (first)
+		{
+			printf("Permitted NameConstraints:\n");
+			first = FALSE;
+		}
+		printf("           %Y\n", id);
+	}
+	enumerator->destroy(enumerator);
+	first = TRUE;
+	enumerator = x509->create_name_constraint_enumerator(x509, FALSE);
+	while (enumerator->enumerate(enumerator, &id))
+	{
+		if (first)
+		{
+			printf("Excluded NameConstraints:\n");
+			first = FALSE;
+		}
+		printf("           %Y\n", id);
+	}
+	enumerator->destroy(enumerator);
+
+	first = TRUE;
+	enumerator = x509->create_cert_policy_enumerator(x509);
+	while (enumerator->enumerate(enumerator, &policy))
+	{
+		char *oid;
+
+		if (first)
+		{
+			printf("CertificatePolicies:\n");
+			first = FALSE;
+		}
+		oid = asn1_oid_to_string(policy->oid);
+		if (oid)
+		{
+			printf("           %s\n", oid);
+			free(oid);
+		}
+		else
+		{
+			printf("           %#B\n", &policy->oid);
+		}
+		if (policy->cps_uri)
+		{
+			printf("             CPS: %s\n", policy->cps_uri);
+		}
+		if (policy->unotice_text)
+		{
+			printf("             Notice: %s\n", policy->unotice_text);
+
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	first = TRUE;
+	enumerator = x509->create_policy_mapping_enumerator(x509);
+	while (enumerator->enumerate(enumerator, &mapping))
+	{
+		char *issuer_oid, *subject_oid;
+
+		if (first)
+		{
+			printf("PolicyMappings:\n");
+			first = FALSE;
+		}
+		issuer_oid = asn1_oid_to_string(mapping->issuer);
+		subject_oid = asn1_oid_to_string(mapping->subject);
+		printf("           %s => %s\n", issuer_oid, subject_oid);
+		free(issuer_oid);
+		free(subject_oid);
+	}
+	enumerator->destroy(enumerator);
+
+	explicit = x509->get_constraint(x509, X509_REQUIRE_EXPLICIT_POLICY);
+	inhibit = x509->get_constraint(x509, X509_INHIBIT_POLICY_MAPPING);
+	len = x509->get_constraint(x509, X509_INHIBIT_ANY_POLICY);
+
+	if (explicit != X509_NO_CONSTRAINT || inhibit != X509_NO_CONSTRAINT ||
+		len != X509_NO_CONSTRAINT)
+	{
+		printf("PolicyConstraints:\n");
+		if (explicit != X509_NO_CONSTRAINT)
+		{
+			printf("           requireExplicitPolicy: %d\n", explicit);
+		}
+		if (inhibit != X509_NO_CONSTRAINT)
+		{
+			printf("           inhibitPolicyMapping: %d\n", inhibit);
+		}
+		if (len != X509_NO_CONSTRAINT)
+		{
+			printf("           inhibitAnyPolicy: %d\n", len);
+		}
 	}
 
 	chunk = x509->get_authKeyIdentifier(x509);
@@ -202,6 +315,71 @@ static void print_x509(x509_t *x509)
 }
 
 /**
+ * Print CRL specific information
+ */
+static void print_crl(crl_t *crl)
+{
+	enumerator_t *enumerator;
+	time_t ts;
+	crl_reason_t reason;
+	chunk_t chunk;
+	int count = 0;
+	bool first;
+	char buf[64];
+	struct tm tm;
+	x509_cdp_t *cdp;
+
+	chunk = crl->get_serial(crl);
+	printf("serial:    %#B\n", &chunk);
+	if (crl->is_delta_crl(crl, &chunk))
+	{
+		printf("delta CRL: for serial %#B\n", &chunk);
+	}
+	chunk = crl->get_authKeyIdentifier(crl);
+	printf("authKeyId: %#B\n", &chunk);
+
+	first = TRUE;
+	enumerator = crl->create_delta_crl_uri_enumerator(crl);
+	while (enumerator->enumerate(enumerator, &cdp))
+	{
+		if (first)
+		{
+			printf("freshest:  %s", cdp->uri);
+			first = FALSE;
+		}
+		else
+		{
+			printf("           %s", cdp->uri);
+		}
+		if (cdp->issuer)
+		{
+			printf(" (CRL issuer: %Y)", cdp->issuer);
+		}
+		printf("\n");
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = crl->create_enumerator(crl);
+	while (enumerator->enumerate(enumerator, &chunk, &ts, &reason))
+	{
+		count++;
+	}
+	enumerator->destroy(enumerator);
+
+	printf("%d revoked certificate%s%s\n", count,
+		   count == 1 ? "" : "s", count ? ":" : "");
+	enumerator = crl->create_enumerator(crl);
+	while (enumerator->enumerate(enumerator, &chunk, &ts, &reason))
+	{
+		localtime_r(&ts, &tm);
+		strftime(buf, sizeof(buf), "%F %T", &tm);
+		printf("    %#B %N %s\n", &chunk, crl_reason_names, reason, buf);
+		count++;
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Print certificate information
  */
 static void print_cert(certificate_t *cert)
@@ -212,7 +390,10 @@ static void print_cert(certificate_t *cert)
 	now = time(NULL);
 
 	printf("cert:      %N\n", certificate_type_names, cert->get_type(cert));
-	printf("subject:  \"%Y\"\n", cert->get_subject(cert));
+	if (cert->get_type(cert) != CERT_X509_CRL)
+	{
+		printf("subject:  \"%Y\"\n", cert->get_subject(cert));
+	}
 	printf("issuer:   \"%Y\"\n", cert->get_issuer(cert));
 
 	cert->get_validity(cert, &now, &notBefore, &notAfter);
@@ -240,21 +421,19 @@ static void print_cert(certificate_t *cert)
 		case CERT_X509:
 			print_x509((x509_t*)cert);
 			break;
+		case CERT_X509_CRL:
+			print_crl((crl_t*)cert);
+			break;
 		default:
 			printf("parsing certificate subtype %N not implemented\n",
 				   certificate_type_names, cert->get_type(cert));
 			break;
 	}
-
 	key = cert->get_public_key(cert);
 	if (key)
 	{
 		print_pubkey(key);
 		key->destroy(key);
-	}
-	else
-	{
-		printf("unable to extract public key\n");
 	}
 }
 
@@ -279,6 +458,11 @@ static int print()
 				{
 					type = CRED_CERTIFICATE;
 					subtype = CERT_X509;
+				}
+				else if (streq(arg, "crl"))
+				{
+					type = CRED_CERTIFICATE;
+					subtype = CERT_X509_CRL;
 				}
 				else if (streq(arg, "pub"))
 				{
@@ -358,7 +542,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ print, 'a', "print",
 		"print a credential in a human readable form",
-		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|x509]"},
+		{"[--in file] [--type rsa-priv|ecdsa-priv|pub|x509|crl]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},

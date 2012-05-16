@@ -297,6 +297,7 @@ void delete_connection(connection_t *c, bool relations)
 {
 	modecfg_attribute_t *ca;
 	connection_t *old_cur_connection;
+	identification_t *client_id;
 
 	old_cur_connection = cur_connection == c? NULL : cur_connection;
 #ifdef DEBUG
@@ -367,12 +368,14 @@ void delete_connection(connection_t *c, bool relations)
 		free(c->spd.that.virt);
 	}
 
+	client_id = (c->xauth_identity) ? c->xauth_identity : c->spd.that.id;
+
 	/* release virtual IP address lease if any */
 	if (c->spd.that.modecfg && c->spd.that.pool &&
 		!c->spd.that.host_srcip->is_anyaddr(c->spd.that.host_srcip))
 	{
 		hydra->attributes->release_address(hydra->attributes, c->spd.that.pool,
-										   c->spd.that.host_srcip, c->spd.that.id);
+										   c->spd.that.host_srcip, client_id);
 	}
 
 	/* release requested attributes if any */
@@ -388,7 +391,7 @@ void delete_connection(connection_t *c, bool relations)
 		while (c->attributes->remove_last(c->attributes, (void **)&ca) == SUCCESS)
 		{
 			hydra->attributes->release(hydra->attributes, ca->handler,
-									   c->spd.that.id, ca->type, ca->value);
+									   client_id, ca->type, ca->value);
 			modecfg_attribute_destroy(ca);
 		}
 		c->attributes->destroy(c->attributes);
@@ -536,7 +539,7 @@ void check_orientations(void)
 				for (hp = host_pairs; hp != NULL; hp = hp->next)
 				{
 					if (sameaddr(&hp->him.addr, &i->addr)
-					&& (!no_klips || hp->him.port == pluto_port))
+						&& hp->him.port == pluto_port)
 					{
 						/* bad news: the whole chain of connections
 						 * hanging off this host pair has both sides
@@ -670,7 +673,7 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 		}
 		else if (subnetisnone(&this->client))
 		{
-			strcpy(client, "?");
+			strncpy(client, "?", sizeof(client));
 		}
 		else
 		{
@@ -682,7 +685,7 @@ size_t format_end(char *buf, size_t buf_len, const struct end *this,
 		/* we are mode config client, or a server with a pool */
 		client_sep = "===";
 		client[0] = '%';
-		strcpy(client+1, this->pool ? this->pool : "modecfg");
+		strncpy(client+1, this->pool ?: "modecfg", sizeof(client)-1);
 	}
 
 	/* host */
@@ -871,7 +874,8 @@ static void load_end_certificate(char *filename, struct end *dst)
 		/* cache the certificate that was last retrieved from the smartcard */
 		if (dst->sc)
 		{
-			if (!certificate->equals(certificate, dst->sc->last_cert->cert))
+			if (!dst->sc->last_cert ||
+			    !certificate->equals(certificate, dst->sc->last_cert->cert))
 			{
 				lock_certs_and_keys("load_end_certificates");
 				cert_release(dst->sc->last_cert);
@@ -1085,7 +1089,7 @@ void add_connection(const whack_message_t *wm)
 		if ((c->policy & POLICY_COMPRESS) && !can_do_IPcomp)
 		{
 			loglog(RC_COMMENT
-				, "ignoring --compress in \"%s\" because KLIPS is not configured to do IPCOMP"
+				, "ignoring --compress in \"%s\" because kernel does not support IPCOMP"
 				, c->name);
 		}
 
@@ -1199,7 +1203,12 @@ void add_connection(const whack_message_t *wm)
 		}
 
 		c->spd.next = NULL;
-		c->spd.reqid = gen_reqid();
+		c->spd.reqid = wm->reqid ?: gen_reqid();
+
+		c->spd.mark_in.value = wm->mark_in.value;
+		c->spd.mark_in.mask = wm->mark_in.mask;
+		c->spd.mark_out.value = wm->mark_out.value;
+		c->spd.mark_out.mask = wm->mark_out.mask;
 
 		/* set internal fields */
 		c->instance_serial = 0;
@@ -1442,11 +1451,11 @@ static connection_t *instantiate(connection_t *c, const ip_address *him,
 
 	connect_to_host_pair(d);
 
-	return d;
 	if (sameaddr(&d->spd.that.host_addr, &d->spd.this.host_nexthop))
 	{
 		d->spd.this.host_nexthop = *him;
 	}
+	return d;
 }
 
 connection_t *rw_instantiate(connection_t *c, const ip_address *him,
@@ -1892,7 +1901,7 @@ bool orient(connection_t *c)
 				{
 					/* check if this interface matches this end */
 					if (sameaddr(&sr->this.host_addr, &p->addr)
-					&& (!no_klips || sr->this.host_port == pluto_port))
+						&& sr->this.host_port == pluto_port)
 					{
 						if (oriented(*c))
 						{
@@ -1911,7 +1920,7 @@ bool orient(connection_t *c)
 
 					/* done with this interface if it doesn't match that end */
 					if (!(sameaddr(&sr->that.host_addr, &p->addr)
-					&& (!no_klips || sr->that.host_port == pluto_port)))
+						&& sr->that.host_port == pluto_port))
 						break;
 
 					/* swap ends and try again.
@@ -2154,27 +2163,6 @@ static void cannot_oppo(connection_t *c, struct find_oppo_bundle *b, err_t ugh)
 		}
 		return;
 	}
-
-#ifdef KLIPS
-	if (b->held)
-	{
-		/* Replace HOLD with b->failure_shunt.
-		 * If no b->failure_shunt specified, use SPI_PASS -- THIS MAY CHANGE.
-		 */
-		if (b->failure_shunt == 0)
-		{
-			DBG(DBG_OPPO, DBG_log("no explicit failure shunt for %s to %s; installing %%pass"
-								  , ocb, pcb));
-		}
-
-		(void) replace_bare_shunt(&b->our_client, &b->peer_client
-			, b->policy_prio
-			, b->failure_shunt
-			, b->failure_shunt != 0
-			, b->transport_proto
-			, ugh);
-	}
-#endif
 }
 
 static void initiate_opportunistic_body(struct find_oppo_bundle *b
@@ -2210,16 +2198,6 @@ static void continue_oppo(struct adns_continuation *acr, err_t ugh)
 	 * neither need freeing.
 	 */
 	whack_log_fd = whackfd;
-
-#ifdef KLIPS
-	/* Discover and record whether %hold has gone away.
-	 * This could have happened while we were awaiting DNS.
-	 * We must check BEFORE any call to cannot_oppo.
-	 */
-	if (was_held)
-		cr->b.held = has_bare_hold(&cr->b.our_client, &cr->b.peer_client
-			, cr->b.transport_proto);
-#endif
 
 #ifdef DEBUG
 	/* if we're going to ignore the error, at least note it in debugging log */
@@ -2432,7 +2410,7 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 		/* We've found a connection that can serve.
 		 * Do we have to initiate it?
 		 * Not if there is currently an IPSEC SA.
-		 * But if there is an IPSEC SA, then KLIPS would not
+		 * But if there is an IPSEC SA, then the kernel would not
 		 * have generated the acquire.  So we assume that there isn't one.
 		 * This may be redundant if a non-opportunistic
 		 * negotiation is already being attempted.
@@ -2453,13 +2431,11 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 		/* otherwise, there is some kind of static conn that can handle
 		 * this connection, so we initiate it */
 
-#ifdef KLIPS
 		if (b->held)
 		{
 			/* what should we do on failure? */
 			(void) assign_hold(c, sr, b->transport_proto, &b->our_client, &b->peer_client);
 		}
-#endif
 		ipsecdoi_initiate(b->whackfd, c, c->policy, 1, SOS_NOBODY);
 		b->whackfd = NULL_FD;   /* protect from close */
 	}
@@ -2824,21 +2800,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 							"no suitable connection for opportunism "
 							"between %s and %s with %Y as peer",
 							 ocb, pcb, ac->gateways_from_dns->gw_id);
-
-#ifdef KLIPS
-					if (b->held)
-					{
-						/* Replace HOLD with PASS.
-						 * The type of replacement *ought* to be
-						 * specified by policy.
-						 */
-						(void) replace_bare_shunt(&b->our_client, &b->peer_client
-							, BOTTOM_PRIO
-							, SPI_PASS  /* fail into PASS */
-							, TRUE, b->transport_proto
-							, "no suitable connection");
-					}
-#endif
 				}
 				else
 				{
@@ -2847,7 +2808,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 					passert(c->gw_info != NULL);
 					passert(HAS_IPSEC_POLICY(c->policy));
 					passert(LHAS(LELEM(RT_UNROUTED) | LELEM(RT_ROUTED_PROSPECTIVE), c->spd.routing));
-#ifdef KLIPS
 					if (b->held)
 					{
 						/* what should we do on failure? */
@@ -2855,7 +2815,6 @@ static void initiate_opportunistic_body(struct find_oppo_bundle *b,
 										   , b->transport_proto
 										   , &b->our_client, &b->peer_client);
 					}
-#endif
 					c->gw_info->key->last_tried_time = now();
 					ipsecdoi_initiate(b->whackfd, c, c->policy, 1, SOS_NOBODY);
 					b->whackfd = NULL_FD;       /* protect from close */
@@ -3169,6 +3128,10 @@ connection_t *route_owner(connection_t *c, struct spd_route **srp,
 				{
 					continue;
 				}
+				if (src->mark_out.value != srd->mark_out.value)
+				{
+					continue;
+				}
 				passert(oriented(*d));
 				if (srd->routing > best_routing)
 				{
@@ -3186,6 +3149,10 @@ connection_t *route_owner(connection_t *c, struct spd_route **srp,
 					continue;
 				}
 				if (src->this.port != srd->this.port)
+				{
+					continue;
+				}
+				if (src->mark_in.value != srd->mark_in.value)
 				{
 					continue;
 				}

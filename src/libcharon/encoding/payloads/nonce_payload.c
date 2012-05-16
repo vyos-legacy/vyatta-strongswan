@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005-2010 Martin Willi
+ * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
@@ -14,21 +15,19 @@
  * for more details.
  */
 
-/* offsetof macro */
 #include <stddef.h>
 
 #include "nonce_payload.h"
 
 #include <encoding/payloads/encodings.h>
 
-
 typedef struct private_nonce_payload_t private_nonce_payload_t;
 
 /**
  * Private data of an nonce_payload_t object.
- *
  */
 struct private_nonce_payload_t {
+
 	/**
 	 * Public nonce_payload_t interface.
 	 */
@@ -43,6 +42,11 @@ struct private_nonce_payload_t {
 	 * Critical flag.
 	 */
 	bool critical;
+
+	/**
+	 * Reserved bits
+	 */
+	bool reserved[7];
 
 	/**
 	 * Length of this payload.
@@ -60,25 +64,24 @@ struct private_nonce_payload_t {
  *
  * The defined offsets are the positions in a object of type
  * private_nonce_payload_t.
- *
  */
 encoding_rule_t nonce_payload_encodings[] = {
 	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_nonce_payload_t, next_payload) 	},
+	{ U_INT_8,			offsetof(private_nonce_payload_t, next_payload)		},
 	/* the critical bit */
-	{ FLAG,				offsetof(private_nonce_payload_t, critical) 		},
-	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
-	{ RESERVED_BIT,	0 														},
+	{ FLAG,				offsetof(private_nonce_payload_t, critical)			},
+	/* 7 Bit reserved bits */
+	{ RESERVED_BIT,		offsetof(private_nonce_payload_t, reserved[0])		},
+	{ RESERVED_BIT,		offsetof(private_nonce_payload_t, reserved[1])		},
+	{ RESERVED_BIT,		offsetof(private_nonce_payload_t, reserved[2])		},
+	{ RESERVED_BIT,		offsetof(private_nonce_payload_t, reserved[3])		},
+	{ RESERVED_BIT,		offsetof(private_nonce_payload_t, reserved[4])		},
+	{ RESERVED_BIT,		offsetof(private_nonce_payload_t, reserved[5])		},
+	{ RESERVED_BIT,		offsetof(private_nonce_payload_t, reserved[6])		},
 	/* Length of the whole nonce payload*/
-	{ PAYLOAD_LENGTH,	offsetof(private_nonce_payload_t, payload_length) 	},
+	{ PAYLOAD_LENGTH,	offsetof(private_nonce_payload_t, payload_length)	},
 	/* some nonce bytes, lenth is defined in PAYLOAD_LENGTH */
-	{ NONCE_DATA,			offsetof(private_nonce_payload_t, nonce) 		}
+	{ NONCE_DATA,		offsetof(private_nonce_payload_t, nonce)			},
 };
 
 /*                           1                   2                   3
@@ -92,102 +95,64 @@ encoding_rule_t nonce_payload_encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
-/**
- * Implementation of payload_t.verify.
- */
-static status_t verify(private_nonce_payload_t *this)
+METHOD(payload_t, verify, status_t,
+	private_nonce_payload_t *this)
 {
-	if ((this->nonce.len < 16) || ((this->nonce.len > 256)))
+	if (this->nonce.len < 16 || this->nonce.len > 256)
 	{
-		/* nonce length is wrong */
 		return FAILED;
 	}
-
 	return SUCCESS;
 }
 
-/**
- * Implementation of nonce_payload_t.set_nonce.
- */
-static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
-{
-	this->nonce.ptr = clalloc(nonce.ptr, nonce.len);
-	this->nonce.len = nonce.len;
-	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
-	return SUCCESS;
-}
-
-/**
- * Implementation of nonce_payload_t.get_nonce.
- */
-static chunk_t get_nonce(private_nonce_payload_t *this)
-{
-	chunk_t nonce;
-	nonce.ptr = clalloc(this->nonce.ptr,this->nonce.len);
-	nonce.len = this->nonce.len;
-	return nonce;
-}
-
-/**
- * Implementation of nonce_payload_t.get_encoding_rules.
- */
-static void get_encoding_rules(private_nonce_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+METHOD(payload_t, get_encoding_rules, void,
+	private_nonce_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = nonce_payload_encodings;
-	*rule_count = sizeof(nonce_payload_encodings) / sizeof(encoding_rule_t);
+	*rule_count = countof(nonce_payload_encodings);
 }
 
-/**
- * Implementation of payload_t.get_type.
- */
-static payload_type_t get_type(private_nonce_payload_t *this)
+METHOD(payload_t, get_type, payload_type_t,
+	private_nonce_payload_t *this)
 {
 	return NONCE;
 }
 
-/**
- * Implementation of payload_t.get_next_type.
- */
-static payload_type_t get_next_type(private_nonce_payload_t *this)
+METHOD(payload_t, get_next_type, payload_type_t,
+	private_nonce_payload_t *this)
 {
-	return (this->next_payload);
+	return this->next_payload;
 }
 
-/**
- * Implementation of payload_t.set_next_type.
- */
-static void set_next_type(private_nonce_payload_t *this,payload_type_t type)
+METHOD(payload_t, set_next_type, void,
+	private_nonce_payload_t *this, payload_type_t type)
 {
 	this->next_payload = type;
 }
 
-/**
- * recompute the length of the payload.
- */
-static void compute_length(private_nonce_payload_t *this)
+METHOD(payload_t, get_length, size_t,
+	private_nonce_payload_t *this)
 {
-	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + this->nonce.len;
-}
-
-/**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_nonce_payload_t *this)
-{
-	compute_length(this);
 	return this->payload_length;
 }
 
-/**
- * Implementation of payload_t.destroy and nonce_payload_t.destroy.
- */
-static void destroy(private_nonce_payload_t *this)
+METHOD(nonce_payload_t, set_nonce, void,
+	 private_nonce_payload_t *this, chunk_t nonce)
 {
-	if (this->nonce.ptr != NULL)
-	{
-		free(this->nonce.ptr);
-	}
+	this->nonce = chunk_clone(nonce);
+	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
+}
 
+METHOD(nonce_payload_t, get_nonce, chunk_t,
+	private_nonce_payload_t *this)
+{
+	return chunk_clone(this->nonce);
+}
+
+METHOD2(payload_t, nonce_payload_t, destroy, void,
+	private_nonce_payload_t *this)
+{
+	free(this->nonce.ptr);
 	free(this);
 }
 
@@ -196,30 +161,25 @@ static void destroy(private_nonce_payload_t *this)
  */
 nonce_payload_t *nonce_payload_create()
 {
-	private_nonce_payload_t *this = malloc_thing(private_nonce_payload_t);
+	private_nonce_payload_t *this;
 
-	/* interface functions */
-	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
-	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
-
-	/* public functions */
-	this->public.destroy = (void (*) (nonce_payload_t *)) destroy;
-	this->public.set_nonce = (void (*) (nonce_payload_t *,chunk_t)) set_nonce;
-	this->public.get_nonce = (chunk_t (*) (nonce_payload_t *)) get_nonce;
-
-	/* private variables */
-	this->critical = FALSE;
-	this->next_payload = NO_PAYLOAD;
-	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH;
-	this->nonce.ptr = NULL;
-	this->nonce.len = 0;
-
-	return (&(this->public));
+	INIT(this,
+		.public = {
+			.payload_interface = {
+				.verify = _verify,
+				.get_encoding_rules = _get_encoding_rules,
+				.get_length = _get_length,
+				.get_next_type = _get_next_type,
+				.set_next_type = _set_next_type,
+				.get_type = _get_type,
+				.destroy = _destroy,
+			},
+			.set_nonce = _set_nonce,
+			.get_nonce = _get_nonce,
+			.destroy = _destroy,
+		},
+		.next_payload = NO_PAYLOAD,
+		.payload_length = NONCE_PAYLOAD_HEADER_LENGTH,
+	);
+	return &this->public;
 }
-
-

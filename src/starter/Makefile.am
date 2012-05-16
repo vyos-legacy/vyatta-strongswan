@@ -9,6 +9,7 @@ INCLUDES = \
 -I${linux_headers} \
 -I$(top_srcdir)/src/libstrongswan \
 -I$(top_srcdir)/src/libfreeswan \
+-I$(top_srcdir)/src/libhydra \
 -I$(top_srcdir)/src/pluto \
 -I$(top_srcdir)/src/whack \
 -I$(top_srcdir)/src/stroke
@@ -23,9 +24,7 @@ AM_CFLAGS = \
 -DDEBUG
 
 starter_LDADD = defs.o $(top_builddir)/src/libfreeswan/libfreeswan.a $(top_builddir)/src/libstrongswan/libstrongswan.la $(SOCKLIB)
-EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf ipsec.conf.5.in
-dist_man_MANS = ipsec.conf.5 starter.8
-CLEANFILES = ipsec.conf.5
+EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
 MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
@@ -43,11 +42,6 @@ if USE_LOAD_WARNING
   AM_CFLAGS += -DLOAD_WARNING
 endif
 
-ipsec.conf.5:	ipsec.conf.5.in
-		sed \
-		-e "s:@IPSEC_VERSION@:$(PACKAGE_VERSION):" \
-		$(srcdir)/$@.in > $@
-
 lex.yy.c:	$(srcdir)/parser.l $(srcdir)/parser.y $(srcdir)/parser.h y.tab.h
 		$(LEX) $(srcdir)/parser.l
 
@@ -64,14 +58,14 @@ defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 		$(COMPILE) -c -o $@ $(PLUTODIR)/defs.c
 
 install-exec-local :
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/certs" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/certs" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/acerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/acerts" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/aacerts" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/aacerts" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/crls" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/crls" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
-		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
-		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -o ${ipsecuid} -g ${ipsecgid} -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -o -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/cacerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/cacerts" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/ocspcerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/ocspcerts" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/certs" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/certs" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/acerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/acerts" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/aacerts" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/aacerts" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/crls" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/crls" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
+		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
+		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
 

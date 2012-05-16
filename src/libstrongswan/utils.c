@@ -28,7 +28,7 @@
 #include "enum.h"
 #include "debug.h"
 
-ENUM(status_names, SUCCESS, DESTROY_ME,
+ENUM(status_names, SUCCESS, NEED_MORE,
 	"SUCCESS",
 	"FAILED",
 	"OUT_OF_RES",
@@ -97,6 +97,14 @@ void memxor(u_int8_t dst[], u_int8_t src[], size_t n)
 	{
 		dst[i] ^= src[i];
 	}
+}
+
+/**
+ * Described in header.
+ */
+void memwipe_noinline(void *ptr, size_t n)
+{
+	memwipe_inline(ptr, n);
 }
 
 /**
@@ -247,6 +255,14 @@ bool return_false()
 }
 
 /**
+ * returns FAILED
+ */
+status_t return_failed()
+{
+	return FAILED;
+}
+
+/**
  * nop operation
  */
 void nop()
@@ -279,7 +295,7 @@ bool ref_put(refcount_t *ref)
 	bool more_refs;
 
 	pthread_mutex_lock(&ref_mutex);
-	more_refs = --(*ref);
+	more_refs = --(*ref) > 0;
 	pthread_mutex_unlock(&ref_mutex);
 	return !more_refs;
 }

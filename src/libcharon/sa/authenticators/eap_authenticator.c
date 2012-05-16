@@ -58,6 +58,11 @@ struct private_eap_authenticator_t {
 	chunk_t sent_init;
 
 	/**
+	 * Reserved bytes of ID payload
+	 */
+	char reserved[3];
+
+	/**
 	 * Current EAP method processing
 	 */
 	eap_method_t *method;
@@ -99,21 +104,29 @@ struct private_eap_authenticator_t {
 static eap_method_t *load_method(private_eap_authenticator_t *this,
 							eap_type_t type, u_int32_t vendor, eap_role_t role)
 {
-	identification_t *server, *peer;
+	identification_t *server, *peer, *aaa;
+	auth_cfg_t *auth;
 
 	if (role == EAP_SERVER)
 	{
 		server = this->ike_sa->get_my_id(this->ike_sa);
 		peer = this->ike_sa->get_other_id(this->ike_sa);
+		auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 	}
 	else
 	{
 		server = this->ike_sa->get_other_id(this->ike_sa);
 		peer = this->ike_sa->get_my_id(this->ike_sa);
+		auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 	}
 	if (this->eap_identity)
 	{
 		peer = this->eap_identity;
+	}
+	aaa = auth->get(auth, AUTH_RULE_AAA_IDENTITY);
+	if (aaa)
+	{
+		server = aaa;
 	}
 	return charon->eap->create_instance(charon->eap, type, vendor,
 										role, server, peer);
@@ -170,16 +183,18 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 	if (this->method)
 	{
 		action = "initiating";
+		type = this->method->get_type(this->method, &vendor);
 		if (this->method->initiate(this->method, &out) == NEED_MORE)
 		{
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "initiating EAP vendor type %d-%d method",
-							  type, vendor);
+				DBG1(DBG_IKE, "initiating EAP vendor type %d-%d method (id 0x%02X)",
+					 type, vendor, out->get_identifier(out));
 			}
 			else
 			{
-				DBG1(DBG_IKE, "initiating %N method", eap_type_names, type);
+				DBG1(DBG_IKE, "initiating %N method (id 0x%02X)", eap_type_names,
+					 type, out->get_identifier(out));
 			}
 			return out;
 		}
@@ -358,13 +373,13 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 	{
 		if (vendor)
 		{
-			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d",
-				 type, vendor);
+			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d ",
+				 		  "(id 0x%02X)", type, vendor, in->get_identifier(in));
 		}
 		else
 		{
-			DBG1(DBG_IKE, "server requested %N authentication",
-				 eap_type_names, type);
+			DBG1(DBG_IKE, "server requested %N authentication (id 0x%02X)",
+				 eap_type_names, type, in->get_identifier(in));
 		}
 		this->method = load_method(this, type, vendor, EAP_PEER);
 		if (!this->method)
@@ -414,7 +429,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = this->ike_sa->get_keymat(this->ike_sa);
 	auth_data = keymat->get_psk_sig(keymat, TRUE, init, nonce,
-									this->msk, other_id);
+									this->msk, other_id, this->reserved);
 	recv_auth_data = auth_payload->get_data(auth_payload);
 	if (!auth_data.len || !chunk_equals(auth_data, recv_auth_data))
 	{
@@ -450,7 +465,8 @@ static void build_auth(private_eap_authenticator_t *this, message_t *message,
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 
-	auth_data = keymat->get_psk_sig(keymat, FALSE, init, nonce, this->msk, my_id);
+	auth_data = keymat->get_psk_sig(keymat, FALSE, init, nonce,
+									this->msk, my_id, this->reserved);
 	auth_payload = auth_payload_create();
 	auth_payload->set_auth_method(auth_payload, AUTH_PSK);
 	auth_payload->set_data(auth_payload, auth_data);
@@ -458,11 +474,8 @@ static void build_auth(private_eap_authenticator_t *this, message_t *message,
 	chunk_free(&auth_data);
 }
 
-/**
- * Implementation of authenticator_t.process for a server
- */
-static status_t process_server(private_eap_authenticator_t *this,
-							   message_t *message)
+METHOD(authenticator_t, process_server, status_t,
+	private_eap_authenticator_t *this, message_t *message)
 {
 	eap_payload_t *eap_payload;
 
@@ -492,11 +505,8 @@ static status_t process_server(private_eap_authenticator_t *this,
 	return NEED_MORE;
 }
 
-/**
- * Implementation of authenticator_t.build for a server
- */
-static status_t build_server(private_eap_authenticator_t *this,
-							 message_t *message)
+METHOD(authenticator_t, build_server, status_t,
+	private_eap_authenticator_t *this, message_t *message)
 {
 	if (this->eap_payload)
 	{
@@ -519,11 +529,8 @@ static status_t build_server(private_eap_authenticator_t *this,
 	return FAILED;
 }
 
-/**
- * Implementation of authenticator_t.process for a client
- */
-static status_t process_client(private_eap_authenticator_t *this,
-							   message_t *message)
+METHOD(authenticator_t, process_client, status_t,
+	private_eap_authenticator_t *this, message_t *message)
 {
 	eap_payload_t *eap_payload;
 
@@ -603,11 +610,8 @@ static status_t process_client(private_eap_authenticator_t *this,
 	return FAILED;
 }
 
-/**
- * Implementation of authenticator_t.build for a client
- */
-static status_t build_client(private_eap_authenticator_t *this,
-							 message_t *message)
+METHOD(authenticator_t, build_client, status_t,
+	private_eap_authenticator_t *this, message_t *message)
 {
 	if (this->eap_payload)
 	{
@@ -623,20 +627,16 @@ static status_t build_client(private_eap_authenticator_t *this,
 	return NEED_MORE;
 }
 
-/**
- * Implementation of authenticator_t.is_mutual.
- */
-static bool is_mutual(private_eap_authenticator_t *this)
+METHOD(authenticator_t, is_mutual, bool,
+	private_eap_authenticator_t *this)
 {
 	/* we don't know yet, but insist on it after EAP is complete */
 	this->require_mutual = TRUE;
 	return TRUE;
 }
 
-/**
- * Implementation of authenticator_t.destroy.
- */
-static void destroy(private_eap_authenticator_t *this)
+METHOD(authenticator_t, destroy, void,
+	private_eap_authenticator_t *this)
 {
 	DESTROY_IF(this->method);
 	DESTROY_IF(this->eap_payload);
@@ -650,27 +650,27 @@ static void destroy(private_eap_authenticator_t *this)
  */
 eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init)
+									chunk_t received_init, chunk_t sent_init,
+									char reserved[3])
 {
-	private_eap_authenticator_t *this = malloc_thing(private_eap_authenticator_t);
+	private_eap_authenticator_t *this;
 
-	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *message))build_client;
-	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process_client;
-	this->public.authenticator.is_mutual = (bool(*)(authenticator_t*))is_mutual;
-	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
-
-	this->ike_sa = ike_sa;
-	this->received_init = received_init;
-	this->received_nonce = received_nonce;
-	this->sent_init = sent_init;
-	this->sent_nonce = sent_nonce;
-	this->msk = chunk_empty;
-	this->method = NULL;
-	this->eap_payload = NULL;
-	this->eap_complete = FALSE;
-	this->auth_complete = FALSE;
-	this->eap_identity = NULL;
-	this->require_mutual = FALSE;
+	INIT(this,
+		.public = {
+			.authenticator = {
+				.build = _build_client,
+				.process = _process_client,
+				.is_mutual = _is_mutual,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+		.received_init = received_init,
+		.received_nonce = received_nonce,
+		.sent_init = sent_init,
+		.sent_nonce = sent_nonce,
+	);
+	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
 	return &this->public;
 }
@@ -680,27 +680,27 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
  */
 eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 									chunk_t received_nonce, chunk_t sent_nonce,
-									chunk_t received_init, chunk_t sent_init)
+									chunk_t received_init, chunk_t sent_init,
+									char reserved[3])
 {
-	private_eap_authenticator_t *this = malloc_thing(private_eap_authenticator_t);
+	private_eap_authenticator_t *this;
 
-	this->public.authenticator.build = (status_t(*)(authenticator_t*, message_t *messageh))build_server;
-	this->public.authenticator.process = (status_t(*)(authenticator_t*, message_t *message))process_server;
-	this->public.authenticator.is_mutual = (bool(*)(authenticator_t*))is_mutual;
-	this->public.authenticator.destroy = (void(*)(authenticator_t*))destroy;
-
-	this->ike_sa = ike_sa;
-	this->received_init = received_init;
-	this->received_nonce = received_nonce;
-	this->sent_init = sent_init;
-	this->sent_nonce = sent_nonce;
-	this->msk = chunk_empty;
-	this->method = NULL;
-	this->eap_payload = NULL;
-	this->eap_complete = FALSE;
-	this->auth_complete = FALSE;
-	this->eap_identity = NULL;
-	this->require_mutual = FALSE;
+	INIT(this,
+		.public = {
+			.authenticator = {
+				.build = _build_server,
+				.process = _process_server,
+				.is_mutual = _is_mutual,
+				.destroy = _destroy,
+			},
+		},
+		.ike_sa = ike_sa,
+		.received_init = received_init,
+		.received_nonce = received_nonce,
+		.sent_init = sent_init,
+		.sent_nonce = sent_nonce,
+	);
+	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
 	return &this->public;
 }

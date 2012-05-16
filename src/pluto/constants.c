@@ -77,7 +77,6 @@ ENUM(dpd_action_names, DPD_ACTION_NONE, DPD_ACTION_RESTART,
 ENUM(timer_event_names, EVENT_NULL, EVENT_LOG_DAILY,
 	"EVENT_NULL",
 	"EVENT_REINIT_SECRET",
-	"EVENT_SHUNT_SCAN",
 	"EVENT_SO_DISCARD",
 	"EVENT_RETRANSMIT",
 	"EVENT_SA_REPLACE",
@@ -112,7 +111,7 @@ const char *const debug_bit_names[] = {
 	"emitting",
 	"control",
 	"lifecycle",
-	"klips",
+	"kernel",
 	"dns",
 	"natt",
 	"oppo",
@@ -132,6 +131,8 @@ const char *const debug_bit_names[] = {
 /* State of exchanges */
 
 static const char *const state_name[] = {
+	"STATE_UNDEFINED",
+
 	"STATE_MAIN_R0",
 	"STATE_MAIN_I1",
 	"STATE_MAIN_R1",
@@ -171,11 +172,12 @@ static const char *const state_name[] = {
 };
 
 enum_names state_names =
-	{ STATE_MAIN_R0, STATE_IKE_ROOF-1, state_name, NULL };
+	{ STATE_UNDEFINED, STATE_IKE_ROOF-1, state_name, NULL };
 
 /* story for state */
 
 const char *const state_story[] = {
+	"undefined state after error",			 /* STATE_UNDEFINED */
 	"expecting MI1",                         /* STATE_MAIN_R0 */
 	"sent MI1, expecting MR1",               /* STATE_MAIN_I1 */
 	"sent MR1, expecting MI2",               /* STATE_MAIN_R1 */
@@ -411,7 +413,7 @@ enum_names esp_transform_names =
 
 static const char *const ipcomp_transform_name[] = {
 	"IPCOMP_OUI",
-	"IPCOMP_DEFLAT",
+	"IPCOMP_DEFLATE",
 	"IPCOMP_LZS",
 	"IPCOMP_LZJH",
 };

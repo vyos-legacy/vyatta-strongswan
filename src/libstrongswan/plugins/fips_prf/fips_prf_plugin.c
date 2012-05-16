@@ -31,10 +31,14 @@ struct private_fips_prf_plugin_t {
 	fips_prf_plugin_t public;
 };
 
-/**
- * Implementation of fips_prf_plugin_t.destroy
- */
-static void destroy(private_fips_prf_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_fips_prf_plugin_t *this)
+{
+	return "fips-prf";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_fips_prf_plugin_t *this)
 {
 	lib->crypto->remove_prf(lib->crypto,
 							(prf_constructor_t)fips_prf_create);
@@ -46,12 +50,26 @@ static void destroy(private_fips_prf_plugin_t *this)
  */
 plugin_t *fips_prf_plugin_create()
 {
-	private_fips_prf_plugin_t *this = malloc_thing(private_fips_prf_plugin_t);
+	private_fips_prf_plugin_t *this;
+	prf_t *prf;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+	);
 
-	lib->crypto->add_prf(lib->crypto, PRF_FIPS_SHA1_160,
-						 (prf_constructor_t)fips_prf_create);
+	prf = lib->crypto->create_prf(lib->crypto, PRF_KEYED_SHA1);
+	if (prf)
+	{
+		prf->destroy(prf);
+		lib->crypto->add_prf(lib->crypto, PRF_FIPS_SHA1_160, get_name(this),
+							 (prf_constructor_t)fips_prf_create);
+	}
 
 	return &this->public.plugin;
 }

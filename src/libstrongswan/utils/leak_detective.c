@@ -165,6 +165,7 @@ char *whitelist[] = {
 	"__gmtime_r",
 	"localtime_r",
 	"tzset",
+	"time_printf_hook",
 	"inet_ntoa",
 	"strerror",
 	"getprotobyname",
@@ -181,12 +182,16 @@ char *whitelist[] = {
 	"register_printf_specifier",
 	"syslog",
 	"vsyslog",
+	"__syslog_chk",
+	"__vsyslog_chk",
 	"getaddrinfo",
 	"setlocale",
+	"getpass",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
 	"dlclose",
+	"dlsym",
 	/* mysql functions */
 	"mysql_init_character_set",
 	"init_client_errs",
@@ -213,23 +218,23 @@ char *whitelist[] = {
 	"gcry_check_version",
 	"gcry_randomize",
 	"gcry_create_nonce",
+	/* NSPR */
+	"PR_CallOnce",
+	/* libapr */
+	"apr_pool_create_ex",
+	/* glib */
+	"g_type_init_with_debug_flags",
+	"g_type_register_static",
+	"g_type_class_ref",
+	"g_type_create_instance",
+	"g_type_add_interface_static",
+	"g_type_interface_add_prerequisite",
+	"g_socket_connection_factory_lookup_type",
+	/* libgpg */
+	"gpg_err_init",
+	/* gnutls */
+	"gnutls_global_init",
 };
-
-/**
- * check if a stack frame contains functions listed above
- */
-static bool is_whitelisted(backtrace_t *backtrace)
-{
-	int i;
-	for (i = 0; i < sizeof(whitelist)/sizeof(char*); i++)
-	{
-		if (backtrace->contains_function(backtrace, whitelist[i]))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
 
 /**
  * Report leaks at library destruction
@@ -243,7 +248,8 @@ static void report(private_leak_detective_t *this, bool detailed)
 
 		for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 		{
-			if (is_whitelisted(hdr->backtrace))
+			if (hdr->backtrace->contains_function(hdr->backtrace,
+											whitelist, countof(whitelist)))
 			{
 				whitelisted++;
 			}

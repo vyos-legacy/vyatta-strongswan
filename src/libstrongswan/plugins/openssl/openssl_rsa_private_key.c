@@ -131,19 +131,16 @@ error:
 	return success;
 }
 
-/**
- * Implementation of openssl_rsa_private_key.get_type.
- */
-static key_type_t get_type(private_openssl_rsa_private_key_t *this)
+
+METHOD(private_key_t, get_type, key_type_t,
+	private_openssl_rsa_private_key_t *this)
 {
 	return KEY_RSA;
 }
 
-/**
- * Implementation of openssl_rsa_private_key.sign.
- */
-static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t scheme,
-				 chunk_t data, chunk_t *signature)
+METHOD(private_key_t, sign, bool,
+	private_openssl_rsa_private_key_t *this, signature_scheme_t scheme,
+	chunk_t data, chunk_t *signature)
 {
 	switch (scheme)
 	{
@@ -168,28 +165,47 @@ static bool sign(private_openssl_rsa_private_key_t *this, signature_scheme_t sch
 	}
 }
 
-/**
- * Implementation of openssl_rsa_private_key.decrypt.
- */
-static bool decrypt(private_openssl_rsa_private_key_t *this,
-					chunk_t crypto, chunk_t *plain)
+METHOD(private_key_t, decrypt, bool,
+	private_openssl_rsa_private_key_t *this, encryption_scheme_t scheme,
+	chunk_t crypto, chunk_t *plain)
 {
-	DBG1(DBG_LIB, "RSA private key decryption not implemented");
-	return FALSE;
+	int padding, len;
+	char *decrypted;
+
+	switch (scheme)
+	{
+		case ENCRYPT_RSA_PKCS1:
+			padding = RSA_PKCS1_PADDING;
+			break;
+		case ENCRYPT_RSA_OAEP_SHA1:
+			padding = RSA_PKCS1_OAEP_PADDING;
+			break;
+		default:
+			DBG1(DBG_LIB, "encryption scheme %N not supported via openssl",
+				 encryption_scheme_names, scheme);
+			return FALSE;
+	}
+	decrypted = malloc(RSA_size(this->rsa));
+	len = RSA_private_decrypt(crypto.len, crypto.ptr, decrypted,
+							  this->rsa, padding);
+	if (len < 0)
+	{
+		DBG1(DBG_LIB, "RSA decryption failed");
+		free(decrypted);
+		return FALSE;
+	}
+	*plain = chunk_create(decrypted, len);
+	return TRUE;
 }
 
-/**
- * Implementation of openssl_rsa_private_key.get_keysize.
- */
-static size_t get_keysize(private_openssl_rsa_private_key_t *this)
+METHOD(private_key_t, get_keysize, int,
+	private_openssl_rsa_private_key_t *this)
 {
-	return RSA_size(this->rsa);
+	return RSA_size(this->rsa) * 8;
 }
 
-/**
- * Implementation of openssl_rsa_private_key.get_public_key.
- */
-static public_key_t* get_public_key(private_openssl_rsa_private_key_t *this)
+METHOD(private_key_t, get_public_key, public_key_t*,
+	private_openssl_rsa_private_key_t *this)
 {
 	chunk_t enc;
 	public_key_t *key;
@@ -204,20 +220,16 @@ static public_key_t* get_public_key(private_openssl_rsa_private_key_t *this)
 	return key;
 }
 
-/**
- * Implementation of public_key_t.get_fingerprint.
- */
-static bool get_fingerprint(private_openssl_rsa_private_key_t *this,
-							cred_encoding_type_t type, chunk_t *fingerprint)
+METHOD(private_key_t, get_fingerprint, bool,
+	private_openssl_rsa_private_key_t *this, cred_encoding_type_t type,
+	chunk_t *fingerprint)
 {
 	return openssl_rsa_fingerprint(this->rsa, type, fingerprint);
 }
 
-/*
- * Implementation of public_key_t.get_encoding.
- */
-static bool get_encoding(private_openssl_rsa_private_key_t *this,
-						 cred_encoding_type_t type, chunk_t *encoding)
+METHOD(private_key_t, get_encoding, bool,
+	private_openssl_rsa_private_key_t *this, cred_encoding_type_t type,
+	chunk_t *encoding)
 {
 	u_char *p;
 
@@ -252,19 +264,15 @@ static bool get_encoding(private_openssl_rsa_private_key_t *this,
 	}
 }
 
-/**
- * Implementation of openssl_rsa_private_key.get_ref.
- */
-static private_openssl_rsa_private_key_t* get_ref(private_openssl_rsa_private_key_t *this)
+METHOD(private_key_t, get_ref, private_key_t*,
+	private_openssl_rsa_private_key_t *this)
 {
 	ref_get(&this->ref);
-	return this;
+	return &this->public.key;
 }
 
-/**
- * Implementation of openssl_rsa_private_key.destroy.
- */
-static void destroy(private_openssl_rsa_private_key_t *this)
+METHOD(private_key_t, destroy, void,
+	private_openssl_rsa_private_key_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -280,25 +288,29 @@ static void destroy(private_openssl_rsa_private_key_t *this)
 /**
  * Internal generic constructor
  */
-static private_openssl_rsa_private_key_t *create_empty(void)
+static private_openssl_rsa_private_key_t *create_empty()
 {
-	private_openssl_rsa_private_key_t *this = malloc_thing(private_openssl_rsa_private_key_t);
+	private_openssl_rsa_private_key_t *this;
 
-	this->public.interface.get_type = (key_type_t (*) (private_key_t*))get_type;
-	this->public.interface.sign = (bool (*) (private_key_t*, signature_scheme_t, chunk_t, chunk_t*))sign;
-	this->public.interface.decrypt = (bool (*) (private_key_t*, chunk_t, chunk_t*))decrypt;
-	this->public.interface.get_keysize = (size_t (*) (private_key_t*))get_keysize;
-	this->public.interface.get_public_key = (public_key_t* (*) (private_key_t*))get_public_key;
-	this->public.interface.equals = private_key_equals;
-	this->public.interface.belongs_to = private_key_belongs_to;
-	this->public.interface.get_fingerprint = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *fp))get_fingerprint;
-	this->public.interface.has_fingerprint = (bool(*)(private_key_t*, chunk_t fp))private_key_has_fingerprint;
-	this->public.interface.get_encoding = (bool(*)(private_key_t*, cred_encoding_type_t type, chunk_t *encoding))get_encoding;
-	this->public.interface.get_ref = (private_key_t* (*) (private_key_t*))get_ref;
-	this->public.interface.destroy = (void (*) (private_key_t*))destroy;
-
-	this->engine = FALSE;
-	this->ref = 1;
+	INIT(this,
+		.public = {
+			.key = {
+				.get_type = _get_type,
+				.sign = _sign,
+				.decrypt = _decrypt,
+				.get_keysize = _get_keysize,
+				.get_public_key = _get_public_key,
+				.equals = private_key_equals,
+				.belongs_to = private_key_belongs_to,
+				.get_fingerprint = _get_fingerprint,
+				.has_fingerprint = private_key_has_fingerprint,
+				.get_encoding = _get_encoding,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
+		},
+		.ref = 1,
+	);
 
 	return this;
 }
@@ -443,6 +455,50 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 	return NULL;
 }
 
+#ifndef OPENSSL_NO_ENGINE
+/**
+ * Login to engine with a PIN specified for a keyid
+ */
+static bool login(ENGINE *engine, chunk_t keyid)
+{
+	enumerator_t *enumerator;
+	shared_key_t *shared;
+	identification_t *id;
+	chunk_t key;
+	char pin[64];
+	bool found = FALSE, success = FALSE;
+
+	id = identification_create_from_encoding(ID_KEY_ID, keyid);
+	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
+														SHARED_PIN, id, NULL);
+	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
+	{
+		found = TRUE;
+		key = shared->get_key(shared);
+		if (snprintf(pin, sizeof(pin), "%.*s", key.len, key.ptr) >= sizeof(pin))
+		{
+			continue;
+		}
+		if (ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
+		{
+			success = TRUE;
+			break;
+		}
+		else
+		{
+			DBG1(DBG_CFG, "setting PIN on engine failed");
+		}
+	}
+	enumerator->destroy(enumerator);
+	id->destroy(id);
+	if (!found)
+	{
+		DBG1(DBG_CFG, "no PIN found for %#B", &keyid);
+	}
+	return success;
+}
+#endif /* OPENSSL_NO_ENGINE */
+
 /**
  * See header.
  */
@@ -451,20 +507,25 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 {
 #ifndef OPENSSL_NO_ENGINE
 	private_openssl_rsa_private_key_t *this;
-	char *keyid = NULL, *pin = NULL;
+	char *engine_id = NULL;
+	char keyname[64];
+	chunk_t keyid = chunk_empty;;
 	EVP_PKEY *key;
-	char *engine_id;
 	ENGINE *engine;
+	int slot = -1;
 
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
-			case BUILD_SMARTCARD_KEYID:
-				keyid = va_arg(args, char*);
+			case BUILD_PKCS11_KEYID:
+				keyid = va_arg(args, chunk_t);
 				continue;
-			case BUILD_SMARTCARD_PIN:
-				pin = va_arg(args, char*);
+			case BUILD_PKCS11_SLOT:
+				slot = va_arg(args, int);
+				continue;
+			case BUILD_PKCS11_MODULE:
+				engine_id = va_arg(args, char*);
 				continue;
 			case BUILD_END:
 				break;
@@ -473,17 +534,31 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		}
 		break;
 	}
-	if (!keyid || !pin)
+	if (!keyid.len || keyid.len > 40)
 	{
 		return NULL;
 	}
 
-	engine_id = lib->settings->get_str(lib->settings,
+	memset(keyname, 0, sizeof(keyname));
+	if (slot != -1)
+	{
+		snprintf(keyname, sizeof(keyname), "%d:", slot);
+	}
+	if (sizeof(keyname) - strlen(keyname) <= keyid.len * 4 / 3 + 1)
+	{
+		return NULL;
+	}
+	chunk_to_hex(keyid, keyname + strlen(keyname), FALSE);
+
+	if (!engine_id)
+	{
+		engine_id = lib->settings->get_str(lib->settings,
 						"libstrongswan.plugins.openssl.engine_id", "pkcs11");
+	}
 	engine = ENGINE_by_id(engine_id);
 	if (!engine)
 	{
-		DBG1(DBG_LIB, "engine '%s' is not available", engine_id);
+		DBG2(DBG_LIB, "engine '%s' is not available", engine_id);
 		return NULL;
 	}
 	if (!ENGINE_init(engine))
@@ -492,18 +567,17 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 		ENGINE_free(engine);
 		return NULL;
 	}
-	if (!ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
+	if (!login(engine, keyid))
 	{
-		DBG1(DBG_LIB, "failed to set PIN on engine '%s'", engine_id);
+		DBG1(DBG_LIB, "login to engine '%s' failed", engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}
-
-	key = ENGINE_load_private_key(engine, keyid, NULL, NULL);
+	key = ENGINE_load_private_key(engine, keyname, NULL, NULL);
 	if (!key)
 	{
 		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
-			 "engine '%s'", keyid, engine_id);
+			 "engine '%s'", keyname, engine_id);
 		ENGINE_free(engine);
 		return NULL;
 	}
@@ -512,6 +586,11 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
 	this = create_empty();
 	this->rsa = EVP_PKEY_get1_RSA(key);
 	this->engine = TRUE;
+	if (!this->rsa)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	return &this->public;
 #else /* OPENSSL_NO_ENGINE */

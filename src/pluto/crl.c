@@ -163,7 +163,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 		{
 			/* keep any known CRL distribution points */
 			add_distribution_points(x509crl->distributionPoints,
-					 				oldcrl->distributionPoints);
+									oldcrl->distributionPoints);
 
 			/* now delete the old CRL */
 			free_first_crl();
@@ -199,7 +199,7 @@ bool insert_crl(x509crl_t *x509crl, char *crl_uri, bool cache_crl)
 		chunk_t hex, encoding;
 
 		hex = chunk_to_hex(crl->get_authKeyIdentifier(crl), NULL, FALSE);
-		snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_PATH, hex);
+		snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_PATH, hex.ptr);
 		free(hex.ptr);
 
 		if (cert_crl->get_encoding(cert_crl, CERT_ASN1_DER, &encoding))
@@ -352,7 +352,7 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 	x509crl_t *x509crl;
 	ca_info_t *ca;
 	enumerator_t *enumerator;
-	char *point;
+	x509_cdp_t *cdp;
 
 	ca = get_ca_info(issuer, authKeyID);
 
@@ -376,9 +376,9 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 		}
 
 		enumerator = x509->create_crl_uri_enumerator(x509);
-		while (enumerator->enumerate(enumerator, &point))
+		while (enumerator->enumerate(enumerator, &cdp))
 		{
-			add_distribution_point(crluris, point);
+			add_distribution_point(crluris, cdp->uri);
 		}
 		enumerator->destroy(enumerator);
 
@@ -416,16 +416,17 @@ cert_status_t verify_by_crl(cert_t *cert, time_t *until, time_t *revocationDate,
 		}
 
 		enumerator = x509->create_crl_uri_enumerator(x509);
-		while (enumerator->enumerate(enumerator, &point))
+		while (enumerator->enumerate(enumerator, &cdp))
 		{
-			add_distribution_point(x509crl->distributionPoints, point);
+			add_distribution_point(x509crl->distributionPoints, cdp->uri);
 		}
 		enumerator->destroy(enumerator);
 
 		lock_authcert_list("verify_by_crl");
 
 		issuer_cert = get_authcert(issuer, authKeyID, X509_CA);
-		trusted = cert_crl->issued_by(cert_crl, issuer_cert->cert);
+		trusted = issuer_cert ? cert_crl->issued_by(cert_crl, issuer_cert->cert)
+							  : FALSE;
 
 		unlock_authcert_list("verify_by_crl");
 

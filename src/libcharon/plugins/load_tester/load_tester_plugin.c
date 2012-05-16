@@ -22,10 +22,13 @@
 
 #include <unistd.h>
 
+#include <hydra.h>
 #include <daemon.h>
 #include <processing/jobs/callback_job.h>
 #include <threading/condvar.h>
 #include <threading/mutex.h>
+
+static const char *plugin_name = "load_tester";
 
 typedef struct private_load_tester_plugin_t private_load_tester_plugin_t;
 
@@ -143,10 +146,14 @@ static job_requeue_t do_load_test(private_load_tester_plugin_t *this)
 	return JOB_REQUEUE_NONE;
 }
 
-/**
- * Implementation of plugin_t.destroy
- */
-static void destroy(private_load_tester_plugin_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_load_tester_plugin_t *this)
+{
+	return "load-tester";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_load_tester_plugin_t *this)
 {
 	this->iterations = -1;
 	this->mutex->lock(this->mutex);
@@ -155,7 +162,7 @@ static void destroy(private_load_tester_plugin_t *this)
 		this->condvar->wait(this->condvar, this->mutex);
 	}
 	this->mutex->unlock(this->mutex);
-	charon->kernel_interface->remove_ipsec_interface(charon->kernel_interface,
+	hydra->kernel_interface->remove_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	charon->backends->remove_backend(charon->backends, &this->config->backend);
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->credential_set);
@@ -185,43 +192,50 @@ plugin_t *load_tester_plugin_create()
 		return NULL;
 	}
 
-	this = malloc_thing(private_load_tester_plugin_t);
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+		.delay = lib->settings->get_int(lib->settings,
+					"charon.plugins.load-tester.delay", 0),
+		.iterations = lib->settings->get_int(lib->settings,
+					"charon.plugins.load-tester.iterations", 1),
+		.initiators = lib->settings->get_int(lib->settings,
+					"charon.plugins.load-tester.initiators", 0),
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		.config = load_tester_config_create(),
+		.creds = load_tester_creds_create(),
+		.listener = load_tester_listener_create(shutdown_on),
+	);
 
-	lib->crypto->add_dh(lib->crypto, MODP_NULL,
+	lib->crypto->add_dh(lib->crypto, MODP_NULL, plugin_name,
 						(dh_constructor_t)load_tester_diffie_hellman_create);
+	charon->backends->add_backend(charon->backends, &this->config->backend);
+	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
+	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
-	this->delay = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.delay", 0);
-	this->iterations = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.iterations", 1);
-	this->initiators = lib->settings->get_int(lib->settings,
-					"charon.plugins.load-tester.initiators", 0);
 	if (lib->settings->get_bool(lib->settings,
 					"charon.plugins.load-tester.shutdown_when_complete", 0))
 	{
 		shutdown_on = this->iterations * this->initiators;
 	}
 
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
-	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
-	this->config = load_tester_config_create();
-	this->creds = load_tester_creds_create();
-	this->listener = load_tester_listener_create(shutdown_on);
-	charon->backends->add_backend(charon->backends, &this->config->backend);
-	lib->credmgr->add_set(lib->credmgr, &this->creds->credential_set);
-	charon->bus->add_listener(charon->bus, &this->listener->listener);
 
 	if (lib->settings->get_bool(lib->settings,
 					"charon.plugins.load-tester.fake_kernel", FALSE))
 	{
-		charon->kernel_interface->add_ipsec_interface(charon->kernel_interface,
+		hydra->kernel_interface->add_ipsec_interface(hydra->kernel_interface,
 						(kernel_ipsec_constructor_t)load_tester_ipsec_create);
 	}
 	this->running = 0;
 	for (i = 0; i < this->initiators; i++)
 	{
-		charon->processor->queue_job(charon->processor,
+		lib->processor->queue_job(lib->processor,
 					(job_t*)callback_job_create((callback_job_cb_t)do_load_test,
 												this, NULL, NULL));
 	}

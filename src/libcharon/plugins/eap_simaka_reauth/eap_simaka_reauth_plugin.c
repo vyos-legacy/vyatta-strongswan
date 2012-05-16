@@ -42,10 +42,14 @@ struct private_eap_simaka_reauth_t {
 	eap_simaka_reauth_provider_t *provider;
 };
 
-/**
- * Implementation of eap_simaka_reauth_t.destroy.
- */
-static void destroy(private_eap_simaka_reauth_t *this)
+METHOD(plugin_t, get_name, char*,
+	private_eap_simaka_reauth_t *this)
+{
+	return "eap-simaka-reauth";
+}
+
+METHOD(plugin_t, destroy, void,
+	private_eap_simaka_reauth_t *this)
 {
 	charon->sim->remove_card(charon->sim, &this->card->card);
 	charon->sim->remove_provider(charon->sim, &this->provider->provider);
@@ -59,11 +63,19 @@ static void destroy(private_eap_simaka_reauth_t *this)
  */
 plugin_t *eap_simaka_reauth_plugin_create()
 {
-	private_eap_simaka_reauth_t *this = malloc_thing(private_eap_simaka_reauth_t);
+	private_eap_simaka_reauth_t *this;
 
-	this->public.plugin.destroy = (void(*)(plugin_t*))destroy;
+	INIT(this,
+		.public = {
+			.plugin = {
+				.get_name = _get_name,
+				.reload = (void*)return_false,
+				.destroy = _destroy,
+			},
+		},
+		.provider = eap_simaka_reauth_provider_create(),
+	);
 
-	this->provider = eap_simaka_reauth_provider_create();
 	if (!this->provider)
 	{
 		free(this);
