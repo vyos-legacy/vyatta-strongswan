@@ -1,3 +1,294 @@
+strongswan (4.5.2-1.1~bpo60+2) squeeze-backports; urgency=low
+
+  [ Rene Mayrhofer ]
+  * Create directories for strongswan package manually, svn-inject
+    doesn't seem to like it.
+  * Import initial strongswan 2.7.0 version into SVN.
+  * Also copy the initial import of the 2.7.0 strongswan upstream source
+    to the trunk directory.
+  * - Just copy the whole debian/ dir from my openswan packaging.
+  * - s/openswan/strongswan/g
+  * Add the layout configuration for svn-buildpackage.
+  * - Don't depend on makedev | devfsd.
+  * Just s/openswan/strongswan/g and s/Openswan/strongSwan/g.
+  * Remove these files from the repository, because they get created
+    during the
+  * - Remove my patches for now.
+  * - Advances in packaging strongswan.
+  * Ok, need two different...
+  * Doh, hopefully right this time.
+  * And another minor change.
+  * - docs/ is no more.
+  * Load /tmp/tmp.dFxzTv5957/strongswan-2.7.2 into
+  * Update to 2.7.2.
+  * Whoops, fix chnagelog syntax.
+  * dpkg-buildpackage is picky...
+  * - Many small changes to make it a Debian policy compliant package.
+  * Load /tmp/tmp.UCewB23859/strongswan-2.7.2+dfsg into
+  * - Remove RFC drafts.
+  * - Updated policy standards version.
+  * - Update the debconf translations with debconf-updatepo.
+  * - Use invoke-rc.d in prerm.
+  * - Remove the doc-base file, since the HTML documentation is no
+    longer shipped.
+  * Load /tmp/tmp.beAMfG4063/strongswan-2.7.3 into
+  * - Updated to new upstream version.
+  * - Remove RFC draft files again to be DFSG free.
+  * - Copy a fix from the last openswan upload: call debconf-updatepo to
+    update the templates
+  * - These were changed by the automated call to debconf-updatepo.
+  * - Fix a few minor things, mostly lintian cleanups.
+  * - Fix lintian warnings for debconf tamples.
+  * - Add po-debconf to build dependencies.
+  * Load /tmp/tmp.IBEBMao893/strongswan-2.8.0+dfsg into
+  * - New upstream release.
+  * - Fix an important bug: renaming of the no_oe.conf to oe.conf.
+    Changes
+  * - Updated the debconf templates (automatically during build).
+  * [svn-upgrade] Integrating new upstream version, strongswan (2.8.1)
+  * - New upstream release, now _with_ XAUTH support.
+  * [svn-upgrade] Integrating new upstream version, strongswan
+    (2.8.1.dfsg.orig)
+  * - Remove non-DFSG-free documentation files and explicitly enable
+  * - Need to disable IPSECPOLICY again, because the code doesn't
+    compile
+  * [svn-upgrade] Integrating new upstream version, strongswan (2.8.2)
+  * - New upstream release.
+  * - doc/ is no longer...
+  * [svn-upgrade] Integrating new upstream version, strongswan (2.8.3)
+  * - Update to new upstream release.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.1.1)
+  * Major new upstream release, just ran svn-upgrade for now (and wrote
+    some
+  * First changes to use the autoconf tools instead of the old build
+    system.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.1.3)
+  * - Update to new upstream release.
+  * - Enable DBUS and XML interfaces with configure.
+  * - DBUS and XML interfaces are seemingly not ready yet.
+  * - No longer patch for bashism, this fails to build.
+  * - Fix building from dpkg-buildpackage.
+  * - The changelog has been renamed.
+  * - Remove deprecated DH_VERSION setting from debian/rules.
+  * - strongSwan 4.x now uses a shared library, so do the right thing...
+  * - Templates regenerated due to new questions.
+  * - Revert change in r4762: need to export DH_COMPAT still, or
+  * - Don't install under /usr/libexec, but use /usr/lib
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.1.4)
+  * - Updated to new upstream release.
+  * - Updated debconf tamplates.
+  * - debconf templates "recompiled".
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.1.8)
+  * - Import new upstream release 4.1.8.
+  * Actually fix all the Debian bugreports for strongswan.
+  * - Regenerated po files during build process.
+  * - It's ok if there's no package to work on.
+  * - Semicolon, not comma to separate sed commands.
+  * - Many small packaging fixes, check changelog for details.
+  * - Make the Makefile work...
+  * - Ship our own init script.
+  * - Install init script as /etc/init.d/ipsec instead of as strongswan.
+  * - Yuck, fix syntax error.
+  * - Need to name the master file the .templates again.
+    dh_installdebconf
+  * - Templates file renamed, adapt the translations.
+  * - ipsec.conf should actually get standard permissions.
+  * - Finally, there's an easy way to harden C code. Use it.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.1.10)
+  * - Updated to new upstream release.
+  * - Updated translations.
+  * - Enable more configure options.
+  * - Explicitly set path to opensc-pkcs11 engine.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.1.11)
+  * - New upstream release.
+  * - It seems this file is touched during the build process..
+  * - Build-dep on network-manager-dev.
+  * - Apply patch to make it work with libpkcs11.
+  * - Build-depend on libfcgi-deb and clearsilver-dev to make it
+    compile.
+  * - Also build-depend on libxml2-dev.
+  * - Also need to build-depend on libdbus-1-dev.
+  * - Also need to build-depend on libtool
+  * - Also build-dep on libsqlite3-dev, argh.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.2.4)
+  * - Updated to new upstream.
+  * - Updated Czech debconf translation.
+  * - Document some of the changes.
+  * - Drop patch that is no longer required.
+  * - Fix some lintian warning.
+  * - Drop dbus support. The new configure no longer uses it.
+  * - Change urgency to medium.
+  * - Disable --enable-dbus. configure no longer needs it.
+  * - Take NEWS instead of ChangeLog as the upstream changelog.
+  * - Disable the tests, they don't compile.
+  * - Document some example configurations.
+  * - "Fix" the final bug.
+  * - Fix 2 bugs.
+  * - Use unstable for upload.
+  * - Fix configure options.
+  * - Tweaked configure options for a smaller package.
+  * - Remove dbus dependency.
+  * - Add a backported patch from upstream.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.2.8)
+  * - New upstream release.
+  * - Remove patch that is in upstream now.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.2.9)
+  * - Updated to new upstream.
+  * - Fix bugs by enabling curl (and the other one just with a new
+  * - Enable KLIPS kernel support and mediation server.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.2.12)
+  * - Updated to new upstream revision.
+  * - Minor Debian packaging fixes.
+  * - Start building network manager plugin.
+  * - Started package building, changed .po files.
+  * - Also need to build-dep on libnnm-util-dev.
+  * Correct type.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.2.13)
+  * - New upstream version.
+  * - Drop --enable-http for configure, obsoleted by --enable-curl.
+  * - Modularize: move stuff to sub-packages.
+  * - File name has changed.
+  * - File name has changed.
+  * - Apply patch from security team.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.2.14)
+  * - New upstream release to hopefully compile on sid.
+  * - Removed patch that is now upstream.
+  * - Additional dh_installdirs call.
+  * Bump standards version.
+  * Slightly clean up debian/rules. More importantly, call dh_install to
+  * Use dh_install correctly...
+  * - More install fixes.
+  * - Need special handling for padlock plugin.
+  * - Enable other EAP plugins.
+  * - Fix paths.
+  * - ipsec.secrets gets special handling.
+  * Syntax error fix?
+  * Another install path fix.
+  * - Also install nm plugin.
+  * - Minor build fix.
+  * - Updated translations.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.3.2)
+  * Updated to new upstream version.
+  * Updates due to building the package.
+  * Hmm, lex.yy.c and asn1/asn1.c were reverted by a patch it seems.
+    Force
+  * Small compilation fix.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.3.4)
+  * - New upstream release.
+  * Reset to default files. Don't know why they were changed.
+  * Try to read default table as well.
+  * Use popen, which makes the code much simpler.
+  * Document patch.
+  * Use patch from Astaro instead to read routes via netlink.
+  * Convert to new dpkg-source format.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.3.6)
+  * Updated to new upstream release. interfaces Patch is not from
+    upstream.
+  * Add build-dep for gperf.
+  * Sync postinst, rules, and debconf handling with openswan.
+  * Document that we now build a debugging symbols package.
+  * Re-fuzzified translations.
+  * Include the "attr" plugin.
+  * Mention additional fixed bugs.
+  * Another bug to close.
+  * [svn-upgrade] Integrating new upstream version, strongswan (4.4.0)
+  * New upstream release.
+  * - Call adduser in postinst and deluser in postrm to manage
+    "strongswan" user.
+  * Build-depend on libcap-dev.
+  * - Disable user switching again, as the configure script tries to
+    read the uid at build time.
+  * Disable other kernel interfaces again, KLIPS doesn't even build...
+  * Disable libcap support as well, as it doesn't build either.
+  * "Recompiled"
+  * - Reenable capability dropping with libcap.
+  * Remove leftovers after source code restructuring.
+  * Resynchronize debconf templates with openswan.
+  * Fix snprintf vulnerability by adding upstream-provided patch.
+  * Mention the snprintf patch.
+  * "Recompiled".
+  * The patches directory should be under debian/
+  * Fix patch to actually apply.
+  * Make urgency high.
+  * Updated fr translation.
+  * New ru translation update.
+  * Remove leftover source files from last upstream source update.
+  * Bugfixes.
+  * "Recompiled."
+  * Debian patch not applied here.
+  * Make sure all plugins are being installer.
+  * There are multiple socket plugins.
+  * Only use list-missing instead of fail-missing option.
+  * Also install the libchecksum plugin.
+  * Install additional tools and manual pages.
+  * Correct debian version.
+  * Updated de debconf translation.
+  * [svn-upgrade] new version strongswan (4.4.1)
+  * New upstream release.
+  * "Recompiled"
+  * Security fix has been applied upstream.
+  * Fix typos.
+  * Address some BTS bugs.
+  * Close another bugreport.
+  * Add es translation.
+  * Try to fix some lintian warnings.
+  * Fix encoding to UTF-8.
+  * Recompiled.
+  * Lintian overrides are per package it seems.
+  * Also install xauth plugin.
+  * Fix lintian warnings and errors.
+  * Remove superflous overrides.
+  * This common overrides file no longer exists.
+  * Fix compilation options for charon.
+  * Correct version number.
+  * Don't install the .a files.
+  * Another try to make package building work.
+  * Make script more robust on stop and actually fix some problems with
+    invalid PID file name.
+  * Close BTS bugs.
+  * Argh, very stupid mistake. Don't call dh_clean from install target.
+  * Support pluto or charon not being installed.
+  * Be sure to have a defined RETVAL.
+  * Return 0 on start and stop.
+  * Enable test vectors.
+  * Fix install path for libchecksum.
+  * Don't close bugreport yet.
+  * [svn-upgrade] new version strongswan (4.5.0)
+  * New upstream version.
+  * Document major upstream change (IKEv2 being the default now) and
+    enable more configure options.
+  * Add translations NMU and install two more missing plugins.
+  * Also document new NAT-transport support in NEWS file.
+  * "Recompiled".
+  * Add additional translation.
+  * Un-gzip translation file.
+  * Recompiled translation files
+  * Special handling for strongswan-nm: only build if headers are really
+    available.
+  * Document last change.
+
+  [ René Mayrhofer ]
+  * Imported Upstream version 4.5.1
+  * Remove merge conflict markers
+  * Imported Upstream version 4.5.2
+  * Document new version
+  * This manpage is no longer installed
+  * Fix CONFIGUREARGS typo in debian/rules and no longer install
+    starter.8 manpage either.
+  * Fix install call for libstrongswan-nm.so
+  * Install additional plugins and fail if we miss to install some files
+    for future tracking
+  * Install missing files and ignore those we don't want to install
+  * Also need to create this directory to install the padlock plugin
+  * Also need to ignore those .so files we install manually or the fail-
+    missing check will fail
+  * Point Vcs links to Debian Git packaging instead of upstream
+
+  [ Saurabh Mohan ]
+  * Upgrade to 4.5.2-1.1~bpo60+1
+
+ -- Saurabh Mohan <saurabh@vyatta.com>  Fri, 18 May 2012 13:55:25 -0700
+
 strongswan (4.5.2-1.1~bpo60+1) squeeze-backports; urgency=low
 
   * Backport to squeeze-backports.
