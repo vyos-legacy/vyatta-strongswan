@@ -1,3 +1,10 @@
+strongswan (4.4.1-5.1-vyatta3+oxnard2) unstable; urgency=low
+
+  * CVE-2012-2388: Fix boolean return value if an empty RSA signature is
+    detected in gmp plugin
+
+ -- Saurabh Mohan <saurabh@vyatta.com>  Fri, 01 Jun 2012 15:32:53 -0700
+
 strongswan (4.4.1-5.1-vyatta3+oxnard1) unstable; urgency=low
 
   * new branch
