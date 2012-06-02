@@ -1,4 +1,4 @@
-strongswan (4.5.2-1.1_bpo60+2) squeeze-backports; urgency=low
+strongswan (4.5.2-1.1-bpo60+2) squeeze-backports; urgency=low
 
   [ Rene Mayrhofer ]
   * Create directories for strongswan package manually, svn-inject
