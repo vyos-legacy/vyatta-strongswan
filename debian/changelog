@@ -1,3 +1,11 @@
+strongswan (4.5.2-1.1-bpo60+3) squeeze-backports; urgency=low
+
+  * 4.5.2-1.1_bpo60+2
+  * CVE-2012-2388: Fix boolean return value if an empty RSA signature is
+    detected in gmp plugin.
+
+ -- Saurabh Mohan <saurabh@vyatta.com>  Fri, 01 Jun 2012 17:02:27 -0700
+
 strongswan (4.5.2-1.1-bpo60+2) squeeze-backports; urgency=low
 
   [ Rene Mayrhofer ]
