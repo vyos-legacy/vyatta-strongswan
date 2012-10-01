@@ -54,6 +54,9 @@ libtool
 /scripts/keyid2sql
 /scripts/pubkey_speed
 /scripts/thread_analysis
+/scripts/crypt_burn
+/scripts/fetch
+/scripts/oid2der
 /src/_copyright/_copyright
 /src/_updown/_updown
 /src/charon/charon
