@@ -1,3 +1,9 @@
+strongswan (4.5.2-1.1-bpo60+5+daisy1) squeeze-backports; urgency=low
+
+  * create daisy branch
+
+ -- John Southworth <john.southworth@vyatta.com>  Sat, 13 Oct 2012 13:31:39 -0700
+
 strongswan (4.5.2-1.1-bpo60+5) squeeze-backports; urgency=low
 
   * new branch
