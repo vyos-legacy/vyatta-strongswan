@@ -1,3 +1,9 @@
+strongswan (4.5.2-1.1-bpo60+4+pacifica1) squeeze-backports; urgency=low
+
+  * new branch
+
+ -- John Southworth <john.southworth@vyatta.com>  Fri, 12 Oct 2012 18:50:29 -0700
+
 strongswan (4.5.2-1.1-bpo60+4) squeeze-backports; urgency=low
 
   * Bugfix 8373:  Create kernel routes for IPv6 destination prefixes
