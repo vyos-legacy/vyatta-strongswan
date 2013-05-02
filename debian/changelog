@@ -1,9 +1,6 @@
-strongswan (4.5.2-1.1-bpo60+5+daisy3) squeeze-backports; urgency=low
+strongswan (4.5.2-1.1-bpo60+6) squeeze-backports; urgency=low
 
-  [ Sven-Thorsten Dietrich ]
-  * Remove generated files.
-
-  [ Saurabh Mohan ]
+  * Merge daisy into master
 
  -- Saurabh Mohan <saurabh@vyatta.com>  Thu, 02 May 2013 13:27:07 -0700
 
