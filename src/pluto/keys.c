@@ -143,6 +143,12 @@ const secret_t* match_secret(identification_t *my_id, identification_t *his_id,
 				{
 					match |= match_him;
 				}
+				//FIX for DMVPN-121
+				if (id->get_type(id) == ID_ANY)
+				{
+					match |= match_me;
+					match |= match_him;
+				}
 			}
 			enumerator->destroy(enumerator);
 
