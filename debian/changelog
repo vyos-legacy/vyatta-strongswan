@@ -1,3 +1,12 @@
+strongswan (4.5.2-1.1-bpo60+5+daisy3) squeeze-backports; urgency=low
+
+  [ Sven-Thorsten Dietrich ]
+  * Remove generated files.
+
+  [ Saurabh Mohan ]
+
+ -- Saurabh Mohan <saurabh@vyatta.com>  Thu, 02 May 2013 13:27:07 -0700
+
 strongswan (4.5.2-1.1-bpo60+5+daisy2) squeeze-backports; urgency=low
 
   * Support for key selection for peer %any. part of dmvpn support.
