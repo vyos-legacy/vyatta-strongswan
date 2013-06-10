@@ -1,3 +1,17 @@
+strongswan (4.5.2-1.1-bpo60+7) squeeze-backports; urgency=low
+
+  [ Sven-Thorsten Dietrich ]
+  * Remove generated files.
+
+  [ Saurabh Mohan ]
+  * 4.5.2-1.1-bpo60+5+daisy3
+  * Added new tag
+
+  [ Sven-Thorsten Dietrich ]
+  * Change format to 1.0
+
+ -- Sven-Thorsten Dietrich <sven@vyatta.com>  Sun, 09 Jun 2013 17:09:51 -0700
+
 strongswan (4.5.2-1.1-bpo60+6) squeeze-backports; urgency=low
 
   * Merge daisy into master
