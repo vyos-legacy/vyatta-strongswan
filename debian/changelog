@@ -1,3 +1,19 @@
+strongswan (4.5.2-1.1-bpo60+5+hydrogen2) squeeze-backports; urgency=low
+
+  [ Martin Willi ]
+  * identification: Properly check length before comparing for binary DN
+    equality
+
+  [ Daniil Baturin ]
+
+ -- Daniil Baturin <daniil@baturin.org>  Sat, 16 Nov 2013 12:49:16 +0100
+
+strongswan (4.5.2-1.1-bpo60+5+hydrogen1) squeeze-backports; urgency=low
+
+  * Fix branch name.
+
+ -- Daniil Baturin <daniil@baturin.org>  Sat, 16 Nov 2013 00:00:00 +0100
+
 strongswan (4.5.2-1.1-bpo60+5+daisy2) squeeze-backports; urgency=low
 
   * Support for key selection for peer %any. part of dmvpn support.
