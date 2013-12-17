@@ -1,3 +1,9 @@
+strongswan (4.5.2-1.1-bpo60+5+hydrogen3) squeeze-backports; urgency=low
+
+  * Bug #89: remove unused build dependency on libopensc2
+
+ -- Daniil Baturin <daniil@baturin.org>  Tue, 17 Dec 2013 05:10:05 +0100
+
 strongswan (4.5.2-1.1-bpo60+5+hydrogen2) squeeze-backports; urgency=low
 
   [ Martin Willi ]
