@@ -1,3 +1,9 @@
+strongswan (4.5.2-1.1-bpo60+vyos1+helium1) squeeze-backports; urgency=low
+
+  * New branch
+
+ -- Daniil Baturin <daniil@baturin.org>  Sat, 15 Feb 2014 20:27:23 +0100
+
 strongswan (4.5.2-1.1-bpo60+5+hydrogen4) squeeze-backports; urgency=low
 
   * Force release
