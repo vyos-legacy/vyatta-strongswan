@@ -295,7 +295,7 @@ int asn1_unwrap(chunk_t *blob, chunk_t *inner)
 	else
 	{	/* composite length, determine number of length octets */
 		len &= 0x7f;
-		if (len == 0 || len > sizeof(res.len))
+		if (len == 0 || len > blob->len || len > sizeof(res.len))
 		{
 			return ASN1_INVALID;
 		}
