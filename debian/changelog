@@ -1,3 +1,12 @@
+strongswan (4.5.2-1.1-bpo60+5+hydrogen5) squeeze-backports; urgency=low
+
+  [ Fabian ]
+  * Fix CVE-2014-2338
+
+  [ Daniil Baturin ]
+
+ -- Daniil Baturin <daniil@baturin.org>  Sun, 27 Apr 2014 02:30:28 +0200
+
 strongswan (4.5.2-1.1-bpo60+5+hydrogen4) squeeze-backports; urgency=low
 
   * Force release
