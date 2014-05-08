@@ -1,3 +1,12 @@
+strongswan (4.5.2-1.1-bpo60+5+hydrogen6) squeeze-backports; urgency=low
+
+  [ Tobias Brunner ]
+  * asn1: Properly check length in asn1_unwrap()
+
+  [ Daniil Baturin ]
+
+ -- Daniil Baturin <daniil@baturin.org>  Thu, 08 May 2014 19:42:35 +0200
+
 strongswan (4.5.2-1.1-bpo60+5+hydrogen5) squeeze-backports; urgency=low
 
   [ Fabian ]
