@@ -717,10 +717,16 @@ int main (int argc, char **argv)
 
 					if (conn->startup == STARTUP_START)
 					{
+						/*
+						 * Install kernel traps (route) before initiating the
+						 * connection so that selected traffic won't go out
+						 * unencrypted before IKE negotiation is complete.
+						 */
 						if (conn->keyexchange != KEY_EXCHANGE_IKEV1)
 						{
 							if (starter_charon_pid())
 							{
+								starter_stroke_route_conn(conn);
 								starter_stroke_initiate_conn(conn);
 							}
 						}
@@ -728,6 +734,7 @@ int main (int argc, char **argv)
 						{
 							if (starter_pluto_pid())
 							{
+								starter_whack_route_conn(conn);
 								starter_whack_initiate_conn(conn);
 							}
 						}
