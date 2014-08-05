@@ -1,3 +1,14 @@
+strongswan (4.5.2-1.1-bpo60+vyos1+helium3) squeeze-backports; urgency=low
+
+  [ Ryan Riske ]
+  * Bug 197: Make starter parse pfsgroup parameter for DH groups 22-24
+  * Bug 241: Make starter install kernel traps before initiating a
+    connection when auto=start
+
+  [ Daniil Baturin ]
+
+ -- Daniil Baturin <daniil@baturin.org>  Tue, 05 Aug 2014 16:34:44 +0000
+
 strongswan (4.5.2-1.1-bpo60+vyos1+helium2) squeeze-backports; urgency=low
 
   [ Fabian ]
