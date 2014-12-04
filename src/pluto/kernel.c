@@ -1132,7 +1132,18 @@ static bool setup_half_ipsec_sa(struct state *st, bool inbound)
 	{
 		src = &c->spd.that;
 		dst = &c->spd.this;
-		mark = c->spd.mark_in;
+		/* If this is a VTI (identified in this case by both src and dst being set to 
+		 * either 0.0.0.0/0 or ::/0 addresses) then set a wilcard mark on the incoming
+		 * sa only, otherwise mark as normal */
+		if (isanyaddr(&c->spd.that.client.addr) && isanyaddr(&c->spd.this.client.addr))
+		{
+			mark.value = 0;
+			mark.mask = 0xffffffff;
+		}
+		else
+		{
+			mark = c->spd.mark_in;
+		}
 	}
 	else
 	{
@@ -1367,7 +1378,18 @@ static bool teardown_half_ipsec_sa(struct state *st, bool inbound)
 	{
 		src = &c->spd.that;
 		dst = &c->spd.this;
-		mark = c->spd.mark_in;
+		/* If this is a VTI (identified in this case by both src and dst being set to 
+		 * either 0.0.0.0/0 or ::/0 addresses) then use a wilcard mark when removing
+		 * the incoming sa, otherwise use the mark as normal */
+		if (isanyaddr(&c->spd.that.client.addr) && isanyaddr(&c->spd.this.client.addr))
+		{
+			mark.value = 0;
+			mark.mask = 0xffffffff;
+		}
+		else
+		{
+			mark = c->spd.mark_in;
+		}
 	}
 	else
 	{
