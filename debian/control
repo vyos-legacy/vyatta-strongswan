@@ -1,7 +1,7 @@
 Source: strongswan
 Section: net
 Priority: optional
-Maintainer: Rene Mayrhofer <rmayr@debian.org>
+Maintainer: VyOS Package Maintainers <maintainers@vyos.net>
 Standards-Version: 3.9.1
 Vcs-Browser: http://anonscm.debian.org/git/pkg-swn/strongswan.git
 Vcs-Git: git://anonscm.debian.org/pkg-swan/strongswan.git
