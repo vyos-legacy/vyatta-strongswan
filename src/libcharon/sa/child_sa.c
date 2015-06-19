@@ -564,13 +564,14 @@ METHOD(child_sa_t, install, status_t,
 {
 	u_int16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
 	u_int16_t esn = NO_EXT_SEQ_NUMBERS;
-	traffic_selector_t *src_ts = NULL, *dst_ts = NULL;
+	traffic_selector_t *src_ts = NULL, *dst_ts = NULL, *vti_src_ts = NULL, *vti_dst_ts = NULL;
 	time_t now;
 	lifetime_cfg_t *lifetime;
 	u_int32_t tfc = 0;
 	host_t *src, *dst;
 	status_t status;
 	bool update = FALSE;
+	mark_t mark_in;
 
 	/* now we have to decide which spi to use. Use self allocated, if "in",
 	 * or the one in the proposal, if not "in" (others). Additionally,
@@ -646,9 +647,28 @@ METHOD(child_sa_t, install, status_t,
 		}
 	}
 
+	/* If this is a VTI (identified in this case by both src and dst traffic 
+	 * selectors being equal) then set a wilcard mark on the incoming sa only,
+	 * otherwise mark as normal */
+	if (inbound)
+	{
+		my_ts->get_first(my_ts, (void**)&vti_dst_ts);
+		other_ts->get_first(other_ts, (void**)&vti_src_ts);
+		
+		if (vti_src_ts->equals(vti_src_ts, vti_dst_ts))
+		{
+			mark_in.value = 0;
+			mark_in.mask = 0xffffffff;
+		}
+		else
+		{
+			mark_in = this->mark_in;
+		}
+	}
+	
 	status = hydra->kernel_interface->add_sa(hydra->kernel_interface,
 				src, dst, spi, proto_ike2ip(this->protocol), this->reqid,
-				inbound ? this->mark_in : this->mark_out, tfc,
+				inbound ? mark_in : this->mark_out, tfc,
 				lifetime, enc_alg, encr, int_alg, integ, this->mode,
 				this->ipcomp, cpi, this->encap, esn, update, src_ts, dst_ts);
 
@@ -909,8 +929,9 @@ METHOD(child_sa_t, destroy, void,
 	   private_child_sa_t *this)
 {
 	enumerator_t *enumerator;
-	traffic_selector_t *my_ts, *other_ts;
+	traffic_selector_t *my_ts, *other_ts, *vti_src_ts = NULL, *vti_dst_ts = NULL;
 	bool unrouted = (this->state == CHILD_ROUTED);
+	mark_t mark_in;
 
 	set_state(this, CHILD_DESTROYING);
 
@@ -923,10 +944,27 @@ METHOD(child_sa_t, destroy, void,
 		{
 			this->protocol = PROTO_ESP;
 		}
+		
+		/* If this is a VTI (identified in this case by both src and dst traffic 
+		 * selectors being equal) then use a wilcard mark when removing the incoming 
+		 * sa, otherwise use the mark as normal */
+		this->my_ts->get_first(this->my_ts, (void**)&vti_dst_ts);
+		this->other_ts->get_first(this->other_ts, (void**)&vti_src_ts);
+	
+		if (vti_src_ts->equals(vti_src_ts, vti_dst_ts))
+		{
+			mark_in.value = 0;
+			mark_in.mask = 0xffffffff;
+		}
+		else
+		{
+			mark_in = this->mark_in;
+		}
+		
 		hydra->kernel_interface->del_sa(hydra->kernel_interface,
 					this->other_addr, this->my_addr, this->my_spi,
 					proto_ike2ip(this->protocol), this->my_cpi,
-					this->mark_in);
+					mark_in);
 	}
 	if (this->other_spi)
 	{
