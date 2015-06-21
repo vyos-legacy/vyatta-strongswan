@@ -154,7 +154,7 @@ binary-common:
 	dh_makeshlibs
 	dh_installdeb
 	dh_shlibdeps
-	if [ -f "../.VYATTA_DEV_BUILD" ]; \
+	if [ -f "../.VYOS_DEV_BUILD" ]; \
 		then dh_gencontrol -- -v999.dev; \
 	else \
 		dh_gencontrol; \
