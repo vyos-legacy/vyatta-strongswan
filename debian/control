@@ -9,7 +9,7 @@ Build-Depends: debhelper (>= 7.1), libtool, libgmp3-dev,
                libssl-dev (>= 0.9.8), libcurl4-openssl-dev | libcurl3-dev | libcurl2-dev,
                libldap2-dev,
                libpam0g-dev, libkrb5-dev, bison, flex, bzip2, po-debconf,
-               hardening-wrapper, libcap-dev
+               hardening-wrapper, libcap-dev, autoconf, automake, pkg-config, libtool
 Homepage: http://www.strongswan.org
 Uploaders: Micah Anderson <micah@debian.org>
 
