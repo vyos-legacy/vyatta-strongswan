@@ -83,6 +83,9 @@ install: build-stamp
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 
+	# remove lib/systemd/system/strongswan.service
+	rm $(CURDIR)/debian/tmp/lib/systemd/system/strongswan.service
+
 	# install files from debian/tmp into proper package dirs
 	dh_install --fail-missing -X\.la -X\.a -Xmedsrv -Xman3 -Xlibstrongswan-padlock.so
 
