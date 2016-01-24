@@ -1,3 +1,13 @@
+strongswan (4.5.2-1.1-bpo60+vyos2+current1) squeeze-backports; urgency=medium
+
+  [ Thomas Jepp ]
+  * Fix build dependencies.
+  * Fix strongswan build on jessie.
+
+  [ Kim Hagen ]
+
+ -- Kim Hagen <kim.sidney@gmail.com>  Sun, 24 Jan 2016 15:25:43 -0500
+
 strongswan (4.5.2-1.1-bpo60+vyos2+lithium5) squeeze-backports; urgency=low
 
   [ Tobias Brunner ]
