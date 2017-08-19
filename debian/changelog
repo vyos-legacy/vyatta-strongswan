@@ -1,3 +1,12 @@
+strongswan (4.5.2-1.1-bpo60+vyos1+helium5) squeeze-backports; urgency=low
+
+  [ Tobias Brunner ]
+  * eap-mschapv2: Only succeed authentication if MSK was established
+
+  [ Yuya Kusakabe ]
+
+ -- Yuya Kusakabe <yuya.kusakabe@gmail.com>  Sat, 19 Aug 2017 13:08:40 +0900
+
 strongswan (4.5.2-1.1-bpo60+vyos1+helium4) squeeze-backports; urgency=low
 
   [ Alex Harpin ]
