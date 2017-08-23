@@ -6,7 +6,7 @@ Standards-Version: 3.9.1
 Vcs-Browser: http://anonscm.debian.org/git/pkg-swn/strongswan.git
 Vcs-Git: git://anonscm.debian.org/pkg-swan/strongswan.git
 Build-Depends: debhelper (>= 7.1), libtool, libgmp3-dev, 
-               libssl-dev (>= 0.9.8), libcurl4-openssl-dev | libcurl3-dev | libcurl2-dev,
+               libssl-dev (>= 1.0.2), libcurl4-openssl-dev | libcurl3-dev | libcurl2-dev,
                libldap2-dev,
                libpam0g-dev, libkrb5-dev, bison, flex, bzip2, po-debconf,
                hardening-wrapper, libcap-dev
