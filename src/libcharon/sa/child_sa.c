@@ -655,7 +655,7 @@ METHOD(child_sa_t, install, status_t,
 		my_ts->get_first(my_ts, (void**)&vti_dst_ts);
 		other_ts->get_first(other_ts, (void**)&vti_src_ts);
 		
-		if (vti_src_ts->equals(vti_src_ts, vti_dst_ts))
+		if (vti_src_ts && vti_src_ts->equals(vti_src_ts, vti_dst_ts))
 		{
 			mark_in.value = 0;
 			mark_in.mask = 0xffffffff;
@@ -951,7 +951,7 @@ METHOD(child_sa_t, destroy, void,
 		this->my_ts->get_first(this->my_ts, (void**)&vti_dst_ts);
 		this->other_ts->get_first(this->other_ts, (void**)&vti_src_ts);
 	
-		if (vti_src_ts->equals(vti_src_ts, vti_dst_ts))
+		if (vti_src_ts && vti_src_ts->equals(vti_src_ts, vti_dst_ts))
 		{
 			mark_in.value = 0;
 			mark_in.mask = 0xffffffff;
